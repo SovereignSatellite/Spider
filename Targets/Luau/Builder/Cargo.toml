@@ -1,0 +1,11 @@
+[package]
+name = "luau-builder"
+version = "1.0.0"
+edition = "2021"
+
+[dependencies]
+data-flow-graph = { path = "../../../Data Flow/Graph" }
+data-flow-builder = { path = "../../../Data Flow/Builder" }
+data-flow-visitor = { path = "../../../Data Flow/Visitor" }
+luau-tree = { path = "../Tree" }
+hashbrown = "0.15.2"
