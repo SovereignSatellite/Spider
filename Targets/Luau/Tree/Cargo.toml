@@ -1,0 +1,7 @@
+[package]
+name = "luau-tree"
+version = "1.0.0"
+edition = "2021"
+
+[dependencies]
+data-flow-graph = { path = "../../../Data Flow/Graph" }
