@@ -1,0 +1,8 @@
+[package]
+name = "control-flow-liveness"
+version = "1.0.0"
+edition = "2021"
+
+[dependencies]
+control-flow-graph = { path = "../Graph" }
+set = { git = "https://github.com/Rerumu/Set.git", rev = "d10ce45" }
