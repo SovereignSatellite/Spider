@@ -1,0 +1,9 @@
+[package]
+name = "data-flow-visitor"
+version = "1.0.0"
+edition = "2021"
+
+[dependencies]
+data-flow-graph = { path = "../Graph" }
+set = { git = "https://github.com/Rerumu/Set.git", rev = "d10ce45" }
+hashbrown = "0.15.1"
