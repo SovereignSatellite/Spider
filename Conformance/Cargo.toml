@@ -1,0 +1,19 @@
+[package]
+name = "conformance"
+version = "1.0.0"
+edition = "2021"
+
+[dev-dependencies]
+data-flow-graph = { path = "../Data Flow/Graph" }
+data-flow-builder = { path = "../Data Flow/Builder" }
+data-flow-visitor = { path = "../Data Flow/Visitor" }
+luau-tree = { path = "../Targets/Luau/Tree" }
+luau-builder = { path = "../Targets/Luau/Builder" }
+luau-printer = { path = "../Targets/Luau/Printer" }
+datatest-stable = "0.3.2"
+pretty_assertions = "1.4.1"
+wast = "222.0.0"
+
+[[test]]
+name = "luau"
+harness = false
