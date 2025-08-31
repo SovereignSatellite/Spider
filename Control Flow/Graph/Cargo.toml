@@ -1,0 +1,7 @@
+[package]
+name = "control-flow-graph"
+version = "1.0.0"
+edition = "2021"
+
+[dependencies]
+list = { git = "https://github.com/Rerumu/List.git", rev = "57d0ca8" }
