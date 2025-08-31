@@ -1,0 +1,12 @@
+[package]
+name = "data-flow-builder"
+version = "1.0.0"
+edition = "2021"
+
+[dependencies]
+control-flow-graph = { path = "../../Control Flow/Graph" }
+control-flow-builder = { path = "../../Control Flow/Builder" }
+control-flow-liveness = { path = "../../Control Flow/Liveness" }
+data-flow-graph = { path = "../Graph" }
+list = { git = "https://github.com/Rerumu/List.git", rev = "57d0ca8" }
+wasmparser = { version = "0.235.0", default-features = false }
