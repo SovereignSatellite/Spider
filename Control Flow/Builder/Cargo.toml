@@ -1,0 +1,11 @@
+[package]
+name = "control-flow-builder"
+version = "1.0.0"
+edition = "2021"
+
+[dependencies]
+control-flow-graph = { path = "../Graph" }
+control-flow-structurer = { path = "../Structurer" }
+list = { git = "https://github.com/Rerumu/List.git", rev = "57d0ca8" }
+set = { git = "https://github.com/Rerumu/Set.git", rev = "d10ce45" }
+wasmparser = { version = "0.235.0", default-features = false }
