@@ -20,7 +20,7 @@ impl Section {
 		let end = source.find('\n')?;
 		let (data, source) = source.split_at(end);
 
-		Some((data, source.trim_start()))
+		Some((data.trim_end(), source.trim_start()))
 	}
 
 	fn parse_references(mut source: &'static str) -> (Box<[&'static str]>, &'static str) {
