@@ -34,8 +34,8 @@ struct Luau {
 	references: Vec<&'static str>,
 
 	loader: Loader,
-	luau_builder: LuauBuilder,
-	luau_printer: LuauPrinter,
+	builder: LuauBuilder,
+	printer: LuauPrinter,
 }
 
 impl Luau {
@@ -53,8 +53,8 @@ impl Luau {
 			references: Vec::new(),
 
 			loader: Loader::new(),
-			luau_builder: LuauBuilder::new(),
-			luau_printer: LuauPrinter::new(),
+			builder: LuauBuilder::new(),
+			printer: LuauPrinter::new(),
 		}
 	}
 
@@ -84,13 +84,13 @@ impl Luau {
 
 	fn fmt_source(&mut self, data: &[u8]) -> Result<()> {
 		let graph = self.loader.run(data);
-		let tree = self.luau_builder.run(&graph);
+		let tree = self.builder.run(&graph);
 
 		NamesFinder::new(&mut self.references).run(&tree);
 
-		self.luau_printer.indent();
-		self.luau_printer.print(&tree, &mut self.file)?;
-		self.luau_printer.outdent();
+		self.printer.indent();
+		self.printer.print(&tree, &mut self.file)?;
+		self.printer.outdent();
 
 		Ok(())
 	}

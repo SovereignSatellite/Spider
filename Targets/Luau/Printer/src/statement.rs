@@ -4,13 +4,18 @@ use luau_tree::{
 	LuauTree,
 	expression::Expression,
 	statement::{
-		Assign, AssignAll, Call, DataDrop, ElementsDrop, Export, FastDefine, GlobalSet, Match,
-		MemoryCopy, MemoryFill, MemoryInit, MemoryStore, Repeat, Sequence, SlowDefine, Statement,
-		TableCopy, TableFill, TableInit, TableSet,
+		Assign, AssignAll, Call, DataDrop, ElementsDrop, Export, GlobalSet, Match, MemoryCopy,
+		MemoryFill, MemoryInit, MemoryStore, Repeat, Sequence, Statement, TableCopy, TableFill,
+		TableInit, TableSet,
 	},
 };
 
-use crate::{LuauPrinter, expression::fmt_delimited, library::NeedsName, print::Print};
+use crate::{
+	LuauPrinter,
+	expression::{fmt_delimited, fmt_locals, fmt_stack_enter, fmt_stack_leave},
+	library::NeedsName,
+	print::Print,
+};
 
 impl Print for Match {
 	fn print(&self, printer: &mut LuauPrinter, out: &mut dyn Write) -> Result<()> {
@@ -84,83 +89,31 @@ impl Print for Match {
 
 impl Print for Repeat {
 	fn print(&self, printer: &mut LuauPrinter, out: &mut dyn Write) -> Result<()> {
-		let Self {
-			code,
-			post,
-			condition,
-		} = self;
+		let Self { code, condition } = self;
 
 		printer.tab(out)?;
-		writeln!(out, "while true do")?;
+		writeln!(out, "repeat")?;
 
 		printer.indent();
 		code.print(printer, out)?;
+		printer.outdent();
 
 		printer.tab(out)?;
-		write!(out, "if (")?;
-
+		write!(out, "until (")?;
 		condition.print(printer, out)?;
-		writeln!(out, ") == 0 then")?;
-
-		printer.indent();
-		post.print(printer, out)?;
-		printer.tab(out)?;
-		writeln!(out, "break")?;
-
-		printer.outdent();
-		printer.tab(out)?;
-		writeln!(out, "else")?;
-
-		printer.indent();
-		post.print(printer, out)?;
-
-		printer.outdent();
-		printer.tab(out)?;
-		writeln!(out, "end")?;
-
-		printer.outdent();
-		printer.tab(out)?;
-
-		writeln!(out, "end")
-	}
-}
-
-impl Print for FastDefine {
-	fn print(&self, printer: &mut LuauPrinter, out: &mut dyn Write) -> Result<()> {
-		let Self { name, source } = self;
-
-		printer.tab(out)?;
-		write!(out, "local ")?;
-
-		name.print(printer, out)?;
-
-		write!(out, " = ")?;
-
-		source.print(printer, out)?;
-
-		writeln!(out, ";")
-	}
-}
-
-impl Print for SlowDefine {
-	fn print(&self, printer: &mut LuauPrinter, out: &mut dyn Write) -> Result<()> {
-		let Self { name, len } = self;
-
-		printer.tab(out)?;
-		write!(out, "local ")?;
-
-		name.print(printer, out)?;
-
-		writeln!(out, " = table.create({len});")
+		writeln!(out, ") == 0")
 	}
 }
 
 impl Print for Assign {
 	fn print(&self, printer: &mut LuauPrinter, out: &mut dyn Write) -> Result<()> {
-		let Self { local, source } = self;
+		let Self {
+			destination,
+			source,
+		} = self;
 
 		printer.tab(out)?;
-		local.print(printer, out)?;
+		destination.print(printer, out)?;
 
 		write!(out, " = ")?;
 
@@ -478,8 +431,6 @@ impl Print for Statement {
 		match self {
 			Self::Match(r#match) => r#match.print(printer, out),
 			Self::Repeat(repeat) => repeat.print(printer, out),
-			Self::FastDefine(fast_define) => fast_define.print(printer, out),
-			Self::SlowDefine(slow_define) => slow_define.print(printer, out),
 			Self::Assign(assign) => assign.print(printer, out),
 			Self::AssignAll(assign_all) => assign_all.print(printer, out),
 			Self::Call(call) => call.print(printer, out),
@@ -522,7 +473,7 @@ fn fmt_export_list(
 	out: &mut dyn Write,
 ) -> Result<()> {
 	printer.tab(out)?;
-	writeln!(out, "return {{")?;
+	writeln!(out, "local export = {{")?;
 
 	printer.indent();
 
@@ -543,19 +494,35 @@ impl Print for LuauTree {
 	fn print(&self, printer: &mut LuauPrinter, out: &mut dyn Write) -> Result<()> {
 		let Self {
 			environment,
+			locals,
+			stack,
 			code,
 			exports,
 		} = self;
 
 		printer.tab(out)?;
 		write!(out, "local function module(")?;
+
 		environment.print(printer, out)?;
+
 		writeln!(out, ")")?;
 
 		printer.indent();
+
+		printer.tab(out)?;
+		writeln!(out, "local excess_stack = {{ top = 0 }}")?;
+
+		fmt_stack_enter(*stack, printer, out)?;
+		fmt_locals(locals, printer, out)?;
+
 		code.print(printer, out)?;
 
 		fmt_export_list(exports, printer, out)?;
+		fmt_stack_leave(*stack, printer, out)?;
+
+		printer.tab(out)?;
+		writeln!(out, "return export")?;
+
 		printer.outdent();
 
 		printer.tab(out)?;

@@ -1,6 +1,6 @@
 use alloc::{boxed::Box, sync::Arc, vec::Vec};
 
-use crate::expression::{Expression, Local, Location, Name};
+use crate::expression::{Expression, Local, Location};
 
 pub use data_flow_graph::mvp::StoreType;
 
@@ -13,7 +13,7 @@ impl Sequence {
 	pub fn as_assign_destination(&self) -> Option<Local> {
 		match self.list.as_slice() {
 			[Statement::AssignAll(assign_all)] => assign_all.as_assign_destination(),
-			[Statement::Assign(assign)] => Some(assign.local),
+			[Statement::Assign(assign)] => Some(assign.destination),
 			_ => None,
 		}
 	}
@@ -39,22 +39,11 @@ pub struct Match {
 
 pub struct Repeat {
 	pub code: Sequence,
-	pub post: AssignAll,
 	pub condition: Expression,
 }
 
-pub struct FastDefine {
-	pub name: Name,
-	pub source: Expression,
-}
-
-pub struct SlowDefine {
-	pub name: Name,
-	pub len: u32,
-}
-
 pub struct Assign {
-	pub local: Local,
+	pub destination: Local,
 	pub source: Expression,
 }
 
@@ -64,8 +53,8 @@ pub struct AssignAll {
 
 impl AssignAll {
 	const fn as_assign_destination(&self) -> Option<Local> {
-		if let &[(local, _)] = self.assignments.as_slice() {
-			Some(local)
+		if let &[(destination, _)] = self.assignments.as_slice() {
+			Some(destination)
 		} else {
 			None
 		}
@@ -150,8 +139,6 @@ pub enum Statement {
 	Match(Box<Match>),
 	Repeat(Box<Repeat>),
 
-	FastDefine(Box<FastDefine>),
-	SlowDefine(Box<SlowDefine>),
 	Assign(Box<Assign>),
 	AssignAll(Box<AssignAll>),
 

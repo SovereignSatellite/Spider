@@ -71,8 +71,8 @@ pub struct RegionOut {
 #[derive(Clone)]
 pub struct GammaIn {
 	pub output: u32,
-	pub condition: Link,
 	pub arguments: Vec<Link>,
+	pub condition: Link,
 }
 
 #[derive(Clone)]
@@ -90,8 +90,8 @@ pub struct ThetaIn {
 #[derive(Clone)]
 pub struct ThetaOut {
 	pub input: u32,
-	pub condition: Link,
 	pub results: Vec<Link>,
+	pub condition: Link,
 }
 
 #[derive(Clone)]

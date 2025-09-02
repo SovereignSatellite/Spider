@@ -1,113 +1,104 @@
-use core::ops::Range;
-
 use data_flow_graph::Link;
-use hashbrown::HashMap;
-use luau_tree::expression::Name;
+use hashbrown::{HashMap, hash_map::Entry};
+use luau_tree::expression::{Local, Name};
 
-use crate::{place::Place, scoped_provider::ScopedProvider};
+use super::index_provider::IndexProvider;
+
+// Luau has a max amount of local variables and no register allocator, so we must
+// decide to spill to our own table per function after this count is reached.
+const MAX_LOCAL_VARIABLES: usize = 197;
 
 pub struct LocalProvider {
-	lifetimes: HashMap<Link, u32>,
-
-	provider: ScopedProvider,
+	local_provider: IndexProvider,
+	table_provider: IndexProvider,
 }
 
 impl LocalProvider {
-	pub fn new() -> Self {
+	pub const fn new() -> Self {
 		Self {
-			lifetimes: HashMap::new(),
-
-			provider: ScopedProvider::new(),
+			local_provider: IndexProvider::new(),
+			table_provider: IndexProvider::new(),
 		}
 	}
 
-	pub fn lifetimes_mut(&mut self) -> &mut HashMap<Link, u32> {
-		&mut self.lifetimes
+	pub fn clear(&mut self) {
+		self.local_provider.set_names(0);
+		self.local_provider.forget_names();
+
+		self.table_provider.set_names(0);
+		self.table_provider.forget_names();
 	}
 
-	pub fn pop_local_scope(&mut self) {
-		self.provider.pop_local_scope();
+	pub fn refresh(&mut self) {
+		self.local_provider.forget_names();
+
+		self.table_provider.set_names(0);
+		self.table_provider.forget_names();
 	}
 
-	pub fn push_local_scope(&mut self) {
-		self.provider.push_local_scope();
-	}
-
-	pub fn pop_function_scope(&mut self) -> Option<(Name, u32)> {
-		self.provider.pop_function_scope()
-	}
-
-	pub fn push_function_scope(&mut self) {
-		self.provider.push_function_scope();
-	}
-
-	fn get_lifetime(&self, link: Link) -> u32 {
-		self.lifetimes.get(&link).copied().unwrap_or(link.0 + 1)
-	}
-
-	fn pull(&mut self, link: Link) -> Place {
-		let until = self.get_lifetime(link);
-
-		self.provider.pull(until)
-	}
-
-	pub fn pull_all_into(&mut self, from: Range<u16>, to: u32, locals: &mut HashMap<Link, Place>) {
-		let iter = from.map(|port| Link(to, port)).map(|link| {
-			let place = self.pull(link);
-
-			(link, place)
-		});
-
-		locals.extend(iter);
-	}
-
-	fn try_revive(&mut self, link: Link, place: Place) -> Option<Place> {
-		let until = self.get_lifetime(link);
-
-		self.provider.try_revive(place, until).then_some(
-			if let Place::Definition { name } = place {
-				Place::Assignment { name }
-			} else {
-				place
-			},
+	pub const fn get_names(&self) -> (u32, u32) {
+		(
+			self.local_provider.get_names(),
+			self.table_provider.get_names(),
 		)
 	}
 
-	pub fn try_revive_all_into(
-		&mut self,
-		from: &[Link],
-		to: u32,
-		locals: &mut HashMap<Link, Place>,
-	) {
-		for (to, &from) in (0..).map(|port| Link(to, port)).zip(from) {
-			let Some(place) = locals
-				.get(&from)
-				.and_then(|&place| self.try_revive(to, place))
-			else {
-				continue;
+	fn pull(&mut self, start: u32) -> Local {
+		if self.local_provider.should_exceed(MAX_LOCAL_VARIABLES) {
+			let offset = self.table_provider.pull(start).try_into().unwrap();
+
+			Local::Slow { offset }
+		} else {
+			let name = Name {
+				id: self.local_provider.pull(start),
 			};
 
-			locals.insert(to, place);
+			Local::Fast { name }
 		}
 	}
 
-	fn try_pull_all_into(&mut self, from: Range<u16>, to: u32, locals: &mut HashMap<Link, Place>) {
-		for to in from.map(|port| Link(to, port)) {
-			locals.entry(to).or_insert_with(|| self.pull(to));
+	fn try_revive(&mut self, local: Local, start: u32) -> bool {
+		match local {
+			Local::Fast { name } => self.local_provider.try_revive(name.id, start),
+			Local::Slow { offset } => self.table_provider.try_revive(offset.into(), start),
 		}
 	}
 
-	pub fn revive_all_into(&mut self, from: &[Link], to: u32, locals: &mut HashMap<Link, Place>) {
-		let count = from.len().try_into().unwrap();
+	pub fn try_revive_into(
+		&mut self,
+		assignments: &mut HashMap<Link, Local>,
+		destination: Link,
+		preferred: Link,
+	) -> bool {
+		let Some(&local) = assignments.get(&preferred) else {
+			return false;
+		};
 
-		// We first try to allocate variables to their old places to avoid moves.
-		self.try_revive_all_into(from, to, locals);
+		let Entry::Vacant(entry) = assignments.entry(destination) else {
+			return true;
+		};
 
-		// Then, any remaining ones are given new places.
-		self.try_pull_all_into(0..count, to, locals);
+		if !self.try_revive(local, destination.0) {
+			return false;
+		}
+
+		entry.insert(local);
+
+		true
 	}
 
-	pub fn push_until(&mut self, end: u32) {
-		self.provider.push_until(end);
+	pub fn try_pull_into(&mut self, assignments: &mut HashMap<Link, Local>, link: Link) {
+		let Entry::Vacant(entry) = assignments.entry(link) else {
+			return;
+		};
+
+		let local = self.pull(link.0);
+
+		entry.insert(local);
+	}
+
+	pub fn push_until(&mut self, start: u32) {
+		self.local_provider.push_until(start);
+		self.table_provider.push_until(start);
 	}
 }

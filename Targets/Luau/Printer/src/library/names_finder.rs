@@ -616,8 +616,6 @@ impl NeedsName for Statement {
 		match self {
 			Self::Match(_)
 			| Self::Repeat(_)
-			| Self::FastDefine(_)
-			| Self::SlowDefine(_)
 			| Self::Assign(_)
 			| Self::AssignAll(_)
 			| Self::Call(_) => "",

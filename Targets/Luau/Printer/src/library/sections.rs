@@ -113,6 +113,7 @@ impl Sections {
 		}
 	}
 
+	#[must_use]
 	pub fn find(&self, name: &'static str) -> &Section {
 		let position = self
 			.list

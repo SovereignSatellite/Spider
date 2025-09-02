@@ -31,6 +31,27 @@ where
 	}
 }
 
+pub fn fmt_stack_enter(size: u16, printer: &LuauPrinter, out: &mut dyn Write) -> Result<()> {
+	if size == 0 {
+		return Ok(());
+	}
+
+	printer.tab(out)?;
+	writeln!(out, "local stack_top = excess_stack.top + {size}")?;
+
+	printer.tab(out)?;
+	writeln!(out, "excess_stack.top = stack_top")
+}
+
+pub fn fmt_stack_leave(size: u16, printer: &LuauPrinter, out: &mut dyn Write) -> Result<()> {
+	if size == 0 {
+		return Ok(());
+	}
+
+	printer.tab(out)?;
+	writeln!(out, "excess_stack.top = stack_top - {size}")
+}
+
 impl Print for Name {
 	fn print(&self, printer: &mut LuauPrinter, out: &mut dyn Write) -> Result<()> {
 		let Self { id } = self;
@@ -40,14 +61,25 @@ impl Print for Name {
 	}
 }
 
+pub fn fmt_locals(names: &[Name], printer: &mut LuauPrinter, out: &mut dyn Write) -> Result<()> {
+	if names.is_empty() {
+		return Ok(());
+	}
+
+	printer.tab(out)?;
+	write!(out, "local ")?;
+
+	fmt_delimited(names, printer, out)?;
+
+	writeln!(out)
+}
+
 impl Print for Local {
 	fn print(&self, printer: &mut LuauPrinter, out: &mut dyn Write) -> Result<()> {
 		match self {
 			Self::Fast { name } => name.print(printer, out),
-			Self::Slow { table, index } => {
-				table.print(printer, out)?;
-
-				write!(out, "[{}]", index + 1)
+			Self::Slow { offset } => {
+				write!(out, "excess_stack[stack_top - {offset}]")
 			}
 		}
 	}
@@ -57,6 +89,8 @@ impl Print for Function {
 	fn print(&self, printer: &mut LuauPrinter, out: &mut dyn Write) -> Result<()> {
 		let Self {
 			arguments,
+			locals,
+			stack,
 			code,
 			returns,
 		} = self;
@@ -68,7 +102,13 @@ impl Print for Function {
 		writeln!(out, ")")?;
 
 		printer.indent();
+
+		fmt_stack_enter(*stack, printer, out)?;
+		fmt_locals(locals, printer, out)?;
+
 		code.print(printer, out)?;
+
+		fmt_stack_leave(*stack, printer, out)?;
 
 		if !returns.is_empty() {
 			printer.tab(out)?;
@@ -88,9 +128,12 @@ impl Print for Function {
 
 impl Print for Scoped {
 	fn print(&self, printer: &mut LuauPrinter, out: &mut dyn Write) -> Result<()> {
-		let Self { locals, function } = self;
+		let Self {
+			dependencies,
+			function,
+		} = self;
 
-		if locals.is_empty() {
+		if dependencies.is_empty() {
 			return function.print(printer, out);
 		}
 
@@ -98,8 +141,14 @@ impl Print for Scoped {
 
 		printer.indent();
 
-		for local in locals {
-			local.print(printer, out)?;
+		for (name, source) in dependencies {
+			printer.tab(out)?;
+			write!(out, "local ")?;
+
+			name.print(printer, out)?;
+			write!(out, " = ")?;
+			source.print(printer, out)?;
+			writeln!(out, ";")?;
 		}
 
 		printer.tab(out)?;

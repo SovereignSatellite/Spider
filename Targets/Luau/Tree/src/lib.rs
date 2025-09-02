@@ -15,6 +15,9 @@ use self::{
 
 pub struct LuauTree {
 	pub environment: Name,
+	pub locals: Vec<Name>,
+	pub stack: u16,
+
 	pub code: Sequence,
 	pub exports: Vec<Export>,
 }

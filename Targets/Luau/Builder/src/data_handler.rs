@@ -11,106 +11,148 @@ use luau_tree::{
 		NumberUnaryOperation, NumberWiden, RefIsNull, Scoped, TableGet, TableGrow, TableNew,
 		TableSize,
 	},
-	statement::{Export, FastDefine, Sequence},
+	statement::{Export, Sequence},
 };
 
-pub struct DataHandler {
-	expressions: HashMap<u32, Expression>,
-	locals: HashMap<Link, Local>,
+use crate::local_allocator::Declarations;
 
-	links: Vec<Link>,
-	scopes: Vec<usize>,
+pub struct DataHandler {
+	declarations: HashMap<u32, Declarations>,
+	assignments: HashMap<Link, Local>,
+
+	expressions: HashMap<u32, Expression>,
 }
 
 impl DataHandler {
 	pub fn new() -> Self {
 		Self {
+			declarations: HashMap::new(),
+			assignments: HashMap::new(),
+
 			expressions: HashMap::new(),
-			locals: HashMap::new(),
-
-			links: Vec::new(),
-			scopes: Vec::new(),
 		}
 	}
 
-	pub fn pop_scope(&mut self) {
-		let start = self.scopes.pop().unwrap_or_default();
-
-		for link in &self.links[start..] {
-			self.locals.remove(link).unwrap();
-		}
-
-		self.links.truncate(start);
+	pub const fn locals_mut(
+		&mut self,
+	) -> (&mut HashMap<u32, Declarations>, &mut HashMap<Link, Local>) {
+		(&mut self.declarations, &mut self.assignments)
 	}
 
-	pub fn push_scope(&mut self) {
-		self.scopes.push(self.links.len());
-	}
-
-	pub fn define(&mut self, id: u32, source: Expression) {
+	pub fn store_expression(&mut self, id: u32, source: Expression) {
 		let last = self.expressions.insert(id, source);
 
-		debug_assert!(last.is_none(), "expression should not be set");
+		debug_assert!(last.is_none(), "expression should set only once");
 	}
 
-	pub fn alias(&mut self, link: Link, local: Local) {
-		let last = self.locals.insert(link, local);
-
-		self.links.push(link);
-
-		debug_assert!(last.is_none(), "local should not be set");
+	pub fn get_stack_size(&self, id: u32) -> u16 {
+		self.declarations[&id].stack
 	}
 
-	pub fn load_local(&self, link: Link) -> Option<Local> {
-		self.locals.get(&link).copied()
+	pub fn get_local(&self, link: Link) -> Option<Local> {
+		self.assignments.get(&link).copied()
 	}
 
-	pub fn load(&mut self, link: Link) -> Option<Expression> {
-		self.load_local(link).map(Expression::Local).or_else(|| {
-			if link.1 == 0 {
-				self.expressions.remove(&link.0)
-			} else {
-				None
-			}
-		})
+	pub fn load(&mut self, link: Link) -> Expression {
+		self.get_local(link).map_or_else(
+			|| {
+				assert_eq!(link.1, 0, "expression should load from first port");
+
+				self.expressions.remove(&link.0).unwrap()
+			},
+			Expression::Local,
+		)
 	}
 
-	pub fn load_sources(&mut self, sources: &[Link]) -> Vec<Expression> {
-		sources.iter().map_while(|&link| self.load(link)).collect()
+	pub fn load_all(&mut self, sources: &[Link]) -> Vec<Expression> {
+		sources.iter().map(|&link| self.load(link)).collect()
 	}
 
-	pub fn load_locals(&mut self, sources: &[Link]) -> Vec<Local> {
-		fn assert_into_local(local: Expression) -> Local {
-			if let Expression::Local(local) = local {
-				local
-			} else {
-				unreachable!()
-			}
-		}
+	pub fn load_name_assignments(&self, id: u32, ports: core::ops::Range<u16>) -> Vec<Name> {
+		let names = ports.map(|port| Link(id, port));
 
-		sources
-			.iter()
-			.map_while(|&link| self.load(link))
-			.map(assert_into_local)
+		names
+			.map(|name| self.assignments[&name].into_name())
 			.collect()
 	}
 
+	pub fn load_local_assignments(&self, id: u32, ports: core::ops::Range<u16>) -> Vec<Local> {
+		let names = ports.map(|port| Link(id, port));
+
+		names.map(|name| self.assignments[&name]).collect()
+	}
+
+	pub fn load_assign_all(&self, id: u32, sources: &[Link]) -> Vec<(Local, Local)> {
+		let destinations = (0..).map(|port| Link(id, port));
+		let iter = destinations
+			.zip(sources)
+			.filter_map(|(destination, &source)| {
+				let destination = self.assignments[&destination];
+				let source = self.assignments[&source];
+
+				(destination != source).then_some((destination, source))
+			});
+
+		iter.collect()
+	}
+
+	pub fn load_dependencies(
+		&mut self,
+		id: u32,
+		ports: core::ops::Range<u16>,
+		dependencies: &[Link],
+	) -> Vec<(Name, Expression)> {
+		let names = ports.map(|port| Link(id, port));
+		let iter = names.zip(dependencies).map(|(name, &dependency)| {
+			let name = self.assignments[&name].into_name();
+			let dependency = self.load(dependency);
+
+			(name, dependency)
+		});
+
+		iter.collect()
+	}
+
+	pub fn load_declarations(&self, id: u32) -> Vec<Name> {
+		let locals = self.declarations[&id].locals.clone();
+
+		locals.map(|id| Name { id }).collect()
+	}
+
+	pub fn load_returns(
+		&self,
+		results: &[Link],
+		function_type: &nested::FunctionType,
+	) -> Vec<Local> {
+		let returns = results.iter().map(|&name| self.assignments[&name]);
+		let len = function_type.results.len();
+
+		returns.take(len).collect()
+	}
+
 	pub fn load_scoped(
-		locals: Vec<FastDefine>,
+		dependencies: Vec<(Name, Expression)>,
 		arguments: Vec<Name>,
+		locals: Vec<Name>,
+		stack: u16,
 		code: Sequence,
 		returns: Vec<Local>,
 	) -> Expression {
 		let function = Function {
 			arguments,
+			locals,
+			stack,
 			code,
 			returns,
 		};
 
-		if locals.is_empty() {
+		if dependencies.is_empty() {
 			Expression::Function(function.into())
 		} else {
-			let scoped = Scoped { locals, function };
+			let scoped = Scoped {
+				dependencies,
+				function,
+			};
 
 			Expression::Scoped(scoped.into())
 		}
@@ -153,7 +195,7 @@ impl DataHandler {
 
 	pub fn load_import(&mut self, import: &nested::Import) -> Expression {
 		let import = Import {
-			environment: self.load(import.environment).unwrap(),
+			environment: self.load(import.environment),
 			namespace: import.namespace.clone(),
 			identifier: import.identifier.clone(),
 		};
@@ -161,22 +203,29 @@ impl DataHandler {
 		Expression::Import(import.into())
 	}
 
-	pub fn load_export(&mut self, export: &nested::Export) -> Export {
+	fn load_export(&mut self, export: &nested::Export) -> Export {
 		Export {
 			identifier: export.identifier.clone(),
-			source: self.load(export.reference).unwrap(),
+			source: self.load(export.reference),
 		}
 	}
 
+	pub fn load_exports(&mut self, exports: &[nested::Export]) -> Vec<Export> {
+		exports
+			.iter()
+			.map(|export| self.load_export(export))
+			.collect()
+	}
+
 	pub fn load_identity(&mut self, identity: mvp::Identity) -> Expression {
-		self.load(identity.source).unwrap()
+		self.load(identity.source)
 	}
 
 	pub fn load_call(&mut self, call: &mvp::Call) -> Expression {
 		let end = call.arguments.len() - usize::from(call.states);
 		let call = Call {
-			function: self.load(call.function).unwrap(),
-			arguments: self.load_sources(&call.arguments[..end]),
+			function: self.load(call.function),
+			arguments: self.load_all(&call.arguments[..end]),
 		};
 
 		Expression::Call(call.into())
@@ -184,14 +233,14 @@ impl DataHandler {
 
 	pub fn load_location(&mut self, location: mvp::Location) -> Location {
 		Location {
-			reference: self.load(location.reference).unwrap(),
-			offset: self.load(location.offset).unwrap(),
+			reference: self.load(location.reference),
+			offset: self.load(location.offset),
 		}
 	}
 
 	pub fn load_ref_is_null(&mut self, ref_is_null: mvp::RefIsNull) -> Expression {
 		let operation = RefIsNull {
-			source: self.load(ref_is_null.source).unwrap(),
+			source: self.load(ref_is_null.source),
 		};
 
 		Expression::RefIsNull(operation.into())
@@ -202,7 +251,7 @@ impl DataHandler {
 		operation: mvp::IntegerUnaryOperation,
 	) -> Expression {
 		let operation = IntegerUnaryOperation {
-			source: self.load(operation.source).unwrap(),
+			source: self.load(operation.source),
 			r#type: operation.r#type,
 			operator: operation.operator,
 		};
@@ -215,8 +264,8 @@ impl DataHandler {
 		operation: mvp::IntegerBinaryOperation,
 	) -> Expression {
 		let operation = IntegerBinaryOperation {
-			lhs: self.load(operation.lhs).unwrap(),
-			rhs: self.load(operation.rhs).unwrap(),
+			lhs: self.load(operation.lhs),
+			rhs: self.load(operation.rhs),
 			r#type: operation.r#type,
 			operator: operation.operator,
 		};
@@ -229,8 +278,8 @@ impl DataHandler {
 		operation: mvp::IntegerCompareOperation,
 	) -> Expression {
 		let operation = IntegerCompareOperation {
-			lhs: self.load(operation.lhs).unwrap(),
-			rhs: self.load(operation.rhs).unwrap(),
+			lhs: self.load(operation.lhs),
+			rhs: self.load(operation.rhs),
 			r#type: operation.r#type,
 			operator: operation.operator,
 		};
@@ -240,7 +289,7 @@ impl DataHandler {
 
 	pub fn load_integer_narrow(&mut self, operation: mvp::IntegerNarrow) -> Expression {
 		let operation = IntegerNarrow {
-			source: self.load(operation.source).unwrap(),
+			source: self.load(operation.source),
 		};
 
 		Expression::IntegerNarrow(operation.into())
@@ -248,7 +297,7 @@ impl DataHandler {
 
 	pub fn load_integer_widen(&mut self, operation: mvp::IntegerWiden) -> Expression {
 		let operation = IntegerWiden {
-			source: self.load(operation.source).unwrap(),
+			source: self.load(operation.source),
 		};
 
 		Expression::IntegerWiden(operation.into())
@@ -256,7 +305,7 @@ impl DataHandler {
 
 	pub fn load_integer_extend(&mut self, operation: mvp::IntegerExtend) -> Expression {
 		let operation = IntegerExtend {
-			source: self.load(operation.source).unwrap(),
+			source: self.load(operation.source),
 			r#type: operation.r#type,
 		};
 
@@ -268,7 +317,7 @@ impl DataHandler {
 		operation: mvp::IntegerConvertToNumber,
 	) -> Expression {
 		let operation = IntegerConvertToNumber {
-			source: self.load(operation.source).unwrap(),
+			source: self.load(operation.source),
 			signed: operation.signed,
 			to: operation.to,
 			from: operation.from,
@@ -282,7 +331,7 @@ impl DataHandler {
 		operation: mvp::IntegerTransmuteToNumber,
 	) -> Expression {
 		let operation = IntegerTransmuteToNumber {
-			source: self.load(operation.source).unwrap(),
+			source: self.load(operation.source),
 			from: operation.from,
 		};
 
@@ -294,7 +343,7 @@ impl DataHandler {
 		operation: mvp::NumberUnaryOperation,
 	) -> Expression {
 		let operation = NumberUnaryOperation {
-			source: self.load(operation.source).unwrap(),
+			source: self.load(operation.source),
 			r#type: operation.r#type,
 			operator: operation.operator,
 		};
@@ -307,8 +356,8 @@ impl DataHandler {
 		operation: mvp::NumberBinaryOperation,
 	) -> Expression {
 		let operation = NumberBinaryOperation {
-			lhs: self.load(operation.lhs).unwrap(),
-			rhs: self.load(operation.rhs).unwrap(),
+			lhs: self.load(operation.lhs),
+			rhs: self.load(operation.rhs),
 			r#type: operation.r#type,
 			operator: operation.operator,
 		};
@@ -321,8 +370,8 @@ impl DataHandler {
 		operation: mvp::NumberCompareOperation,
 	) -> Expression {
 		let operation = NumberCompareOperation {
-			lhs: self.load(operation.lhs).unwrap(),
-			rhs: self.load(operation.rhs).unwrap(),
+			lhs: self.load(operation.lhs),
+			rhs: self.load(operation.rhs),
 			r#type: operation.r#type,
 			operator: operation.operator,
 		};
@@ -332,7 +381,7 @@ impl DataHandler {
 
 	pub fn load_number_narrow(&mut self, operation: mvp::NumberNarrow) -> Expression {
 		let operation = NumberNarrow {
-			source: self.load(operation.source).unwrap(),
+			source: self.load(operation.source),
 		};
 
 		Expression::NumberNarrow(operation.into())
@@ -340,7 +389,7 @@ impl DataHandler {
 
 	pub fn load_number_widen(&mut self, operation: mvp::NumberWiden) -> Expression {
 		let operation = NumberWiden {
-			source: self.load(operation.source).unwrap(),
+			source: self.load(operation.source),
 		};
 
 		Expression::NumberWiden(operation.into())
@@ -351,7 +400,7 @@ impl DataHandler {
 		operation: mvp::NumberTruncateToInteger,
 	) -> Expression {
 		let operation = NumberTruncateToInteger {
-			source: self.load(operation.source).unwrap(),
+			source: self.load(operation.source),
 			signed: operation.signed,
 			saturate: operation.saturate,
 			to: operation.to,
@@ -366,7 +415,7 @@ impl DataHandler {
 		operation: mvp::NumberTransmuteToInteger,
 	) -> Expression {
 		let operation = NumberTransmuteToInteger {
-			source: self.load(operation.source).unwrap(),
+			source: self.load(operation.source),
 			from: operation.from,
 		};
 
@@ -375,7 +424,7 @@ impl DataHandler {
 
 	pub fn load_global_new(&mut self, global_new: mvp::GlobalNew) -> Expression {
 		let global_new = GlobalNew {
-			initializer: self.load(global_new.initializer).unwrap(),
+			initializer: self.load(global_new.initializer),
 		};
 
 		Expression::GlobalNew(global_new.into())
@@ -383,7 +432,7 @@ impl DataHandler {
 
 	pub fn load_global_get(&mut self, global_get: mvp::GlobalGet) -> Expression {
 		let global_get = GlobalGet {
-			source: self.load(global_get.source).unwrap(),
+			source: self.load(global_get.source),
 		};
 
 		Expression::GlobalGet(global_get.into())
@@ -391,7 +440,7 @@ impl DataHandler {
 
 	pub fn load_table_new(&mut self, table_new: mvp::TableNew) -> Expression {
 		let table_new = TableNew {
-			initializer: self.load(table_new.initializer).unwrap(),
+			initializer: self.load(table_new.initializer),
 			minimum: table_new.minimum,
 			maximum: table_new.maximum,
 		};
@@ -409,7 +458,7 @@ impl DataHandler {
 
 	pub fn load_table_size(&mut self, table_size: mvp::TableSize) -> Expression {
 		let table_size = TableSize {
-			source: self.load(table_size.source).unwrap(),
+			source: self.load(table_size.source),
 		};
 
 		Expression::TableSize(table_size.into())
@@ -417,9 +466,9 @@ impl DataHandler {
 
 	pub fn load_table_grow(&mut self, table_grow: mvp::TableGrow) -> Expression {
 		let table_grow = TableGrow {
-			destination: self.load(table_grow.destination).unwrap(),
-			initializer: self.load(table_grow.initializer).unwrap(),
-			size: self.load(table_grow.size).unwrap(),
+			destination: self.load(table_grow.destination),
+			initializer: self.load(table_grow.initializer),
+			size: self.load(table_grow.size),
 		};
 
 		Expression::TableGrow(table_grow.into())
@@ -427,7 +476,7 @@ impl DataHandler {
 
 	pub fn load_elements_new(&mut self, elements_new: &mvp::ElementsNew) -> Expression {
 		let elements_new = ElementsNew {
-			content: self.load_sources(&elements_new.content),
+			content: self.load_all(&elements_new.content),
 		};
 
 		Expression::ElementsNew(elements_new.into())
@@ -444,7 +493,7 @@ impl DataHandler {
 
 	pub fn load_memory_size(&mut self, memory_size: mvp::MemorySize) -> Expression {
 		let memory_size = MemorySize {
-			source: self.load(memory_size.source).unwrap(),
+			source: self.load(memory_size.source),
 		};
 
 		Expression::MemorySize(memory_size.into())
@@ -452,8 +501,8 @@ impl DataHandler {
 
 	pub fn load_memory_grow(&mut self, memory_grow: mvp::MemoryGrow) -> Expression {
 		let memory_grow = MemoryGrow {
-			destination: self.load(memory_grow.destination).unwrap(),
-			size: self.load(memory_grow.size).unwrap(),
+			destination: self.load(memory_grow.destination),
+			size: self.load(memory_grow.size),
 		};
 
 		Expression::MemoryGrow(memory_grow.into())

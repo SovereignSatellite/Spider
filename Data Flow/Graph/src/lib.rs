@@ -127,11 +127,11 @@ impl DataFlowGraph {
 		region_out
 	}
 
-	pub fn add_gamma_in(&mut self, condition: Link, arguments: Vec<Link>) -> u32 {
+	pub fn add_gamma_in(&mut self, arguments: Vec<Link>, condition: Link) -> u32 {
 		self.add_node(Node::GammaIn(GammaIn {
 			output: u32::MAX,
-			condition,
 			arguments,
+			condition,
 		}))
 	}
 
@@ -167,11 +167,11 @@ impl DataFlowGraph {
 	/// # Panics
 	///
 	/// Panics if `input` is not a [`ThetaIn`] reference.
-	pub fn add_theta_out(&mut self, input: u32, condition: Link, results: Vec<Link>) -> u32 {
+	pub fn add_theta_out(&mut self, input: u32, results: Vec<Link>, condition: Link) -> u32 {
 		let theta_out = self.add_node(Node::ThetaOut(ThetaOut {
 			input,
-			condition,
 			results,
+			condition,
 		}));
 
 		let ThetaIn { output, .. } = self.get_mut(input).as_mut_theta_in().unwrap();

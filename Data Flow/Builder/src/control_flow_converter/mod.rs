@@ -45,7 +45,7 @@ impl ControlFlowConverter {
 		let results = self.basic_block_converter.get_active_bindings(locals);
 
 		let theta_in = self.region_stack.pop();
-		let theta_out = graph.add_theta_out(theta_in, condition, results);
+		let theta_out = graph.add_theta_out(theta_in, results, condition);
 
 		self.basic_block_converter
 			.set_active_bindings(theta_out, locals);
@@ -56,7 +56,7 @@ impl ControlFlowConverter {
 			.basic_block_converter
 			.get_active_bindings(&self.successors);
 
-		let gamma_in = graph.add_gamma_in(condition, arguments);
+		let gamma_in = graph.add_gamma_in(arguments, condition);
 
 		self.region_stack.push_gamma();
 		self.region_stack.push(gamma_in);

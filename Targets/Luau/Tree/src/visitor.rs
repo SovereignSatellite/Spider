@@ -12,7 +12,7 @@ use crate::{
 		TableSize,
 	},
 	statement::{
-		Assign, Call as StatementCall, DataDrop, ElementsDrop, Export, FastDefine, GlobalSet,
+		Assign, Call as StatementCall, DataDrop, ElementsDrop, Export, GlobalSet,
 		Match as StatementMatch, MemoryCopy, MemoryFill, MemoryInit, MemoryStore, Repeat, Sequence,
 		Statement, TableCopy, TableFill, TableInit, TableSet,
 	},
@@ -30,6 +30,8 @@ impl Function {
 	fn accept<T: Visitor>(&self, visitor: &mut T) -> ControlFlow<T::Output> {
 		let Self {
 			arguments: _,
+			locals: _,
+			stack: _,
 			code,
 			returns: _,
 		} = self;
@@ -40,9 +42,15 @@ impl Function {
 
 impl Scoped {
 	fn accept<T: Visitor>(&self, visitor: &mut T) -> ControlFlow<T::Output> {
-		let Self { locals, function } = self;
+		let Self {
+			dependencies,
+			function,
+		} = self;
 
-		locals.iter().try_for_each(|local| local.accept(visitor))?;
+		dependencies
+			.iter()
+			.try_for_each(|dependency| dependency.1.accept(visitor))?;
+
 		function.accept(visitor)
 	}
 }
@@ -456,28 +464,19 @@ impl StatementMatch {
 
 impl Repeat {
 	fn accept<T: Visitor>(&self, visitor: &mut T) -> ControlFlow<T::Output> {
-		let Self {
-			code,
-			post: _,
-			condition,
-		} = self;
+		let Self { code, condition } = self;
 
 		code.accept(visitor)?;
 		condition.accept(visitor)
 	}
 }
 
-impl FastDefine {
-	fn accept<T: Visitor>(&self, visitor: &mut T) -> ControlFlow<T::Output> {
-		let Self { name: _, source } = self;
-
-		source.accept(visitor)
-	}
-}
-
 impl Assign {
 	fn accept<T: Visitor>(&self, visitor: &mut T) -> ControlFlow<T::Output> {
-		let Self { local: _, source } = self;
+		let Self {
+			destination: _,
+			source,
+		} = self;
 
 		source.accept(visitor)
 	}
@@ -640,11 +639,10 @@ impl Statement {
 		visitor.visit_statement(self)?;
 
 		match self {
-			Self::SlowDefine(_) | Self::AssignAll(_) => ControlFlow::Continue(()),
+			Self::AssignAll(_) => ControlFlow::Continue(()),
 
 			Self::Match(r#match) => r#match.accept(visitor),
 			Self::Repeat(repeat) => repeat.accept(visitor),
-			Self::FastDefine(fast_define) => fast_define.accept(visitor),
 			Self::Assign(assign) => assign.accept(visitor),
 			Self::Call(call) => call.accept(visitor),
 			Self::GlobalSet(global_set) => global_set.accept(visitor),
@@ -677,6 +675,8 @@ impl LuauTree {
 	pub fn accept<T: Visitor>(&self, visitor: &mut T) -> ControlFlow<T::Output> {
 		let Self {
 			environment: _,
+			locals: _,
+			stack: _,
 			code,
 			exports,
 		} = self;

@@ -1,212 +1,180 @@
+use core::ops::Range;
+
 use alloc::vec::Vec;
-use data_flow_graph::{
-	DataFlowGraph, Link, Node,
-	nested::{
-		GammaIn, GammaOut, LambdaIn, LambdaOut, OmegaOut, RegionIn, RegionOut, ThetaIn, ThetaOut,
-	},
-};
+use data_flow_graph::{DataFlowGraph, Link};
 use hashbrown::HashMap;
+use luau_tree::expression::Local;
 
-use crate::{
-	place::{Place, Table},
-	reference_finder::{ReferenceFinder, result_count_of},
+use self::{
+	argument_finder::{ArgumentFinder, get_region_range},
+	local_provider::LocalProvider,
+	scalar_finder::ScalarFinder,
 };
 
-use self::{lifetime_finder::LifetimeFinder, local_provider::LocalProvider};
-
-mod lifetime_finder;
-mod local_finder;
+mod argument_finder;
+mod index_provider;
 mod local_provider;
+mod reference_finder;
+mod scalar_finder;
 
-// FIXME: This needs to be rewritten to be a backwards pass instead.
+pub struct Declarations {
+	pub locals: Range<u32>,
+	pub stack: u16,
+}
+
 pub struct LocalAllocator {
-	locals: Vec<u32>,
+	preferences: HashMap<Link, Link>,
+	functions: Vec<Range<u32>>,
+	arguments: Vec<(Link, Link)>,
 
-	finder: LifetimeFinder,
 	provider: LocalProvider,
+	scalar_finder: ScalarFinder,
+	argument_finder: ArgumentFinder,
 }
 
 impl LocalAllocator {
 	pub fn new() -> Self {
 		Self {
-			locals: Vec::new(),
+			preferences: HashMap::new(),
+			functions: Vec::new(),
+			arguments: Vec::new(),
 
-			finder: LifetimeFinder::new(),
 			provider: LocalProvider::new(),
+			scalar_finder: ScalarFinder::new(),
+			argument_finder: ArgumentFinder::new(),
 		}
 	}
 
-	fn handle_operation(&mut self, node: &Node, id: u32, locals: &mut HashMap<Link, Place>) {
-		let results = result_count_of(node);
-
-		if results != 0 && self.locals.binary_search(&id).is_ok() {
-			self.provider.pull_all_into(0..results, id, locals);
-		}
-	}
-
-	fn handle_function_end(&mut self, input: u32, tables: &mut HashMap<u32, Table>) {
-		let Some((name, len)) = self.provider.pop_function_scope() else {
-			return;
-		};
-
-		tables.insert(input, Table { name, len });
-	}
-
-	fn handle_lambda_in(
-		&mut self,
-		id: u32,
-		lambda_in: &LambdaIn,
-		locals: &mut HashMap<Link, Place>,
-	) {
-		self.provider.push_function_scope();
-
-		let dependencies = lambda_in.dependency_ports();
-
-		self.provider.pull_all_into(dependencies, id, locals);
-
-		assert!(
-			self.provider.pop_function_scope().is_none(),
-			"node {id} has too many upvalues"
+	fn find_functions(&mut self, graph: &DataFlowGraph) {
+		self.functions.extend(
+			graph.nodes().rev().filter_map(|node| {
+				get_region_range(graph, node).map(|(start, end)| start..end + 1)
+			}),
 		);
-
-		self.provider.push_function_scope();
-
-		let arguments = lambda_in.argument_ports();
-
-		self.provider.pull_all_into(arguments, id, locals);
 	}
 
-	fn handle_lambda_out(
+	fn handle_arguments(
 		&mut self,
+		assignments: &mut HashMap<Link, Local>,
+		graph: &DataFlowGraph,
 		id: u32,
-		lambda_out: &LambdaOut,
-		tables: &mut HashMap<u32, Table>,
-		locals: &mut HashMap<Link, Place>,
 	) {
-		let LambdaOut { input, .. } = *lambda_out;
+		let mut arguments = core::mem::take(&mut self.arguments);
 
-		self.handle_function_end(input, tables);
+		self.argument_finder
+			.run(&mut arguments, &self.preferences, graph, id);
 
-		if self.locals.binary_search(&id).is_ok() {
-			self.provider.pull_all_into(0..1, id, locals);
+		// In the first pass we ensure all producers outside the list
+		// have their variables reused.
+		arguments.retain(|&(argument, preferred)| {
+			argument == preferred
+				|| !self
+					.provider
+					.try_revive_into(assignments, argument, preferred)
+		});
+
+		arguments.sort_unstable();
+
+		// In the second pass we assign new variables where needed and
+		// reuse producers within the list.
+		for &(argument, preferred) in arguments.iter().rev() {
+			if self
+				.provider
+				.try_revive_into(assignments, argument, preferred)
+			{
+				continue;
+			}
+
+			self.provider.try_pull_into(assignments, argument);
 		}
+
+		self.arguments = arguments;
 	}
 
-	fn handle_region_in(
-		&mut self,
-		graph: &DataFlowGraph,
-		id: u32,
-		region_in: &RegionIn,
-		locals: &mut HashMap<Link, Place>,
-	) {
-		let GammaIn { arguments, .. } = graph.get(region_in.input).as_gamma_in().unwrap();
-
-		self.provider.try_revive_all_into(arguments, id, locals);
-		self.provider.push_local_scope();
-	}
-
-	fn handle_region_out(&mut self) {
-		self.provider.pop_local_scope();
-	}
-
-	fn handle_gamma_in(&mut self) {
-		self.provider.push_local_scope();
-	}
-
-	fn handle_gamma_out(
-		&mut self,
-		graph: &DataFlowGraph,
-		id: u32,
-		gamma_out: &GammaOut,
-		locals: &mut HashMap<Link, Place>,
-	) {
-		let GammaOut { regions, .. } = gamma_out;
-		let RegionOut { results, .. } = graph.get(regions[0]).as_region_out().unwrap();
-
-		self.provider.pop_local_scope();
-		self.provider.revive_all_into(results, id, locals);
-	}
-
-	fn handle_theta_in(&mut self, id: u32, theta_in: &ThetaIn, locals: &mut HashMap<Link, Place>) {
-		let ThetaIn { arguments, .. } = theta_in;
-
-		self.provider.try_revive_all_into(arguments, id, locals);
-		self.provider.push_local_scope();
-	}
-
-	fn handle_theta_out(
-		&mut self,
-		id: u32,
-		theta_out: &ThetaOut,
-		locals: &mut HashMap<Link, Place>,
-	) {
-		let ThetaOut { results, .. } = theta_out;
-
-		self.provider.pop_local_scope();
-		self.provider.revive_all_into(results, id, locals);
-	}
-
-	fn handle_omega_in(&mut self, id: u32, locals: &mut HashMap<Link, Place>) {
-		self.provider.push_function_scope();
-		self.provider.pull_all_into(0..1, id, locals);
-	}
-
-	fn handle_omega_out(&mut self, omega_out: &OmegaOut, tables: &mut HashMap<u32, Table>) {
-		let OmegaOut { input, .. } = *omega_out;
-
-		self.handle_function_end(input, tables);
+	fn handle_definitions(&mut self, assignments: &mut HashMap<Link, Local>, id: u32) {
+		// We might have some locals that require assignment but have no uses, which means we must
+		// manually declare them with an empty lifetime.
+		for link in (0..)
+			.map(|port| Link(id, port))
+			.take_while(|link| self.preferences.contains_key(link))
+		{
+			self.provider.try_pull_into(assignments, link);
+		}
 	}
 
 	fn handle_node(
 		&mut self,
+		assignments: &mut HashMap<Link, Local>,
 		graph: &DataFlowGraph,
 		id: u32,
-		node: &Node,
-		tables: &mut HashMap<u32, Table>,
-		locals: &mut HashMap<Link, Place>,
-	) {
-		match node {
-			Node::LambdaIn(lambda_in) => self.handle_lambda_in(id, lambda_in, locals),
-			Node::LambdaOut(lambda_out) => self.handle_lambda_out(id, lambda_out, tables, locals),
-			Node::RegionIn(region_in) => self.handle_region_in(graph, id, region_in, locals),
-			Node::RegionOut(_) => self.handle_region_out(),
-			Node::GammaIn(_) => self.handle_gamma_in(),
-			Node::GammaOut(gamma_out) => self.handle_gamma_out(graph, id, gamma_out, locals),
-			Node::ThetaIn(theta_in) => self.handle_theta_in(id, theta_in, locals),
-			Node::ThetaOut(theta_out) => self.handle_theta_out(id, theta_out, locals),
-			Node::OmegaIn(_) => self.handle_omega_in(id, locals),
-			Node::OmegaOut(omega_out) => self.handle_omega_out(omega_out, tables),
+	) -> u32 {
+		let (start, end) = get_region_range(graph, graph.get(id)).unwrap_or((id, id));
 
-			node => self.handle_operation(node, id, locals),
+		self.handle_definitions(assignments, end);
+
+		self.provider.push_until(start);
+
+		self.handle_arguments(assignments, graph, start);
+
+		start
+	}
+
+	fn handle_scope(
+		&mut self,
+		assignments: &mut HashMap<Link, Local>,
+		graph: &DataFlowGraph,
+		mut range: Range<u32>,
+	) {
+		self.handle_definitions(assignments, range.start);
+		self.handle_arguments(assignments, graph, range.next_back().unwrap());
+
+		while let Some(id) = range.next_back() {
+			range.end = self.handle_node(assignments, graph, id);
+		}
+	}
+
+	fn handle_function(
+		&mut self,
+		assignments: &mut HashMap<Link, Local>,
+		graph: &DataFlowGraph,
+		range: Range<u32>,
+	) -> Declarations {
+		let (first, _) = self.provider.get_names();
+
+		self.handle_scope(assignments, graph, range);
+
+		let (last, table) = self.provider.get_names();
+
+		self.provider.refresh();
+
+		Declarations {
+			locals: first..last,
+			stack: table.try_into().unwrap(),
 		}
 	}
 
 	pub fn run(
 		&mut self,
-		tables: &mut HashMap<u32, Table>,
-		locals: &mut HashMap<Link, Place>,
+		declarations: &mut HashMap<u32, Declarations>,
+		assignments: &mut HashMap<Link, Local>,
 		graph: &DataFlowGraph,
-		reference_finder: &ReferenceFinder,
 	) {
-		local_finder::run(&mut self.locals, graph, reference_finder);
+		self.preferences.clear();
+		self.provider.clear();
+		self.argument_finder.clear();
 
-		self.finder
-			.run(self.provider.lifetimes_mut(), graph, &self.locals);
+		reference_finder::run(&mut self.preferences, graph);
+		self.scalar_finder.run(&mut self.preferences, graph);
 
-		self.provider.push_function_scope();
+		self.find_functions(graph);
 
-		tables.clear();
-		locals.clear();
+		declarations.clear();
+		assignments.clear();
 
-		for (node, id) in graph.nodes().zip(0..) {
-			self.provider.push_until(id);
+		while let Some(range) = self.functions.pop() {
+			let declaration = self.handle_function(assignments, graph, range.clone());
 
-			self.handle_node(graph, id, node, tables, locals);
+			declarations.insert(range.start, declaration);
 		}
-
-		assert!(
-			self.provider.pop_function_scope().is_none(),
-			"top level scope has too many locals"
-		);
 	}
 }

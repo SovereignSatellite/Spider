@@ -6,16 +6,18 @@ pub use data_flow_graph::mvp::{
 	NumberType, NumberUnaryOperator,
 };
 
-use crate::statement::{FastDefine, Sequence};
+use crate::statement::Sequence;
 
 pub struct Function {
 	pub arguments: Vec<Name>,
+	pub locals: Vec<Name>,
+	pub stack: u16,
 	pub code: Sequence,
 	pub returns: Vec<Local>,
 }
 
 pub struct Scoped {
-	pub locals: Vec<FastDefine>,
+	pub dependencies: Vec<(Name, Expression)>,
 	pub function: Function,
 }
 
@@ -38,7 +40,18 @@ pub struct Name {
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
 pub enum Local {
 	Fast { name: Name },
-	Slow { table: Name, index: u16 },
+	Slow { offset: u16 },
+}
+
+impl Local {
+	#[must_use]
+	pub const fn into_name(self) -> Name {
+		if let Self::Fast { name } = self {
+			name
+		} else {
+			panic!("`Local` did not have a name")
+		}
+	}
 }
 
 pub struct Call {
@@ -240,4 +253,15 @@ pub enum Expression {
 	MemoryGrow(Box<MemoryGrow>),
 
 	DataNew(DataNew),
+}
+
+impl Expression {
+	#[must_use]
+	pub const fn into_local(&self) -> Local {
+		if let Self::Local(local) = *self {
+			local
+		} else {
+			panic!("`Expression` was did not have a local")
+		}
+	}
 }

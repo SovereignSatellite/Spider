@@ -33,23 +33,15 @@ fn replace_with_identity(graph: &mut DataFlowGraph, from: &mut Link) {
 	*from = identity;
 }
 
-fn replace_if_producer(graph: &mut DataFlowGraph, from: &mut Link, producer: u32) {
-	if from.0 != producer {
-		return;
-	}
-
-	replace_with_identity(graph, from);
-}
-
 // NOTE: We insert at...
-// `RegionOut` arguments if they reference the start, since we need to issue the correct move order.
+// `RegionOut` arguments, since we need to issue the correct move order.
 // `ThetaIn` arguments always, since they are mutable and must produce new locals.
-// `ThetaOut` arguments and condition if they reference the start, since we need to issue the correct move order.
+// `ThetaOut` arguments and condition, since we need to issue the correct move order.
 fn insert_at(graph: &mut DataFlowGraph, node: &mut Node) {
 	match node {
-		Node::RegionOut(RegionOut { input, results, .. }) => {
+		Node::RegionOut(RegionOut { results, .. }) => {
 			for result in results {
-				replace_if_producer(graph, result, *input);
+				replace_with_identity(graph, result);
 			}
 		}
 		Node::ThetaIn(ThetaIn { arguments, .. }) => {
@@ -58,7 +50,7 @@ fn insert_at(graph: &mut DataFlowGraph, node: &mut Node) {
 			}
 		}
 		Node::ThetaOut(ThetaOut {
-			condition, results, ..
+			results, condition, ..
 		}) => {
 			replace_with_identity(graph, condition);
 

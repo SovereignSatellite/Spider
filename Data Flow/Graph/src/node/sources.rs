@@ -300,47 +300,51 @@ impl GammaIn {
 	fn for_each_id<H: FnMut(u32)>(&self, mut handler: H) {
 		let Self {
 			output,
-			condition,
 			arguments,
+			condition,
 		} = self;
 
 		handler(*output);
+		for_each_link_list(arguments, &mut handler);
+
 		handler(condition.0);
-		for_each_link_list(arguments, handler);
 	}
 
 	fn for_each_mut_id<H: FnMut(&mut u32)>(&mut self, mut handler: H) {
 		let Self {
 			output,
-			condition,
 			arguments,
+			condition,
 		} = self;
 
 		handler(output);
+		for_each_mut_link_list(arguments, &mut handler);
+
 		handler(&mut condition.0);
-		for_each_mut_link_list(arguments, handler);
 	}
 
 	fn for_each_argument<H: FnMut(Link)>(&self, mut handler: H) {
 		let Self {
 			output: _,
-			condition,
 			arguments,
+			condition,
 		} = self;
 
+		arguments.iter().copied().for_each(&mut handler);
+
 		handler(*condition);
-		arguments.iter().copied().for_each(handler);
 	}
 
 	fn for_each_mut_argument<H: FnMut(&mut Link)>(&mut self, mut handler: H) {
 		let Self {
 			output: _,
-			condition,
 			arguments,
+			condition,
 		} = self;
 
+		arguments.iter_mut().for_each(&mut handler);
+
 		handler(condition);
-		arguments.iter_mut().for_each(handler);
 	}
 }
 
@@ -434,8 +438,8 @@ impl ThetaOut {
 	fn for_each_requirement<H: FnMut(u32)>(&self, mut handler: H) {
 		let Self {
 			input,
-			condition: _,
 			results: _,
+			condition: _,
 		} = self;
 
 		handler(*input);
@@ -444,47 +448,51 @@ impl ThetaOut {
 	fn for_each_id<H: FnMut(u32)>(&self, mut handler: H) {
 		let Self {
 			input,
-			condition,
 			results,
+			condition,
 		} = self;
 
 		handler(*input);
+		for_each_link_list(results, &mut handler);
+
 		handler(condition.0);
-		for_each_link_list(results, handler);
 	}
 
 	fn for_each_mut_id<H: FnMut(&mut u32)>(&mut self, mut handler: H) {
 		let Self {
 			input,
-			condition,
 			results,
+			condition,
 		} = self;
 
 		handler(input);
+		for_each_mut_link_list(results, &mut handler);
+
 		handler(&mut condition.0);
-		for_each_mut_link_list(results, handler);
 	}
 
 	fn for_each_argument<H: FnMut(Link)>(&self, mut handler: H) {
 		let Self {
 			input: _,
-			condition,
 			results,
+			condition,
 		} = self;
 
+		results.iter().copied().for_each(&mut handler);
+
 		handler(*condition);
-		results.iter().copied().for_each(handler);
 	}
 
 	fn for_each_mut_argument<H: FnMut(&mut Link)>(&mut self, mut handler: H) {
 		let Self {
 			input: _,
-			condition,
 			results,
+			condition,
 		} = self;
 
+		results.iter_mut().for_each(&mut handler);
+
 		handler(condition);
-		results.iter_mut().for_each(handler);
 	}
 }
 

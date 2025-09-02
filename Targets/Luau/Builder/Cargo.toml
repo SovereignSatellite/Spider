@@ -6,7 +6,7 @@ edition = "2024"
 [dependencies]
 data-flow-graph = { path = "../../../Data Flow/Graph" }
 data-flow-builder = { path = "../../../Data Flow/Builder" }
-data-flow-visitor = { path = "../../../Data Flow/Visitor" }
 luau-tree = { path = "../Tree" }
 
 hashbrown.workspace = true
+set.workspace = true
