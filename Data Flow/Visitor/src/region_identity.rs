@@ -1,10 +1,10 @@
 use data_flow_graph::{
+	DataFlowGraph, Link, Node,
 	mvp::Identity,
 	nested::{RegionOut, ThetaIn, ThetaOut},
-	DataFlowGraph, Link, Node,
 };
 
-fn replace_with_producer(graph: &mut DataFlowGraph, from: &mut Link) {
+fn replace_with_producer(graph: &DataFlowGraph, from: &mut Link) {
 	let Node::Identity(Identity { source }) = *graph.get(from.0) else {
 		return;
 	};

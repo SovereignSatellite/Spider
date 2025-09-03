@@ -10,6 +10,7 @@ pub struct Printer {
 }
 
 impl Printer {
+	#[must_use]
 	pub fn new() -> Self {
 		Self {
 			references: Vec::new(),
@@ -44,5 +45,11 @@ impl Printer {
 
 			writeln!(out, "{contents}\n")
 		})
+	}
+}
+
+impl Default for Printer {
+	fn default() -> Self {
+		Self::new()
 	}
 }

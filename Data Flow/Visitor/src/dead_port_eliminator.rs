@@ -1,6 +1,6 @@
 use data_flow_graph::{
-	nested::{GammaIn, GammaOut, LambdaIn, LambdaOut, RegionIn, RegionOut, ThetaIn, ThetaOut},
 	DataFlowGraph, Link, Node,
+	nested::{GammaIn, GammaOut, LambdaIn, LambdaOut, RegionIn, RegionOut, ThetaIn, ThetaOut},
 };
 use hashbrown::HashMap;
 use set::Set;

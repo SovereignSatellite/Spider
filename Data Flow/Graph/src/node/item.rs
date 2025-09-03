@@ -113,7 +113,7 @@ macro_rules! as_ref_inner {
 macro_rules! as_mut_inner {
 	($inner:ident, $name:ident) => {
 		#[must_use]
-		pub fn $name(&mut self) -> Option<&mut $inner> {
+		pub const fn $name(&mut self) -> Option<&mut $inner> {
 			if let Self::$inner(node) = self {
 				Some(node)
 			} else {

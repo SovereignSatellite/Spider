@@ -10,7 +10,7 @@ use std::{
 };
 
 use hashbrown::HashMap;
-use luau_tree::{expression::Name, LuauTree};
+use luau_tree::{LuauTree, expression::Name};
 
 use self::print::Print;
 
@@ -36,11 +36,11 @@ impl LuauPrinter {
 		self.names.get(&name).map(Arc::as_ref)
 	}
 
-	pub fn indent(&mut self) {
+	pub const fn indent(&mut self) {
 		self.depth = self.depth.wrapping_add(1);
 	}
 
-	pub fn outdent(&mut self) {
+	pub const fn outdent(&mut self) {
 		self.depth = self.depth.wrapping_sub(1);
 	}
 

@@ -1,11 +1,11 @@
 use alloc::vec::Vec;
 use data_flow_graph::{
+	DataFlowGraph, Link, Node,
 	mvp::{
 		Call, GlobalGet, GlobalSet, MemoryCopy, MemoryFill, MemoryGrow, MemoryInit, MemoryLoad,
 		MemorySize, MemoryStore, TableCopy, TableFill, TableGet, TableGrow, TableInit, TableSet,
 		TableSize,
 	},
-	DataFlowGraph, Link, Node,
 };
 use hashbrown::HashMap;
 

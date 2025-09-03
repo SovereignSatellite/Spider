@@ -10,7 +10,7 @@ use luau_tree::expression::{
 	NumberUnaryOperator, NumberWiden, RefIsNull, Scoped, TableGet, TableGrow, TableNew, TableSize,
 };
 
-use crate::{library::NeedsName, print::Print, LuauPrinter};
+use crate::{LuauPrinter, library::NeedsName, print::Print};
 
 pub fn fmt_delimited<T, I>(items: I, printer: &mut LuauPrinter, out: &mut dyn Write) -> Result<()>
 where

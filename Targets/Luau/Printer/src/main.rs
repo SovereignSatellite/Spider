@@ -9,8 +9,8 @@ use data_flow_visitor::{
 };
 use luau_builder::LuauBuilder;
 use luau_printer::{
-	library::{LibraryPrinter, LibrarySections, NamesFinder},
 	LuauPrinter,
+	library::{LibraryPrinter, LibrarySections, NamesFinder},
 };
 use luau_tree::LuauTree;
 use wasmparser::Validator;
@@ -58,7 +58,7 @@ fn build_data_flow_graph(data: &[u8], optimize: bool) -> DataFlowGraph {
 	let mut graph = DataFlowGraph::new();
 	let mut builder = DataFlowBuilder::new();
 
-	let omega = builder.run(&mut graph, &data);
+	let omega = builder.run(&mut graph, data);
 	let omega = if optimize {
 		run_optimizations(&mut graph, omega)
 	} else {
@@ -77,7 +77,7 @@ fn build_luau_tree(graph: &DataFlowGraph) -> LuauTree {
 }
 
 fn lock_standard_output() -> BufWriter<StdoutLock<'static>> {
-	const DEFAULT_BUF_SIZE: usize = 1024 * 1024 * 1;
+	const DEFAULT_BUF_SIZE: usize = 1024 * 1024;
 
 	BufWriter::with_capacity(DEFAULT_BUF_SIZE, std::io::stdout().lock())
 }

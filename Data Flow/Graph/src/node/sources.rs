@@ -233,7 +233,7 @@ impl RegionIn {
 }
 
 impl RegionOut {
-	fn ports_output(&self) -> usize {
+	const fn ports_output(&self) -> usize {
 		self.results.len()
 	}
 
@@ -293,7 +293,7 @@ impl RegionOut {
 }
 
 impl GammaIn {
-	fn ports_output(&self) -> usize {
+	const fn ports_output(&self) -> usize {
 		self.arguments.len()
 	}
 
@@ -389,7 +389,7 @@ impl GammaOut {
 }
 
 impl ThetaIn {
-	fn ports_output(&self) -> usize {
+	const fn ports_output(&self) -> usize {
 		self.arguments.len()
 	}
 
@@ -427,7 +427,7 @@ impl ThetaIn {
 }
 
 impl ThetaOut {
-	fn ports_output(&self) -> usize {
+	const fn ports_output(&self) -> usize {
 		self.results.len()
 	}
 
@@ -2296,7 +2296,7 @@ impl Node {
 	}
 
 	#[must_use]
-	pub fn as_mut_ports(&mut self) -> Option<&mut Vec<Link>> {
+	pub const fn as_mut_ports(&mut self) -> Option<&mut Vec<Link>> {
 		let ports = match self {
 			Self::LambdaIn(lambda_in) => &mut lambda_in.dependencies,
 			Self::LambdaOut(lambda_out) => &mut lambda_out.results,

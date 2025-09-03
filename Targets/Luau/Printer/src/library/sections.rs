@@ -76,6 +76,7 @@ impl Sections {
 	pub const TABLE_SOURCE: &str = include_str!("../../runtime/table.luau");
 	pub const MEMORY_SOURCE: &str = include_str!("../../runtime/memory.luau");
 
+	#[must_use]
 	pub fn with_built_ins() -> Self {
 		let mut sections = Self { list: Vec::new() };
 
@@ -108,7 +109,7 @@ impl Sections {
 			let Section { name: lhs, .. } = window[0];
 			let Section { name: rhs, .. } = window[1];
 
-			assert_ne!(lhs, rhs, "`{lhs}` section was duplicated")
+			assert_ne!(lhs, rhs, "`{lhs}` section was duplicated");
 		}
 	}
 

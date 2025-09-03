@@ -1,7 +1,7 @@
 [package]
 name = "control-flow-graph"
 version = "1.0.0"
-edition = "2021"
+edition = "2024"
 
 [dependencies]
 list.workspace = true

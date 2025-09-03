@@ -1,6 +1,7 @@
 use std::ops::ControlFlow;
 
 use luau_tree::{
+	LuauTree,
 	expression::{
 		DataNew, ElementsNew, Expression, ExtendType, GlobalGet, GlobalNew, IntegerBinaryOperation,
 		IntegerBinaryOperator, IntegerCompareOperation, IntegerCompareOperator,
@@ -16,7 +17,6 @@ use luau_tree::{
 		Statement, StoreType, TableCopy, TableFill, TableInit, TableSet,
 	},
 	visitor::Visitor,
-	LuauTree,
 };
 
 pub trait NeedsName {
@@ -467,68 +467,68 @@ impl NeedsName for DataNew {
 impl NeedsName for Expression {
 	fn needs_name(&self) -> &'static str {
 		match self {
-			Expression::Function(_)
-			| Expression::Scoped(_)
-			| Expression::Match(_)
-			| Expression::Import(_)
-			| Expression::Trap
-			| Expression::Null
-			| Expression::Local(_)
-			| Expression::Call(_)
-			| Expression::RefIsNull(_) => "",
+			Self::Function(_)
+			| Self::Scoped(_)
+			| Self::Match(_)
+			| Self::Import(_)
+			| Self::Trap
+			| Self::Null
+			| Self::Local(_)
+			| Self::Call(_)
+			| Self::RefIsNull(_) => "",
 
-			Expression::I32(i32) => i32.needs_name(),
-			Expression::I64(i64) => i64.needs_name(),
-			Expression::F32(f32) => f32.needs_name(),
-			Expression::F64(f64) => f64.needs_name(),
+			Self::I32(i32) => i32.needs_name(),
+			Self::I64(i64) => i64.needs_name(),
+			Self::F32(f32) => f32.needs_name(),
+			Self::F64(f64) => f64.needs_name(),
 
-			Expression::IntegerUnaryOperation(integer_unary_operation) => {
+			Self::IntegerUnaryOperation(integer_unary_operation) => {
 				integer_unary_operation.needs_name()
 			}
-			Expression::IntegerBinaryOperation(integer_binary_operation) => {
+			Self::IntegerBinaryOperation(integer_binary_operation) => {
 				integer_binary_operation.needs_name()
 			}
-			Expression::IntegerCompareOperation(integer_compare_operation) => {
+			Self::IntegerCompareOperation(integer_compare_operation) => {
 				integer_compare_operation.needs_name()
 			}
-			Expression::IntegerNarrow(integer_narrow) => integer_narrow.needs_name(),
-			Expression::IntegerWiden(integer_widen) => integer_widen.needs_name(),
-			Expression::IntegerExtend(integer_extend) => integer_extend.needs_name(),
-			Expression::IntegerConvertToNumber(integer_convert_to_number) => {
+			Self::IntegerNarrow(integer_narrow) => integer_narrow.needs_name(),
+			Self::IntegerWiden(integer_widen) => integer_widen.needs_name(),
+			Self::IntegerExtend(integer_extend) => integer_extend.needs_name(),
+			Self::IntegerConvertToNumber(integer_convert_to_number) => {
 				integer_convert_to_number.needs_name()
 			}
-			Expression::IntegerTransmuteToNumber(integer_transmute_to_number) => {
+			Self::IntegerTransmuteToNumber(integer_transmute_to_number) => {
 				integer_transmute_to_number.needs_name()
 			}
-			Expression::NumberUnaryOperation(number_unary_operation) => {
+			Self::NumberUnaryOperation(number_unary_operation) => {
 				number_unary_operation.needs_name()
 			}
-			Expression::NumberBinaryOperation(number_binary_operation) => {
+			Self::NumberBinaryOperation(number_binary_operation) => {
 				number_binary_operation.needs_name()
 			}
-			Expression::NumberCompareOperation(number_compare_operation) => {
+			Self::NumberCompareOperation(number_compare_operation) => {
 				number_compare_operation.needs_name()
 			}
-			Expression::NumberNarrow(number_narrow) => number_narrow.needs_name(),
-			Expression::NumberWiden(number_widen) => number_widen.needs_name(),
-			Expression::NumberTruncateToInteger(number_truncate_to_integer) => {
+			Self::NumberNarrow(number_narrow) => number_narrow.needs_name(),
+			Self::NumberWiden(number_widen) => number_widen.needs_name(),
+			Self::NumberTruncateToInteger(number_truncate_to_integer) => {
 				number_truncate_to_integer.needs_name()
 			}
-			Expression::NumberTransmuteToInteger(number_transmute_to_integer) => {
+			Self::NumberTransmuteToInteger(number_transmute_to_integer) => {
 				number_transmute_to_integer.needs_name()
 			}
-			Expression::GlobalNew(global_new) => global_new.needs_name(),
-			Expression::GlobalGet(global_get) => global_get.needs_name(),
-			Expression::TableNew(table_new) => table_new.needs_name(),
-			Expression::TableGet(table_get) => table_get.needs_name(),
-			Expression::TableSize(table_size) => table_size.needs_name(),
-			Expression::TableGrow(table_grow) => table_grow.needs_name(),
-			Expression::ElementsNew(elements_new) => elements_new.needs_name(),
-			Expression::MemoryNew(memory_new) => memory_new.needs_name(),
-			Expression::MemoryLoad(memory_load) => memory_load.needs_name(),
-			Expression::MemorySize(memory_size) => memory_size.needs_name(),
-			Expression::MemoryGrow(memory_grow) => memory_grow.needs_name(),
-			Expression::DataNew(data_new) => data_new.needs_name(),
+			Self::GlobalNew(global_new) => global_new.needs_name(),
+			Self::GlobalGet(global_get) => global_get.needs_name(),
+			Self::TableNew(table_new) => table_new.needs_name(),
+			Self::TableGet(table_get) => table_get.needs_name(),
+			Self::TableSize(table_size) => table_size.needs_name(),
+			Self::TableGrow(table_grow) => table_grow.needs_name(),
+			Self::ElementsNew(elements_new) => elements_new.needs_name(),
+			Self::MemoryNew(memory_new) => memory_new.needs_name(),
+			Self::MemoryLoad(memory_load) => memory_load.needs_name(),
+			Self::MemorySize(memory_size) => memory_size.needs_name(),
+			Self::MemoryGrow(memory_grow) => memory_grow.needs_name(),
+			Self::DataNew(data_new) => data_new.needs_name(),
 		}
 	}
 }
@@ -614,25 +614,25 @@ impl NeedsName for DataDrop {
 impl NeedsName for Statement {
 	fn needs_name(&self) -> &'static str {
 		match self {
-			Statement::Match(_)
-			| Statement::Repeat(_)
-			| Statement::FastDefine(_)
-			| Statement::SlowDefine(_)
-			| Statement::Assign(_)
-			| Statement::AssignAll(_)
-			| Statement::Call(_) => "",
+			Self::Match(_)
+			| Self::Repeat(_)
+			| Self::FastDefine(_)
+			| Self::SlowDefine(_)
+			| Self::Assign(_)
+			| Self::AssignAll(_)
+			| Self::Call(_) => "",
 
-			Statement::GlobalSet(global_set) => global_set.needs_name(),
-			Statement::TableSet(table_set) => table_set.needs_name(),
-			Statement::TableFill(table_fill) => table_fill.needs_name(),
-			Statement::TableCopy(table_copy) => table_copy.needs_name(),
-			Statement::TableInit(table_init) => table_init.needs_name(),
-			Statement::ElementsDrop(elements_drop) => elements_drop.needs_name(),
-			Statement::MemoryStore(memory_store) => memory_store.needs_name(),
-			Statement::MemoryFill(memory_fill) => memory_fill.needs_name(),
-			Statement::MemoryCopy(memory_copy) => memory_copy.needs_name(),
-			Statement::MemoryInit(memory_init) => memory_init.needs_name(),
-			Statement::DataDrop(data_drop) => data_drop.needs_name(),
+			Self::GlobalSet(global_set) => global_set.needs_name(),
+			Self::TableSet(table_set) => table_set.needs_name(),
+			Self::TableFill(table_fill) => table_fill.needs_name(),
+			Self::TableCopy(table_copy) => table_copy.needs_name(),
+			Self::TableInit(table_init) => table_init.needs_name(),
+			Self::ElementsDrop(elements_drop) => elements_drop.needs_name(),
+			Self::MemoryStore(memory_store) => memory_store.needs_name(),
+			Self::MemoryFill(memory_fill) => memory_fill.needs_name(),
+			Self::MemoryCopy(memory_copy) => memory_copy.needs_name(),
+			Self::MemoryInit(memory_init) => memory_init.needs_name(),
+			Self::DataDrop(data_drop) => data_drop.needs_name(),
 		}
 	}
 }

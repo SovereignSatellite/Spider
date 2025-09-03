@@ -1,7 +1,7 @@
 [package]
 name = "conformance"
 version = "1.0.0"
-edition = "2021"
+edition = "2024"
 
 [dev-dependencies]
 data-flow-graph = { path = "../Data Flow/Graph" }

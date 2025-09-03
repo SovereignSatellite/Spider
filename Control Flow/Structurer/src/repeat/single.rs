@@ -1,5 +1,5 @@
 use alloc::vec::Vec;
-use control_flow_graph::{instruction::Name, ControlFlowGraph};
+use control_flow_graph::{ControlFlowGraph, instruction::Name};
 use set::{Set, Slice};
 
 pub struct Single {
@@ -135,14 +135,15 @@ impl Single {
 				.predecessors(exit)
 				.filter(|&id| Self::in_region_acyclic(graph, self.region.as_slice(), id, exit));
 
-			if let Some(escape) = escapes.next() {
-				if repetition == escape && repetitions.next().is_none() && escapes.next().is_none()
-				{
-					let mut edges = graph.successors(repetition);
+			if let Some(escape) = escapes.next()
+				&& repetition == escape
+				&& repetitions.next().is_none()
+				&& escapes.next().is_none()
+			{
+				let mut edges = graph.successors(repetition);
 
-					if edges.next().is_some() && edges.next().is_some() && edges.next().is_none() {
-						return Some(repetition);
-					}
+				if edges.next().is_some() && edges.next().is_some() && edges.next().is_none() {
+					return Some(repetition);
 				}
 			}
 		}

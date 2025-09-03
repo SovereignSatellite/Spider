@@ -1,15 +1,15 @@
 use alloc::vec::Vec;
 use data_flow_graph::{
+	DataFlowGraph, Link, Node,
 	nested::{
 		GammaIn, GammaOut, LambdaIn, LambdaOut, OmegaOut, RegionIn, RegionOut, ThetaIn, ThetaOut,
 	},
-	DataFlowGraph, Link, Node,
 };
 use hashbrown::HashMap;
 
 use crate::{
 	place::{Place, Table},
-	reference_finder::{result_count_of, ReferenceFinder},
+	reference_finder::{ReferenceFinder, result_count_of},
 };
 
 use self::{lifetime_finder::LifetimeFinder, local_provider::LocalProvider};

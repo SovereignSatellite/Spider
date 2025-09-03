@@ -6,8 +6,8 @@ use control_flow_liveness::{
 	references::{self, Reference},
 };
 use data_flow_graph::{
-	nested::{FunctionType, ValueType},
 	DataFlowGraph, Link,
+	nested::{FunctionType, ValueType},
 };
 use list::resizable::Resizable;
 use wasmparser::{BlockType, FunctionBody, LocalsReader, OperatorsReader, ValType};

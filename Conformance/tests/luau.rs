@@ -9,13 +9,13 @@ use std::{
 use datatest_stable::Result;
 use luau_builder::LuauBuilder;
 use luau_printer::{
-	library::{LibraryPrinter, LibrarySections, NamesFinder},
 	LuauPrinter,
+	library::{LibraryPrinter, LibrarySections, NamesFinder},
 };
 use wast::{
-	core::{NanPattern, WastArgCore, WastRetCore},
-	token::{Id, Span, F32, F64},
 	QuoteWat, WastArg, WastExecute, WastInvoke, WastRet, WastThread, Wat,
+	core::{NanPattern, WastArgCore, WastRetCore},
+	token::{F32, F64, Id, Span},
 };
 
 use self::common::{loader::Loader, runner::Runner};
@@ -605,7 +605,10 @@ fn luau(path: &Path) -> Result<()> {
 	let output = load_output_path(path);
 	let test = std::fs::read_to_string(path)?;
 
-	std::env::set_var("RUST_BACKTRACE", "1");
+	// SAFETY: I'm not sure, but it's not a problem in practice.
+	unsafe {
+		std::env::set_var("RUST_BACKTRACE", "1");
+	}
 
 	let mut luau = Luau::new();
 

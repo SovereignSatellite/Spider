@@ -2,8 +2,8 @@ use alloc::vec::Vec;
 use control_flow_graph::ControlFlowGraph;
 use control_flow_liveness::{locals::Locals, references::Reference};
 use data_flow_graph::{
-	nested::{LambdaIn, ValueType},
 	DataFlowGraph, Link,
+	nested::{LambdaIn, ValueType},
 };
 
 use self::{basic_block_converter::BasicBlockConverter, region_stack::RegionStack};

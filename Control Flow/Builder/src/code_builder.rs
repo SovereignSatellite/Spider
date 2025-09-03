@@ -1,5 +1,6 @@
 use alloc::vec::Vec;
 use control_flow_graph::{
+	BasicBlock, ControlFlowGraph,
 	instruction::{
 		Call, DataDrop, ElementsDrop, ExtendType, F32Constant, F64Constant, GlobalGet, GlobalSet,
 		I32Constant, I64Constant, Instruction, IntegerBinaryOperation, IntegerBinaryOperator,
@@ -12,7 +13,6 @@ use control_flow_graph::{
 		NumberUnaryOperation, NumberUnaryOperator, NumberWiden, RefFunction, RefIsNull, RefNull,
 		StoreType, TableCopy, TableFill, TableGet, TableGrow, TableInit, TableSet, TableSize,
 	},
-	BasicBlock, ControlFlowGraph,
 };
 use list::resizable::Resizable;
 

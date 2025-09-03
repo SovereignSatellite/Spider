@@ -1,16 +1,16 @@
 use control_flow_graph::{
+	ControlFlowGraph,
 	instruction::{
 		ExtendType, IntegerBinaryOperator, IntegerCompareOperator, IntegerType,
 		IntegerUnaryOperator, LoadType, Location, NumberBinaryOperator, NumberCompareOperator,
 		NumberType, NumberUnaryOperator, StoreType,
 	},
-	ControlFlowGraph,
 };
 use wasmparser::{BlockType, BrTable, FuncType, Ieee32, Ieee64, MemArg, Operator, OperatorsReader};
 
 use crate::{
 	code_builder::CodeBuilder,
-	stack_builder::{Jump, Level, StackBuilder, LOCAL_BASE, SHARED_LOCAL},
+	stack_builder::{Jump, LOCAL_BASE, Level, SHARED_LOCAL, StackBuilder},
 	types::Types,
 };
 
@@ -136,7 +136,7 @@ impl BasicBlockBuilder {
 			.add_call(destinations, sources, SHARED_LOCAL);
 	}
 
-	fn handle_drop(&mut self) {
+	const fn handle_drop(&mut self) {
 		let _item = self.stack_builder.pull_local();
 	}
 

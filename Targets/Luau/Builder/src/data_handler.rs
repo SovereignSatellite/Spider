@@ -1,5 +1,5 @@
 use alloc::vec::Vec;
-use data_flow_graph::{mvp, nested, Link};
+use data_flow_graph::{Link, mvp, nested};
 use hashbrown::HashMap;
 use luau_tree::{
 	expression::{
@@ -140,15 +140,15 @@ impl DataHandler {
 	) -> Result<Expression, (Expression, Vec<Sequence>)> {
 		let mut locals = branches.iter().map(Sequence::as_assign_destination);
 
-		if let Some(local) = locals.next().flatten() {
-			if locals.all(|other| other == Some(local)) {
-				let expression = Self::load_match_expression(condition, branches);
+		if let Some(local) = locals.next().flatten()
+			&& locals.all(|other| other == Some(local))
+		{
+			let expression = Self::load_match_expression(condition, branches);
 
-				return Ok(expression);
-			}
+			Ok(expression)
+		} else {
+			Err((condition, branches))
 		}
-
-		Err((condition, branches))
 	}
 
 	pub fn load_import(&mut self, import: &nested::Import) -> Expression {

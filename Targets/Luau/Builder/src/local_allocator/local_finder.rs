@@ -1,15 +1,15 @@
 use alloc::vec::Vec;
 use data_flow_graph::{
+	DataFlowGraph, Link, Node,
 	mvp::{
 		Call, DataDrop, ElementsDrop, GlobalGet, GlobalSet, MemoryCopy, MemoryFill, MemoryGrow,
 		MemoryInit, MemoryLoad, MemorySize, MemoryStore, Merge, TableCopy, TableFill, TableGet,
 		TableGrow, TableInit, TableSet, TableSize,
 	},
 	nested::{GammaIn, GammaOut, LambdaOut, RegionOut, ThetaIn, ThetaOut},
-	DataFlowGraph, Link, Node,
 };
 
-use crate::reference_finder::{result_count_of, ReferenceFinder};
+use crate::reference_finder::{ReferenceFinder, result_count_of};
 
 // We localize any predecessors that appear out of order relative
 // to their position in the topological order.

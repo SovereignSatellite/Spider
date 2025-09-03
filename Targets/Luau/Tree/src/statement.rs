@@ -63,7 +63,7 @@ pub struct AssignAll {
 }
 
 impl AssignAll {
-	fn as_assign_destination(&self) -> Option<Local> {
+	const fn as_assign_destination(&self) -> Option<Local> {
 		if let &[(local, _)] = self.assignments.as_slice() {
 			Some(local)
 		} else {

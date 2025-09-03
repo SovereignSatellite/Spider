@@ -1,16 +1,16 @@
 use std::io::{Result, Write};
 
 use luau_tree::{
+	LuauTree,
 	expression::Expression,
 	statement::{
 		Assign, AssignAll, Call, DataDrop, ElementsDrop, Export, FastDefine, GlobalSet, Match,
 		MemoryCopy, MemoryFill, MemoryInit, MemoryStore, Repeat, Sequence, SlowDefine, Statement,
 		TableCopy, TableFill, TableInit, TableSet,
 	},
-	LuauTree,
 };
 
-use crate::{expression::fmt_delimited, library::NeedsName, print::Print, LuauPrinter};
+use crate::{LuauPrinter, expression::fmt_delimited, library::NeedsName, print::Print};
 
 impl Print for Match {
 	fn print(&self, printer: &mut LuauPrinter, out: &mut dyn Write) -> Result<()> {

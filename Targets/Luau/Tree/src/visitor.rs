@@ -1,6 +1,7 @@
 use core::ops::ControlFlow;
 
 use crate::{
+	LuauTree,
 	expression::{
 		Call as ExpressionCall, ElementsNew, Expression, Function, GlobalGet, GlobalNew, Import,
 		IntegerBinaryOperation, IntegerCompareOperation, IntegerConvertToNumber, IntegerExtend,
@@ -15,7 +16,6 @@ use crate::{
 		Match as StatementMatch, MemoryCopy, MemoryFill, MemoryInit, MemoryStore, Repeat, Sequence,
 		Statement, TableCopy, TableFill, TableInit, TableSet,
 	},
-	LuauTree,
 };
 
 pub trait Visitor {

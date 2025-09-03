@@ -3,8 +3,10 @@ use core::fmt::{Display, Formatter, Result};
 use alloc::vec::Vec;
 
 use crate::{
+	DataFlowGraph,
 	nested::Import,
 	node::{
+		Node,
 		mvp::{
 			DataNew, ExtendType, IntegerBinaryOperation, IntegerBinaryOperator,
 			IntegerCompareOperation, IntegerCompareOperator, IntegerExtend, IntegerType,
@@ -12,9 +14,7 @@ use crate::{
 			NumberBinaryOperator, NumberCompareOperation, NumberCompareOperator, NumberType,
 			NumberUnaryOperation, NumberUnaryOperator,
 		},
-		Node,
 	},
-	DataFlowGraph,
 };
 
 #[derive(PartialEq, Eq, Clone, Copy)]

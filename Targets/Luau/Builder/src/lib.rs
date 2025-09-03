@@ -2,6 +2,7 @@
 
 use alloc::vec::Vec;
 use data_flow_graph::{
+	DataFlowGraph, Link, Node,
 	mvp::{
 		Call, DataDrop, DataNew, ElementsDrop, ElementsNew, GlobalGet, GlobalNew, GlobalSet, Host,
 		Identity, IntegerBinaryOperation, IntegerCompareOperation, IntegerConvertToNumber,
@@ -16,13 +17,12 @@ use data_flow_graph::{
 		GammaIn, GammaOut, Import, LambdaIn, LambdaOut, OmegaIn, OmegaOut, RegionOut, ThetaIn,
 		ThetaOut,
 	},
-	DataFlowGraph, Link, Node,
 };
 use hashbrown::HashMap;
 use luau_tree::{
+	LuauTree,
 	expression::{Expression, Local, Name},
 	statement::{AssignAll, Export, FastDefine, Sequence},
-	LuauTree,
 };
 
 use self::{

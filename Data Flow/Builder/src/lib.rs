@@ -5,9 +5,9 @@ extern crate alloc;
 use alloc::vec::Vec;
 use control_flow_builder::Types;
 use data_flow_graph::{
+	DataFlowGraph, Link,
 	mvp::Location,
 	nested::{Export, OmegaIn},
-	DataFlowGraph, Link,
 };
 use wasmparser::{ConstExpr, ElementItems, FunctionBody, RecGroup, SectionLimited, ValType};
 

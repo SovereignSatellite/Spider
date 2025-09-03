@@ -10,7 +10,7 @@ use control_flow_graph::instruction::{
 	TableGet, TableGrow, TableInit, TableSet, TableSize,
 };
 use control_flow_liveness::references::{Reference, ReferenceType};
-use data_flow_graph::{mvp::Location, nested::ValueType, DataFlowGraph, Link};
+use data_flow_graph::{DataFlowGraph, Link, mvp::Location, nested::ValueType};
 
 use super::dependency_map::DependencyMap;
 
@@ -83,7 +83,7 @@ impl BasicBlockConverter {
 		let null = graph.add_null();
 		let count = usize::from(size).saturating_sub(self.locals.len());
 
-		self.locals.extend(core::iter::repeat(null).take(count));
+		self.locals.extend(core::iter::repeat_n(null, count));
 		self.locals[..LOCAL_BASE].fill(null);
 	}
 

@@ -1,5 +1,5 @@
 use alloc::vec::Vec;
-use control_flow_graph::{instruction::Name, ControlFlowGraph};
+use control_flow_graph::{ControlFlowGraph, instruction::Name};
 
 use super::continuation_finder::ContinuationFinder;
 
@@ -44,11 +44,14 @@ impl Single {
 				if graph.has_assignment(id, Name::A) {
 					let mut predecessors = graph.predecessors(id);
 
-					if let Some(id) = predecessors.next() {
-						if predecessors.next().is_none() && graph.has_assignment(id, Name::C) {
-							return Some(id);
-						}
-					}
+					let id = if let Some(id) = predecessors.next()
+						&& predecessors.next().is_none()
+						&& graph.has_assignment(id, Name::C)
+					{
+						id
+					} else {
+						id
+					};
 
 					Some(id)
 				} else {

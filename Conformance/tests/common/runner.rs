@@ -1,9 +1,9 @@
 use datatest_stable::Result;
 use wast::{
+	QuoteWat, Wast, WastDirective, WastExecute, WastInvoke, WastRet, WastThread, Wat,
 	lexer::Lexer,
 	parser::ParseBuffer,
 	token::{Id, Span},
-	QuoteWat, Wast, WastDirective, WastExecute, WastInvoke, WastRet, WastThread, Wat,
 };
 
 pub trait Runner {

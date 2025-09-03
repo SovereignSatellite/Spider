@@ -82,7 +82,7 @@ impl StackBuilder {
 		self.levels.last_mut().unwrap()
 	}
 
-	fn push_locals(&mut self, count: u16) -> (u16, u16) {
+	const fn push_locals(&mut self, count: u16) -> (u16, u16) {
 		let top = self.top;
 
 		self.top = top.wrapping_add(count);
@@ -90,11 +90,11 @@ impl StackBuilder {
 		(top, self.top)
 	}
 
-	pub fn push_local(&mut self) -> u16 {
+	pub const fn push_local(&mut self) -> u16 {
 		self.push_locals(1).0
 	}
 
-	fn pull_locals(&mut self, count: u16) -> (u16, u16) {
+	const fn pull_locals(&mut self, count: u16) -> (u16, u16) {
 		let top = self.top;
 
 		self.top = top.wrapping_sub(count);
@@ -102,7 +102,7 @@ impl StackBuilder {
 		(self.top, top)
 	}
 
-	pub fn pull_local(&mut self) -> u16 {
+	pub const fn pull_local(&mut self) -> u16 {
 		self.pull_locals(1).0
 	}
 
@@ -117,7 +117,7 @@ impl StackBuilder {
 		self.top
 	}
 
-	pub fn set_top(&mut self, top: u16) {
+	pub const fn set_top(&mut self, top: u16) {
 		self.top = top;
 	}
 

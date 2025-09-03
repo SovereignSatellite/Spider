@@ -1,6 +1,6 @@
 use data_flow_graph::{
-	nested::{GammaIn, GammaOut, RegionOut, ThetaIn, ThetaOut},
 	DataFlowGraph, Link, Node,
+	nested::{GammaIn, GammaOut, RegionOut, ThetaIn, ThetaOut},
 };
 use hashbrown::HashMap;
 
@@ -59,12 +59,12 @@ impl FallthroughMover {
 		// Assuming the result of the region is the same value as its argument,
 		// then we can replace it with a direct link.
 		for (port, &result) in results.iter().enumerate() {
-			if let Some(argument) = self.find_argument(result, input, arguments) {
-				if argument == self.get_reference(arguments[port]) {
-					let link = Link(output, port.try_into().unwrap());
+			if let Some(argument) = self.find_argument(result, input, arguments)
+				&& argument == self.get_reference(arguments[port])
+			{
+				let link = Link(output, port.try_into().unwrap());
 
-					self.map.insert(link, argument);
-				}
+				self.map.insert(link, argument);
 			}
 		}
 	}

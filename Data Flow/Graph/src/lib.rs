@@ -29,7 +29,7 @@ use self::node::{
 
 pub use self::{
 	dot::Dot,
-	node::{mvp, nested, Link, Node},
+	node::{Link, Node, mvp, nested},
 };
 
 /// A directed graph of nodes containing operations.
@@ -44,12 +44,12 @@ impl DataFlowGraph {
 	}
 
 	#[must_use]
-	pub fn len(&self) -> usize {
+	pub const fn len(&self) -> usize {
 		self.nodes.len()
 	}
 
 	#[must_use]
-	pub fn is_empty(&self) -> bool {
+	pub const fn is_empty(&self) -> bool {
 		self.nodes.is_empty()
 	}
 
@@ -62,7 +62,7 @@ impl DataFlowGraph {
 		&mut self.nodes[usize::try_from(id).unwrap()]
 	}
 
-	pub fn inner_mut(&mut self) -> &mut Vec<Node> {
+	pub const fn inner_mut(&mut self) -> &mut Vec<Node> {
 		&mut self.nodes
 	}
 

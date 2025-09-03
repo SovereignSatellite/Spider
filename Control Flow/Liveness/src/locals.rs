@@ -1,5 +1,6 @@
 use alloc::vec::Vec;
 use control_flow_graph::{
+	ControlFlowGraph,
 	instruction::{
 		Call, F32Constant, F64Constant, GlobalGet, GlobalSet, I32Constant, I64Constant,
 		Instruction, IntegerBinaryOperation, IntegerCompareOperation, IntegerConvertToNumber,
@@ -10,7 +11,6 @@ use control_flow_graph::{
 		NumberWiden, RefFunction, RefIsNull, RefNull, TableCopy, TableFill, TableGet, TableGrow,
 		TableInit, TableSet, TableSize,
 	},
-	ControlFlowGraph,
 };
 use set::{Set, Slice};
 
