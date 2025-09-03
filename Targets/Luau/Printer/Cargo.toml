@@ -9,9 +9,10 @@ data-flow-builder = { path = "../../../Data Flow/Builder" }
 data-flow-visitor = { path = "../../../Data Flow/Visitor" }
 luau-tree = { path = "../Tree" }
 luau-builder = { path = "../Builder" }
-clap = { version = "4.5.23", features = ["derive"] }
-hashbrown = "0.15.2"
-wasmparser = { version = "0.235.0", default-features = false, features = ["validate"] }
+
+clap.workspace = true
+hashbrown.workspace = true
+wasmparser = { workspace = true, features = ["validate"] }
 
 [[bin]]
 name = "wasm2luau"

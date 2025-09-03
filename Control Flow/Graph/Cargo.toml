@@ -4,4 +4,4 @@ version = "1.0.0"
 edition = "2021"
 
 [dependencies]
-list = { git = "https://github.com/Rerumu/List.git", rev = "57d0ca8" }
+list.workspace = true

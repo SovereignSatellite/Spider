@@ -5,4 +5,5 @@ edition = "2021"
 
 [dependencies]
 control-flow-graph = { path = "../Graph" }
-set = { git = "https://github.com/Rerumu/Set.git", rev = "d10ce45" }
+
+set.workspace = true

@@ -8,4 +8,5 @@ data-flow-graph = { path = "../../../Data Flow/Graph" }
 data-flow-builder = { path = "../../../Data Flow/Builder" }
 data-flow-visitor = { path = "../../../Data Flow/Visitor" }
 luau-tree = { path = "../Tree" }
-hashbrown = "0.15.2"
+
+hashbrown.workspace = true

@@ -1,10 +1,15 @@
 [workspace]
 resolver = "2"
 members = [
-	"Control Flow/*",
-	"Data Flow/*",
+	"Conformance",
 
 	"Targets/Luau/*",
-
-	"Conformance",
 ]
+
+[workspace.dependencies]
+list = { git = "https://github.com/Rerumu/List.git", rev = "57d0ca8" }
+set = { git = "https://github.com/Rerumu/Set.git", rev = "d10ce45" }
+
+clap = { version = "4.5.23", default-features = false, features = ["color", "derive", "error-context", "help", "std", "suggestions", "usage"] }
+hashbrown = { version = "0.16.0", default-features = false, features = ["default-hasher", "equivalent", "inline-more"] }
+wasmparser = { version = "0.235.0", default-features = false }
