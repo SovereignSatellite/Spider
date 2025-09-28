@@ -240,9 +240,9 @@ local function rt_is_zero_i64(source: number): boolean
 		local source_2 = rt_create_u32_from_i64_2(source)
 
 		return source_2 == 0
+	else
+		return false
 	end
-
-	return false
 end
 
 -- SECTION divide_s64
@@ -252,7 +252,7 @@ end
 -- NEEDS is_positive
 -- NEEDS negate_i64
 local function rt_divide_s64(lhs: number, rhs: number): number
-	if rt_equal_i64(lhs, MINIMUM_S64) == 1 and rt_equal_i64(rhs, ALL_U64) == 1 then
+	if rt_equal_i64(lhs, MINIMUM_S64) and rt_equal_i64(rhs, ALL_U64) then
 		error("integer overflow", 2)
 	end
 
@@ -311,7 +311,7 @@ local function rt_divide_u64(lhs: number, rhs: number): (number, number)
 		local offset = rt_create_i64_from_u32(offset, 0)
 		local divisor = rt_shift_left_i64(rhs, offset)
 
-		if rt_greater_than_equal_u64(remainder, divisor) == 1 then
+		if rt_greater_than_equal_u64(remainder, divisor) then
 			remainder = rt_subtract_i64(remainder, divisor)
 			quotient = rt_or_i64(quotient, rt_shift_left_i64(ONE_U64, offset))
 		end
@@ -499,20 +499,20 @@ end
 
 -- SECTION equal_i64
 -- NEEDS create_u32_from_i64
-local function rt_equal_i64(lhs: number, rhs: number): number
+local function rt_equal_i64(lhs: number, rhs: number): boolean
 	local lhs_1, lhs_2 = rt_create_u32_from_i64(lhs)
 	local rhs_1, rhs_2 = rt_create_u32_from_i64(rhs)
 
-	return if lhs_1 == rhs_1 and lhs_2 == rhs_2 then 1 else 0
+	return lhs_1 == rhs_1 and lhs_2 == rhs_2
 end
 
 -- SECTION not_equal_i64
 -- NEEDS create_u32_from_i64
-local function rt_not_equal_i64(lhs: number, rhs: number): number
+local function rt_not_equal_i64(lhs: number, rhs: number): boolean
 	local lhs_1, lhs_2 = rt_create_u32_from_i64(lhs)
 	local rhs_1, rhs_2 = rt_create_u32_from_i64(rhs)
 
-	return if lhs_1 == rhs_1 and lhs_2 == rhs_2 then 0 else 1
+	return lhs_1 ~= rhs_1 or lhs_2 ~= rhs_2
 end
 
 -- SECTION flip_sign_bit_i64
@@ -529,7 +529,7 @@ end
 -- SECTION less_than_s64
 -- NEEDS flip_sign_bit_i64
 -- NEEDS less_than_u64
-local function rt_less_than_s64(lhs: number, rhs: number): number
+local function rt_less_than_s64(lhs: number, rhs: number): boolean
 	local lhs = rt_flip_sign_bit_i64(lhs)
 	local rhs = rt_flip_sign_bit_i64(rhs)
 
@@ -538,17 +538,17 @@ end
 
 -- SECTION less_than_u64
 -- NEEDS create_u32_from_i64
-local function rt_less_than_u64(lhs: number, rhs: number): number
+local function rt_less_than_u64(lhs: number, rhs: number): boolean
 	local lhs_1, lhs_2 = rt_create_u32_from_i64(lhs)
 	local rhs_1, rhs_2 = rt_create_u32_from_i64(rhs)
 
-	return if lhs_2 < rhs_2 or (lhs_2 == rhs_2 and lhs_1 < rhs_1) then 1 else 0
+	return lhs_2 < rhs_2 or (lhs_2 == rhs_2 and lhs_1 < rhs_1)
 end
 
 -- SECTION greater_than_s64
 -- NEEDS flip_sign_bit_i64
 -- NEEDS greater_than_u64
-local function rt_greater_than_s64(lhs: number, rhs: number): number
+local function rt_greater_than_s64(lhs: number, rhs: number): boolean
 	local lhs = rt_flip_sign_bit_i64(lhs)
 	local rhs = rt_flip_sign_bit_i64(rhs)
 
@@ -557,17 +557,17 @@ end
 
 -- SECTION greater_than_u64
 -- NEEDS create_u32_from_i64
-local function rt_greater_than_u64(lhs: number, rhs: number): number
+local function rt_greater_than_u64(lhs: number, rhs: number): boolean
 	local lhs_1, lhs_2 = rt_create_u32_from_i64(lhs)
 	local rhs_1, rhs_2 = rt_create_u32_from_i64(rhs)
 
-	return if lhs_2 > rhs_2 or (lhs_2 == rhs_2 and lhs_1 > rhs_1) then 1 else 0
+	return lhs_2 > rhs_2 or (lhs_2 == rhs_2 and lhs_1 > rhs_1)
 end
 
 -- SECTION less_than_equal_s64
 -- NEEDS flip_sign_bit_i64
 -- NEEDS less_than_equal_u64
-local function rt_less_than_equal_s64(lhs: number, rhs: number): number
+local function rt_less_than_equal_s64(lhs: number, rhs: number): boolean
 	local lhs = rt_flip_sign_bit_i64(lhs)
 	local rhs = rt_flip_sign_bit_i64(rhs)
 
@@ -577,18 +577,14 @@ end
 -- SECTION less_than_equal_u64
 -- NEEDS equal_i64
 -- NEEDS less_than_u64
-local function rt_less_than_equal_u64(lhs: number, rhs: number): number
-	if rt_less_than_u64(lhs, rhs) == 1 then
-		return 1
-	end
-
-	return rt_equal_i64(lhs, rhs)
+local function rt_less_than_equal_u64(lhs: number, rhs: number): boolean
+	return rt_less_than_u64(lhs, rhs) or rt_equal_i64(lhs, rhs)
 end
 
 -- SECTION greater_than_equal_s64
 -- NEEDS flip_sign_bit_i64
 -- NEEDS greater_than_equal_u64
-local function rt_greater_than_equal_s64(lhs: number, rhs: number): number
+local function rt_greater_than_equal_s64(lhs: number, rhs: number): boolean
 	local lhs = rt_flip_sign_bit_i64(lhs)
 	local rhs = rt_flip_sign_bit_i64(rhs)
 
@@ -598,12 +594,8 @@ end
 -- SECTION greater_than_equal_u64
 -- NEEDS equal_i64
 -- NEEDS greater_than_u64
-local function rt_greater_than_equal_u64(lhs: number, rhs: number): number
-	if rt_greater_than_u64(lhs, rhs) == 1 then
-		return 1
-	end
-
-	return rt_equal_i64(lhs, rhs)
+local function rt_greater_than_equal_u64(lhs: number, rhs: number): boolean
+	return rt_greater_than_u64(lhs, rhs) or rt_equal_i64(lhs, rhs)
 end
 
 -- SECTION narrow_i64

@@ -3,7 +3,7 @@ use data_flow_graph::{Link, mvp, nested};
 use hashbrown::HashMap;
 use luau_tree::{
 	expression::{
-		Call, ElementsNew, Expression, Function, GlobalGet, GlobalNew, Import,
+		BooleanToInteger, Call, ElementsNew, Expression, Function, GlobalGet, GlobalNew, Import,
 		IntegerBinaryOperation, IntegerCompareOperation, IntegerConvertToNumber, IntegerExtend,
 		IntegerNarrow, IntegerTransmuteToNumber, IntegerUnaryOperation, IntegerWiden, Local,
 		Location, Match, MemoryGrow, MemoryLoad, MemorySize, Name, NumberBinaryOperation,
@@ -243,7 +243,11 @@ impl DataHandler {
 			source: self.load(ref_is_null.source),
 		};
 
-		Expression::RefIsNull(operation.into())
+		let boolean = BooleanToInteger {
+			source: Expression::RefIsNull(operation.into()),
+		};
+
+		Expression::BooleanToInteger(boolean.into())
 	}
 
 	pub fn load_integer_unary_operation(
@@ -284,7 +288,11 @@ impl DataHandler {
 			operator: operation.operator,
 		};
 
-		Expression::IntegerCompareOperation(operation.into())
+		let boolean = BooleanToInteger {
+			source: Expression::IntegerCompareOperation(operation.into()),
+		};
+
+		Expression::BooleanToInteger(boolean.into())
 	}
 
 	pub fn load_integer_narrow(&mut self, operation: mvp::IntegerNarrow) -> Expression {
@@ -376,7 +384,11 @@ impl DataHandler {
 			operator: operation.operator,
 		};
 
-		Expression::NumberCompareOperation(operation.into())
+		let boolean = BooleanToInteger {
+			source: Expression::NumberCompareOperation(operation.into()),
+		};
+
+		Expression::BooleanToInteger(boolean.into())
 	}
 
 	pub fn load_number_narrow(&mut self, operation: mvp::NumberNarrow) -> Expression {

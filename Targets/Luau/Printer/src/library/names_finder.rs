@@ -475,6 +475,7 @@ impl NeedsName for Expression {
 			| Self::Null
 			| Self::Local(_)
 			| Self::Call(_)
+			| Self::BooleanToInteger(_)
 			| Self::RefIsNull(_) => "",
 
 			Self::I32(i32) => i32.needs_name(),

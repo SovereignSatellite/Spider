@@ -3,13 +3,13 @@ use core::ops::ControlFlow;
 use crate::{
 	LuauTree,
 	expression::{
-		Call as ExpressionCall, ElementsNew, Expression, Function, GlobalGet, GlobalNew, Import,
-		IntegerBinaryOperation, IntegerCompareOperation, IntegerConvertToNumber, IntegerExtend,
-		IntegerNarrow, IntegerTransmuteToNumber, IntegerUnaryOperation, IntegerWiden, Location,
-		Match as ExpressionMatch, MemoryGrow, MemoryLoad, MemorySize, NumberBinaryOperation,
-		NumberCompareOperation, NumberNarrow, NumberTransmuteToInteger, NumberTruncateToInteger,
-		NumberUnaryOperation, NumberWiden, RefIsNull, Scoped, TableGet, TableGrow, TableNew,
-		TableSize,
+		BooleanToInteger, Call as ExpressionCall, ElementsNew, Expression, Function, GlobalGet,
+		GlobalNew, Import, IntegerBinaryOperation, IntegerCompareOperation, IntegerConvertToNumber,
+		IntegerExtend, IntegerNarrow, IntegerTransmuteToNumber, IntegerUnaryOperation,
+		IntegerWiden, Location, Match as ExpressionMatch, MemoryGrow, MemoryLoad, MemorySize,
+		NumberBinaryOperation, NumberCompareOperation, NumberNarrow, NumberTransmuteToInteger,
+		NumberTruncateToInteger, NumberUnaryOperation, NumberWiden, RefIsNull, Scoped, TableGet,
+		TableGrow, TableNew, TableSize,
 	},
 	statement::{
 		Assign, Call as StatementCall, DataDrop, ElementsDrop, Export, GlobalSet,
@@ -92,6 +92,14 @@ impl ExpressionCall {
 		arguments
 			.iter()
 			.try_for_each(|argument| argument.accept(visitor))
+	}
+}
+
+impl BooleanToInteger {
+	fn accept<T: Visitor>(&self, visitor: &mut T) -> ControlFlow<T::Output> {
+		let Self { source } = self;
+
+		source.accept(visitor)
 	}
 }
 
@@ -388,6 +396,7 @@ impl Expression {
 			Self::Match(r#match) => r#match.accept(visitor),
 			Self::Import(import) => import.accept(visitor),
 			Self::Call(call) => call.accept(visitor),
+			Self::BooleanToInteger(boolean_to_integer) => boolean_to_integer.accept(visitor),
 			Self::RefIsNull(ref_is_null) => ref_is_null.accept(visitor),
 			Self::IntegerUnaryOperation(integer_unary_operation) => {
 				integer_unary_operation.accept(visitor)

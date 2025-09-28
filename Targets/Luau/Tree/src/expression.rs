@@ -49,7 +49,7 @@ impl Local {
 		if let Self::Fast { name } = self {
 			name
 		} else {
-			panic!("`Local` did not have a name")
+			panic!("`Local::Fast expected`, but we got `Local::Slow`")
 		}
 	}
 }
@@ -57,6 +57,10 @@ impl Local {
 pub struct Call {
 	pub function: Expression,
 	pub arguments: Vec<Expression>,
+}
+
+pub struct BooleanToInteger {
+	pub source: Expression,
 }
 
 pub struct RefIsNull {
@@ -69,11 +73,23 @@ pub struct IntegerUnaryOperation {
 	pub operator: IntegerUnaryOperator,
 }
 
+impl IntegerUnaryOperation {
+	const fn should_be_boolean(&self) -> bool {
+		matches!(self.r#type, IntegerType::I32)
+	}
+}
+
 pub struct IntegerBinaryOperation {
 	pub lhs: Expression,
 	pub rhs: Expression,
 	pub r#type: IntegerType,
 	pub operator: IntegerBinaryOperator,
+}
+
+impl IntegerBinaryOperation {
+	const fn should_be_boolean(&self) -> bool {
+		matches!(self.r#type, IntegerType::I32)
+	}
 }
 
 pub struct IntegerCompareOperation {
@@ -94,6 +110,12 @@ pub struct IntegerWiden {
 pub struct IntegerExtend {
 	pub source: Expression,
 	pub r#type: ExtendType,
+}
+
+impl IntegerExtend {
+	const fn should_be_boolean(&self) -> bool {
+		matches!(self.r#type, ExtendType::I32_S8 | ExtendType::I32_S16)
+	}
 }
 
 pub struct IntegerConvertToNumber {
@@ -144,9 +166,21 @@ pub struct NumberTruncateToInteger {
 	pub from: NumberType,
 }
 
+impl NumberTruncateToInteger {
+	const fn should_be_boolean(&self) -> bool {
+		matches!(self.to, IntegerType::I32)
+	}
+}
+
 pub struct NumberTransmuteToInteger {
 	pub source: Expression,
 	pub from: NumberType,
+}
+
+impl NumberTransmuteToInteger {
+	const fn should_be_boolean(&self) -> bool {
+		matches!(self.from, NumberType::F32)
+	}
 }
 
 pub struct Location {
@@ -191,6 +225,19 @@ pub struct MemoryLoad {
 	pub r#type: LoadType,
 }
 
+impl MemoryLoad {
+	const fn should_be_boolean(&self) -> bool {
+		matches!(
+			self.r#type,
+			LoadType::I32_S8
+				| LoadType::I32_U8
+				| LoadType::I32_S16
+				| LoadType::I32_U16
+				| LoadType::I32
+		)
+	}
+}
+
 pub struct MemorySize {
 	pub source: Expression,
 }
@@ -218,6 +265,7 @@ pub enum Expression {
 
 	Call(Box<Call>),
 
+	BooleanToInteger(Box<BooleanToInteger>),
 	RefIsNull(Box<RefIsNull>),
 
 	IntegerUnaryOperation(Box<IntegerUnaryOperation>),
@@ -261,7 +309,69 @@ impl Expression {
 		if let Self::Local(local) = *self {
 			local
 		} else {
-			panic!("`Expression` was did not have a local")
+			panic!("`Expression::Local` expected, we got something else")
+		}
+	}
+
+	fn into_boolean_unchecked(self) -> Self {
+		let operation = IntegerCompareOperation {
+			lhs: self,
+			rhs: Self::I32(0),
+			r#type: IntegerType::I32,
+			operator: IntegerCompareOperator::NotEqual,
+		};
+
+		Self::IntegerCompareOperation(operation.into())
+	}
+
+	#[must_use]
+	pub fn into_boolean(self) -> Self {
+		match self {
+			Self::Match(_)
+			| Self::Local(_)
+			| Self::I32(_)
+			| Self::Call(_)
+			| Self::IntegerNarrow(_)
+			| Self::GlobalGet(_)
+			| Self::TableSize(_)
+			| Self::TableGrow(_)
+			| Self::MemorySize(_)
+			| Self::MemoryGrow(_) => self.into_boolean_unchecked(),
+
+			Self::Trap
+			| Self::RefIsNull(_)
+			| Self::IntegerCompareOperation(_)
+			| Self::NumberCompareOperation(_) => self,
+
+			Self::BooleanToInteger(boolean_to_integer) => boolean_to_integer.source,
+			Self::IntegerUnaryOperation(ref integer_unary_operation)
+				if integer_unary_operation.should_be_boolean() =>
+			{
+				self.into_boolean_unchecked()
+			}
+			Self::IntegerBinaryOperation(ref integer_binary_operation)
+				if integer_binary_operation.should_be_boolean() =>
+			{
+				self.into_boolean_unchecked()
+			}
+			Self::IntegerExtend(ref integer_extend) if integer_extend.should_be_boolean() => {
+				self.into_boolean_unchecked()
+			}
+			Self::NumberTruncateToInteger(ref number_truncate_to_integer)
+				if number_truncate_to_integer.should_be_boolean() =>
+			{
+				self.into_boolean_unchecked()
+			}
+			Self::NumberTransmuteToInteger(ref number_transmute_to_integer)
+				if number_transmute_to_integer.should_be_boolean() =>
+			{
+				self.into_boolean_unchecked()
+			}
+			Self::MemoryLoad(ref memory_load) if memory_load.should_be_boolean() => {
+				self.into_boolean_unchecked()
+			}
+
+			_ => panic!("`Expression` integer expected, we got something else"),
 		}
 	}
 }

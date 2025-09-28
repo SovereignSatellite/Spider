@@ -91,33 +91,33 @@ local function rt_copy_sign_f64(lhs: number, rhs: number): number
 end
 
 -- SECTION equal_f64
-local function rt_equal_f64(lhs: number, rhs: number): number
-	return if lhs == rhs then 1 else 0
+local function rt_equal_f64(lhs: number, rhs: number): boolean
+	return lhs == rhs
 end
 
 -- SECTION not_equal_f64
-local function rt_not_equal_f64(lhs: number, rhs: number): number
-	return if lhs == rhs then 0 else 1
+local function rt_not_equal_f64(lhs: number, rhs: number): boolean
+	return lhs ~= rhs
 end
 
 -- SECTION less_than_f64
-local function rt_less_than_f64(lhs: number, rhs: number): number
-	return if lhs < rhs then 1 else 0
+local function rt_less_than_f64(lhs: number, rhs: number): boolean
+	return lhs < rhs
 end
 
 -- SECTION greater_than_f64
-local function rt_greater_than_f64(lhs: number, rhs: number): number
-	return if lhs > rhs then 1 else 0
+local function rt_greater_than_f64(lhs: number, rhs: number): boolean
+	return lhs > rhs
 end
 
 -- SECTION less_than_equal_f64
-local function rt_less_than_equal_f64(lhs: number, rhs: number): number
-	return if lhs <= rhs then 1 else 0
+local function rt_less_than_equal_f64(lhs: number, rhs: number): boolean
+	return lhs <= rhs
 end
 
 -- SECTION greater_than_equal_f64
-local function rt_greater_than_equal_f64(lhs: number, rhs: number): number
-	return if lhs >= rhs then 1 else 0
+local function rt_greater_than_equal_f64(lhs: number, rhs: number): boolean
+	return lhs >= rhs
 end
 
 -- SECTION narrow_f64

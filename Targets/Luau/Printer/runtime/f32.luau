@@ -102,33 +102,33 @@ local function rt_copy_sign_f32(lhs: vector, rhs: vector): vector
 end
 
 -- SECTION equal_f32
-local function rt_equal_f32(lhs: vector, rhs: vector): number
-	return if lhs.x == rhs.x then 1 else 0
+local function rt_equal_f32(lhs: vector, rhs: vector): boolean
+	return lhs.x == rhs.x
 end
 
 -- SECTION not_equal_f32
-local function rt_not_equal_f32(lhs: vector, rhs: vector): number
-	return if lhs.x == rhs.x then 0 else 1
+local function rt_not_equal_f32(lhs: vector, rhs: vector): boolean
+	return lhs.x ~= rhs.x
 end
 
 -- SECTION less_than_f32
-local function rt_less_than_f32(lhs: vector, rhs: vector): number
-	return if lhs.x < rhs.x then 1 else 0
+local function rt_less_than_f32(lhs: vector, rhs: vector): boolean
+	return lhs.x < rhs.x
 end
 
 -- SECTION greater_than_f32
-local function rt_greater_than_f32(lhs: vector, rhs: vector): number
-	return if lhs.x > rhs.x then 1 else 0
+local function rt_greater_than_f32(lhs: vector, rhs: vector): boolean
+	return lhs.x > rhs.x
 end
 
 -- SECTION less_than_equal_f32
-local function rt_less_than_equal_f32(lhs: vector, rhs: vector): number
-	return if lhs.x <= rhs.x then 1 else 0
+local function rt_less_than_equal_f32(lhs: vector, rhs: vector): boolean
+	return lhs.x <= rhs.x
 end
 
 -- SECTION greater_than_equal_f32
-local function rt_greater_than_equal_f32(lhs: vector, rhs: vector): number
-	return if lhs.x >= rhs.x then 1 else 0
+local function rt_greater_than_equal_f32(lhs: vector, rhs: vector): boolean
+	return lhs.x >= rhs.x
 end
 
 -- SECTION widen_f32

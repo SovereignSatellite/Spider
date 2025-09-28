@@ -45,14 +45,22 @@ impl CodeHandler {
 	}
 
 	pub fn do_match(&mut self, regions: &[u32], condition: Link, data_handler: &mut DataHandler) {
+		let condition = data_handler.load(condition);
+		let condition = if regions.len() == 2 {
+			condition.into_boolean()
+		} else {
+			condition
+		};
+
+		let branches = regions
+			.iter()
+			.map(|id| self.regions.remove(id).unwrap())
+			.collect();
+
 		let r#match = Statement::Match(
 			Match {
-				branches: regions
-					.iter()
-					.map(|id| self.regions.remove(id).unwrap())
-					.collect(),
-
-				condition: data_handler.load(condition),
+				branches,
+				condition,
 			}
 			.into(),
 		);
@@ -61,13 +69,10 @@ impl CodeHandler {
 	}
 
 	pub fn do_repeat(&mut self, condition: Link, data_handler: &mut DataHandler) {
-		let repeat = Statement::Repeat(
-			Repeat {
-				code: self.pop_scope(),
-				condition: data_handler.load(condition),
-			}
-			.into(),
-		);
+		let condition = data_handler.load(condition).into_boolean();
+		let code = self.pop_scope();
+
+		let repeat = Statement::Repeat(Repeat { code, condition }.into());
 
 		self.scopes.last_mut().unwrap().push(repeat);
 	}

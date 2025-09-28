@@ -146,57 +146,57 @@ local function rt_rotate_right_i32(lhs: number, rhs: number): number
 end
 
 -- SECTION equal_i32
-local function rt_equal_i32(lhs: number, rhs: number): number
-	return if lhs == rhs then 1 else 0
+local function rt_equal_i32(lhs: number, rhs: number): boolean
+	return lhs == rhs
 end
 
 -- SECTION not_equal_i32
-local function rt_not_equal_i32(lhs: number, rhs: number): number
-	return if lhs == rhs then 0 else 1
+local function rt_not_equal_i32(lhs: number, rhs: number): boolean
+	return lhs ~= rhs
 end
 
 -- SECTION less_than_s32
 -- NEEDS bit_xor
-local function rt_less_than_s32(lhs: number, rhs: number): number
-	return if bit_xor(lhs, 0x8000_0000) < bit_xor(rhs, 0x8000_0000) then 1 else 0
+local function rt_less_than_s32(lhs: number, rhs: number): boolean
+	return bit_xor(lhs, 0x8000_0000) < bit_xor(rhs, 0x8000_0000)
 end
 
 -- SECTION less_than_u32
-local function rt_less_than_u32(lhs: number, rhs: number): number
-	return if lhs < rhs then 1 else 0
+local function rt_less_than_u32(lhs: number, rhs: number): boolean
+	return lhs < rhs
 end
 
 -- SECTION greater_than_s32
 -- NEEDS bit_xor
-local function rt_greater_than_s32(lhs: number, rhs: number): number
-	return if bit_xor(lhs, 0x8000_0000) > bit_xor(rhs, 0x8000_0000) then 1 else 0
+local function rt_greater_than_s32(lhs: number, rhs: number): boolean
+	return bit_xor(lhs, 0x8000_0000) > bit_xor(rhs, 0x8000_0000)
 end
 
 -- SECTION greater_than_u32
-local function rt_greater_than_u32(lhs: number, rhs: number): number
-	return if lhs > rhs then 1 else 0
+local function rt_greater_than_u32(lhs: number, rhs: number): boolean
+	return lhs > rhs
 end
 
 -- SECTION less_than_equal_s32
 -- NEEDS bit_xor
-local function rt_less_than_equal_s32(lhs: number, rhs: number): number
-	return if bit_xor(lhs, 0x8000_0000) <= bit_xor(rhs, 0x8000_0000) then 1 else 0
+local function rt_less_than_equal_s32(lhs: number, rhs: number): boolean
+	return bit_xor(lhs, 0x8000_0000) <= bit_xor(rhs, 0x8000_0000)
 end
 
 -- SECTION less_than_equal_u32
-local function rt_less_than_equal_u32(lhs: number, rhs: number): number
-	return if lhs <= rhs then 1 else 0
+local function rt_less_than_equal_u32(lhs: number, rhs: number): boolean
+	return lhs <= rhs
 end
 
 -- SECTION greater_than_equal_s32
 -- NEEDS bit_xor
-local function rt_greater_than_equal_s32(lhs: number, rhs: number): number
-	return if bit_xor(lhs, 0x8000_0000) >= bit_xor(rhs, 0x8000_0000) then 1 else 0
+local function rt_greater_than_equal_s32(lhs: number, rhs: number): boolean
+	return bit_xor(lhs, 0x8000_0000) >= bit_xor(rhs, 0x8000_0000)
 end
 
 -- SECTION greater_than_equal_u32
-local function rt_greater_than_equal_u32(lhs: number, rhs: number): number
-	return if lhs >= rhs then 1 else 0
+local function rt_greater_than_equal_u32(lhs: number, rhs: number): boolean
+	return lhs >= rhs
 end
 
 -- SECTION widen_i32

@@ -1,8 +1,8 @@
 use std::io::{Result, Write};
 
 use luau_tree::expression::{
-	Call, DataNew, ElementsNew, Expression, Function, GlobalGet, GlobalNew, Import,
-	IntegerBinaryOperation, IntegerCompareOperation, IntegerConvertToNumber, IntegerExtend,
+	BooleanToInteger, Call, DataNew, ElementsNew, Expression, Function, GlobalGet, GlobalNew,
+	Import, IntegerBinaryOperation, IntegerCompareOperation, IntegerConvertToNumber, IntegerExtend,
 	IntegerNarrow, IntegerTransmuteToNumber, IntegerUnaryOperation, IntegerWiden, Local, Location,
 	Match, MemoryGrow, MemoryLoad, MemoryNew, MemorySize, Name, NumberBinaryOperation,
 	NumberBinaryOperator, NumberCompareOperation, NumberCompareOperator, NumberNarrow,
@@ -50,6 +50,24 @@ pub fn fmt_stack_leave(size: u16, printer: &LuauPrinter, out: &mut dyn Write) ->
 
 	printer.tab(out)?;
 	writeln!(out, "excess_stack.top = stack_top - {size}")
+}
+
+fn fmt_infix_operator(
+	lhs: &Expression,
+	rhs: &Expression,
+	operator: &'static str,
+	printer: &mut LuauPrinter,
+	out: &mut dyn Write,
+) -> Result<()> {
+	write!(out, "(")?;
+
+	lhs.print(printer, out)?;
+
+	write!(out, ") {operator} (")?;
+
+	rhs.print(printer, out)?;
+
+	write!(out, ")")
 }
 
 impl Print for Name {
@@ -303,15 +321,27 @@ impl Print for Call {
 	}
 }
 
+impl Print for BooleanToInteger {
+	fn print(&self, printer: &mut LuauPrinter, out: &mut dyn Write) -> Result<()> {
+		let Self { source } = self;
+
+		write!(out, "if ")?;
+
+		source.print(printer, out)?;
+
+		write!(out, " then 1 else 0")
+	}
+}
+
 impl Print for RefIsNull {
 	fn print(&self, printer: &mut LuauPrinter, out: &mut dyn Write) -> Result<()> {
 		let Self { source } = self;
 
-		write!(out, "(if ")?;
+		write!(out, "(")?;
 
 		source.print(printer, out)?;
 
-		write!(out, " == nil then 1 else 0)")
+		write!(out, ") == nil")
 	}
 }
 
@@ -463,7 +493,7 @@ impl Print for NumberUnaryOperation {
 		} = self;
 
 		if *operator == NumberUnaryOperator::Negate {
-			write!(out, "(-")?;
+			write!(out, "-(")?;
 
 			source.print(printer, out)?;
 
@@ -482,24 +512,6 @@ impl Print for NumberUnaryOperation {
 
 impl Print for NumberBinaryOperation {
 	fn print(&self, printer: &mut LuauPrinter, out: &mut dyn Write) -> Result<()> {
-		fn fmt_infix(
-			lhs: &Expression,
-			rhs: &Expression,
-			operator: char,
-			printer: &mut LuauPrinter,
-			out: &mut dyn Write,
-		) -> Result<()> {
-			write!(out, "(")?;
-
-			lhs.print(printer, out)?;
-
-			write!(out, " {operator} ")?;
-
-			rhs.print(printer, out)?;
-
-			write!(out, ")")
-		}
-
 		let Self {
 			lhs,
 			rhs,
@@ -508,14 +520,14 @@ impl Print for NumberBinaryOperation {
 		} = self;
 
 		if let Some(operator) = match operator {
-			NumberBinaryOperator::Add => Some('+'),
-			NumberBinaryOperator::Subtract => Some('-'),
-			NumberBinaryOperator::Multiply => Some('*'),
-			NumberBinaryOperator::Divide => Some('/'),
+			NumberBinaryOperator::Add => Some("+"),
+			NumberBinaryOperator::Subtract => Some("-"),
+			NumberBinaryOperator::Multiply => Some("*"),
+			NumberBinaryOperator::Divide => Some("/"),
 
 			_ => None,
 		} {
-			return fmt_infix(lhs, rhs, operator, printer, out);
+			return fmt_infix_operator(lhs, rhs, operator, printer, out);
 		}
 
 		let intrinsic = self.needs_name();
@@ -534,24 +546,6 @@ impl Print for NumberBinaryOperation {
 
 impl Print for NumberCompareOperation {
 	fn print(&self, printer: &mut LuauPrinter, out: &mut dyn Write) -> Result<()> {
-		fn fmt_infix(
-			lhs: &Expression,
-			rhs: &Expression,
-			operator: &str,
-			printer: &mut LuauPrinter,
-			out: &mut dyn Write,
-		) -> Result<()> {
-			write!(out, "(if ")?;
-
-			lhs.print(printer, out)?;
-
-			write!(out, " {operator} ")?;
-
-			rhs.print(printer, out)?;
-
-			write!(out, " then 1 else 0)")
-		}
-
 		let Self {
 			lhs,
 			rhs,
@@ -569,7 +563,7 @@ impl Print for NumberCompareOperation {
 				NumberCompareOperator::GreaterThanEqual => ">=",
 			};
 
-			return fmt_infix(lhs, rhs, operator, printer, out);
+			return fmt_infix_operator(lhs, rhs, operator, printer, out);
 		}
 
 		let intrinsic = self.needs_name();
@@ -851,6 +845,7 @@ impl Print for Expression {
 			Self::F32(f32) => f32.print(printer, out),
 			Self::F64(f64) => f64.print(printer, out),
 			Self::Call(call) => call.print(printer, out),
+			Self::BooleanToInteger(boolean_to_integer) => boolean_to_integer.print(printer, out),
 			Self::RefIsNull(ref_is_null) => ref_is_null.print(printer, out),
 			Self::IntegerUnaryOperation(integer_unary_operation) => {
 				integer_unary_operation.print(printer, out)
