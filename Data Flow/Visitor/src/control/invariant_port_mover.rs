@@ -4,11 +4,11 @@ use data_flow_graph::{
 };
 use hashbrown::HashMap;
 
-pub struct FallthroughMover {
+pub struct InvariantPortMover {
 	map: HashMap<Link, Link>,
 }
 
-impl FallthroughMover {
+impl InvariantPortMover {
 	#[must_use]
 	pub fn new() -> Self {
 		Self {
@@ -113,7 +113,7 @@ impl FallthroughMover {
 	}
 }
 
-impl Default for FallthroughMover {
+impl Default for InvariantPortMover {
 	fn default() -> Self {
 		Self::new()
 	}

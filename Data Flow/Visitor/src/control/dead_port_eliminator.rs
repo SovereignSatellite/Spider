@@ -31,11 +31,15 @@ impl DeadPortEliminator {
 		self.stack.push(link);
 	}
 
-	fn add_all_links(&mut self, links: &[Link], id: u32) {
-		let len = links.len().try_into().unwrap();
+	fn add_region_sides(&mut self, links: &[Link], id: u32) {
+		let len = links.len();
 
-		self.seen
-			.extend((0..len).map(|port| Link(id, port)).map(Link::into_usize));
+		self.seen.extend(
+			(0..)
+				.map(|port| Link(id, port))
+				.map(Link::into_usize)
+				.take(len),
+		);
 
 		for &link in links {
 			self.add_predecessor(link);
@@ -43,41 +47,51 @@ impl DeadPortEliminator {
 	}
 
 	fn mark_lambda_in(&mut self, lambda_in: &LambdaIn, id: u32) {
-		self.add_all_links(&lambda_in.dependencies, id);
+		let LambdaIn { dependencies, .. } = lambda_in;
+
+		self.add_region_sides(dependencies, id);
 	}
 
 	fn mark_lambda_out(&mut self, lambda_out: &LambdaOut, id: u32) {
-		self.add_all_links(&lambda_out.results, id);
+		let LambdaOut { results, .. } = lambda_out;
+
+		self.add_region_sides(results, id);
 	}
 
 	fn mark_region_in(&mut self, region_in: &RegionIn, port: u16) {
-		self.add_predecessor(Link(region_in.input, port));
+		let RegionIn { input, .. } = *region_in;
+
+		self.add_predecessor(Link(input, port));
 	}
 
 	fn mark_region_out(&mut self, region_out: &RegionOut, port: u16) {
-		self.add_predecessor(region_out.results[usize::from(port)]);
+		let RegionOut { results, .. } = region_out;
+
+		self.add_predecessor(results[usize::from(port)]);
 	}
 
 	fn mark_gamma_in(&mut self, graph: &DataFlowGraph, gamma_in: &GammaIn, port: u16) {
 		let GammaIn {
-			output, arguments, ..
-		} = gamma_in;
-		let GammaOut { regions, .. } = graph.get(*output).as_gamma_out().unwrap();
+			output,
+			ref arguments,
+			..
+		} = *gamma_in;
+		let GammaOut { regions, .. } = graph.get(output).as_gamma_out().unwrap();
 
 		for &region in regions {
-			let RegionOut { input, .. } = graph.get(region).as_region_out().unwrap();
+			let RegionOut { input, .. } = *graph.get(region).as_region_out().unwrap();
 
-			self.add_predecessor(Link(*input, port));
+			self.add_predecessor(Link(input, port));
 		}
 
 		self.add_predecessor(arguments[usize::from(port)]);
 	}
 
 	fn mark_gamma_out(&mut self, graph: &DataFlowGraph, gamma_out: &GammaOut, port: u16) {
-		let GammaOut { input, regions } = gamma_out;
-		let GammaIn { condition, .. } = graph.get(*input).as_gamma_in().unwrap();
+		let GammaOut { input, ref regions } = *gamma_out;
+		let GammaIn { condition, .. } = *graph.get(input).as_gamma_in().unwrap();
 
-		self.add_predecessor(*condition);
+		self.add_predecessor(condition);
 
 		for &region in regions {
 			self.add_predecessor(Link(region, port));
@@ -85,20 +99,29 @@ impl DeadPortEliminator {
 	}
 
 	fn mark_theta_in(&mut self, theta_in: &ThetaIn, port: u16) {
-		self.add_predecessor(Link(theta_in.output, port));
-		self.add_predecessor(theta_in.arguments[usize::from(port)]);
+		let ThetaIn {
+			output,
+			ref arguments,
+		} = *theta_in;
+
+		self.add_predecessor(Link(output, port));
+		self.add_predecessor(arguments[usize::from(port)]);
 	}
 
 	fn mark_theta_out(&mut self, theta_out: &ThetaOut, port: u16) {
-		self.add_predecessor(Link(theta_out.input, port));
-		self.add_predecessor(theta_out.results[usize::from(port)]);
-		self.add_predecessor(theta_out.condition);
+		let ThetaOut {
+			input,
+			ref results,
+			condition,
+		} = *theta_out;
+
+		self.add_predecessor(Link(input, port));
+		self.add_predecessor(results[usize::from(port)]);
+		self.add_predecessor(condition);
 	}
 
 	fn mark_operation(&mut self, node: &Node) {
-		node.for_each_argument(|link| {
-			self.add_predecessor(link);
-		});
+		node.for_each_argument(|link| self.add_predecessor(link));
 	}
 
 	fn mark(&mut self, graph: &DataFlowGraph, result: Link) {
@@ -127,14 +150,14 @@ impl DeadPortEliminator {
 			return;
 		};
 
-		let mut positions = (0..u16::MAX).map(|port| Link(id, port));
+		let mut outputs = (0..).map(|port| Link(id, port));
 
-		for from in (0..u16::try_from(ports).unwrap()).map(|port| Link(id, port)) {
+		for from in outputs.clone().take(ports) {
 			if !self.seen.contains(from.into_usize()) {
 				continue;
 			}
 
-			let to = positions.next().unwrap();
+			let to = outputs.next().unwrap();
 
 			if from.1 != to.1 {
 				self.map.insert(from, to);
@@ -147,17 +170,17 @@ impl DeadPortEliminator {
 			return;
 		};
 
-		let mut links = (0..u16::MAX)
-			.map(|port| Link(id, port))
-			.map(Link::into_usize);
+		let mut inputs = (0..).map(|port| Link(id, port)).map(Link::into_usize);
 
-		arguments.retain(|_| self.seen.contains(links.next().unwrap()));
+		arguments.retain(|_| self.seen.contains(inputs.next().unwrap()));
 	}
 
 	fn sweep(&mut self, graph: &mut DataFlowGraph) {
+		let len = graph.len();
+
 		self.map.clear();
 
-		for id in (0..graph.len().try_into().unwrap()).rev() {
+		for id in (0..len.try_into().unwrap()).rev() {
 			self.sweep_outputs(graph, id);
 			self.sweep_inputs(graph, id);
 		}

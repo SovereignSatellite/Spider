@@ -40,9 +40,11 @@ impl DepthFirstSearcher {
 		self.add_predecessor(result);
 
 		while let Some((id, post)) = self.stack.pop() {
-			if post {
-				handler(graph, id);
-			} else if !self.seen.grow_insert(id.try_into().unwrap()) {
+			if self.seen.grow_insert(id.try_into().unwrap()) {
+				if post {
+					handler(graph, id);
+				}
+			} else {
 				self.stack.push((id, true));
 
 				self.add_predecessors(graph.get(id));

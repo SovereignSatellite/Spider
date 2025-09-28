@@ -4,7 +4,10 @@ use clap::Parser;
 use data_flow_builder::DataFlowBuilder;
 use data_flow_graph::{DataFlowGraph, Link};
 use data_flow_visitor::{
-	dead_port_eliminator::DeadPortEliminator, fallthrough_mover::FallthroughMover, region_identity,
+	control::{
+		dead_port_eliminator::DeadPortEliminator, invariant_port_mover::InvariantPortMover,
+		region_identity,
+	},
 	topological_normalizer::TopologicalNormalizer,
 };
 use luau_builder::LuauBuilder;
@@ -35,9 +38,9 @@ fn run_optimizations(graph: &mut DataFlowGraph, omega: u32) -> u32 {
 
 	let omega = topological_normalizer.run(graph, omega);
 
-	let mut fallthrough_mover = FallthroughMover::new();
+	let mut invariant_port_mover = InvariantPortMover::new();
 
-	fallthrough_mover.run(graph);
+	invariant_port_mover.run(graph);
 
 	let mut dead_port_eliminator = DeadPortEliminator::new();
 

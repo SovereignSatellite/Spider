@@ -1,16 +1,14 @@
-use std::slice::Iter;
-
-use data_flow_graph::DataFlowGraph;
+use data_flow_graph::{DataFlowGraph, Link};
 
 #[derive(PartialEq, Eq, PartialOrd, Ord, Clone, Copy)]
-pub struct Item {
+pub struct BiLink {
 	pub from: u32,
-	pub to: u32,
 	pub port: u16,
+	pub to: u32,
 }
 
 pub struct SuccessorFinder {
-	successors: Vec<Item>,
+	successors: Vec<BiLink>,
 }
 
 impl SuccessorFinder {
@@ -21,34 +19,33 @@ impl SuccessorFinder {
 		}
 	}
 
-	pub fn at(&self, id: u32) -> Iter<'_, Item> {
-		let start = self.successors.partition_point(|item| item.from < id);
-		let end = self.successors.partition_point(|item| item.from <= id);
+	#[must_use]
+	pub fn by_id(&self, id: u32) -> &[BiLink] {
+		let start = self.successors.partition_point(|bi| bi.from < id);
+		let end = self.successors.partition_point(|bi| bi.from <= id);
 
-		self.successors[start..end].iter()
+		&self.successors[start..end]
 	}
 
-	pub fn find_last_successors(&self, id: u32, buffer: &mut [u32]) {
-		for &Item { to, port, .. } in self.at(id) {
-			let port = usize::from(port);
+	#[must_use]
+	pub fn by_link(&self, link: Link) -> &[BiLink] {
+		let start = self
+			.successors
+			.partition_point(|bi| Link(bi.from, bi.port) < link);
 
-			if let Some(reference) = buffer.get_mut(port) {
-				// We don't need to `max` since the ID is ascending.
-				*reference = to;
-			}
-		}
+		let end = self
+			.successors
+			.partition_point(|bi| Link(bi.from, bi.port) <= link);
+
+		&self.successors[start..end]
 	}
 
 	pub fn run(&mut self, graph: &DataFlowGraph) {
 		self.successors.clear();
 
-		for (node, id) in graph.nodes().zip(0..) {
-			node.for_each_argument(|link| {
-				self.successors.push(Item {
-					from: link.0,
-					to: id,
-					port: link.1,
-				});
+		for (node, to) in graph.nodes().zip(0..) {
+			node.for_each_argument(|Link(from, port)| {
+				self.successors.push(BiLink { from, port, to });
 			});
 		}
 

@@ -34,12 +34,16 @@ impl DepthFirstSearcher {
 		while let Some((id, post)) = self.stack.pop() {
 			let id_usize = id.into();
 
-			if post {
-				handler(basic_blocks, id);
-			} else if !self.seen.grow_insert(id_usize) {
+			if self.seen.grow_insert(id_usize) {
+				if post {
+					handler(basic_blocks, id);
+				}
+			} else {
+				let BasicBlock { successors, .. } = &basic_blocks[id_usize];
+
 				self.stack.push((id, true));
 
-				for &id in &basic_blocks[id_usize].successors {
+				for &id in successors {
 					self.add_successor(id);
 				}
 			}
