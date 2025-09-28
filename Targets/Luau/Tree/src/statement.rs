@@ -2,7 +2,7 @@ use alloc::{boxed::Box, sync::Arc, vec::Vec};
 
 use crate::expression::{Expression, Local, Location};
 
-pub use data_flow_graph::mvp::StoreType;
+pub use data_flow_graph::base::StoreType;
 
 pub struct Sequence {
 	pub list: Vec<Statement>,

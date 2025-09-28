@@ -1,7 +1,7 @@
 use data_flow_graph::{
 	DataFlowGraph, Link, Node,
-	mvp::Identity,
-	nested::{RegionOut, ThetaIn, ThetaOut},
+	base::Identity,
+	control::{RegionOut, ThetaIn, ThetaOut},
 };
 
 fn replace_with_producer(graph: &DataFlowGraph, from: &mut Link) {

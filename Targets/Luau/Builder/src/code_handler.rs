@@ -1,5 +1,5 @@
 use alloc::vec::Vec;
-use data_flow_graph::{Link, mvp};
+use data_flow_graph::{Link, base};
 
 use hashbrown::HashMap;
 use luau_tree::{
@@ -119,7 +119,7 @@ impl CodeHandler {
 		self.scopes.last_mut().unwrap().push(assign_all);
 	}
 
-	pub fn do_call(&mut self, call: &mvp::Call, id: u32, data_handler: &mut DataHandler) {
+	pub fn do_call(&mut self, call: &base::Call, id: u32, data_handler: &mut DataHandler) {
 		let end = call.arguments.len() - usize::from(call.states);
 		let call = Statement::Call(
 			Call {
@@ -133,7 +133,7 @@ impl CodeHandler {
 		self.scopes.last_mut().unwrap().push(call);
 	}
 
-	pub fn do_global_set(&mut self, global_set: mvp::GlobalSet, data_handler: &mut DataHandler) {
+	pub fn do_global_set(&mut self, global_set: base::GlobalSet, data_handler: &mut DataHandler) {
 		let global_set = Statement::GlobalSet(
 			GlobalSet {
 				destination: data_handler.load(global_set.destination),
@@ -145,7 +145,7 @@ impl CodeHandler {
 		self.scopes.last_mut().unwrap().push(global_set);
 	}
 
-	pub fn do_table_set(&mut self, table_set: mvp::TableSet, data_handler: &mut DataHandler) {
+	pub fn do_table_set(&mut self, table_set: base::TableSet, data_handler: &mut DataHandler) {
 		let table_set = Statement::TableSet(
 			TableSet {
 				destination: data_handler.load_location(table_set.destination),
@@ -157,7 +157,7 @@ impl CodeHandler {
 		self.scopes.last_mut().unwrap().push(table_set);
 	}
 
-	pub fn do_table_fill(&mut self, table_fill: mvp::TableFill, data_handler: &mut DataHandler) {
+	pub fn do_table_fill(&mut self, table_fill: base::TableFill, data_handler: &mut DataHandler) {
 		let table_fill = Statement::TableFill(
 			TableFill {
 				destination: data_handler.load_location(table_fill.destination),
@@ -170,7 +170,7 @@ impl CodeHandler {
 		self.scopes.last_mut().unwrap().push(table_fill);
 	}
 
-	pub fn do_table_copy(&mut self, table_copy: mvp::TableCopy, data_handler: &mut DataHandler) {
+	pub fn do_table_copy(&mut self, table_copy: base::TableCopy, data_handler: &mut DataHandler) {
 		let table_copy = Statement::TableCopy(
 			TableCopy {
 				destination: data_handler.load_location(table_copy.destination),
@@ -183,7 +183,7 @@ impl CodeHandler {
 		self.scopes.last_mut().unwrap().push(table_copy);
 	}
 
-	pub fn do_table_init(&mut self, table_init: mvp::TableInit, data_handler: &mut DataHandler) {
+	pub fn do_table_init(&mut self, table_init: base::TableInit, data_handler: &mut DataHandler) {
 		let table_init = Statement::TableInit(
 			TableInit {
 				destination: data_handler.load_location(table_init.destination),
@@ -198,7 +198,7 @@ impl CodeHandler {
 
 	pub fn do_elements_drop(
 		&mut self,
-		elements_drop: mvp::ElementsDrop,
+		elements_drop: base::ElementsDrop,
 		data_handler: &mut DataHandler,
 	) {
 		let elements_drop = Statement::ElementsDrop(
@@ -213,7 +213,7 @@ impl CodeHandler {
 
 	pub fn do_memory_store(
 		&mut self,
-		memory_store: mvp::MemoryStore,
+		memory_store: base::MemoryStore,
 		data_handler: &mut DataHandler,
 	) {
 		let memory_store = Statement::MemoryStore(
@@ -228,7 +228,11 @@ impl CodeHandler {
 		self.scopes.last_mut().unwrap().push(memory_store);
 	}
 
-	pub fn do_memory_fill(&mut self, memory_fill: mvp::MemoryFill, data_handler: &mut DataHandler) {
+	pub fn do_memory_fill(
+		&mut self,
+		memory_fill: base::MemoryFill,
+		data_handler: &mut DataHandler,
+	) {
 		let memory_fill = Statement::MemoryFill(
 			MemoryFill {
 				destination: data_handler.load_location(memory_fill.destination),
@@ -241,7 +245,11 @@ impl CodeHandler {
 		self.scopes.last_mut().unwrap().push(memory_fill);
 	}
 
-	pub fn do_memory_copy(&mut self, memory_copy: mvp::MemoryCopy, data_handler: &mut DataHandler) {
+	pub fn do_memory_copy(
+		&mut self,
+		memory_copy: base::MemoryCopy,
+		data_handler: &mut DataHandler,
+	) {
 		let memory_copy = Statement::MemoryCopy(
 			MemoryCopy {
 				destination: data_handler.load_location(memory_copy.destination),
@@ -254,7 +262,11 @@ impl CodeHandler {
 		self.scopes.last_mut().unwrap().push(memory_copy);
 	}
 
-	pub fn do_memory_init(&mut self, memory_init: mvp::MemoryInit, data_handler: &mut DataHandler) {
+	pub fn do_memory_init(
+		&mut self,
+		memory_init: base::MemoryInit,
+		data_handler: &mut DataHandler,
+	) {
 		let memory_init = Statement::MemoryInit(
 			MemoryInit {
 				destination: data_handler.load_location(memory_init.destination),
@@ -267,7 +279,7 @@ impl CodeHandler {
 		self.scopes.last_mut().unwrap().push(memory_init);
 	}
 
-	pub fn do_data_drop(&mut self, data_drop: mvp::DataDrop, data_handler: &mut DataHandler) {
+	pub fn do_data_drop(&mut self, data_drop: base::DataDrop, data_handler: &mut DataHandler) {
 		let data_drop = Statement::DataDrop(
 			DataDrop {
 				source: data_handler.load(data_drop.source),

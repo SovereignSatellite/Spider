@@ -9,7 +9,7 @@ mod node;
 use alloc::{boxed::Box, sync::Arc, vec::Vec};
 
 use self::node::{
-	mvp::{
+	base::{
 		Call, DataDrop, DataNew, ElementsDrop, ElementsNew, ExtendType, GlobalGet, GlobalNew,
 		GlobalSet, Identity, IntegerBinaryOperation, IntegerBinaryOperator,
 		IntegerCompareOperation, IntegerCompareOperator, IntegerConvertToNumber, IntegerExtend,
@@ -21,7 +21,7 @@ use self::node::{
 		NumberUnaryOperator, NumberWiden, RefIsNull, StoreType, TableCopy, TableFill, TableGet,
 		TableGrow, TableInit, TableNew, TableSet, TableSize,
 	},
-	nested::{
+	control::{
 		Export, FunctionType, GammaIn, GammaOut, Import, LambdaIn, LambdaOut, OmegaIn, OmegaOut,
 		RegionIn, RegionOut, ThetaIn, ThetaOut,
 	},
@@ -29,7 +29,7 @@ use self::node::{
 
 pub use self::{
 	dot::Dot,
-	node::{Link, Node, mvp, nested},
+	node::{Link, Node, base, control},
 };
 
 /// A directed graph of nodes containing operations.

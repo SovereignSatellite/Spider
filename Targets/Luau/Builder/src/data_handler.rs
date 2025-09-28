@@ -1,5 +1,5 @@
 use alloc::vec::Vec;
-use data_flow_graph::{Link, mvp, nested};
+use data_flow_graph::{Link, base, control};
 use hashbrown::HashMap;
 use luau_tree::{
 	expression::{
@@ -122,7 +122,7 @@ impl DataHandler {
 	pub fn load_returns(
 		&self,
 		results: &[Link],
-		function_type: &nested::FunctionType,
+		function_type: &control::FunctionType,
 	) -> Vec<Local> {
 		let returns = results.iter().map(|&name| self.assignments[&name]);
 		let len = function_type.results.len();
@@ -193,7 +193,7 @@ impl DataHandler {
 		}
 	}
 
-	pub fn load_import(&mut self, import: &nested::Import) -> Expression {
+	pub fn load_import(&mut self, import: &control::Import) -> Expression {
 		let import = Import {
 			environment: self.load(import.environment),
 			namespace: import.namespace.clone(),
@@ -203,25 +203,25 @@ impl DataHandler {
 		Expression::Import(import.into())
 	}
 
-	fn load_export(&mut self, export: &nested::Export) -> Export {
+	fn load_export(&mut self, export: &control::Export) -> Export {
 		Export {
 			identifier: export.identifier.clone(),
 			source: self.load(export.reference),
 		}
 	}
 
-	pub fn load_exports(&mut self, exports: &[nested::Export]) -> Vec<Export> {
+	pub fn load_exports(&mut self, exports: &[control::Export]) -> Vec<Export> {
 		exports
 			.iter()
 			.map(|export| self.load_export(export))
 			.collect()
 	}
 
-	pub fn load_identity(&mut self, identity: mvp::Identity) -> Expression {
+	pub fn load_identity(&mut self, identity: base::Identity) -> Expression {
 		self.load(identity.source)
 	}
 
-	pub fn load_call(&mut self, call: &mvp::Call) -> Expression {
+	pub fn load_call(&mut self, call: &base::Call) -> Expression {
 		let end = call.arguments.len() - usize::from(call.states);
 		let call = Call {
 			function: self.load(call.function),
@@ -231,14 +231,14 @@ impl DataHandler {
 		Expression::Call(call.into())
 	}
 
-	pub fn load_location(&mut self, location: mvp::Location) -> Location {
+	pub fn load_location(&mut self, location: base::Location) -> Location {
 		Location {
 			reference: self.load(location.reference),
 			offset: self.load(location.offset),
 		}
 	}
 
-	pub fn load_ref_is_null(&mut self, ref_is_null: mvp::RefIsNull) -> Expression {
+	pub fn load_ref_is_null(&mut self, ref_is_null: base::RefIsNull) -> Expression {
 		let operation = RefIsNull {
 			source: self.load(ref_is_null.source),
 		};
@@ -252,7 +252,7 @@ impl DataHandler {
 
 	pub fn load_integer_unary_operation(
 		&mut self,
-		operation: mvp::IntegerUnaryOperation,
+		operation: base::IntegerUnaryOperation,
 	) -> Expression {
 		let operation = IntegerUnaryOperation {
 			source: self.load(operation.source),
@@ -265,7 +265,7 @@ impl DataHandler {
 
 	pub fn load_integer_binary_operation(
 		&mut self,
-		operation: mvp::IntegerBinaryOperation,
+		operation: base::IntegerBinaryOperation,
 	) -> Expression {
 		let operation = IntegerBinaryOperation {
 			lhs: self.load(operation.lhs),
@@ -279,7 +279,7 @@ impl DataHandler {
 
 	pub fn load_integer_compare_operation(
 		&mut self,
-		operation: mvp::IntegerCompareOperation,
+		operation: base::IntegerCompareOperation,
 	) -> Expression {
 		let operation = IntegerCompareOperation {
 			lhs: self.load(operation.lhs),
@@ -295,7 +295,7 @@ impl DataHandler {
 		Expression::BooleanToInteger(boolean.into())
 	}
 
-	pub fn load_integer_narrow(&mut self, operation: mvp::IntegerNarrow) -> Expression {
+	pub fn load_integer_narrow(&mut self, operation: base::IntegerNarrow) -> Expression {
 		let operation = IntegerNarrow {
 			source: self.load(operation.source),
 		};
@@ -303,7 +303,7 @@ impl DataHandler {
 		Expression::IntegerNarrow(operation.into())
 	}
 
-	pub fn load_integer_widen(&mut self, operation: mvp::IntegerWiden) -> Expression {
+	pub fn load_integer_widen(&mut self, operation: base::IntegerWiden) -> Expression {
 		let operation = IntegerWiden {
 			source: self.load(operation.source),
 		};
@@ -311,7 +311,7 @@ impl DataHandler {
 		Expression::IntegerWiden(operation.into())
 	}
 
-	pub fn load_integer_extend(&mut self, operation: mvp::IntegerExtend) -> Expression {
+	pub fn load_integer_extend(&mut self, operation: base::IntegerExtend) -> Expression {
 		let operation = IntegerExtend {
 			source: self.load(operation.source),
 			r#type: operation.r#type,
@@ -322,7 +322,7 @@ impl DataHandler {
 
 	pub fn load_integer_convert_to_number(
 		&mut self,
-		operation: mvp::IntegerConvertToNumber,
+		operation: base::IntegerConvertToNumber,
 	) -> Expression {
 		let operation = IntegerConvertToNumber {
 			source: self.load(operation.source),
@@ -336,7 +336,7 @@ impl DataHandler {
 
 	pub fn load_integer_transmute_to_number(
 		&mut self,
-		operation: mvp::IntegerTransmuteToNumber,
+		operation: base::IntegerTransmuteToNumber,
 	) -> Expression {
 		let operation = IntegerTransmuteToNumber {
 			source: self.load(operation.source),
@@ -348,7 +348,7 @@ impl DataHandler {
 
 	pub fn load_number_unary_operation(
 		&mut self,
-		operation: mvp::NumberUnaryOperation,
+		operation: base::NumberUnaryOperation,
 	) -> Expression {
 		let operation = NumberUnaryOperation {
 			source: self.load(operation.source),
@@ -361,7 +361,7 @@ impl DataHandler {
 
 	pub fn load_number_binary_operation(
 		&mut self,
-		operation: mvp::NumberBinaryOperation,
+		operation: base::NumberBinaryOperation,
 	) -> Expression {
 		let operation = NumberBinaryOperation {
 			lhs: self.load(operation.lhs),
@@ -375,7 +375,7 @@ impl DataHandler {
 
 	pub fn load_number_compare_operation(
 		&mut self,
-		operation: mvp::NumberCompareOperation,
+		operation: base::NumberCompareOperation,
 	) -> Expression {
 		let operation = NumberCompareOperation {
 			lhs: self.load(operation.lhs),
@@ -391,7 +391,7 @@ impl DataHandler {
 		Expression::BooleanToInteger(boolean.into())
 	}
 
-	pub fn load_number_narrow(&mut self, operation: mvp::NumberNarrow) -> Expression {
+	pub fn load_number_narrow(&mut self, operation: base::NumberNarrow) -> Expression {
 		let operation = NumberNarrow {
 			source: self.load(operation.source),
 		};
@@ -399,7 +399,7 @@ impl DataHandler {
 		Expression::NumberNarrow(operation.into())
 	}
 
-	pub fn load_number_widen(&mut self, operation: mvp::NumberWiden) -> Expression {
+	pub fn load_number_widen(&mut self, operation: base::NumberWiden) -> Expression {
 		let operation = NumberWiden {
 			source: self.load(operation.source),
 		};
@@ -409,7 +409,7 @@ impl DataHandler {
 
 	pub fn load_number_truncate_to_integer(
 		&mut self,
-		operation: mvp::NumberTruncateToInteger,
+		operation: base::NumberTruncateToInteger,
 	) -> Expression {
 		let operation = NumberTruncateToInteger {
 			source: self.load(operation.source),
@@ -424,7 +424,7 @@ impl DataHandler {
 
 	pub fn load_number_transmute_to_integer(
 		&mut self,
-		operation: mvp::NumberTransmuteToInteger,
+		operation: base::NumberTransmuteToInteger,
 	) -> Expression {
 		let operation = NumberTransmuteToInteger {
 			source: self.load(operation.source),
@@ -434,7 +434,7 @@ impl DataHandler {
 		Expression::NumberTransmuteToInteger(operation.into())
 	}
 
-	pub fn load_global_new(&mut self, global_new: mvp::GlobalNew) -> Expression {
+	pub fn load_global_new(&mut self, global_new: base::GlobalNew) -> Expression {
 		let global_new = GlobalNew {
 			initializer: self.load(global_new.initializer),
 		};
@@ -442,7 +442,7 @@ impl DataHandler {
 		Expression::GlobalNew(global_new.into())
 	}
 
-	pub fn load_global_get(&mut self, global_get: mvp::GlobalGet) -> Expression {
+	pub fn load_global_get(&mut self, global_get: base::GlobalGet) -> Expression {
 		let global_get = GlobalGet {
 			source: self.load(global_get.source),
 		};
@@ -450,7 +450,7 @@ impl DataHandler {
 		Expression::GlobalGet(global_get.into())
 	}
 
-	pub fn load_table_new(&mut self, table_new: mvp::TableNew) -> Expression {
+	pub fn load_table_new(&mut self, table_new: base::TableNew) -> Expression {
 		let table_new = TableNew {
 			initializer: self.load(table_new.initializer),
 			minimum: table_new.minimum,
@@ -460,7 +460,7 @@ impl DataHandler {
 		Expression::TableNew(table_new.into())
 	}
 
-	pub fn load_table_get(&mut self, table_get: mvp::TableGet) -> Expression {
+	pub fn load_table_get(&mut self, table_get: base::TableGet) -> Expression {
 		let table_get = TableGet {
 			source: self.load_location(table_get.source),
 		};
@@ -468,7 +468,7 @@ impl DataHandler {
 		Expression::TableGet(table_get.into())
 	}
 
-	pub fn load_table_size(&mut self, table_size: mvp::TableSize) -> Expression {
+	pub fn load_table_size(&mut self, table_size: base::TableSize) -> Expression {
 		let table_size = TableSize {
 			source: self.load(table_size.source),
 		};
@@ -476,7 +476,7 @@ impl DataHandler {
 		Expression::TableSize(table_size.into())
 	}
 
-	pub fn load_table_grow(&mut self, table_grow: mvp::TableGrow) -> Expression {
+	pub fn load_table_grow(&mut self, table_grow: base::TableGrow) -> Expression {
 		let table_grow = TableGrow {
 			destination: self.load(table_grow.destination),
 			initializer: self.load(table_grow.initializer),
@@ -486,7 +486,7 @@ impl DataHandler {
 		Expression::TableGrow(table_grow.into())
 	}
 
-	pub fn load_elements_new(&mut self, elements_new: &mvp::ElementsNew) -> Expression {
+	pub fn load_elements_new(&mut self, elements_new: &base::ElementsNew) -> Expression {
 		let elements_new = ElementsNew {
 			content: self.load_all(&elements_new.content),
 		};
@@ -494,7 +494,7 @@ impl DataHandler {
 		Expression::ElementsNew(elements_new.into())
 	}
 
-	pub fn load_memory_load(&mut self, memory_load: mvp::MemoryLoad) -> Expression {
+	pub fn load_memory_load(&mut self, memory_load: base::MemoryLoad) -> Expression {
 		let memory_load = MemoryLoad {
 			source: self.load_location(memory_load.source),
 			r#type: memory_load.r#type,
@@ -503,7 +503,7 @@ impl DataHandler {
 		Expression::MemoryLoad(memory_load.into())
 	}
 
-	pub fn load_memory_size(&mut self, memory_size: mvp::MemorySize) -> Expression {
+	pub fn load_memory_size(&mut self, memory_size: base::MemorySize) -> Expression {
 		let memory_size = MemorySize {
 			source: self.load(memory_size.source),
 		};
@@ -511,7 +511,7 @@ impl DataHandler {
 		Expression::MemorySize(memory_size.into())
 	}
 
-	pub fn load_memory_grow(&mut self, memory_grow: mvp::MemoryGrow) -> Expression {
+	pub fn load_memory_grow(&mut self, memory_grow: base::MemoryGrow) -> Expression {
 		let memory_grow = MemoryGrow {
 			destination: self.load(memory_grow.destination),
 			size: self.load(memory_grow.size),

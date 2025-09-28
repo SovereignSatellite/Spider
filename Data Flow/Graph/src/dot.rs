@@ -4,10 +4,10 @@ use alloc::vec::Vec;
 
 use crate::{
 	DataFlowGraph,
-	nested::Import,
+	control::Import,
 	node::{
 		Node,
-		mvp::{
+		base::{
 			DataNew, ExtendType, IntegerBinaryOperation, IntegerBinaryOperator,
 			IntegerCompareOperation, IntegerCompareOperator, IntegerExtend, IntegerType,
 			IntegerUnaryOperation, IntegerUnaryOperator, NumberBinaryOperation,

@@ -2,7 +2,7 @@
 
 use data_flow_graph::{
 	DataFlowGraph, Link, Node,
-	mvp::{
+	base::{
 		Call, DataDrop, DataNew, ElementsDrop, ElementsNew, GlobalGet, GlobalNew, GlobalSet, Host,
 		Identity, IntegerBinaryOperation, IntegerCompareOperation, IntegerConvertToNumber,
 		IntegerExtend, IntegerNarrow, IntegerTransmuteToNumber, IntegerUnaryOperation,
@@ -12,7 +12,7 @@ use data_flow_graph::{
 		NumberWiden, RefIsNull, TableCopy, TableFill, TableGet, TableGrow, TableInit, TableNew,
 		TableSet, TableSize,
 	},
-	nested::{
+	control::{
 		GammaIn, GammaOut, Import, LambdaIn, LambdaOut, OmegaIn, OmegaOut, RegionIn, ThetaIn,
 		ThetaOut,
 	},

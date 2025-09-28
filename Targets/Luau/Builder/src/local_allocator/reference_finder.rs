@@ -1,11 +1,11 @@
 use data_flow_graph::{
 	DataFlowGraph, Link, Node,
-	mvp::{
+	base::{
 		Call, DataDrop, ElementsDrop, GlobalGet, GlobalSet, Identity, MemoryCopy, MemoryFill,
 		MemoryGrow, MemoryInit, MemoryLoad, MemorySize, MemoryStore, Merge, TableCopy, TableFill,
 		TableGet, TableGrow, TableInit, TableSet, TableSize,
 	},
-	nested::{
+	control::{
 		GammaIn, GammaOut, LambdaIn, LambdaOut, OmegaIn, OmegaOut, RegionOut, ThetaIn, ThetaOut,
 	},
 };

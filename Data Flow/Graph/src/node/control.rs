@@ -1,7 +1,7 @@
 use alloc::{boxed::Box, sync::Arc, vec::Vec};
 use list::resizable::Resizable;
 
-use super::link::Link;
+use super::Link;
 
 #[derive(Clone, Copy)]
 pub enum ValueType {

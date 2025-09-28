@@ -1,12 +1,12 @@
 use alloc::{sync::Arc, vec::Vec};
 
-use super::link::Link;
-
 pub use control_flow_graph::instruction::{
 	ExtendType, IntegerBinaryOperator, IntegerCompareOperator, IntegerType, IntegerUnaryOperator,
 	LoadType, NumberBinaryOperator, NumberCompareOperator, NumberType, NumberUnaryOperator,
 	StoreType,
 };
+
+use super::Link;
 
 pub trait Host {
 	fn identifier(&self) -> &'static str;

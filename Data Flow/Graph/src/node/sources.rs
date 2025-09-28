@@ -3,9 +3,8 @@ use alloc::vec::Vec;
 use crate::DataFlowGraph;
 
 use super::{
-	item::Node,
-	link::Link,
-	mvp::{
+	Link, Node,
+	base::{
 		Call, DataDrop, DataNew, ElementsDrop, ElementsNew, GlobalGet, GlobalNew, GlobalSet,
 		Identity, IntegerBinaryOperation, IntegerCompareOperation, IntegerConvertToNumber,
 		IntegerExtend, IntegerNarrow, IntegerTransmuteToNumber, IntegerUnaryOperation,
@@ -15,7 +14,7 @@ use super::{
 		NumberWiden, RefIsNull, TableCopy, TableFill, TableGet, TableGrow, TableInit, TableNew,
 		TableSet, TableSize,
 	},
-	nested::{
+	control::{
 		Export, GammaIn, GammaOut, Import, LambdaIn, LambdaOut, OmegaIn, OmegaOut, RegionIn,
 		RegionOut, ThetaIn, ThetaOut,
 	},

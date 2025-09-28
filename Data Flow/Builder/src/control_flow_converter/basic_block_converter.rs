@@ -10,7 +10,7 @@ use control_flow_graph::instruction::{
 	TableGet, TableGrow, TableInit, TableSet, TableSize,
 };
 use control_flow_liveness::references::{Reference, ReferenceType};
-use data_flow_graph::{DataFlowGraph, Link, mvp::Location, nested::ValueType};
+use data_flow_graph::{DataFlowGraph, Link, base::Location, control::ValueType};
 
 use super::dependency_map::DependencyMap;
 

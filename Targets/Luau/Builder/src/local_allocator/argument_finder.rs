@@ -1,7 +1,7 @@
 use alloc::vec::Vec;
 use data_flow_graph::{
 	DataFlowGraph, Link, Node,
-	nested::{LambdaIn, LambdaOut, OmegaIn, OmegaOut},
+	control::{LambdaIn, LambdaOut, OmegaIn, OmegaOut},
 };
 use hashbrown::HashMap;
 use set::Set;
