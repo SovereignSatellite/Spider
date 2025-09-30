@@ -1,0 +1,9 @@
+(decl partial SimplifyTable (Link) Link)
+
+(rule
+	(SimplifyTable
+		(TableGet (TableSet source offset _) offset)
+	)
+
+	source
+)

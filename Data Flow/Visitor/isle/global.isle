@@ -1,0 +1,17 @@
+(decl partial SimplifyGlobal (Link) Link)
+
+(rule 2
+	(SimplifyGlobal
+		(GlobalGet (GlobalNew source))
+	)
+
+	source
+)
+
+(rule 1
+	(SimplifyGlobal
+		(GlobalGet (GlobalSet _ source))
+	)
+
+	source
+)

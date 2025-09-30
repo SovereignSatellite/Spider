@@ -1,0 +1,7 @@
+;; Node::TableGet
+(decl TableGet (Link Link) Link)
+(extern extractor TableGet get_table_get)
+
+;; Node::TableSet
+(decl TableSet (Link Link Link) Link)
+(extern extractor TableSet get_table_set)

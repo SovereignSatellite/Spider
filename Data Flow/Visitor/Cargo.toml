@@ -8,3 +8,6 @@ data-flow-graph = { path = "../Graph" }
 
 set.workspace = true
 hashbrown.workspace = true
+
+[build-dependencies]
+cranelift-isle.workspace = true

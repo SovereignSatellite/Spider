@@ -16,6 +16,8 @@ clap = { version = "4.5.23", default-features = false, features = [
 	"usage",
 ] }
 
+cranelift-isle = { version = "0.124.1", default-features = false }
+
 hashbrown = { version = "0.16.0", default-features = false, features = [
 	"default-hasher",
 	"equivalent",

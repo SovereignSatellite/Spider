@@ -1,0 +1,11 @@
+;; Node::GlobalNew
+(decl GlobalNew (Link) Link)
+(extern extractor GlobalNew get_global_new)
+
+;; Node::GlobalGet
+(decl GlobalGet (Link) Link)
+(extern extractor GlobalGet get_global_get)
+
+;; Node::GlobalSet
+(decl GlobalSet (Link Link) Link)
+(extern extractor GlobalSet get_global_set)

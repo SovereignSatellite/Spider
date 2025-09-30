@@ -1,0 +1,73 @@
+(decl partial SimplifyI32 (Link) Link)
+
+;; (N + 0) => N
+(rule 3
+	(SimplifyI32
+		(I32Add lhs (I32 0))
+	)
+
+	lhs
+)
+
+;; (N - 0) => N
+(rule 3
+	(SimplifyI32
+		(I32Sub lhs (I32 0))
+	)
+
+	lhs
+)
+
+;; (K1 + K2) => K3
+(rule 2
+	(SimplifyI32
+		(I32Add (I32 lhs) (I32 rhs))
+	)
+
+	(I32 (raw_add_i32 lhs rhs))
+)
+
+;; (K1 - K2) => K3
+(rule 2
+	(SimplifyI32
+		(I32Sub (I32 lhs) (I32 rhs))
+	)
+
+	(I32 (raw_sub_i32 lhs rhs))
+)
+
+;; (N + K1) + K2 => N + (K1 + K2)
+(rule 1
+	(SimplifyI32
+		(I32Add
+			(I32Add lhs_1 rhs_1 @ (I32 _))
+			rhs_2 @ (I32 _)
+		)
+	)
+
+	(I32Add lhs_1 (I32Add rhs_1 rhs_2))
+)
+
+;; (N + K1) - K2 => N + (K1 - K2)
+(rule 1
+	(SimplifyI32
+		(I32Sub
+			(I32Add lhs_1 rhs_1 @ (I32 _))
+			rhs_2 @ (I32 _)
+		)
+	)
+
+	(I32Add lhs_1 (I32Sub rhs_1 rhs_2))
+)
+
+;; (N - K1) - K2 => N - (K1 + K2)
+(rule 1
+	(SimplifyI32
+		(I32Sub
+			(I32Sub lhs_1 rhs_1 @ (I32 _))
+			rhs_2 @ (I32 _)
+		)
+	)
+
+	(I32Sub lhs_1 (I32Add rhs_1 rhs_2))
+)

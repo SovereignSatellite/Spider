@@ -1,0 +1,44 @@
+;; Node::I32
+(decl I32 (i32) Link)
+(extern extractor I32 get_i32)
+(extern constructor I32 add_i32)
+
+;; Node::I64
+(decl I64 (i64) Link)
+(extern extractor I64 get_i64)
+(extern constructor I64 add_i64)
+
+;; Node::IntegerBinaryOperation
+(decl IntegerBinaryOperation (Link Link IntegerType IntegerBinaryOperator) Link)
+(extern extractor IntegerBinaryOperation get_integer_binary_operation)
+(extern constructor IntegerBinaryOperation add_integer_binary_operation)
+
+;; Node::IntegerBinaryOperation (IntegerType::I32, IntegerBinaryOperator::Add)
+(decl I32Add (Link Link) Link)
+
+(rule (I32Add lhs rhs)
+	(IntegerBinaryOperation lhs rhs (IntegerType.I32) (IntegerBinaryOperator.Add))
+)
+
+(extractor (I32Add lhs rhs)
+	(IntegerBinaryOperation lhs rhs (IntegerType.I32) (IntegerBinaryOperator.Add))
+)
+
+;; Node::IntegerBinaryOperation (IntegerType::I32, IntegerBinaryOperator::Subtract)
+(decl I32Sub (Link Link) Link)
+
+(rule (I32Sub lhs rhs)
+	(IntegerBinaryOperation lhs rhs (IntegerType.I32) (IntegerBinaryOperator.Subtract))
+)
+
+(extractor (I32Sub lhs rhs)
+	(IntegerBinaryOperation lhs rhs (IntegerType.I32) (IntegerBinaryOperator.Subtract))
+)
+
+;; Built-in `+`
+(decl pure raw_add_i32 (i32 i32) i32)
+(extern constructor raw_add_i32 raw_add_i32)
+
+;; Built-in `-`
+(decl pure raw_sub_i32 (i32 i32) i32)
+(extern constructor raw_sub_i32 raw_sub_i32)

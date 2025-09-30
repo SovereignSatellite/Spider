@@ -1,0 +1,136 @@
+(type Link (primitive Link))
+(type f32 (primitive f32))
+(type f64 (primitive f64))
+
+(type IntegerType extern
+	(enum
+		(I32)
+		(I64)
+	)
+)
+
+(type ExtendType extern
+	(enum
+		(I32_S8)
+		(I32_S16)
+
+		(I64_S8)
+		(I64_S16)
+		(I64_S32)
+	)
+)
+
+(type IntegerUnaryOperator extern
+	(enum
+		(CountOnes)
+		(LeadingZeroes)
+		(TrailingZeroes)
+	)
+)
+
+(type IntegerBinaryOperator extern
+	(enum
+		(Add)
+		(Subtract)
+		(Multiply)
+		(Divide (signed bool))
+		(Remainder (signed bool))
+		(And)
+		(Or)
+		(ExclusiveOr)
+		(ShiftLeft)
+		(ShiftRight (signed bool))
+		(RotateLeft)
+		(RotateRight)
+	)
+)
+
+(type IntegerCompareOperator extern
+	(enum
+		(Equal)
+		(NotEqual)
+		(LessThan (signed bool))
+		(GreaterThan (signed bool))
+		(LessThanEqual (signed bool))
+		(GreaterThanEqual (signed bool))
+	)
+)
+
+(type NumberType extern
+	(enum
+		(F32)
+		(F64)
+	)
+)
+
+(type NumberUnaryOperator extern
+	(enum
+		(Absolute)
+		(Negate)
+		(SquareRoot)
+		(RoundUp)
+		(RoundDown)
+		(Truncate)
+		(Nearest)
+	)
+)
+
+(type NumberBinaryOperator extern
+	(enum
+		(Add)
+		(Subtract)
+		(Multiply)
+		(Divide)
+		(Minimum)
+		(Maximum)
+		(CopySign)
+	)
+)
+
+(type NumberCompareOperator extern
+	(enum
+		(Equal)
+		(NotEqual)
+		(LessThan)
+		(GreaterThan)
+		(LessThanEqual)
+		(GreaterThanEqual)
+	)
+)
+
+(type LoadType extern
+	(enum
+		(I32_S8)
+		(I32_U8)
+		(I32_S16)
+		(I32_U16)
+		(I32)
+
+		(I64_S8)
+		(I64_U8)
+		(I64_S16)
+		(I64_U16)
+		(I64_S32)
+		(I64_U32)
+		(I64)
+
+		(F32)
+		(F64)
+	)
+)
+
+(type StoreType extern
+	(enum
+		(I32_I8)
+		(I32_I16)
+		(I32)
+
+		(I64_I8)
+		(I64_I16)
+		(I64_I32)
+		(I64)
+
+		(F32)
+		(F64)
+	)
+)

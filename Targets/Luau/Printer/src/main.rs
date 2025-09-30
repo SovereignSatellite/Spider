@@ -8,6 +8,7 @@ use data_flow_visitor::{
 		dead_port_eliminator::DeadPortEliminator, invariant_port_mover::InvariantPortMover,
 		region_identity,
 	},
+	isle,
 	topological_normalizer::TopologicalNormalizer,
 };
 use luau_builder::LuauBuilder;
@@ -33,18 +34,39 @@ struct Arguments {
 	optimize: bool,
 }
 
-fn run_optimizations(graph: &mut DataFlowGraph, omega: u32) -> u32 {
+fn run_isle_optimizations(graph: &mut DataFlowGraph) -> bool {
+	let mut applied = false;
+	let len = graph.len();
+
+	for id in (0..len.try_into().unwrap()).rev() {
+		while isle::simplify_i32(graph, id)
+		// || isle::simplify_global(graph, id)
+		// || isle::simplify_table(graph, id)
+		{
+			applied = true;
+		}
+	}
+
+	applied
+}
+
+fn run_all_optimizations(graph: &mut DataFlowGraph, mut omega: u32) -> u32 {
 	let mut topological_normalizer = TopologicalNormalizer::new();
-
-	let omega = topological_normalizer.run(graph, omega);
-
 	let mut invariant_port_mover = InvariantPortMover::new();
-
-	invariant_port_mover.run(graph);
-
 	let mut dead_port_eliminator = DeadPortEliminator::new();
 
-	dead_port_eliminator.run(graph, Link(omega, 0));
+	loop {
+		omega = topological_normalizer.run(graph, omega);
+
+		invariant_port_mover.run(graph);
+		dead_port_eliminator.run(graph, Link(omega, 0));
+
+		if !run_isle_optimizations(graph) {
+			break;
+		}
+
+		region_identity::remove(graph);
+	}
 
 	omega
 }
@@ -63,7 +85,7 @@ fn build_data_flow_graph(data: &[u8], optimize: bool) -> DataFlowGraph {
 
 	let omega = builder.run(&mut graph, data);
 	let omega = if optimize {
-		run_optimizations(&mut graph, omega)
+		run_all_optimizations(&mut graph, omega)
 	} else {
 		omega
 	};

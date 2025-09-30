@@ -1,0 +1,9 @@
+;; Node::F32
+(decl F32 (f32) Link)
+(extern extractor F32 get_f32)
+(extern constructor F32 add_f32)
+
+;; Node::F64
+(decl F64 (f64) Link)
+(extern extractor F64 get_f64)
+(extern constructor F64 add_f64)
