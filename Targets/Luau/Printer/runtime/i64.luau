@@ -249,6 +249,7 @@ end
 -- NEEDS constant_all_u64
 -- NEEDS constant_minimum_s64
 -- NEEDS divide_u64
+-- NEEDS equal_i64
 -- NEEDS is_positive
 -- NEEDS negate_i64
 local function rt_divide_s64(lhs: number, rhs: number): number
@@ -565,37 +566,27 @@ local function rt_greater_than_u64(lhs: number, rhs: number): boolean
 end
 
 -- SECTION less_than_equal_s64
--- NEEDS flip_sign_bit_i64
--- NEEDS less_than_equal_u64
+-- NEEDS greater_than_s64
 local function rt_less_than_equal_s64(lhs: number, rhs: number): boolean
-	local lhs = rt_flip_sign_bit_i64(lhs)
-	local rhs = rt_flip_sign_bit_i64(rhs)
-
-	return rt_less_than_equal_u64(lhs, rhs)
+	return not rt_greater_than_s64(lhs, rhs)
 end
 
 -- SECTION less_than_equal_u64
--- NEEDS equal_i64
--- NEEDS less_than_u64
+-- NEEDS greater_than_u64
 local function rt_less_than_equal_u64(lhs: number, rhs: number): boolean
-	return rt_less_than_u64(lhs, rhs) or rt_equal_i64(lhs, rhs)
+	return not rt_greater_than_u64(lhs, rhs)
 end
 
 -- SECTION greater_than_equal_s64
--- NEEDS flip_sign_bit_i64
--- NEEDS greater_than_equal_u64
+-- NEEDS less_than_s64
 local function rt_greater_than_equal_s64(lhs: number, rhs: number): boolean
-	local lhs = rt_flip_sign_bit_i64(lhs)
-	local rhs = rt_flip_sign_bit_i64(rhs)
-
-	return rt_greater_than_equal_u64(lhs, rhs)
+	return not rt_less_than_s64(lhs, rhs)
 end
 
 -- SECTION greater_than_equal_u64
--- NEEDS equal_i64
--- NEEDS greater_than_u64
+-- NEEDS less_than_u64
 local function rt_greater_than_equal_u64(lhs: number, rhs: number): boolean
-	return rt_greater_than_u64(lhs, rhs) or rt_equal_i64(lhs, rhs)
+	return not rt_less_than_u64(lhs, rhs)
 end
 
 -- SECTION narrow_i64
