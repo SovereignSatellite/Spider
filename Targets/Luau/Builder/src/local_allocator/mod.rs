@@ -125,7 +125,7 @@ impl LocalAllocator {
 		graph: &DataFlowGraph,
 		mut range: Range<u32>,
 	) {
-		self.handle_definitions(assignments, range.start);
+		self.handle_definitions(assignments, range.next().unwrap());
 		self.handle_arguments(assignments, graph, range.next_back().unwrap());
 
 		while let Some(id) = range.next_back() {
