@@ -1,4 +1,3 @@
-use alloc::vec::Vec;
 use data_flow_graph::{DataFlowGraph, Link, Node};
 use hashbrown::{HashMap, hash_map::Entry};
 
@@ -78,74 +77,19 @@ pub fn add_value_assignments(
 	let results = result_count_of(graph.get(id));
 
 	for link in (0..results).map(|port| Link(id, port)) {
-		let _ = assignments.try_insert(link, link);
+		let _ = assignments.try_insert(link, Link::DANGLING);
 	}
 }
 
 pub struct ScalarFinder {
 	handled: HashMap<u32, bool>,
-	arguments: Vec<u32>,
 }
 
 impl ScalarFinder {
 	pub fn new() -> Self {
 		Self {
 			handled: HashMap::new(),
-			arguments: Vec::new(),
 		}
-	}
-
-	fn assign_arguments(
-		&mut self,
-		assignments: &mut HashMap<Link, Link>,
-		graph: &DataFlowGraph,
-		id: u32,
-	) {
-		let arguments = self
-			.arguments
-			.extract_if(.., |&mut argument| id >= argument);
-
-		for argument in arguments {
-			if self.handled.insert(argument, true).unwrap_or_default() {
-				continue;
-			}
-
-			add_value_assignments(assignments, graph, argument);
-		}
-	}
-
-	fn push_or_assign_arguments(
-		&mut self,
-		assignments: &mut HashMap<Link, Link>,
-		graph: &DataFlowGraph,
-		link: Link,
-	) {
-		let Link(id, port) = link;
-
-		// We don't care about accesses to states for localizing variables,
-		// since they are always forced to be local.
-		if port >= result_count_of(graph.get(id)) {
-			return;
-		}
-
-		// If we encounter a local, then everything before it must also be local,
-		// otherwise we can make out of order assignments.
-		if assignments.contains_key(&link) {
-			self.assign_arguments(assignments, graph, id);
-		} else {
-			self.arguments.push(id);
-		}
-	}
-
-	fn handle_sequence(
-		&mut self,
-		assignments: &mut HashMap<Link, Link>,
-		graph: &DataFlowGraph,
-		node: &Node,
-	) {
-		self.arguments.clear();
-
-		node.for_each_argument(|link| self.push_or_assign_arguments(assignments, graph, link));
 	}
 
 	fn handle_effects(
@@ -196,13 +140,12 @@ impl ScalarFinder {
 		assignments: &mut HashMap<Link, Link>,
 		graph: &DataFlowGraph,
 		id: u32,
-		port: u16,
 	) {
-		let node = graph.get(id);
-
-		if port < result_count_of(node) && !self.handled.insert(id, true).unwrap_or_default() {
-			add_value_assignments(assignments, graph, id);
+		if self.handled.insert(id, true).unwrap_or_default() {
+			return;
 		}
+
+		add_value_assignments(assignments, graph, id);
 	}
 
 	fn handle_uses(
@@ -215,7 +158,7 @@ impl ScalarFinder {
 			if port == 0 {
 				self.handle_repeat(assignments, graph, id);
 			} else {
-				self.handle_excess(assignments, graph, id, port);
+				self.handle_excess(assignments, graph, id);
 			}
 		});
 	}
@@ -234,10 +177,8 @@ impl ScalarFinder {
 		}
 
 		// Then, effects are handled from the missing assignments.
-		// Lastly, we ensure arguments are sequenced properly where needed.
 		for (node, id) in graph.nodes().zip(0..) {
 			self.handle_effects(assignments, graph, id, node);
-			self.handle_sequence(assignments, graph, node);
 		}
 	}
 }

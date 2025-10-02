@@ -67,7 +67,7 @@ impl LocalAllocator {
 		// In the first pass we ensure all producers outside the list
 		// have their variables reused.
 		arguments.retain(|&(argument, preferred)| {
-			argument == preferred
+			preferred == Link::DANGLING
 				|| !self
 					.provider
 					.try_revive_into(assignments, argument, preferred)
@@ -78,9 +78,10 @@ impl LocalAllocator {
 		// In the second pass we assign new variables where needed and
 		// reuse producers within the list.
 		for &(argument, preferred) in arguments.iter().rev() {
-			if self
-				.provider
-				.try_revive_into(assignments, argument, preferred)
+			if preferred != Link::DANGLING
+				&& self
+					.provider
+					.try_revive_into(assignments, argument, preferred)
 			{
 				continue;
 			}

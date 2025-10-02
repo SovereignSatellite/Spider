@@ -17,15 +17,13 @@ fn add_state_assignment(assignments: &mut HashMap<Link, Link>, graph: &DataFlowG
 	let Link(id, port) = link;
 
 	if port >= result_count_of(graph.get(id)) {
-		let _ = assignments.try_insert(link, link);
+		let _ = assignments.try_insert(link, Link::DANGLING);
 	}
 }
 
 fn handle_lambda_in(assignments: &mut HashMap<Link, Link>, id: u32, lambda_in: &LambdaIn) {
 	for port in lambda_in.output_ports() {
-		let argument = Link(id, port);
-
-		let _ = assignments.try_insert(argument, argument);
+		let _ = assignments.try_insert(Link(id, port), Link::DANGLING);
 	}
 }
 
@@ -67,7 +65,7 @@ fn handle_region_post(
 
 	// We ensure that all arguments of the last region get their local, even if not used.
 	for argument in (0..len).map(|port| Link(last, port)) {
-		let _ = assignments.try_insert(argument, argument);
+		let _ = assignments.try_insert(argument, Link::DANGLING);
 	}
 
 	// Then we make all other regions reuse the locals of the last.
@@ -92,7 +90,7 @@ fn handle_gamma_post(assignments: &mut HashMap<Link, Link>, graph: &DataFlowGrap
 
 	// We ensure that all results get their local, even if not used.
 	for result in (0..len).map(|port| Link(*output, port)) {
-		let _ = assignments.try_insert(result, result);
+		let _ = assignments.try_insert(result, Link::DANGLING);
 	}
 }
 
@@ -112,7 +110,7 @@ fn handle_gamma_out(
 	handle_gamma_post(assignments, graph, *regions.last().unwrap());
 
 	if regions.len() != 2 {
-		let _ = assignments.try_insert(*condition, *condition);
+		let _ = assignments.try_insert(*condition, Link::DANGLING);
 	}
 }
 
@@ -135,7 +133,7 @@ fn handle_theta_out(
 	assignments.extend(inputs.zip(outputs.clone()).take(len));
 
 	for output in outputs.take(len) {
-		let _ = assignments.try_insert(output, output);
+		let _ = assignments.try_insert(output, Link::DANGLING);
 	}
 }
 
@@ -147,19 +145,14 @@ fn handle_omega_in(
 	let OmegaIn { output } = omega_in;
 	let OmegaOut { input, state, .. } = graph.get(*output).as_omega_out().unwrap();
 
-	let _ = assignments.try_insert(*state, *state);
+	let _ = assignments.try_insert(Link(*input, OmegaIn::ENVIRONMENT_PORT), Link::DANGLING);
+	let _ = assignments.try_insert(Link(*input, OmegaIn::STATE_PORT), Link::DANGLING);
 
-	let environment = Link(*input, OmegaIn::ENVIRONMENT_PORT);
-	let state = Link(*input, OmegaIn::STATE_PORT);
-
-	let _ = assignments.try_insert(environment, environment);
-	let _ = assignments.try_insert(state, state);
+	let _ = assignments.try_insert(*state, Link::DANGLING);
 }
 
 fn handle_trap(assignments: &mut HashMap<Link, Link>, id: u32) {
-	let trap = Link(id, 0);
-
-	let _ = assignments.try_insert(trap, trap);
+	let _ = assignments.try_insert(Link(id, 0), Link::DANGLING);
 }
 
 fn handle_identity(assignments: &mut HashMap<Link, Link>, id: u32, identity: Identity) {
@@ -182,7 +175,7 @@ fn handle_call(assignments: &mut HashMap<Link, Link>, id: u32, call: &Call) {
 	let states = (results..).map(|port| Link(id, port));
 
 	for state in states.clone().take(len) {
-		let _ = assignments.try_insert(state, state);
+		let _ = assignments.try_insert(state, Link::DANGLING);
 	}
 
 	assignments.extend(arguments.copied().zip(states));
@@ -192,7 +185,7 @@ fn handle_merge(assignments: &mut HashMap<Link, Link>, merge: &Merge) {
 	let Merge { states } = merge;
 
 	for &state in states {
-		let _ = assignments.try_insert(state, state);
+		let _ = assignments.try_insert(state, Link::DANGLING);
 	}
 }
 
