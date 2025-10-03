@@ -165,7 +165,7 @@ impl DataFlowBuilder {
 			.into_iter()
 			.map(Result::unwrap)
 			.map(|index| functions[usize::try_from(index).unwrap()])
-			.map(|link| graph.add_global_get(link))
+			.map(|link| graph.add_global_get(link).0)
 			.collect()
 	}
 
@@ -220,7 +220,7 @@ impl DataFlowBuilder {
 
 		let size = graph.add_i32(size);
 
-		graph.add_table_init(destination, source, size)
+		graph.add_table_init(destination, source, size).0
 	}
 
 	fn handle_element_kind(
@@ -321,7 +321,7 @@ impl DataFlowBuilder {
 
 		let size = graph.add_i32(size);
 
-		graph.add_memory_init(destination, source, size)
+		graph.add_memory_init(destination, source, size).0
 	}
 
 	fn handle_data_kind(
@@ -463,7 +463,7 @@ impl DataFlowBuilder {
 		let mut reference = self.global_state.get_external_kind(export.kind)[index];
 
 		if export.kind == wasmparser::ExternalKind::Func {
-			reference = graph.add_global_get(reference);
+			reference = graph.add_global_get(reference).0;
 		}
 
 		Export {
@@ -494,7 +494,7 @@ impl DataFlowBuilder {
 
 		start.map_or(state, |start| {
 			let function = self.global_state.functions[usize::try_from(start).unwrap()];
-			let function = graph.add_global_get(function);
+			let function = graph.add_global_get(function).0;
 			let call = graph.add_call(function, alloc::vec![state], 0, 1);
 
 			Link(call, 0)

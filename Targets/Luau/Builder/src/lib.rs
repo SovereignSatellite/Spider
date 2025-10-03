@@ -349,6 +349,12 @@ impl LuauBuilder {
 		let expression = self.data_handler.load_global_get(node);
 
 		self.do_assignment(id, expression);
+
+		self.code_handler.do_rename(
+			Link(id, GlobalGet::STATE_PORT),
+			node.source,
+			&self.data_handler,
+		);
 	}
 
 	fn handle_global_set(&mut self, id: u32, node: GlobalSet) {
@@ -372,6 +378,12 @@ impl LuauBuilder {
 		let expression = self.data_handler.load_table_get(node);
 
 		self.do_assignment(id, expression);
+
+		self.code_handler.do_rename(
+			Link(id, TableGet::STATE_PORT),
+			node.source.reference,
+			&self.data_handler,
+		);
 	}
 
 	fn handle_table_set(&mut self, id: u32, node: TableSet) {
@@ -388,6 +400,12 @@ impl LuauBuilder {
 		let expression = self.data_handler.load_table_size(node);
 
 		self.do_assignment(id, expression);
+
+		self.code_handler.do_rename(
+			Link(id, TableSize::STATE_PORT),
+			node.source,
+			&self.data_handler,
+		);
 	}
 
 	fn handle_table_grow(&mut self, id: u32, node: TableGrow) {
@@ -474,6 +492,12 @@ impl LuauBuilder {
 		let expression = self.data_handler.load_memory_load(node);
 
 		self.do_assignment(id, expression);
+
+		self.code_handler.do_rename(
+			Link(id, MemoryLoad::STATE_PORT),
+			node.source.reference,
+			&self.data_handler,
+		);
 	}
 
 	fn handle_memory_store(&mut self, id: u32, node: MemoryStore) {
@@ -491,6 +515,12 @@ impl LuauBuilder {
 		let expression = self.data_handler.load_memory_size(node);
 
 		self.do_assignment(id, expression);
+
+		self.code_handler.do_rename(
+			Link(id, MemorySize::STATE_PORT),
+			node.source,
+			&self.data_handler,
+		);
 	}
 
 	fn handle_memory_grow(&mut self, id: u32, node: MemoryGrow) {

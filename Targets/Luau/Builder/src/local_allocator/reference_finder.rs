@@ -180,10 +180,7 @@ fn handle_merge(assignments: &mut HashMap<Link, Link>, node: &Merge) {
 fn handle_global_get(assignments: &mut HashMap<Link, Link>, id: u32, node: GlobalGet) {
 	let GlobalGet { source } = node;
 
-	// TODO: Fix `get` states
-	if false {
-		assignments.insert(source, Link(id, GlobalGet::STATE_PORT));
-	}
+	assignments.insert(source, Link(id, GlobalGet::STATE_PORT));
 }
 
 fn handle_global_set(
@@ -205,10 +202,7 @@ fn handle_global_set(
 fn handle_table_get(assignments: &mut HashMap<Link, Link>, id: u32, node: TableGet) {
 	let TableGet { source } = node;
 
-	// TODO: Fix `get` states
-	if false {
-		assignments.insert(source.reference, Link(id, TableGet::STATE_PORT));
-	}
+	assignments.insert(source.reference, Link(id, TableGet::STATE_PORT));
 }
 
 fn handle_table_set(assignments: &mut HashMap<Link, Link>, id: u32, node: TableSet) {
@@ -220,10 +214,7 @@ fn handle_table_set(assignments: &mut HashMap<Link, Link>, id: u32, node: TableS
 fn handle_table_size(assignments: &mut HashMap<Link, Link>, id: u32, node: TableSize) {
 	let TableSize { source } = node;
 
-	// TODO: Fix `get` states
-	if false {
-		assignments.insert(source, Link(id, TableSize::STATE_PORT));
-	}
+	assignments.insert(source, Link(id, TableSize::STATE_PORT));
 }
 
 fn handle_table_grow(assignments: &mut HashMap<Link, Link>, id: u32, node: TableGrow) {
@@ -275,10 +266,7 @@ fn handle_elements_drop(assignments: &mut HashMap<Link, Link>, id: u32, node: El
 fn handle_memory_load(assignments: &mut HashMap<Link, Link>, id: u32, node: MemoryLoad) {
 	let MemoryLoad { source, .. } = node;
 
-	// TODO: Fix `get` states
-	if false {
-		assignments.insert(source.reference, Link(id, MemoryLoad::STATE_PORT));
-	}
+	assignments.insert(source.reference, Link(id, MemoryLoad::STATE_PORT));
 }
 
 fn handle_memory_store(assignments: &mut HashMap<Link, Link>, id: u32, node: MemoryStore) {
@@ -290,10 +278,7 @@ fn handle_memory_store(assignments: &mut HashMap<Link, Link>, id: u32, node: Mem
 fn handle_memory_size(assignments: &mut HashMap<Link, Link>, id: u32, node: MemorySize) {
 	let MemorySize { source } = node;
 
-	// TODO: Fix `get` states
-	if false {
-		assignments.insert(source, Link(id, MemorySize::STATE_PORT));
-	}
+	assignments.insert(source, Link(id, MemorySize::STATE_PORT));
 }
 
 fn handle_memory_grow(assignments: &mut HashMap<Link, Link>, id: u32, node: MemoryGrow) {

@@ -483,10 +483,14 @@ impl DataFlowGraph {
 		Link(self.add_node(node), 0)
 	}
 
-	pub fn add_global_get(&mut self, source: Link) -> Link {
+	pub fn add_global_get(&mut self, source: Link) -> (Link, Link) {
 		let node = Node::GlobalGet(GlobalGet { source });
+		let id = self.add_node(node);
 
-		Link(self.add_node(node), GlobalGet::RESULT_PORT)
+		(
+			Link(id, GlobalGet::RESULT_PORT),
+			Link(id, GlobalGet::STATE_PORT),
+		)
 	}
 
 	pub fn add_global_set(&mut self, destination: Link, source: Link) -> Link {
@@ -508,10 +512,14 @@ impl DataFlowGraph {
 		Link(self.add_node(node), 0)
 	}
 
-	pub fn add_table_get(&mut self, source: Location) -> Link {
+	pub fn add_table_get(&mut self, source: Location) -> (Link, Link) {
 		let node = Node::TableGet(TableGet { source });
+		let id = self.add_node(node);
 
-		Link(self.add_node(node), TableGet::RESULT_PORT)
+		(
+			Link(id, TableGet::RESULT_PORT),
+			Link(id, TableGet::STATE_PORT),
+		)
 	}
 
 	pub fn add_table_set(&mut self, destination: Location, source: Link) -> Link {
@@ -523,10 +531,14 @@ impl DataFlowGraph {
 		Link(self.add_node(node), TableSet::STATE_PORT)
 	}
 
-	pub fn add_table_size(&mut self, source: Link) -> Link {
+	pub fn add_table_size(&mut self, source: Link) -> (Link, Link) {
 		let node = Node::TableSize(TableSize { source });
+		let id = self.add_node(node);
 
-		Link(self.add_node(node), TableSize::RESULT_PORT)
+		(
+			Link(id, TableSize::RESULT_PORT),
+			Link(id, TableSize::STATE_PORT),
+		)
 	}
 
 	pub fn add_table_grow(
@@ -558,24 +570,42 @@ impl DataFlowGraph {
 		Link(self.add_node(node), TableFill::STATE_PORT)
 	}
 
-	pub fn add_table_copy(&mut self, destination: Location, source: Location, size: Link) -> Link {
+	pub fn add_table_copy(
+		&mut self,
+		destination: Location,
+		source: Location,
+		size: Link,
+	) -> (Link, Link) {
 		let node = Node::TableCopy(TableCopy {
 			destination,
 			source,
 			size,
 		});
+		let id = self.add_node(node);
 
-		Link(self.add_node(node), TableCopy::DESTINATION_STATE_PORT)
+		(
+			Link(id, TableCopy::DESTINATION_STATE_PORT),
+			Link(id, TableCopy::SOURCE_STATE_PORT),
+		)
 	}
 
-	pub fn add_table_init(&mut self, destination: Location, source: Location, size: Link) -> Link {
+	pub fn add_table_init(
+		&mut self,
+		destination: Location,
+		source: Location,
+		size: Link,
+	) -> (Link, Link) {
 		let node = Node::TableInit(TableInit {
 			destination,
 			source,
 			size,
 		});
+		let id = self.add_node(node);
 
-		Link(self.add_node(node), TableInit::DESTINATION_STATE_PORT)
+		(
+			Link(id, TableInit::DESTINATION_STATE_PORT),
+			Link(id, TableInit::SOURCE_STATE_PORT),
+		)
 	}
 
 	pub fn add_elements_new(&mut self, content: Vec<Link>) -> Link {
@@ -596,10 +626,14 @@ impl DataFlowGraph {
 		Link(self.add_node(node), 0)
 	}
 
-	pub fn add_memory_load(&mut self, source: Location, r#type: LoadType) -> Link {
+	pub fn add_memory_load(&mut self, source: Location, r#type: LoadType) -> (Link, Link) {
 		let node = Node::MemoryLoad(MemoryLoad { source, r#type });
+		let id = self.add_node(node);
 
-		Link(self.add_node(node), MemoryLoad::RESULT_PORT)
+		(
+			Link(id, MemoryLoad::RESULT_PORT),
+			Link(id, MemoryLoad::STATE_PORT),
+		)
 	}
 
 	pub fn add_memory_store(
@@ -617,10 +651,14 @@ impl DataFlowGraph {
 		Link(self.add_node(node), MemoryStore::STATE_PORT)
 	}
 
-	pub fn add_memory_size(&mut self, source: Link) -> Link {
+	pub fn add_memory_size(&mut self, source: Link) -> (Link, Link) {
 		let node = Node::MemorySize(MemorySize { source });
+		let id = self.add_node(node);
 
-		Link(self.add_node(node), MemorySize::RESULT_PORT)
+		(
+			Link(id, MemorySize::RESULT_PORT),
+			Link(id, MemorySize::STATE_PORT),
+		)
 	}
 
 	pub fn add_memory_grow(&mut self, destination: Link, size: Link) -> (Link, Link) {
@@ -643,24 +681,42 @@ impl DataFlowGraph {
 		Link(self.add_node(node), MemoryFill::STATE_PORT)
 	}
 
-	pub fn add_memory_copy(&mut self, destination: Location, source: Location, size: Link) -> Link {
+	pub fn add_memory_copy(
+		&mut self,
+		destination: Location,
+		source: Location,
+		size: Link,
+	) -> (Link, Link) {
 		let node = Node::MemoryCopy(MemoryCopy {
 			destination,
 			source,
 			size,
 		});
+		let id = self.add_node(node);
 
-		Link(self.add_node(node), MemoryCopy::DESTINATION_STATE_PORT)
+		(
+			Link(id, MemoryCopy::DESTINATION_STATE_PORT),
+			Link(id, MemoryCopy::SOURCE_STATE_PORT),
+		)
 	}
 
-	pub fn add_memory_init(&mut self, destination: Location, source: Location, size: Link) -> Link {
+	pub fn add_memory_init(
+		&mut self,
+		destination: Location,
+		source: Location,
+		size: Link,
+	) -> (Link, Link) {
 		let node = Node::MemoryInit(MemoryInit {
 			destination,
 			source,
 			size,
 		});
+		let id = self.add_node(node);
 
-		Link(self.add_node(node), MemoryInit::DESTINATION_STATE_PORT)
+		(
+			Link(id, MemoryInit::DESTINATION_STATE_PORT),
+			Link(id, MemoryInit::SOURCE_STATE_PORT),
+		)
 	}
 
 	pub fn add_data_new(&mut self, content: Arc<[u8]>) -> Link {

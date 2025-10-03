@@ -182,7 +182,7 @@ impl BasicBlockConverter {
 
 		let state = self.dependencies.get(ReferenceType::Function, function);
 
-		self.locals[usize::from(destination)] = graph.add_global_get(state);
+		self.locals[usize::from(destination)] = graph.add_global_get(state).0;
 	}
 
 	fn handle_unreachable(&mut self, graph: &mut DataFlowGraph) {
@@ -481,8 +481,11 @@ impl BasicBlockConverter {
 		} = instruction;
 
 		let state = self.dependencies.get(ReferenceType::Global, source);
+		let (result, state) = graph.add_global_get(state);
 
-		self.locals[usize::from(destination)] = graph.add_global_get(state);
+		self.locals[usize::from(destination)] = result;
+
+		self.dependencies.set(ReferenceType::Global, source, state);
 	}
 
 	fn handle_global_set(&mut self, graph: &mut DataFlowGraph, instruction: GlobalSet) {
@@ -518,8 +521,12 @@ impl BasicBlockConverter {
 		} = instruction;
 
 		let state = self.load_location(ReferenceType::Table, source);
+		let (result, state) = graph.add_table_get(state);
 
-		self.locals[usize::from(destination)] = graph.add_table_get(state);
+		self.locals[usize::from(destination)] = result;
+
+		self.dependencies
+			.set(ReferenceType::Table, source.reference, state);
 	}
 
 	fn handle_table_set(&mut self, graph: &mut DataFlowGraph, instruction: TableSet) {
@@ -541,8 +548,11 @@ impl BasicBlockConverter {
 		let TableSize { destination, table } = instruction;
 
 		let state = self.dependencies.get(ReferenceType::Table, table);
+		let (result, state) = graph.add_table_size(state);
 
-		self.locals[usize::from(destination)] = graph.add_table_size(state);
+		self.locals[usize::from(destination)] = result;
+
+		self.dependencies.set(ReferenceType::Table, table, state);
 	}
 
 	fn handle_table_grow(&mut self, graph: &mut DataFlowGraph, instruction: TableGrow) {
@@ -588,14 +598,20 @@ impl BasicBlockConverter {
 			size,
 		} = instruction;
 
-		let state = graph.add_table_copy(
+		let (destination_state, source_state) = graph.add_table_copy(
 			self.load_location(ReferenceType::Table, destination),
 			self.load_location(ReferenceType::Table, source),
 			self.locals[usize::from(size)],
 		);
 
+		self.dependencies.set(
+			ReferenceType::Table,
+			destination.reference,
+			destination_state,
+		);
+
 		self.dependencies
-			.set(ReferenceType::Table, destination.reference, state);
+			.set(ReferenceType::Table, source.reference, source_state);
 	}
 
 	fn handle_table_init(&mut self, graph: &mut DataFlowGraph, instruction: TableInit) {
@@ -605,25 +621,34 @@ impl BasicBlockConverter {
 			size,
 		} = instruction;
 
-		let mut source = self.load_location(ReferenceType::Elements, source);
+		let mut elements = self.load_location(ReferenceType::Elements, source);
+		let (reference, state) = graph.add_global_get(elements.reference);
 
-		source.reference = graph.add_global_get(source.reference);
+		elements.reference = reference;
 
-		let state = graph.add_table_init(
+		let (destination_state, source_state) = graph.add_table_init(
 			self.load_location(ReferenceType::Table, destination),
-			source,
+			elements,
 			self.locals[usize::from(size)],
 		);
 
+		self.dependencies.set(
+			ReferenceType::Table,
+			destination.reference,
+			destination_state,
+		);
+
+		let source_state = graph.add_global_set(state, source_state);
+
 		self.dependencies
-			.set(ReferenceType::Table, destination.reference, state);
+			.set(ReferenceType::Elements, source.reference, source_state);
 	}
 
 	fn handle_elements_drop(&mut self, graph: &mut DataFlowGraph, instruction: ElementsDrop) {
 		let ElementsDrop { source } = instruction;
 
 		let state = self.dependencies.get(ReferenceType::Elements, source);
-		let inner = graph.add_global_get(state);
+		let (inner, state) = graph.add_global_get(state);
 		let inner = graph.add_elements_drop(inner);
 		let state = graph.add_global_set(state, inner);
 
@@ -639,8 +664,12 @@ impl BasicBlockConverter {
 		} = instruction;
 
 		let state = self.load_location(ReferenceType::Memory, source);
+		let (result, state) = graph.add_memory_load(state, r#type);
 
-		self.locals[usize::from(destination)] = graph.add_memory_load(state, r#type);
+		self.locals[usize::from(destination)] = result;
+
+		self.dependencies
+			.set(ReferenceType::Memory, source.reference, state);
 	}
 
 	fn handle_memory_store(&mut self, graph: &mut DataFlowGraph, instruction: MemoryStore) {
@@ -667,8 +696,11 @@ impl BasicBlockConverter {
 		} = instruction;
 
 		let state = self.dependencies.get(ReferenceType::Memory, memory);
+		let (result, state) = graph.add_memory_size(state);
 
-		self.locals[usize::from(destination)] = graph.add_memory_size(state);
+		self.locals[usize::from(destination)] = result;
+
+		self.dependencies.set(ReferenceType::Memory, memory, state);
 	}
 
 	fn handle_memory_grow(&mut self, graph: &mut DataFlowGraph, instruction: MemoryGrow) {
@@ -712,14 +744,20 @@ impl BasicBlockConverter {
 			size,
 		} = instruction;
 
-		let state = graph.add_memory_copy(
+		let (destination_state, source_state) = graph.add_memory_copy(
 			self.load_location(ReferenceType::Memory, destination),
 			self.load_location(ReferenceType::Memory, source),
 			self.locals[usize::from(size)],
 		);
 
+		self.dependencies.set(
+			ReferenceType::Memory,
+			destination.reference,
+			destination_state,
+		);
+
 		self.dependencies
-			.set(ReferenceType::Memory, destination.reference, state);
+			.set(ReferenceType::Memory, source.reference, source_state);
 	}
 
 	fn handle_memory_init(&mut self, graph: &mut DataFlowGraph, instruction: MemoryInit) {
@@ -729,14 +767,20 @@ impl BasicBlockConverter {
 			size,
 		} = instruction;
 
-		let state = graph.add_memory_init(
+		let (destination_state, source_state) = graph.add_memory_init(
 			self.load_location(ReferenceType::Memory, destination),
 			self.load_location(ReferenceType::Data, source),
 			self.locals[usize::from(size)],
 		);
 
+		self.dependencies.set(
+			ReferenceType::Memory,
+			destination.reference,
+			destination_state,
+		);
+
 		self.dependencies
-			.set(ReferenceType::Memory, destination.reference, state);
+			.set(ReferenceType::Data, source.reference, source_state);
 	}
 
 	fn handle_data_drop(&mut self, graph: &mut DataFlowGraph, instruction: DataDrop) {
