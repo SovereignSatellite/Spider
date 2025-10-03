@@ -23,82 +23,62 @@ use super::{
 macro_rules! for_each_visit {
 	($self:ident, $visit:ident, $handler:ident) => {
 		match $self {
-			Self::LambdaIn(lambda_in) => lambda_in.$visit($handler),
-			Self::LambdaOut(lambda_out) => lambda_out.$visit($handler),
-			Self::RegionIn(region_in) => region_in.$visit($handler),
-			Self::RegionOut(region_out) => region_out.$visit($handler),
-			Self::GammaIn(gamma_in) => gamma_in.$visit($handler),
-			Self::GammaOut(gamma_out) => gamma_out.$visit($handler),
-			Self::ThetaIn(theta_in) => theta_in.$visit($handler),
-			Self::ThetaOut(theta_out) => theta_out.$visit($handler),
-			Self::OmegaIn(omega_in) => omega_in.$visit($handler),
-			Self::OmegaOut(omega_out) => omega_out.$visit($handler),
-			Self::Import(import) => import.$visit($handler),
+			Self::LambdaIn(node) => node.$visit($handler),
+			Self::LambdaOut(node) => node.$visit($handler),
+			Self::RegionIn(node) => node.$visit($handler),
+			Self::RegionOut(node) => node.$visit($handler),
+			Self::GammaIn(node) => node.$visit($handler),
+			Self::GammaOut(node) => node.$visit($handler),
+			Self::ThetaIn(node) => node.$visit($handler),
+			Self::ThetaOut(node) => node.$visit($handler),
+			Self::OmegaIn(node) => node.$visit($handler),
+			Self::OmegaOut(node) => node.$visit($handler),
+			Self::Import(node) => node.$visit($handler),
 			Self::Host(host) => host.$visit(&mut $handler),
 			Self::Trap | Self::Null | Self::I32(_) | Self::I64(_) | Self::F32(_) | Self::F64(_) => {
 			}
-			Self::Identity(identity) => identity.$visit($handler),
-			Self::Call(call) => call.$visit($handler),
-			Self::Merge(merge) => merge.$visit($handler),
-			Self::RefIsNull(ref_is_null) => ref_is_null.$visit($handler),
-			Self::IntegerUnaryOperation(integer_unary_operation) => {
-				integer_unary_operation.$visit($handler)
-			}
-			Self::IntegerBinaryOperation(integer_binary_operation) => {
-				integer_binary_operation.$visit($handler)
-			}
-			Self::IntegerCompareOperation(integer_compare_operation) => {
-				integer_compare_operation.$visit($handler)
-			}
-			Self::IntegerNarrow(integer_narrow) => integer_narrow.$visit($handler),
-			Self::IntegerWiden(integer_widen) => integer_widen.$visit($handler),
-			Self::IntegerExtend(integer_extend) => integer_extend.$visit($handler),
-			Self::IntegerConvertToNumber(integer_convert_to_number) => {
-				integer_convert_to_number.$visit($handler)
-			}
-			Self::IntegerTransmuteToNumber(integer_transmute_to_number) => {
-				integer_transmute_to_number.$visit($handler)
-			}
-			Self::NumberUnaryOperation(number_unary_operation) => {
-				number_unary_operation.$visit($handler)
-			}
-			Self::NumberBinaryOperation(number_binary_operation) => {
-				number_binary_operation.$visit($handler)
-			}
-			Self::NumberCompareOperation(number_compare_operation) => {
-				number_compare_operation.$visit($handler)
-			}
-			Self::NumberNarrow(number_narrow) => number_narrow.$visit($handler),
-			Self::NumberWiden(number_widen) => number_widen.$visit($handler),
-			Self::NumberTruncateToInteger(number_truncate_to_integer) => {
-				number_truncate_to_integer.$visit($handler)
-			}
-			Self::NumberTransmuteToInteger(number_transmute_to_integer) => {
-				number_transmute_to_integer.$visit($handler)
-			}
-			Self::GlobalNew(global_new) => global_new.$visit($handler),
-			Self::GlobalGet(global_get) => global_get.$visit($handler),
-			Self::GlobalSet(global_set) => global_set.$visit($handler),
-			Self::TableNew(table_new) => table_new.$visit($handler),
-			Self::TableGet(table_get) => table_get.$visit($handler),
-			Self::TableSet(table_set) => table_set.$visit($handler),
-			Self::TableSize(table_size) => table_size.$visit($handler),
-			Self::TableGrow(table_grow) => table_grow.$visit($handler),
-			Self::TableFill(table_fill) => table_fill.$visit($handler),
-			Self::TableCopy(table_copy) => table_copy.$visit($handler),
-			Self::TableInit(table_init) => table_init.$visit($handler),
-			Self::ElementsNew(elements_new) => elements_new.$visit($handler),
-			Self::ElementsDrop(elements_drop) => elements_drop.$visit($handler),
-			Self::MemoryNew(memory_new) => memory_new.$visit($handler),
-			Self::MemoryLoad(memory_load) => memory_load.$visit($handler),
-			Self::MemoryStore(memory_store) => memory_store.$visit($handler),
-			Self::MemorySize(memory_size) => memory_size.$visit($handler),
-			Self::MemoryGrow(memory_grow) => memory_grow.$visit($handler),
-			Self::MemoryFill(memory_fill) => memory_fill.$visit($handler),
-			Self::MemoryCopy(memory_copy) => memory_copy.$visit($handler),
-			Self::MemoryInit(memory_init) => memory_init.$visit($handler),
-			Self::DataNew(data_new) => data_new.$visit($handler),
-			Self::DataDrop(data_drop) => data_drop.$visit($handler),
+			Self::Identity(node) => node.$visit($handler),
+			Self::Call(node) => node.$visit($handler),
+			Self::Merge(node) => node.$visit($handler),
+			Self::RefIsNull(node) => node.$visit($handler),
+			Self::IntegerUnaryOperation(node) => node.$visit($handler),
+			Self::IntegerBinaryOperation(node) => node.$visit($handler),
+			Self::IntegerCompareOperation(node) => node.$visit($handler),
+			Self::IntegerNarrow(node) => node.$visit($handler),
+			Self::IntegerWiden(node) => node.$visit($handler),
+			Self::IntegerExtend(node) => node.$visit($handler),
+			Self::IntegerConvertToNumber(node) => node.$visit($handler),
+			Self::IntegerTransmuteToNumber(node) => node.$visit($handler),
+			Self::NumberUnaryOperation(node) => node.$visit($handler),
+			Self::NumberBinaryOperation(node) => node.$visit($handler),
+			Self::NumberCompareOperation(node) => node.$visit($handler),
+			Self::NumberNarrow(node) => node.$visit($handler),
+			Self::NumberWiden(node) => node.$visit($handler),
+			Self::NumberTruncateToInteger(node) => node.$visit($handler),
+			Self::NumberTransmuteToInteger(node) => node.$visit($handler),
+			Self::GlobalNew(node) => node.$visit($handler),
+			Self::GlobalGet(node) => node.$visit($handler),
+			Self::GlobalSet(node) => node.$visit($handler),
+			Self::TableNew(node) => node.$visit($handler),
+			Self::TableGet(node) => node.$visit($handler),
+			Self::TableSet(node) => node.$visit($handler),
+			Self::TableSize(node) => node.$visit($handler),
+			Self::TableGrow(node) => node.$visit($handler),
+			Self::TableFill(node) => node.$visit($handler),
+			Self::TableCopy(node) => node.$visit($handler),
+			Self::TableInit(node) => node.$visit($handler),
+			Self::ElementsNew(node) => node.$visit($handler),
+			Self::ElementsDrop(node) => node.$visit($handler),
+			Self::MemoryNew(node) => node.$visit($handler),
+			Self::MemoryLoad(node) => node.$visit($handler),
+			Self::MemoryStore(node) => node.$visit($handler),
+			Self::MemorySize(node) => node.$visit($handler),
+			Self::MemoryGrow(node) => node.$visit($handler),
+			Self::MemoryFill(node) => node.$visit($handler),
+			Self::MemoryCopy(node) => node.$visit($handler),
+			Self::MemoryInit(node) => node.$visit($handler),
+			Self::DataNew(node) => node.$visit($handler),
+			Self::DataDrop(node) => node.$visit($handler),
 		}
 	};
 }
@@ -116,10 +96,10 @@ impl LambdaIn {
 		let Self {
 			output,
 			r#type: _,
-			dependencies,
-		} = self;
+			ref dependencies,
+		} = *self;
 
-		handler(*output);
+		handler(output);
 
 		for_each_link_list(dependencies, handler);
 	}
@@ -159,15 +139,15 @@ impl LambdaIn {
 
 impl LambdaOut {
 	fn for_each_requirement<H: FnMut(u32)>(&self, mut handler: H) {
-		let Self { input, results: _ } = self;
+		let Self { input, results: _ } = *self;
 
-		handler(*input);
+		handler(input);
 	}
 
 	fn for_each_id<H: FnMut(u32)>(&self, mut handler: H) {
-		let Self { input, results } = self;
+		let Self { input, ref results } = *self;
 
-		handler(*input);
+		handler(input);
 		for_each_link_list(results, handler);
 	}
 
@@ -191,22 +171,23 @@ impl LambdaOut {
 	}
 }
 
+// TODO: Dereference at the source where possible.
 impl RegionIn {
 	fn ports_output(&self, graph: &DataFlowGraph) -> usize {
 		graph.get(self.input).as_gamma_in().unwrap().ports_output()
 	}
 
 	fn for_each_requirement<H: FnMut(u32)>(&self, mut handler: H) {
-		let Self { input, output: _ } = self;
+		let Self { input, output: _ } = *self;
 
-		handler(*input);
+		handler(input);
 	}
 
 	fn for_each_id<H: FnMut(u32)>(&self, mut handler: H) {
-		let Self { input, output } = self;
+		let Self { input, output } = *self;
 
-		handler(*input);
-		handler(*output);
+		handler(input);
+		handler(output);
 	}
 
 	fn for_each_mut_id<H: FnMut(&mut u32)>(&mut self, mut handler: H) {
@@ -241,20 +222,20 @@ impl RegionOut {
 			input,
 			output: _,
 			results: _,
-		} = self;
+		} = *self;
 
-		handler(*input);
+		handler(input);
 	}
 
 	fn for_each_id<H: FnMut(u32)>(&self, mut handler: H) {
 		let Self {
 			input,
 			output,
-			results,
-		} = self;
+			ref results,
+		} = *self;
 
-		handler(*input);
-		handler(*output);
+		handler(input);
+		handler(output);
 		for_each_link_list(results, handler);
 	}
 
@@ -299,11 +280,11 @@ impl GammaIn {
 	fn for_each_id<H: FnMut(u32)>(&self, mut handler: H) {
 		let Self {
 			output,
-			arguments,
+			ref arguments,
 			condition,
-		} = self;
+		} = *self;
 
-		handler(*output);
+		handler(output);
 		for_each_link_list(arguments, &mut handler);
 
 		handler(condition.0);
@@ -325,13 +306,13 @@ impl GammaIn {
 	fn for_each_argument<H: FnMut(Link)>(&self, mut handler: H) {
 		let Self {
 			output: _,
-			arguments,
+			ref arguments,
 			condition,
-		} = self;
+		} = *self;
 
 		arguments.iter().copied().for_each(&mut handler);
 
-		handler(*condition);
+		handler(condition);
 	}
 
 	fn for_each_mut_argument<H: FnMut(&mut Link)>(&mut self, mut handler: H) {
@@ -356,16 +337,16 @@ impl GammaOut {
 	}
 
 	fn for_each_requirement<H: FnMut(u32)>(&self, mut handler: H) {
-		let Self { input, regions } = self;
+		let Self { input, ref regions } = *self;
 
-		handler(*input);
+		handler(input);
 		regions.iter().copied().for_each(handler);
 	}
 
 	fn for_each_id<H: FnMut(u32)>(&self, mut handler: H) {
-		let Self { input, regions } = self;
+		let Self { input, ref regions } = *self;
 
-		handler(*input);
+		handler(input);
 		regions.iter().copied().for_each(handler);
 	}
 
@@ -397,9 +378,12 @@ impl ThetaIn {
 	}
 
 	fn for_each_id<H: FnMut(u32)>(&self, mut handler: H) {
-		let Self { output, arguments } = self;
+		let Self {
+			output,
+			ref arguments,
+		} = *self;
 
-		handler(*output);
+		handler(output);
 		for_each_link_list(arguments, handler);
 	}
 
@@ -439,19 +423,19 @@ impl ThetaOut {
 			input,
 			results: _,
 			condition: _,
-		} = self;
+		} = *self;
 
-		handler(*input);
+		handler(input);
 	}
 
 	fn for_each_id<H: FnMut(u32)>(&self, mut handler: H) {
 		let Self {
 			input,
-			results,
+			ref results,
 			condition,
-		} = self;
+		} = *self;
 
-		handler(*input);
+		handler(input);
 		for_each_link_list(results, &mut handler);
 
 		handler(condition.0);
@@ -473,13 +457,13 @@ impl ThetaOut {
 	fn for_each_argument<H: FnMut(Link)>(&self, mut handler: H) {
 		let Self {
 			input: _,
-			results,
+			ref results,
 			condition,
-		} = self;
+		} = *self;
 
 		results.iter().copied().for_each(&mut handler);
 
-		handler(*condition);
+		handler(condition);
 	}
 
 	fn for_each_mut_argument<H: FnMut(&mut Link)>(&mut self, mut handler: H) {
@@ -500,9 +484,9 @@ impl OmegaIn {
 	pub const STATE_PORT: u16 = 1;
 
 	fn for_each_id<H: FnMut(u32)>(&self, mut handler: H) {
-		let Self { output } = self;
+		let Self { output } = *self;
 
-		handler(*output);
+		handler(output);
 	}
 
 	fn for_each_mut_id<H: FnMut(&mut u32)>(&mut self, mut handler: H) {
@@ -543,9 +527,9 @@ impl Export {
 		let Self {
 			identifier: _,
 			reference,
-		} = self;
+		} = *self;
 
-		handler(*reference);
+		handler(reference);
 	}
 
 	fn for_each_mut_argument<H: FnMut(&mut Link)>(&mut self, mut handler: H) {
@@ -564,19 +548,19 @@ impl OmegaOut {
 			input,
 			state: _,
 			exports: _,
-		} = self;
+		} = *self;
 
-		handler(*input);
+		handler(input);
 	}
 
 	fn for_each_id<H: FnMut(u32)>(&self, mut handler: H) {
 		let Self {
 			input,
 			state,
-			exports,
-		} = self;
+			ref exports,
+		} = *self;
 
-		handler(*input);
+		handler(input);
 		handler(state.0);
 
 		for export in exports {
@@ -603,10 +587,10 @@ impl OmegaOut {
 		let Self {
 			input: _,
 			state,
-			exports,
-		} = self;
+			ref exports,
+		} = *self;
 
-		handler(*state);
+		handler(state);
 
 		for export in exports {
 			export.for_each_argument(&mut handler);
@@ -654,9 +638,9 @@ impl Import {
 			environment,
 			namespace: _,
 			identifier: _,
-		} = self;
+		} = *self;
 
-		handler(*environment);
+		handler(environment);
 	}
 
 	fn for_each_mut_argument<H: FnMut(&mut Link)>(&mut self, mut handler: H) {
@@ -724,12 +708,12 @@ impl Call {
 	fn for_each_argument<H: FnMut(Link)>(&self, mut handler: H) {
 		let Self {
 			function,
-			arguments,
+			ref arguments,
 			results: _,
 			states: _,
-		} = self;
+		} = *self;
 
-		handler(*function);
+		handler(function);
 		arguments.iter().copied().for_each(handler);
 	}
 
@@ -2275,10 +2259,10 @@ impl Node {
 	#[must_use]
 	pub fn ports_output(&self, graph: &DataFlowGraph) -> Option<usize> {
 		let result = match self {
-			Self::RegionIn(region_in) => region_in.ports_output(graph),
-			Self::GammaOut(gamma_out) => gamma_out.ports_output(graph),
-			Self::ThetaIn(theta_in) => theta_in.ports_output(),
-			Self::ThetaOut(theta_out) => theta_out.ports_output(),
+			Self::RegionIn(node) => node.ports_output(graph),
+			Self::GammaOut(node) => node.ports_output(graph),
+			Self::ThetaIn(node) => node.ports_output(),
+			Self::ThetaOut(node) => node.ports_output(),
 
 			_ => return None,
 		};
@@ -2289,12 +2273,12 @@ impl Node {
 	#[must_use]
 	pub const fn as_ports(&self) -> Option<&Vec<Link>> {
 		let ports = match self {
-			Self::LambdaIn(lambda_in) => &lambda_in.dependencies,
-			Self::LambdaOut(lambda_out) => &lambda_out.results,
-			Self::RegionOut(region_out) => &region_out.results,
-			Self::GammaIn(gamma_in) => &gamma_in.arguments,
-			Self::ThetaIn(theta_in) => &theta_in.arguments,
-			Self::ThetaOut(theta_out) => &theta_out.results,
+			Self::LambdaIn(node) => &node.dependencies,
+			Self::LambdaOut(node) => &node.results,
+			Self::RegionOut(node) => &node.results,
+			Self::GammaIn(node) => &node.arguments,
+			Self::ThetaIn(node) => &node.arguments,
+			Self::ThetaOut(node) => &node.results,
 
 			_ => return None,
 		};
@@ -2305,12 +2289,12 @@ impl Node {
 	#[must_use]
 	pub const fn as_mut_ports(&mut self) -> Option<&mut Vec<Link>> {
 		let ports = match self {
-			Self::LambdaIn(lambda_in) => &mut lambda_in.dependencies,
-			Self::LambdaOut(lambda_out) => &mut lambda_out.results,
-			Self::RegionOut(region_out) => &mut region_out.results,
-			Self::GammaIn(gamma_in) => &mut gamma_in.arguments,
-			Self::ThetaIn(theta_in) => &mut theta_in.arguments,
-			Self::ThetaOut(theta_out) => &mut theta_out.results,
+			Self::LambdaIn(node) => &mut node.dependencies,
+			Self::LambdaOut(node) => &mut node.results,
+			Self::RegionOut(node) => &mut node.results,
+			Self::GammaIn(node) => &mut node.arguments,
+			Self::ThetaIn(node) => &mut node.arguments,
+			Self::ThetaOut(node) => &mut node.results,
 
 			_ => return None,
 		};
@@ -2320,12 +2304,12 @@ impl Node {
 
 	pub fn for_each_requirement<H: FnMut(u32)>(&self, handler: H) {
 		match self {
-			Self::LambdaOut(lambda_out) => lambda_out.for_each_requirement(handler),
-			Self::RegionIn(region_in) => region_in.for_each_requirement(handler),
-			Self::RegionOut(region_out) => region_out.for_each_requirement(handler),
-			Self::GammaOut(gamma_out) => gamma_out.for_each_requirement(handler),
-			Self::ThetaOut(theta_out) => theta_out.for_each_requirement(handler),
-			Self::OmegaOut(omega_out) => omega_out.for_each_requirement(handler),
+			Self::LambdaOut(node) => node.for_each_requirement(handler),
+			Self::RegionIn(node) => node.for_each_requirement(handler),
+			Self::RegionOut(node) => node.for_each_requirement(handler),
+			Self::GammaOut(node) => node.for_each_requirement(handler),
+			Self::ThetaOut(node) => node.for_each_requirement(handler),
+			Self::OmegaOut(node) => node.for_each_requirement(handler),
 
 			_ => {}
 		}

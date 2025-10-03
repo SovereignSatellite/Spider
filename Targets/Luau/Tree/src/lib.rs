@@ -1,4 +1,5 @@
 #![no_std]
+#![expect(clippy::missing_panics_doc)]
 
 extern crate alloc;
 

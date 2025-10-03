@@ -39,6 +39,9 @@ impl Printer {
 		}
 	}
 
+	/// # Errors
+	///
+	/// Returns any IO errors that the `out` produces during the process.
 	pub fn print(&self, sections: &Sections, out: &mut dyn Write) -> Result<()> {
 		self.references.iter().try_for_each(|&name| {
 			let Section { contents, .. } = sections.find(name);

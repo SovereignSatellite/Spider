@@ -1,3 +1,5 @@
+#![expect(clippy::missing_panics_doc)]
+
 mod expression;
 mod print;
 mod statement;

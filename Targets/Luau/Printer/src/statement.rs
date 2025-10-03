@@ -420,7 +420,7 @@ impl Print for MemoryStore {
 		let Self {
 			destination,
 			source,
-			r#type: _,
+			..
 		} = self;
 
 		let intrinsic = self.needs_name();

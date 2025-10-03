@@ -69,13 +69,13 @@ fn read_local_types_into(local_types: &mut Vec<ValueType>, reader: LocalsReader)
 pub struct FunctionBuilder {
 	converter: ControlFlowConverter,
 	builder: ControlFlowBuilder,
-	local_finder: LocalTracker,
+	local_tracker: LocalTracker,
 
 	graph: ControlFlowGraph,
 
-	local_types: Vec<ValueType>,
-	locals: Locals,
 	dependencies: Vec<Reference>,
+	locals: Locals,
+	local_types: Vec<ValueType>,
 }
 
 impl FunctionBuilder {
@@ -83,7 +83,7 @@ impl FunctionBuilder {
 		Self {
 			converter: ControlFlowConverter::new(),
 			builder: ControlFlowBuilder::new(),
-			local_finder: LocalTracker::new(),
+			local_tracker: LocalTracker::new(),
 
 			graph: ControlFlowGraph::new(),
 
@@ -102,7 +102,7 @@ impl FunctionBuilder {
 		references::track(&mut self.dependencies, &self.graph.instructions);
 
 		let dependencies = global_state.get_dependencies(&self.dependencies);
-		let stack_size = self.local_finder.run(
+		let stack_size = self.local_tracker.run(
 			&mut self.locals,
 			&self.graph,
 			r#type.results.len().try_into().unwrap(),

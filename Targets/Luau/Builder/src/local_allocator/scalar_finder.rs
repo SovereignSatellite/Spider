@@ -24,7 +24,7 @@ pub fn result_count_of(node: &Node) -> u16 {
 		| Node::MemoryInit(_)
 		| Node::DataDrop(_) => 0,
 
-		Node::Host(_host) => 0,
+		Node::Host(_node) => 0,
 
 		Node::LambdaOut(_)
 		| Node::OmegaOut(_)
@@ -65,7 +65,7 @@ pub fn result_count_of(node: &Node) -> u16 {
 		| Node::MemoryGrow(_)
 		| Node::DataNew(_) => 1,
 
-		Node::Call(call) => call.results,
+		Node::Call(node) => node.results,
 	}
 }
 

@@ -35,13 +35,11 @@ impl Types {
 			.extend(section.into_iter().map(Result::unwrap));
 	}
 
-	#[expect(clippy::missing_panics_doc)]
 	#[must_use]
 	pub fn get_function_index(&self, function: u32) -> u32 {
 		self.functions[usize::try_from(function).unwrap()]
 	}
 
-	#[expect(clippy::missing_panics_doc)]
 	#[must_use]
 	pub fn get_type(&self, r#type: u32) -> &SubType {
 		&self.sub_types[usize::try_from(r#type).unwrap()]

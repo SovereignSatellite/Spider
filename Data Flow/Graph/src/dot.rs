@@ -371,31 +371,19 @@ impl<'inner> Dot<'inner> {
 		}
 
 		match *node {
-			Node::Import(ref import) => Self::fmt_import(import, f),
+			Node::Import(ref node) => Self::fmt_import(node, f),
 			Node::I32(i32) => write!(f, "{i32}_i32"),
 			Node::I64(i64) => write!(f, "{i64}_i64"),
 			Node::F32(f32) => write!(f, "{f32:e}_f32"),
 			Node::F64(f64) => write!(f, "{f64:e}_f64"),
-			Node::IntegerUnaryOperation(integer_unary_operation) => {
-				Self::fmt_integer_unary_operation(integer_unary_operation, f)
-			}
-			Node::IntegerBinaryOperation(integer_binary_operation) => {
-				Self::fmt_integer_binary_operation(integer_binary_operation, f)
-			}
-			Node::IntegerCompareOperation(integer_compare_operation) => {
-				Self::fmt_integer_compare_operation(integer_compare_operation, f)
-			}
-			Node::IntegerExtend(integer_extend) => Self::fmt_integer_extend(integer_extend, f),
-			Node::NumberUnaryOperation(number_unary_operation) => {
-				Self::fmt_number_unary_operation(number_unary_operation, f)
-			}
-			Node::NumberBinaryOperation(number_binary_operation) => {
-				Self::fmt_number_binary_operation(number_binary_operation, f)
-			}
-			Node::NumberCompareOperation(number_compare_operation) => {
-				Self::fmt_number_compare_operation(number_compare_operation, f)
-			}
-			Node::DataNew(ref data_new) => Self::fmt_data_new(data_new, f),
+			Node::IntegerUnaryOperation(node) => Self::fmt_integer_unary_operation(node, f),
+			Node::IntegerBinaryOperation(node) => Self::fmt_integer_binary_operation(node, f),
+			Node::IntegerCompareOperation(node) => Self::fmt_integer_compare_operation(node, f),
+			Node::IntegerExtend(node) => Self::fmt_integer_extend(node, f),
+			Node::NumberUnaryOperation(node) => Self::fmt_number_unary_operation(node, f),
+			Node::NumberBinaryOperation(node) => Self::fmt_number_binary_operation(node, f),
+			Node::NumberCompareOperation(node) => Self::fmt_number_compare_operation(node, f),
+			Node::DataNew(ref node) => Self::fmt_data_new(node, f),
 
 			_ => unreachable!(),
 		}

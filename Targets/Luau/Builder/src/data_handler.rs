@@ -40,9 +40,9 @@ impl DataHandler {
 	}
 
 	pub fn store_expression(&mut self, id: u32, source: Expression) {
-		let last = self.expressions.insert(id, source);
-
-		debug_assert!(last.is_none(), "expression should set only once");
+		self.expressions
+			.try_insert(id, source)
+			.unwrap_or_else(|_| panic!("expression should set only once"));
 	}
 
 	pub fn get_stack_size(&self, id: u32) -> u16 {
@@ -193,39 +193,39 @@ impl DataHandler {
 		}
 	}
 
-	pub fn load_import(&mut self, import: &control::Import) -> Expression {
-		let import = Import {
-			environment: self.load(import.environment),
-			namespace: import.namespace.clone(),
-			identifier: import.identifier.clone(),
+	pub fn load_import(&mut self, node: &control::Import) -> Expression {
+		let expression = Import {
+			environment: self.load(node.environment),
+			namespace: node.namespace.clone(),
+			identifier: node.identifier.clone(),
 		};
 
-		Expression::Import(import.into())
+		Expression::Import(expression.into())
 	}
 
-	fn load_export(&mut self, export: &control::Export) -> Export {
+	fn load_export(&mut self, node: &control::Export) -> Export {
 		Export {
-			identifier: export.identifier.clone(),
-			source: self.load(export.reference),
+			identifier: node.identifier.clone(),
+			source: self.load(node.reference),
 		}
 	}
 
-	pub fn load_exports(&mut self, exports: &[control::Export]) -> Vec<Export> {
-		exports
+	pub fn load_exports(&mut self, nodes: &[control::Export]) -> Vec<Export> {
+		nodes
 			.iter()
 			.map(|export| self.load_export(export))
 			.collect()
 	}
 
-	pub fn load_identity(&mut self, identity: base::Identity) -> Expression {
-		self.load(identity.source)
+	pub fn load_identity(&mut self, node: base::Identity) -> Expression {
+		self.load(node.source)
 	}
 
-	pub fn load_call(&mut self, call: &base::Call) -> Expression {
-		let end = call.arguments.len() - usize::from(call.states);
+	pub fn load_call(&mut self, node: &base::Call) -> Expression {
+		let end = node.arguments.len() - usize::from(node.states);
 		let call = Call {
-			function: self.load(call.function),
-			arguments: self.load_all(&call.arguments[..end]),
+			function: self.load(node.function),
+			arguments: self.load_all(&node.arguments[..end]),
 		};
 
 		Expression::Call(call.into())
@@ -238,13 +238,13 @@ impl DataHandler {
 		}
 	}
 
-	pub fn load_ref_is_null(&mut self, ref_is_null: base::RefIsNull) -> Expression {
-		let operation = RefIsNull {
-			source: self.load(ref_is_null.source),
+	pub fn load_ref_is_null(&mut self, node: base::RefIsNull) -> Expression {
+		let expression = RefIsNull {
+			source: self.load(node.source),
 		};
 
 		let boolean = BooleanToInteger {
-			source: Expression::RefIsNull(operation.into()),
+			source: Expression::RefIsNull(expression.into()),
 		};
 
 		Expression::BooleanToInteger(boolean.into())
@@ -252,271 +252,268 @@ impl DataHandler {
 
 	pub fn load_integer_unary_operation(
 		&mut self,
-		operation: base::IntegerUnaryOperation,
+		node: base::IntegerUnaryOperation,
 	) -> Expression {
-		let operation = IntegerUnaryOperation {
-			source: self.load(operation.source),
-			r#type: operation.r#type,
-			operator: operation.operator,
+		let expression = IntegerUnaryOperation {
+			source: self.load(node.source),
+			r#type: node.r#type,
+			operator: node.operator,
 		};
 
-		Expression::IntegerUnaryOperation(operation.into())
+		Expression::IntegerUnaryOperation(expression.into())
 	}
 
 	pub fn load_integer_binary_operation(
 		&mut self,
-		operation: base::IntegerBinaryOperation,
+		node: base::IntegerBinaryOperation,
 	) -> Expression {
-		let operation = IntegerBinaryOperation {
-			lhs: self.load(operation.lhs),
-			rhs: self.load(operation.rhs),
-			r#type: operation.r#type,
-			operator: operation.operator,
+		let expression = IntegerBinaryOperation {
+			lhs: self.load(node.lhs),
+			rhs: self.load(node.rhs),
+			r#type: node.r#type,
+			operator: node.operator,
 		};
 
-		Expression::IntegerBinaryOperation(operation.into())
+		Expression::IntegerBinaryOperation(expression.into())
 	}
 
 	pub fn load_integer_compare_operation(
 		&mut self,
-		operation: base::IntegerCompareOperation,
+		node: base::IntegerCompareOperation,
 	) -> Expression {
-		let operation = IntegerCompareOperation {
-			lhs: self.load(operation.lhs),
-			rhs: self.load(operation.rhs),
-			r#type: operation.r#type,
-			operator: operation.operator,
+		let expression = IntegerCompareOperation {
+			lhs: self.load(node.lhs),
+			rhs: self.load(node.rhs),
+			r#type: node.r#type,
+			operator: node.operator,
 		};
 
 		let boolean = BooleanToInteger {
-			source: Expression::IntegerCompareOperation(operation.into()),
+			source: Expression::IntegerCompareOperation(expression.into()),
 		};
 
 		Expression::BooleanToInteger(boolean.into())
 	}
 
-	pub fn load_integer_narrow(&mut self, operation: base::IntegerNarrow) -> Expression {
-		let operation = IntegerNarrow {
-			source: self.load(operation.source),
+	pub fn load_integer_narrow(&mut self, node: base::IntegerNarrow) -> Expression {
+		let expression = IntegerNarrow {
+			source: self.load(node.source),
 		};
 
-		Expression::IntegerNarrow(operation.into())
+		Expression::IntegerNarrow(expression.into())
 	}
 
-	pub fn load_integer_widen(&mut self, operation: base::IntegerWiden) -> Expression {
-		let operation = IntegerWiden {
-			source: self.load(operation.source),
+	pub fn load_integer_widen(&mut self, node: base::IntegerWiden) -> Expression {
+		let expression = IntegerWiden {
+			source: self.load(node.source),
 		};
 
-		Expression::IntegerWiden(operation.into())
+		Expression::IntegerWiden(expression.into())
 	}
 
-	pub fn load_integer_extend(&mut self, operation: base::IntegerExtend) -> Expression {
-		let operation = IntegerExtend {
-			source: self.load(operation.source),
-			r#type: operation.r#type,
+	pub fn load_integer_extend(&mut self, node: base::IntegerExtend) -> Expression {
+		let expression = IntegerExtend {
+			source: self.load(node.source),
+			r#type: node.r#type,
 		};
 
-		Expression::IntegerExtend(operation.into())
+		Expression::IntegerExtend(expression.into())
 	}
 
 	pub fn load_integer_convert_to_number(
 		&mut self,
-		operation: base::IntegerConvertToNumber,
+		node: base::IntegerConvertToNumber,
 	) -> Expression {
-		let operation = IntegerConvertToNumber {
-			source: self.load(operation.source),
-			signed: operation.signed,
-			to: operation.to,
-			from: operation.from,
+		let expression = IntegerConvertToNumber {
+			source: self.load(node.source),
+			signed: node.signed,
+			to: node.to,
+			from: node.from,
 		};
 
-		Expression::IntegerConvertToNumber(operation.into())
+		Expression::IntegerConvertToNumber(expression.into())
 	}
 
 	pub fn load_integer_transmute_to_number(
 		&mut self,
-		operation: base::IntegerTransmuteToNumber,
+		node: base::IntegerTransmuteToNumber,
 	) -> Expression {
-		let operation = IntegerTransmuteToNumber {
-			source: self.load(operation.source),
-			from: operation.from,
+		let expression = IntegerTransmuteToNumber {
+			source: self.load(node.source),
+			from: node.from,
 		};
 
-		Expression::IntegerTransmuteToNumber(operation.into())
+		Expression::IntegerTransmuteToNumber(expression.into())
 	}
 
-	pub fn load_number_unary_operation(
-		&mut self,
-		operation: base::NumberUnaryOperation,
-	) -> Expression {
-		let operation = NumberUnaryOperation {
-			source: self.load(operation.source),
-			r#type: operation.r#type,
-			operator: operation.operator,
+	pub fn load_number_unary_operation(&mut self, node: base::NumberUnaryOperation) -> Expression {
+		let expression = NumberUnaryOperation {
+			source: self.load(node.source),
+			r#type: node.r#type,
+			operator: node.operator,
 		};
 
-		Expression::NumberUnaryOperation(operation.into())
+		Expression::NumberUnaryOperation(expression.into())
 	}
 
 	pub fn load_number_binary_operation(
 		&mut self,
-		operation: base::NumberBinaryOperation,
+		node: base::NumberBinaryOperation,
 	) -> Expression {
-		let operation = NumberBinaryOperation {
-			lhs: self.load(operation.lhs),
-			rhs: self.load(operation.rhs),
-			r#type: operation.r#type,
-			operator: operation.operator,
+		let expression = NumberBinaryOperation {
+			lhs: self.load(node.lhs),
+			rhs: self.load(node.rhs),
+			r#type: node.r#type,
+			operator: node.operator,
 		};
 
-		Expression::NumberBinaryOperation(operation.into())
+		Expression::NumberBinaryOperation(expression.into())
 	}
 
 	pub fn load_number_compare_operation(
 		&mut self,
-		operation: base::NumberCompareOperation,
+		node: base::NumberCompareOperation,
 	) -> Expression {
-		let operation = NumberCompareOperation {
-			lhs: self.load(operation.lhs),
-			rhs: self.load(operation.rhs),
-			r#type: operation.r#type,
-			operator: operation.operator,
+		let expression = NumberCompareOperation {
+			lhs: self.load(node.lhs),
+			rhs: self.load(node.rhs),
+			r#type: node.r#type,
+			operator: node.operator,
 		};
 
 		let boolean = BooleanToInteger {
-			source: Expression::NumberCompareOperation(operation.into()),
+			source: Expression::NumberCompareOperation(expression.into()),
 		};
 
 		Expression::BooleanToInteger(boolean.into())
 	}
 
-	pub fn load_number_narrow(&mut self, operation: base::NumberNarrow) -> Expression {
-		let operation = NumberNarrow {
-			source: self.load(operation.source),
+	pub fn load_number_narrow(&mut self, node: base::NumberNarrow) -> Expression {
+		let expression = NumberNarrow {
+			source: self.load(node.source),
 		};
 
-		Expression::NumberNarrow(operation.into())
+		Expression::NumberNarrow(expression.into())
 	}
 
-	pub fn load_number_widen(&mut self, operation: base::NumberWiden) -> Expression {
-		let operation = NumberWiden {
-			source: self.load(operation.source),
+	pub fn load_number_widen(&mut self, node: base::NumberWiden) -> Expression {
+		let expression = NumberWiden {
+			source: self.load(node.source),
 		};
 
-		Expression::NumberWiden(operation.into())
+		Expression::NumberWiden(expression.into())
 	}
 
 	pub fn load_number_truncate_to_integer(
 		&mut self,
-		operation: base::NumberTruncateToInteger,
+		node: base::NumberTruncateToInteger,
 	) -> Expression {
-		let operation = NumberTruncateToInteger {
-			source: self.load(operation.source),
-			signed: operation.signed,
-			saturate: operation.saturate,
-			to: operation.to,
-			from: operation.from,
+		let expression = NumberTruncateToInteger {
+			source: self.load(node.source),
+			signed: node.signed,
+			saturate: node.saturate,
+			to: node.to,
+			from: node.from,
 		};
 
-		Expression::NumberTruncateToInteger(operation.into())
+		Expression::NumberTruncateToInteger(expression.into())
 	}
 
 	pub fn load_number_transmute_to_integer(
 		&mut self,
-		operation: base::NumberTransmuteToInteger,
+		node: base::NumberTransmuteToInteger,
 	) -> Expression {
-		let operation = NumberTransmuteToInteger {
-			source: self.load(operation.source),
-			from: operation.from,
+		let expression = NumberTransmuteToInteger {
+			source: self.load(node.source),
+			from: node.from,
 		};
 
-		Expression::NumberTransmuteToInteger(operation.into())
+		Expression::NumberTransmuteToInteger(expression.into())
 	}
 
-	pub fn load_global_new(&mut self, global_new: base::GlobalNew) -> Expression {
-		let global_new = GlobalNew {
-			initializer: self.load(global_new.initializer),
+	pub fn load_global_new(&mut self, node: base::GlobalNew) -> Expression {
+		let expression = GlobalNew {
+			initializer: self.load(node.initializer),
 		};
 
-		Expression::GlobalNew(global_new.into())
+		Expression::GlobalNew(expression.into())
 	}
 
-	pub fn load_global_get(&mut self, global_get: base::GlobalGet) -> Expression {
-		let global_get = GlobalGet {
-			source: self.load(global_get.source),
+	pub fn load_global_get(&mut self, node: base::GlobalGet) -> Expression {
+		let expression = GlobalGet {
+			source: self.load(node.source),
 		};
 
-		Expression::GlobalGet(global_get.into())
+		Expression::GlobalGet(expression.into())
 	}
 
-	pub fn load_table_new(&mut self, table_new: base::TableNew) -> Expression {
-		let table_new = TableNew {
-			initializer: self.load(table_new.initializer),
-			minimum: table_new.minimum,
-			maximum: table_new.maximum,
+	pub fn load_table_new(&mut self, node: base::TableNew) -> Expression {
+		let expression = TableNew {
+			initializer: self.load(node.initializer),
+			minimum: node.minimum,
+			maximum: node.maximum,
 		};
 
-		Expression::TableNew(table_new.into())
+		Expression::TableNew(expression.into())
 	}
 
-	pub fn load_table_get(&mut self, table_get: base::TableGet) -> Expression {
-		let table_get = TableGet {
-			source: self.load_location(table_get.source),
+	pub fn load_table_get(&mut self, node: base::TableGet) -> Expression {
+		let expression = TableGet {
+			source: self.load_location(node.source),
 		};
 
-		Expression::TableGet(table_get.into())
+		Expression::TableGet(expression.into())
 	}
 
-	pub fn load_table_size(&mut self, table_size: base::TableSize) -> Expression {
-		let table_size = TableSize {
-			source: self.load(table_size.source),
+	pub fn load_table_size(&mut self, node: base::TableSize) -> Expression {
+		let expression = TableSize {
+			source: self.load(node.source),
 		};
 
-		Expression::TableSize(table_size.into())
+		Expression::TableSize(expression.into())
 	}
 
-	pub fn load_table_grow(&mut self, table_grow: base::TableGrow) -> Expression {
-		let table_grow = TableGrow {
-			destination: self.load(table_grow.destination),
-			initializer: self.load(table_grow.initializer),
-			size: self.load(table_grow.size),
+	pub fn load_table_grow(&mut self, node: base::TableGrow) -> Expression {
+		let expression = TableGrow {
+			destination: self.load(node.destination),
+			initializer: self.load(node.initializer),
+			size: self.load(node.size),
 		};
 
-		Expression::TableGrow(table_grow.into())
+		Expression::TableGrow(expression.into())
 	}
 
-	pub fn load_elements_new(&mut self, elements_new: &base::ElementsNew) -> Expression {
-		let elements_new = ElementsNew {
-			content: self.load_all(&elements_new.content),
+	pub fn load_elements_new(&mut self, node: &base::ElementsNew) -> Expression {
+		let expression = ElementsNew {
+			content: self.load_all(&node.content),
 		};
 
-		Expression::ElementsNew(elements_new.into())
+		Expression::ElementsNew(expression.into())
 	}
 
-	pub fn load_memory_load(&mut self, memory_load: base::MemoryLoad) -> Expression {
-		let memory_load = MemoryLoad {
-			source: self.load_location(memory_load.source),
-			r#type: memory_load.r#type,
+	pub fn load_memory_load(&mut self, node: base::MemoryLoad) -> Expression {
+		let expression = MemoryLoad {
+			source: self.load_location(node.source),
+			r#type: node.r#type,
 		};
 
-		Expression::MemoryLoad(memory_load.into())
+		Expression::MemoryLoad(expression.into())
 	}
 
-	pub fn load_memory_size(&mut self, memory_size: base::MemorySize) -> Expression {
-		let memory_size = MemorySize {
-			source: self.load(memory_size.source),
+	pub fn load_memory_size(&mut self, node: base::MemorySize) -> Expression {
+		let expression = MemorySize {
+			source: self.load(node.source),
 		};
 
-		Expression::MemorySize(memory_size.into())
+		Expression::MemorySize(expression.into())
 	}
 
-	pub fn load_memory_grow(&mut self, memory_grow: base::MemoryGrow) -> Expression {
-		let memory_grow = MemoryGrow {
-			destination: self.load(memory_grow.destination),
-			size: self.load(memory_grow.size),
+	pub fn load_memory_grow(&mut self, node: base::MemoryGrow) -> Expression {
+		let expression = MemoryGrow {
+			destination: self.load(node.destination),
+			size: self.load(node.size),
 		};
 
-		Expression::MemoryGrow(memory_grow.into())
+		Expression::MemoryGrow(expression.into())
 	}
 }

@@ -138,89 +138,74 @@ impl LocalTracker {
 		}
 	}
 
-	fn handle_local_set(&mut self, local_set: LocalSet) {
+	fn handle_local_set(&mut self, instruction: LocalSet) {
 		let LocalSet {
 			destination,
 			source,
-		} = local_set;
+		} = instruction;
 
 		self.write_local(destination);
 		self.read_local(source);
 	}
 
-	fn handle_local_branch(&mut self, local_branch: LocalBranch) {
-		let LocalBranch { source } = local_branch;
+	fn handle_local_branch(&mut self, instruction: LocalBranch) {
+		let LocalBranch { source } = instruction;
 
 		self.read_local(source);
 	}
 
-	fn handle_i32_constant(&mut self, i32_constant: I32Constant) {
-		let I32Constant {
-			destination,
-			data: _,
-		} = i32_constant;
+	fn handle_i32_constant(&mut self, instruction: I32Constant) {
+		let I32Constant { destination, .. } = instruction;
 
 		self.write_local(destination);
 	}
 
-	fn handle_i64_constant(&mut self, i64_constant: I64Constant) {
-		let I64Constant {
-			destination,
-			data: _,
-		} = i64_constant;
+	fn handle_i64_constant(&mut self, instruction: I64Constant) {
+		let I64Constant { destination, .. } = instruction;
 
 		self.write_local(destination);
 	}
 
-	fn handle_f32_constant(&mut self, f32_constant: F32Constant) {
-		let F32Constant {
-			destination,
-			data: _,
-		} = f32_constant;
+	fn handle_f32_constant(&mut self, instruction: F32Constant) {
+		let F32Constant { destination, .. } = instruction;
 
 		self.write_local(destination);
 	}
 
-	fn handle_f64_constant(&mut self, f64_constant: F64Constant) {
-		let F64Constant {
-			destination,
-			data: _,
-		} = f64_constant;
+	fn handle_f64_constant(&mut self, instruction: F64Constant) {
+		let F64Constant { destination, .. } = instruction;
 
 		self.write_local(destination);
 	}
 
-	fn handle_ref_is_null(&mut self, ref_is_null: RefIsNull) {
+	fn handle_ref_is_null(&mut self, instruction: RefIsNull) {
 		let RefIsNull {
 			destination,
 			source,
-		} = ref_is_null;
+		} = instruction;
 
 		self.write_local(destination);
 		self.read_local(source);
 	}
 
-	fn handle_ref_null(&mut self, ref_null: RefNull) {
-		let RefNull { destination } = ref_null;
+	fn handle_ref_null(&mut self, instruction: RefNull) {
+		let RefNull { destination } = instruction;
 
 		self.write_local(destination);
 	}
 
-	fn handle_ref_function(&mut self, ref_function: RefFunction) {
-		let RefFunction {
-			destination,
-			function: _,
-		} = ref_function;
+	fn handle_ref_function(&mut self, instruction: RefFunction) {
+		let RefFunction { destination, .. } = instruction;
 
 		self.write_local(destination);
 	}
 
-	fn handle_call(&mut self, call: Call) {
+	fn handle_call(&mut self, instruction: Call) {
 		let Call {
 			destinations,
 			sources,
 			function,
-		} = call;
+		} = instruction;
 
 		for destination in destinations.0..destinations.1 {
 			self.write_local(destination);
@@ -233,375 +218,329 @@ impl LocalTracker {
 		self.read_local(function);
 	}
 
-	fn handle_integer_unary_operation(&mut self, integer_unary_operation: IntegerUnaryOperation) {
+	fn handle_integer_unary_operation(&mut self, instruction: IntegerUnaryOperation) {
 		let IntegerUnaryOperation {
 			destination,
 			source,
-			r#type: _,
-			operator: _,
-		} = integer_unary_operation;
+			..
+		} = instruction;
 
 		self.write_local(destination);
 		self.read_local(source);
 	}
 
-	fn handle_integer_binary_operation(
-		&mut self,
-		integer_binary_operation: IntegerBinaryOperation,
-	) {
+	fn handle_integer_binary_operation(&mut self, instruction: IntegerBinaryOperation) {
 		let IntegerBinaryOperation {
 			destination,
 			lhs,
 			rhs,
-			r#type: _,
-			operator: _,
-		} = integer_binary_operation;
+			..
+		} = instruction;
 
 		self.write_local(destination);
 		self.read_local(lhs);
 		self.read_local(rhs);
 	}
 
-	fn handle_integer_compare_operation(
-		&mut self,
-		integer_compare_operation: IntegerCompareOperation,
-	) {
+	fn handle_integer_compare_operation(&mut self, instruction: IntegerCompareOperation) {
 		let IntegerCompareOperation {
 			destination,
 			lhs,
 			rhs,
-			r#type: _,
-			operator: _,
-		} = integer_compare_operation;
+			..
+		} = instruction;
 
 		self.write_local(destination);
 		self.read_local(lhs);
 		self.read_local(rhs);
 	}
 
-	fn handle_integer_narrow(&mut self, integer_narrow: IntegerNarrow) {
+	fn handle_integer_narrow(&mut self, instruction: IntegerNarrow) {
 		let IntegerNarrow {
 			destination,
 			source,
-		} = integer_narrow;
+		} = instruction;
 
 		self.write_local(destination);
 		self.read_local(source);
 	}
 
-	fn handle_integer_widen(&mut self, integer_widen: IntegerWiden) {
+	fn handle_integer_widen(&mut self, instruction: IntegerWiden) {
 		let IntegerWiden {
 			destination,
 			source,
-		} = integer_widen;
+		} = instruction;
 
 		self.write_local(destination);
 		self.read_local(source);
 	}
 
-	fn handle_integer_extend(&mut self, integer_extend: IntegerExtend) {
+	fn handle_integer_extend(&mut self, instruction: IntegerExtend) {
 		let IntegerExtend {
 			destination,
 			source,
-			r#type: _,
-		} = integer_extend;
+			..
+		} = instruction;
 
 		self.write_local(destination);
 		self.read_local(source);
 	}
 
-	fn handle_integer_convert_to_number(
-		&mut self,
-		integer_convert_to_number: IntegerConvertToNumber,
-	) {
+	fn handle_integer_convert_to_number(&mut self, instruction: IntegerConvertToNumber) {
 		let IntegerConvertToNumber {
 			destination,
 			source,
-			signed: _,
-			to: _,
-			from: _,
-		} = integer_convert_to_number;
+			..
+		} = instruction;
 
 		self.write_local(destination);
 		self.read_local(source);
 	}
 
-	fn handle_integer_transmute_to_number(
-		&mut self,
-		integer_transmute_to_number: IntegerTransmuteToNumber,
-	) {
+	fn handle_integer_transmute_to_number(&mut self, instruction: IntegerTransmuteToNumber) {
 		let IntegerTransmuteToNumber {
 			destination,
 			source,
-			from: _,
-		} = integer_transmute_to_number;
+			..
+		} = instruction;
 
 		self.write_local(destination);
 		self.read_local(source);
 	}
 
-	fn handle_number_unary_operation(&mut self, number_unary_operation: NumberUnaryOperation) {
+	fn handle_number_unary_operation(&mut self, instruction: NumberUnaryOperation) {
 		let NumberUnaryOperation {
 			destination,
 			source,
-			r#type: _,
-			operator: _,
-		} = number_unary_operation;
+			..
+		} = instruction;
 
 		self.write_local(destination);
 		self.read_local(source);
 	}
 
-	fn handle_number_binary_operation(&mut self, number_binary_operation: NumberBinaryOperation) {
+	fn handle_number_binary_operation(&mut self, instruction: NumberBinaryOperation) {
 		let NumberBinaryOperation {
 			destination,
 			lhs,
 			rhs,
-			r#type: _,
-			operator: _,
-		} = number_binary_operation;
+			..
+		} = instruction;
 
 		self.write_local(destination);
 		self.read_local(lhs);
 		self.read_local(rhs);
 	}
 
-	fn handle_number_compare_operation(
-		&mut self,
-		number_compare_operation: NumberCompareOperation,
-	) {
+	fn handle_number_compare_operation(&mut self, instruction: NumberCompareOperation) {
 		let NumberCompareOperation {
 			destination,
 			lhs,
 			rhs,
-			r#type: _,
-			operator: _,
-		} = number_compare_operation;
+			..
+		} = instruction;
 
 		self.write_local(destination);
 		self.read_local(lhs);
 		self.read_local(rhs);
 	}
 
-	fn handle_number_narrow(&mut self, number_narrow: NumberNarrow) {
+	fn handle_number_narrow(&mut self, instruction: NumberNarrow) {
 		let NumberNarrow {
 			destination,
 			source,
-		} = number_narrow;
+		} = instruction;
 
 		self.write_local(destination);
 		self.read_local(source);
 	}
 
-	fn handle_number_widen(&mut self, number_widen: NumberWiden) {
+	fn handle_number_widen(&mut self, instruction: NumberWiden) {
 		let NumberWiden {
 			destination,
 			source,
-		} = number_widen;
+		} = instruction;
 
 		self.write_local(destination);
 		self.read_local(source);
 	}
 
-	fn handle_number_truncate_to_integer(
-		&mut self,
-		number_truncate_to_integer: NumberTruncateToInteger,
-	) {
+	fn handle_number_truncate_to_integer(&mut self, instruction: NumberTruncateToInteger) {
 		let NumberTruncateToInteger {
 			destination,
 			source,
-			signed: _,
-			saturate: _,
-			to: _,
-			from: _,
-		} = number_truncate_to_integer;
+			..
+		} = instruction;
 
 		self.write_local(destination);
 		self.read_local(source);
 	}
 
-	fn handle_number_transmute_to_integer(
-		&mut self,
-		number_transmute_to_integer: NumberTransmuteToInteger,
-	) {
+	fn handle_number_transmute_to_integer(&mut self, instruction: NumberTransmuteToInteger) {
 		let NumberTransmuteToInteger {
 			destination,
 			source,
-			from: _,
-		} = number_transmute_to_integer;
+			..
+		} = instruction;
 
 		self.write_local(destination);
 		self.read_local(source);
 	}
 
-	fn handle_global_get(&mut self, global_get: GlobalGet) {
-		let GlobalGet {
-			destination,
-			source: _,
-		} = global_get;
+	fn handle_global_get(&mut self, instruction: GlobalGet) {
+		let GlobalGet { destination, .. } = instruction;
 
 		self.write_local(destination);
 	}
 
-	fn handle_global_set(&mut self, global_set: GlobalSet) {
-		let GlobalSet {
-			destination: _,
-			source,
-		} = global_set;
+	fn handle_global_set(&mut self, instruction: GlobalSet) {
+		let GlobalSet { source, .. } = instruction;
 
 		self.read_local(source);
 	}
 
-	fn handle_table_get(&mut self, table_get: TableGet) {
+	fn handle_table_get(&mut self, instruction: TableGet) {
 		let TableGet {
 			destination,
 			source,
-		} = table_get;
+		} = instruction;
 
 		self.write_local(destination);
 		self.read_local(source.offset);
 	}
 
-	fn handle_table_set(&mut self, table_set: TableSet) {
+	fn handle_table_set(&mut self, instruction: TableSet) {
 		let TableSet {
 			destination,
 			source,
-		} = table_set;
+		} = instruction;
 
 		self.read_local(destination.offset);
 		self.read_local(source);
 	}
 
-	fn handle_table_size(&mut self, table_size: TableSize) {
-		let TableSize {
-			reference: _,
-			destination,
-		} = table_size;
+	fn handle_table_size(&mut self, instruction: TableSize) {
+		let TableSize { destination, .. } = instruction;
 
 		self.write_local(destination);
 	}
 
-	fn handle_table_grow(&mut self, table_grow: TableGrow) {
+	fn handle_table_grow(&mut self, instruction: TableGrow) {
 		let TableGrow {
-			reference: _,
 			destination,
 			size,
 			initializer,
-		} = table_grow;
+			..
+		} = instruction;
 
 		self.write_local(destination);
 		self.read_local(size);
 		self.read_local(initializer);
 	}
 
-	fn handle_table_fill(&mut self, table_fill: TableFill) {
+	fn handle_table_fill(&mut self, instruction: TableFill) {
 		let TableFill {
 			destination,
 			source,
 			size,
-		} = table_fill;
+		} = instruction;
 
 		self.read_local(destination.offset);
 		self.read_local(source);
 		self.read_local(size);
 	}
 
-	fn handle_table_copy(&mut self, table_copy: TableCopy) {
+	fn handle_table_copy(&mut self, instruction: TableCopy) {
 		let TableCopy {
 			destination,
 			source,
 			size,
-		} = table_copy;
+		} = instruction;
 
 		self.read_local(destination.offset);
 		self.read_local(source.offset);
 		self.read_local(size);
 	}
 
-	fn handle_table_init(&mut self, table_init: TableInit) {
+	fn handle_table_init(&mut self, instruction: TableInit) {
 		let TableInit {
 			destination,
 			source,
 			size,
-		} = table_init;
+		} = instruction;
 
 		self.read_local(destination.offset);
 		self.read_local(source.offset);
 		self.read_local(size);
 	}
 
-	fn handle_memory_load(&mut self, memory_load: MemoryLoad) {
+	fn handle_memory_load(&mut self, instruction: MemoryLoad) {
 		let MemoryLoad {
 			destination,
 			source,
-			r#type: _,
-		} = memory_load;
+			..
+		} = instruction;
 
 		self.write_local(destination);
 		self.read_local(source.offset);
 	}
 
-	fn handle_memory_store(&mut self, memory_store: MemoryStore) {
+	fn handle_memory_store(&mut self, instruction: MemoryStore) {
 		let MemoryStore {
 			destination,
 			source,
-			r#type: _,
-		} = memory_store;
+			..
+		} = instruction;
 
 		self.read_local(destination.offset);
 		self.read_local(source);
 	}
 
-	fn handle_memory_size(&mut self, memory_size: MemorySize) {
-		let MemorySize {
-			reference: _,
-			destination,
-		} = memory_size;
+	fn handle_memory_size(&mut self, instruction: MemorySize) {
+		let MemorySize { destination, .. } = instruction;
 
 		self.write_local(destination);
 	}
 
-	fn handle_memory_grow(&mut self, memory_grow: MemoryGrow) {
+	fn handle_memory_grow(&mut self, instruction: MemoryGrow) {
 		let MemoryGrow {
-			reference: _,
-			destination,
-			size,
-		} = memory_grow;
+			destination, size, ..
+		} = instruction;
 
 		self.write_local(destination);
 		self.read_local(size);
 	}
 
-	fn handle_memory_fill(&mut self, memory_fill: MemoryFill) {
+	fn handle_memory_fill(&mut self, instruction: MemoryFill) {
 		let MemoryFill {
 			destination,
 			byte,
 			size,
-		} = memory_fill;
+		} = instruction;
 
 		self.read_local(destination.offset);
 		self.read_local(byte);
 		self.read_local(size);
 	}
 
-	fn handle_memory_copy(&mut self, memory_copy: MemoryCopy) {
+	fn handle_memory_copy(&mut self, instruction: MemoryCopy) {
 		let MemoryCopy {
 			destination,
 			source,
 			size,
-		} = memory_copy;
+		} = instruction;
 
 		self.read_local(destination.offset);
 		self.read_local(source.offset);
 		self.read_local(size);
 	}
 
-	fn handle_memory_init(&mut self, memory_init: MemoryInit) {
+	fn handle_memory_init(&mut self, instruction: MemoryInit) {
 		let MemoryInit {
 			destination,
 			source,
 			size,
-		} = memory_init;
+		} = instruction;
 
 		self.read_local(destination.offset);
 		self.read_local(source.offset);
@@ -611,71 +550,67 @@ impl LocalTracker {
 	fn handle_instruction(&mut self, instruction: Instruction) {
 		match instruction {
 			Instruction::Unreachable | Instruction::ElementsDrop(_) | Instruction::DataDrop(_) => {}
-			Instruction::LocalSet(local_set) => self.handle_local_set(local_set),
-			Instruction::LocalBranch(local_branch) => self.handle_local_branch(local_branch),
-			Instruction::I32Constant(i32_constant) => self.handle_i32_constant(i32_constant),
-			Instruction::I64Constant(i64_constant) => self.handle_i64_constant(i64_constant),
-			Instruction::F32Constant(f32_constant) => self.handle_f32_constant(f32_constant),
-			Instruction::F64Constant(f64_constant) => self.handle_f64_constant(f64_constant),
-			Instruction::RefIsNull(ref_is_null) => self.handle_ref_is_null(ref_is_null),
-			Instruction::RefNull(ref_null) => self.handle_ref_null(ref_null),
-			Instruction::RefFunction(ref_function) => self.handle_ref_function(ref_function),
-			Instruction::Call(call) => self.handle_call(call),
-			Instruction::IntegerUnaryOperation(integer_unary_operation) => {
-				self.handle_integer_unary_operation(integer_unary_operation);
+			Instruction::LocalSet(instruction) => self.handle_local_set(instruction),
+			Instruction::LocalBranch(instruction) => self.handle_local_branch(instruction),
+			Instruction::I32Constant(instruction) => self.handle_i32_constant(instruction),
+			Instruction::I64Constant(instruction) => self.handle_i64_constant(instruction),
+			Instruction::F32Constant(instruction) => self.handle_f32_constant(instruction),
+			Instruction::F64Constant(instruction) => self.handle_f64_constant(instruction),
+			Instruction::RefIsNull(instruction) => self.handle_ref_is_null(instruction),
+			Instruction::RefNull(instruction) => self.handle_ref_null(instruction),
+			Instruction::RefFunction(instruction) => self.handle_ref_function(instruction),
+			Instruction::Call(instruction) => self.handle_call(instruction),
+			Instruction::IntegerUnaryOperation(instruction) => {
+				self.handle_integer_unary_operation(instruction);
 			}
-			Instruction::IntegerBinaryOperation(integer_binary_operation) => {
-				self.handle_integer_binary_operation(integer_binary_operation);
+			Instruction::IntegerBinaryOperation(instruction) => {
+				self.handle_integer_binary_operation(instruction);
 			}
-			Instruction::IntegerCompareOperation(integer_compare_operation) => {
-				self.handle_integer_compare_operation(integer_compare_operation);
+			Instruction::IntegerCompareOperation(instruction) => {
+				self.handle_integer_compare_operation(instruction);
 			}
-			Instruction::IntegerNarrow(integer_narrow) => {
-				self.handle_integer_narrow(integer_narrow);
+			Instruction::IntegerNarrow(instruction) => self.handle_integer_narrow(instruction),
+			Instruction::IntegerWiden(instruction) => self.handle_integer_widen(instruction),
+			Instruction::IntegerExtend(instruction) => self.handle_integer_extend(instruction),
+			Instruction::IntegerConvertToNumber(instruction) => {
+				self.handle_integer_convert_to_number(instruction);
 			}
-			Instruction::IntegerWiden(integer_widen) => self.handle_integer_widen(integer_widen),
-			Instruction::IntegerExtend(integer_extend) => {
-				self.handle_integer_extend(integer_extend);
+			Instruction::IntegerTransmuteToNumber(instruction) => {
+				self.handle_integer_transmute_to_number(instruction);
 			}
-			Instruction::IntegerConvertToNumber(integer_convert_to_number) => {
-				self.handle_integer_convert_to_number(integer_convert_to_number);
+			Instruction::NumberUnaryOperation(instruction) => {
+				self.handle_number_unary_operation(instruction);
 			}
-			Instruction::IntegerTransmuteToNumber(integer_transmute_to_number) => {
-				self.handle_integer_transmute_to_number(integer_transmute_to_number);
+			Instruction::NumberBinaryOperation(instruction) => {
+				self.handle_number_binary_operation(instruction);
 			}
-			Instruction::NumberUnaryOperation(number_unary_operation) => {
-				self.handle_number_unary_operation(number_unary_operation);
+			Instruction::NumberCompareOperation(instruction) => {
+				self.handle_number_compare_operation(instruction);
 			}
-			Instruction::NumberBinaryOperation(number_binary_operation) => {
-				self.handle_number_binary_operation(number_binary_operation);
+			Instruction::NumberNarrow(instruction) => self.handle_number_narrow(instruction),
+			Instruction::NumberWiden(instruction) => self.handle_number_widen(instruction),
+			Instruction::NumberTruncateToInteger(instruction) => {
+				self.handle_number_truncate_to_integer(instruction);
 			}
-			Instruction::NumberCompareOperation(number_compare_operation) => {
-				self.handle_number_compare_operation(number_compare_operation);
+			Instruction::NumberTransmuteToInteger(instruction) => {
+				self.handle_number_transmute_to_integer(instruction);
 			}
-			Instruction::NumberNarrow(number_narrow) => self.handle_number_narrow(number_narrow),
-			Instruction::NumberWiden(number_widen) => self.handle_number_widen(number_widen),
-			Instruction::NumberTruncateToInteger(number_truncate_to_integer) => {
-				self.handle_number_truncate_to_integer(number_truncate_to_integer);
-			}
-			Instruction::NumberTransmuteToInteger(number_transmute_to_integer) => {
-				self.handle_number_transmute_to_integer(number_transmute_to_integer);
-			}
-			Instruction::GlobalGet(global_get) => self.handle_global_get(global_get),
-			Instruction::GlobalSet(global_set) => self.handle_global_set(global_set),
-			Instruction::TableGet(table_get) => self.handle_table_get(table_get),
-			Instruction::TableSet(table_set) => self.handle_table_set(table_set),
-			Instruction::TableSize(table_size) => self.handle_table_size(table_size),
-			Instruction::TableGrow(table_grow) => self.handle_table_grow(table_grow),
-			Instruction::TableFill(table_fill) => self.handle_table_fill(table_fill),
-			Instruction::TableCopy(table_copy) => self.handle_table_copy(table_copy),
-			Instruction::TableInit(table_init) => self.handle_table_init(table_init),
-			Instruction::MemoryLoad(memory_load) => self.handle_memory_load(memory_load),
-			Instruction::MemoryStore(memory_store) => self.handle_memory_store(memory_store),
-			Instruction::MemorySize(memory_size) => self.handle_memory_size(memory_size),
-			Instruction::MemoryGrow(memory_grow) => self.handle_memory_grow(memory_grow),
-			Instruction::MemoryFill(memory_fill) => self.handle_memory_fill(memory_fill),
-			Instruction::MemoryCopy(memory_copy) => self.handle_memory_copy(memory_copy),
-			Instruction::MemoryInit(memory_init) => self.handle_memory_init(memory_init),
+			Instruction::GlobalGet(instruction) => self.handle_global_get(instruction),
+			Instruction::GlobalSet(instruction) => self.handle_global_set(instruction),
+			Instruction::TableGet(instruction) => self.handle_table_get(instruction),
+			Instruction::TableSet(instruction) => self.handle_table_set(instruction),
+			Instruction::TableSize(instruction) => self.handle_table_size(instruction),
+			Instruction::TableGrow(instruction) => self.handle_table_grow(instruction),
+			Instruction::TableFill(instruction) => self.handle_table_fill(instruction),
+			Instruction::TableCopy(instruction) => self.handle_table_copy(instruction),
+			Instruction::TableInit(instruction) => self.handle_table_init(instruction),
+			Instruction::MemoryLoad(instruction) => self.handle_memory_load(instruction),
+			Instruction::MemoryStore(instruction) => self.handle_memory_store(instruction),
+			Instruction::MemorySize(instruction) => self.handle_memory_size(instruction),
+			Instruction::MemoryGrow(instruction) => self.handle_memory_grow(instruction),
+			Instruction::MemoryFill(instruction) => self.handle_memory_fill(instruction),
+			Instruction::MemoryCopy(instruction) => self.handle_memory_copy(instruction),
+			Instruction::MemoryInit(instruction) => self.handle_memory_init(instruction),
 		}
 	}
 

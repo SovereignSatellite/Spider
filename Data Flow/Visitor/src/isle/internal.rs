@@ -1,6 +1,7 @@
 #![expect(
 	clippy::match_ref_pats,
 	clippy::pedantic,
+	dead_code,
 	non_snake_case,
 	unused_imports,
 	unused_variables

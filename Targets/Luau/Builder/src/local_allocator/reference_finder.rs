@@ -21,8 +21,8 @@ fn add_state_assignment(assignments: &mut HashMap<Link, Link>, graph: &DataFlowG
 	}
 }
 
-fn handle_lambda_in(assignments: &mut HashMap<Link, Link>, id: u32, lambda_in: &LambdaIn) {
-	for port in lambda_in.output_ports() {
+fn handle_lambda_in(assignments: &mut HashMap<Link, Link>, id: u32, node: &LambdaIn) {
+	for port in node.output_ports() {
 		let _ = assignments.try_insert(Link(id, port), Link::DANGLING);
 	}
 }
@@ -30,9 +30,9 @@ fn handle_lambda_in(assignments: &mut HashMap<Link, Link>, id: u32, lambda_in: &
 fn handle_lambda_out(
 	assignments: &mut HashMap<Link, Link>,
 	graph: &DataFlowGraph,
-	lambda_out: &LambdaOut,
+	node: &LambdaOut,
 ) {
-	let LambdaOut { results, .. } = lambda_out;
+	let LambdaOut { results, .. } = node;
 
 	for &result in results {
 		add_value_assignments(assignments, graph, result.0);
@@ -40,10 +40,10 @@ fn handle_lambda_out(
 	}
 }
 
-fn handle_region_out(assignments: &mut HashMap<Link, Link>, region_out: &RegionOut) {
+fn handle_region_out(assignments: &mut HashMap<Link, Link>, node: &RegionOut) {
 	let RegionOut {
 		output, results, ..
-	} = region_out;
+	} = node;
 
 	let outputs = (0..).map(|port| Link(*output, port));
 
@@ -94,12 +94,8 @@ fn handle_gamma_post(assignments: &mut HashMap<Link, Link>, graph: &DataFlowGrap
 	}
 }
 
-fn handle_gamma_out(
-	assignments: &mut HashMap<Link, Link>,
-	graph: &DataFlowGraph,
-	gamma_out: &GammaOut,
-) {
-	let GammaOut { input, regions } = gamma_out;
+fn handle_gamma_out(assignments: &mut HashMap<Link, Link>, graph: &DataFlowGraph, node: &GammaOut) {
+	let GammaOut { input, regions } = node;
 	let GammaIn {
 		arguments,
 		condition,
@@ -114,12 +110,8 @@ fn handle_gamma_out(
 	}
 }
 
-fn handle_theta_out(
-	assignments: &mut HashMap<Link, Link>,
-	graph: &DataFlowGraph,
-	theta_out: &ThetaOut,
-) {
-	let ThetaOut { input, results, .. } = theta_out;
+fn handle_theta_out(assignments: &mut HashMap<Link, Link>, graph: &DataFlowGraph, node: &ThetaOut) {
+	let ThetaOut { input, results, .. } = node;
 	let ThetaIn { output, arguments } = graph.get(*input).as_theta_in().unwrap();
 
 	let outputs = (0..).map(|port| Link(*output, port));
@@ -137,12 +129,8 @@ fn handle_theta_out(
 	}
 }
 
-fn handle_omega_in(
-	assignments: &mut HashMap<Link, Link>,
-	graph: &DataFlowGraph,
-	omega_in: &OmegaIn,
-) {
-	let OmegaIn { output } = omega_in;
+fn handle_omega_in(assignments: &mut HashMap<Link, Link>, graph: &DataFlowGraph, node: &OmegaIn) {
+	let OmegaIn { output } = node;
 	let OmegaOut { input, state, .. } = graph.get(*output).as_omega_out().unwrap();
 
 	let _ = assignments.try_insert(Link(*input, OmegaIn::ENVIRONMENT_PORT), Link::DANGLING);
@@ -155,19 +143,19 @@ fn handle_trap(assignments: &mut HashMap<Link, Link>, id: u32) {
 	let _ = assignments.try_insert(Link(id, 0), Link::DANGLING);
 }
 
-fn handle_identity(assignments: &mut HashMap<Link, Link>, id: u32, identity: Identity) {
-	let Identity { source } = identity;
+fn handle_identity(assignments: &mut HashMap<Link, Link>, id: u32, node: Identity) {
+	let Identity { source } = node;
 
 	assignments.insert(source, Link(id, 0));
 }
 
-fn handle_call(assignments: &mut HashMap<Link, Link>, id: u32, call: &Call) {
+fn handle_call(assignments: &mut HashMap<Link, Link>, id: u32, node: &Call) {
 	let Call {
 		ref arguments,
 		results,
 		states,
 		..
-	} = *call;
+	} = *node;
 
 	let arguments = arguments[arguments.len() - usize::from(states)..].iter();
 
@@ -181,16 +169,16 @@ fn handle_call(assignments: &mut HashMap<Link, Link>, id: u32, call: &Call) {
 	assignments.extend(arguments.copied().zip(states));
 }
 
-fn handle_merge(assignments: &mut HashMap<Link, Link>, merge: &Merge) {
-	let Merge { states } = merge;
+fn handle_merge(assignments: &mut HashMap<Link, Link>, node: &Merge) {
+	let Merge { states } = node;
 
 	for &state in states {
 		let _ = assignments.try_insert(state, Link::DANGLING);
 	}
 }
 
-fn handle_global_get(assignments: &mut HashMap<Link, Link>, id: u32, global_get: GlobalGet) {
-	let GlobalGet { source } = global_get;
+fn handle_global_get(assignments: &mut HashMap<Link, Link>, id: u32, node: GlobalGet) {
+	let GlobalGet { source } = node;
 
 	// TODO: Fix `get` states
 	if false {
@@ -202,20 +190,20 @@ fn handle_global_set(
 	assignments: &mut HashMap<Link, Link>,
 	graph: &DataFlowGraph,
 	id: u32,
-	global_set: GlobalSet,
+	node: GlobalSet,
 ) {
 	let GlobalSet {
 		destination,
 		source,
-	} = global_set;
+	} = node;
 
 	assignments.insert(destination, Link(id, GlobalSet::STATE_PORT));
 
 	add_state_assignment(assignments, graph, source);
 }
 
-fn handle_table_get(assignments: &mut HashMap<Link, Link>, id: u32, table_get: TableGet) {
-	let TableGet { source } = table_get;
+fn handle_table_get(assignments: &mut HashMap<Link, Link>, id: u32, node: TableGet) {
+	let TableGet { source } = node;
 
 	// TODO: Fix `get` states
 	if false {
@@ -223,14 +211,14 @@ fn handle_table_get(assignments: &mut HashMap<Link, Link>, id: u32, table_get: T
 	}
 }
 
-fn handle_table_set(assignments: &mut HashMap<Link, Link>, id: u32, table_set: TableSet) {
-	let TableSet { destination, .. } = table_set;
+fn handle_table_set(assignments: &mut HashMap<Link, Link>, id: u32, node: TableSet) {
+	let TableSet { destination, .. } = node;
 
 	assignments.insert(destination.reference, Link(id, TableSet::STATE_PORT));
 }
 
-fn handle_table_size(assignments: &mut HashMap<Link, Link>, id: u32, table_size: TableSize) {
-	let TableSize { source } = table_size;
+fn handle_table_size(assignments: &mut HashMap<Link, Link>, id: u32, node: TableSize) {
+	let TableSize { source } = node;
 
 	// TODO: Fix `get` states
 	if false {
@@ -238,24 +226,24 @@ fn handle_table_size(assignments: &mut HashMap<Link, Link>, id: u32, table_size:
 	}
 }
 
-fn handle_table_grow(assignments: &mut HashMap<Link, Link>, id: u32, table_grow: TableGrow) {
-	let TableGrow { destination, .. } = table_grow;
+fn handle_table_grow(assignments: &mut HashMap<Link, Link>, id: u32, node: TableGrow) {
+	let TableGrow { destination, .. } = node;
 
 	assignments.insert(destination, Link(id, TableGrow::STATE_PORT));
 }
 
-fn handle_table_fill(assignments: &mut HashMap<Link, Link>, id: u32, table_fill: TableFill) {
-	let TableFill { destination, .. } = table_fill;
+fn handle_table_fill(assignments: &mut HashMap<Link, Link>, id: u32, node: TableFill) {
+	let TableFill { destination, .. } = node;
 
 	assignments.insert(destination.reference, Link(id, TableFill::STATE_PORT));
 }
 
-fn handle_table_copy(assignments: &mut HashMap<Link, Link>, id: u32, table_copy: TableCopy) {
+fn handle_table_copy(assignments: &mut HashMap<Link, Link>, id: u32, node: TableCopy) {
 	let TableCopy {
 		destination,
 		source,
 		..
-	} = table_copy;
+	} = node;
 
 	assignments.insert(
 		destination.reference,
@@ -264,12 +252,12 @@ fn handle_table_copy(assignments: &mut HashMap<Link, Link>, id: u32, table_copy:
 	assignments.insert(source.reference, Link(id, TableCopy::SOURCE_STATE_PORT));
 }
 
-fn handle_table_init(assignments: &mut HashMap<Link, Link>, id: u32, table_init: TableInit) {
+fn handle_table_init(assignments: &mut HashMap<Link, Link>, id: u32, node: TableInit) {
 	let TableInit {
 		destination,
 		source,
 		..
-	} = table_init;
+	} = node;
 
 	assignments.insert(
 		destination.reference,
@@ -278,18 +266,14 @@ fn handle_table_init(assignments: &mut HashMap<Link, Link>, id: u32, table_init:
 	assignments.insert(source.reference, Link(id, TableInit::SOURCE_STATE_PORT));
 }
 
-fn handle_elements_drop(
-	assignments: &mut HashMap<Link, Link>,
-	id: u32,
-	elements_drop: ElementsDrop,
-) {
-	let ElementsDrop { source } = elements_drop;
+fn handle_elements_drop(assignments: &mut HashMap<Link, Link>, id: u32, node: ElementsDrop) {
+	let ElementsDrop { source } = node;
 
 	assignments.insert(source, Link(id, ElementsDrop::STATE_PORT));
 }
 
-fn handle_memory_load(assignments: &mut HashMap<Link, Link>, id: u32, memory_load: MemoryLoad) {
-	let MemoryLoad { source, .. } = memory_load;
+fn handle_memory_load(assignments: &mut HashMap<Link, Link>, id: u32, node: MemoryLoad) {
+	let MemoryLoad { source, .. } = node;
 
 	// TODO: Fix `get` states
 	if false {
@@ -297,14 +281,14 @@ fn handle_memory_load(assignments: &mut HashMap<Link, Link>, id: u32, memory_loa
 	}
 }
 
-fn handle_memory_store(assignments: &mut HashMap<Link, Link>, id: u32, memory_store: MemoryStore) {
-	let MemoryStore { destination, .. } = memory_store;
+fn handle_memory_store(assignments: &mut HashMap<Link, Link>, id: u32, node: MemoryStore) {
+	let MemoryStore { destination, .. } = node;
 
 	assignments.insert(destination.reference, Link(id, MemoryStore::STATE_PORT));
 }
 
-fn handle_memory_size(assignments: &mut HashMap<Link, Link>, id: u32, memory_size: MemorySize) {
-	let MemorySize { source } = memory_size;
+fn handle_memory_size(assignments: &mut HashMap<Link, Link>, id: u32, node: MemorySize) {
+	let MemorySize { source } = node;
 
 	// TODO: Fix `get` states
 	if false {
@@ -312,24 +296,24 @@ fn handle_memory_size(assignments: &mut HashMap<Link, Link>, id: u32, memory_siz
 	}
 }
 
-fn handle_memory_grow(assignments: &mut HashMap<Link, Link>, id: u32, memory_grow: MemoryGrow) {
-	let MemoryGrow { destination, .. } = memory_grow;
+fn handle_memory_grow(assignments: &mut HashMap<Link, Link>, id: u32, node: MemoryGrow) {
+	let MemoryGrow { destination, .. } = node;
 
 	assignments.insert(destination, Link(id, MemoryGrow::STATE_PORT));
 }
 
-fn handle_memory_fill(assignments: &mut HashMap<Link, Link>, id: u32, memory_fill: MemoryFill) {
-	let MemoryFill { destination, .. } = memory_fill;
+fn handle_memory_fill(assignments: &mut HashMap<Link, Link>, id: u32, node: MemoryFill) {
+	let MemoryFill { destination, .. } = node;
 
 	assignments.insert(destination.reference, Link(id, MemoryFill::STATE_PORT));
 }
 
-fn handle_memory_copy(assignments: &mut HashMap<Link, Link>, id: u32, memory_copy: MemoryCopy) {
+fn handle_memory_copy(assignments: &mut HashMap<Link, Link>, id: u32, node: MemoryCopy) {
 	let MemoryCopy {
 		destination,
 		source,
 		..
-	} = memory_copy;
+	} = node;
 
 	assignments.insert(
 		destination.reference,
@@ -338,12 +322,12 @@ fn handle_memory_copy(assignments: &mut HashMap<Link, Link>, id: u32, memory_cop
 	assignments.insert(source.reference, Link(id, MemoryCopy::SOURCE_STATE_PORT));
 }
 
-fn handle_memory_init(assignments: &mut HashMap<Link, Link>, id: u32, memory_init: MemoryInit) {
+fn handle_memory_init(assignments: &mut HashMap<Link, Link>, id: u32, node: MemoryInit) {
 	let MemoryInit {
 		destination,
 		source,
 		..
-	} = memory_init;
+	} = node;
 
 	assignments.insert(
 		destination.reference,
@@ -352,8 +336,8 @@ fn handle_memory_init(assignments: &mut HashMap<Link, Link>, id: u32, memory_ini
 	assignments.insert(source.reference, Link(id, MemoryInit::SOURCE_STATE_PORT));
 }
 
-fn handle_data_drop(assignments: &mut HashMap<Link, Link>, id: u32, data_drop: DataDrop) {
-	let DataDrop { source } = data_drop;
+fn handle_data_drop(assignments: &mut HashMap<Link, Link>, id: u32, node: DataDrop) {
+	let DataDrop { source } = node;
 
 	assignments.insert(source, Link(id, DataDrop::STATE_PORT));
 }
@@ -393,38 +377,36 @@ fn handle_node(assignments: &mut HashMap<Link, Link>, graph: &DataFlowGraph, id:
 		| Node::MemoryNew(_)
 		| Node::DataNew(_) => {}
 
-		Node::LambdaIn(ref lambda_in) => handle_lambda_in(assignments, id, lambda_in),
-		Node::LambdaOut(ref lambda_out) => handle_lambda_out(assignments, graph, lambda_out),
-		Node::RegionOut(ref region_out) => handle_region_out(assignments, region_out),
-		Node::GammaOut(ref gamma_out) => handle_gamma_out(assignments, graph, gamma_out),
-		Node::ThetaOut(ref theta_out) => handle_theta_out(assignments, graph, theta_out),
-		Node::OmegaIn(ref omega_in) => handle_omega_in(assignments, graph, omega_in),
+		Node::LambdaIn(ref node) => handle_lambda_in(assignments, id, node),
+		Node::LambdaOut(ref node) => handle_lambda_out(assignments, graph, node),
+		Node::RegionOut(ref node) => handle_region_out(assignments, node),
+		Node::GammaOut(ref node) => handle_gamma_out(assignments, graph, node),
+		Node::ThetaOut(ref node) => handle_theta_out(assignments, graph, node),
+		Node::OmegaIn(ref node) => handle_omega_in(assignments, graph, node),
 
 		Node::Trap => handle_trap(assignments, id),
 
-		Node::Identity(identity) => handle_identity(assignments, id, identity),
-		Node::Call(ref call) => handle_call(assignments, id, call),
-		Node::Merge(ref merge) => handle_merge(assignments, merge),
-		Node::GlobalGet(global_get) => handle_global_get(assignments, id, global_get),
-		Node::GlobalSet(global_set) => handle_global_set(assignments, graph, id, global_set),
-		Node::TableGet(table_get) => handle_table_get(assignments, id, table_get),
-		Node::TableSet(table_set) => handle_table_set(assignments, id, table_set),
-		Node::TableSize(table_size) => handle_table_size(assignments, id, table_size),
-		Node::TableGrow(table_grow) => handle_table_grow(assignments, id, table_grow),
-		Node::TableFill(table_fill) => handle_table_fill(assignments, id, table_fill),
-		Node::TableCopy(table_copy) => handle_table_copy(assignments, id, table_copy),
-		Node::TableInit(table_init) => handle_table_init(assignments, id, table_init),
-		Node::ElementsDrop(elements_drop) => {
-			handle_elements_drop(assignments, id, elements_drop);
-		}
-		Node::MemoryLoad(memory_load) => handle_memory_load(assignments, id, memory_load),
-		Node::MemoryStore(memory_store) => handle_memory_store(assignments, id, memory_store),
-		Node::MemorySize(memory_size) => handle_memory_size(assignments, id, memory_size),
-		Node::MemoryGrow(memory_grow) => handle_memory_grow(assignments, id, memory_grow),
-		Node::MemoryFill(memory_fill) => handle_memory_fill(assignments, id, memory_fill),
-		Node::MemoryCopy(memory_copy) => handle_memory_copy(assignments, id, memory_copy),
-		Node::MemoryInit(memory_init) => handle_memory_init(assignments, id, memory_init),
-		Node::DataDrop(data_drop) => handle_data_drop(assignments, id, data_drop),
+		Node::Identity(node) => handle_identity(assignments, id, node),
+		Node::Call(ref node) => handle_call(assignments, id, node),
+		Node::Merge(ref node) => handle_merge(assignments, node),
+		Node::GlobalGet(node) => handle_global_get(assignments, id, node),
+		Node::GlobalSet(node) => handle_global_set(assignments, graph, id, node),
+		Node::TableGet(node) => handle_table_get(assignments, id, node),
+		Node::TableSet(node) => handle_table_set(assignments, id, node),
+		Node::TableSize(node) => handle_table_size(assignments, id, node),
+		Node::TableGrow(node) => handle_table_grow(assignments, id, node),
+		Node::TableFill(node) => handle_table_fill(assignments, id, node),
+		Node::TableCopy(node) => handle_table_copy(assignments, id, node),
+		Node::TableInit(node) => handle_table_init(assignments, id, node),
+		Node::ElementsDrop(node) => handle_elements_drop(assignments, id, node),
+		Node::MemoryLoad(node) => handle_memory_load(assignments, id, node),
+		Node::MemoryStore(node) => handle_memory_store(assignments, id, node),
+		Node::MemorySize(node) => handle_memory_size(assignments, id, node),
+		Node::MemoryGrow(node) => handle_memory_grow(assignments, id, node),
+		Node::MemoryFill(node) => handle_memory_fill(assignments, id, node),
+		Node::MemoryCopy(node) => handle_memory_copy(assignments, id, node),
+		Node::MemoryInit(node) => handle_memory_init(assignments, id, node),
+		Node::DataDrop(node) => handle_data_drop(assignments, id, node),
 	}
 }
 

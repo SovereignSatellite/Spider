@@ -1,4 +1,5 @@
 #![no_std]
+#![expect(clippy::missing_panics_doc)]
 
 use data_flow_graph::{
 	DataFlowGraph, Link, Node,
@@ -168,7 +169,6 @@ impl LuauBuilder {
 		self.do_assignment(id, import);
 	}
 
-	#[expect(clippy::unused_self, clippy::needless_pass_by_ref_mut)]
 	fn handle_host(&mut self, id: u32, host: &dyn Host) {
 		panic!("unknown host operation {id} `{}`", host.identifier());
 	}
@@ -181,10 +181,10 @@ impl LuauBuilder {
 		self.do_assignment(id, Expression::Null);
 	}
 
-	fn handle_identity(&mut self, id: u32, identity: Identity) {
-		let identity = self.data_handler.load_identity(identity);
+	fn handle_identity(&mut self, id: u32, node: Identity) {
+		let expression = self.data_handler.load_identity(node);
 
-		self.do_assignment(id, identity);
+		self.do_assignment(id, expression);
 	}
 
 	fn handle_i32_const(&mut self, id: u32, value: i32) {
@@ -203,21 +203,21 @@ impl LuauBuilder {
 		self.do_assignment(id, Expression::F64(value));
 	}
 
-	fn handle_call_statement(&mut self, id: u32, call: &Call) {
-		self.code_handler.do_call(call, id, &mut self.data_handler);
+	fn handle_call_statement(&mut self, id: u32, node: &Call) {
+		self.code_handler.do_call(node, id, &mut self.data_handler);
 	}
 
-	fn handle_call_expression(&mut self, id: u32, call: &Call) {
-		let call = self.data_handler.load_call(call);
+	fn handle_call_expression(&mut self, id: u32, node: &Call) {
+		let expression = self.data_handler.load_call(node);
 
-		self.do_assignment(id, call);
+		self.do_assignment(id, expression);
 	}
 
-	fn handle_call(&mut self, id: u32, call: &Call) {
-		if call.results == 0 || self.data_handler.get_local(Link(id, 0)).is_some() {
-			self.handle_call_statement(id, call);
+	fn handle_call(&mut self, id: u32, node: &Call) {
+		if node.results == 0 || self.data_handler.get_local(Link(id, 0)).is_some() {
+			self.handle_call_statement(id, node);
 		} else {
-			self.handle_call_expression(id, call);
+			self.handle_call_expression(id, node);
 		}
 
 		let Call {
@@ -225,7 +225,7 @@ impl LuauBuilder {
 			results,
 			states,
 			..
-		} = *call;
+		} = *node;
 
 		for (&source, port) in arguments.iter().rev().zip((0..states).rev()) {
 			let destination = Link(id, results + port);
@@ -235,339 +235,333 @@ impl LuauBuilder {
 		}
 	}
 
-	fn handle_merge(&mut self, merge: &Merge) {
-		let Merge { states } = merge;
+	fn handle_merge(&mut self, node: &Merge) {
+		let Merge { states } = node;
 
 		for &source in states {
 			let _source = self.data_handler.load(source);
 		}
 	}
 
-	fn handle_ref_is_null(&mut self, id: u32, ref_is_null: RefIsNull) {
-		let ref_is_null = self.data_handler.load_ref_is_null(ref_is_null);
+	fn handle_ref_is_null(&mut self, id: u32, node: RefIsNull) {
+		let expression = self.data_handler.load_ref_is_null(node);
 
-		self.do_assignment(id, ref_is_null);
+		self.do_assignment(id, expression);
 	}
 
-	fn handle_integer_unary_operation(&mut self, id: u32, operation: IntegerUnaryOperation) {
-		let operation = self.data_handler.load_integer_unary_operation(operation);
+	fn handle_integer_unary_operation(&mut self, id: u32, node: IntegerUnaryOperation) {
+		let expression = self.data_handler.load_integer_unary_operation(node);
 
-		self.do_assignment(id, operation);
+		self.do_assignment(id, expression);
 	}
 
-	fn handle_integer_binary_operation(&mut self, id: u32, operation: IntegerBinaryOperation) {
-		let operation = self.data_handler.load_integer_binary_operation(operation);
+	fn handle_integer_binary_operation(&mut self, id: u32, node: IntegerBinaryOperation) {
+		let expression = self.data_handler.load_integer_binary_operation(node);
 
-		self.do_assignment(id, operation);
+		self.do_assignment(id, expression);
 	}
 
-	fn handle_integer_compare_operation(&mut self, id: u32, operation: IntegerCompareOperation) {
-		let operation = self.data_handler.load_integer_compare_operation(operation);
+	fn handle_integer_compare_operation(&mut self, id: u32, node: IntegerCompareOperation) {
+		let expression = self.data_handler.load_integer_compare_operation(node);
 
-		self.do_assignment(id, operation);
+		self.do_assignment(id, expression);
 	}
 
-	fn handle_integer_narrow(&mut self, id: u32, operation: IntegerNarrow) {
-		let operation = self.data_handler.load_integer_narrow(operation);
+	fn handle_integer_narrow(&mut self, id: u32, node: IntegerNarrow) {
+		let expression = self.data_handler.load_integer_narrow(node);
 
-		self.do_assignment(id, operation);
+		self.do_assignment(id, expression);
 	}
 
-	fn handle_integer_widen(&mut self, id: u32, operation: IntegerWiden) {
-		let operation = self.data_handler.load_integer_widen(operation);
+	fn handle_integer_widen(&mut self, id: u32, node: IntegerWiden) {
+		let expression = self.data_handler.load_integer_widen(node);
 
-		self.do_assignment(id, operation);
+		self.do_assignment(id, expression);
 	}
 
-	fn handle_integer_extend(&mut self, id: u32, operation: IntegerExtend) {
-		let operation = self.data_handler.load_integer_extend(operation);
+	fn handle_integer_extend(&mut self, id: u32, node: IntegerExtend) {
+		let expression = self.data_handler.load_integer_extend(node);
 
-		self.do_assignment(id, operation);
+		self.do_assignment(id, expression);
 	}
 
-	fn handle_integer_convert_to_number(&mut self, id: u32, operation: IntegerConvertToNumber) {
-		let operation = self.data_handler.load_integer_convert_to_number(operation);
+	fn handle_integer_convert_to_number(&mut self, id: u32, node: IntegerConvertToNumber) {
+		let expression = self.data_handler.load_integer_convert_to_number(node);
 
-		self.do_assignment(id, operation);
+		self.do_assignment(id, expression);
 	}
 
-	fn handle_integer_transmute_to_number(&mut self, id: u32, operation: IntegerTransmuteToNumber) {
-		let operation = self
-			.data_handler
-			.load_integer_transmute_to_number(operation);
+	fn handle_integer_transmute_to_number(&mut self, id: u32, node: IntegerTransmuteToNumber) {
+		let expression = self.data_handler.load_integer_transmute_to_number(node);
 
-		self.do_assignment(id, operation);
+		self.do_assignment(id, expression);
 	}
 
-	fn handle_number_unary_operation(&mut self, id: u32, operation: NumberUnaryOperation) {
-		let operation = self.data_handler.load_number_unary_operation(operation);
+	fn handle_number_unary_operation(&mut self, id: u32, node: NumberUnaryOperation) {
+		let expression = self.data_handler.load_number_unary_operation(node);
 
-		self.do_assignment(id, operation);
+		self.do_assignment(id, expression);
 	}
 
-	fn handle_number_binary_operation(&mut self, id: u32, operation: NumberBinaryOperation) {
-		let operation = self.data_handler.load_number_binary_operation(operation);
+	fn handle_number_binary_operation(&mut self, id: u32, node: NumberBinaryOperation) {
+		let expression = self.data_handler.load_number_binary_operation(node);
 
-		self.do_assignment(id, operation);
+		self.do_assignment(id, expression);
 	}
 
-	fn handle_number_compare_operation(&mut self, id: u32, operation: NumberCompareOperation) {
-		let operation = self.data_handler.load_number_compare_operation(operation);
+	fn handle_number_compare_operation(&mut self, id: u32, node: NumberCompareOperation) {
+		let expression = self.data_handler.load_number_compare_operation(node);
 
-		self.do_assignment(id, operation);
+		self.do_assignment(id, expression);
 	}
 
-	fn handle_number_narrow(&mut self, id: u32, operation: NumberNarrow) {
-		let operation = self.data_handler.load_number_narrow(operation);
+	fn handle_number_narrow(&mut self, id: u32, node: NumberNarrow) {
+		let expression = self.data_handler.load_number_narrow(node);
 
-		self.do_assignment(id, operation);
+		self.do_assignment(id, expression);
 	}
 
-	fn handle_number_widen(&mut self, id: u32, operation: NumberWiden) {
-		let operation = self.data_handler.load_number_widen(operation);
+	fn handle_number_widen(&mut self, id: u32, node: NumberWiden) {
+		let expression = self.data_handler.load_number_widen(node);
 
-		self.do_assignment(id, operation);
+		self.do_assignment(id, expression);
 	}
 
-	fn handle_number_truncate_to_integer(&mut self, id: u32, operation: NumberTruncateToInteger) {
-		let operation = self.data_handler.load_number_truncate_to_integer(operation);
+	fn handle_number_truncate_to_integer(&mut self, id: u32, node: NumberTruncateToInteger) {
+		let expression = self.data_handler.load_number_truncate_to_integer(node);
 
-		self.do_assignment(id, operation);
+		self.do_assignment(id, expression);
 	}
 
-	fn handle_number_transmute_to_integer(&mut self, id: u32, operation: NumberTransmuteToInteger) {
-		let operation = self
-			.data_handler
-			.load_number_transmute_to_integer(operation);
+	fn handle_number_transmute_to_integer(&mut self, id: u32, node: NumberTransmuteToInteger) {
+		let expression = self.data_handler.load_number_transmute_to_integer(node);
 
-		self.do_assignment(id, operation);
+		self.do_assignment(id, expression);
 	}
 
-	fn handle_global_new(&mut self, id: u32, global_new: GlobalNew) {
-		let global_new = self.data_handler.load_global_new(global_new);
+	fn handle_global_new(&mut self, id: u32, node: GlobalNew) {
+		let expression = self.data_handler.load_global_new(node);
 
-		self.do_assignment(id, global_new);
+		self.do_assignment(id, expression);
 	}
 
-	fn handle_global_get(&mut self, id: u32, global_get: GlobalGet) {
-		let result = self.data_handler.load_global_get(global_get);
+	fn handle_global_get(&mut self, id: u32, node: GlobalGet) {
+		let expression = self.data_handler.load_global_get(node);
 
-		self.do_assignment(id, result);
+		self.do_assignment(id, expression);
 	}
 
-	fn handle_global_set(&mut self, id: u32, global_set: GlobalSet) {
+	fn handle_global_set(&mut self, id: u32, node: GlobalSet) {
 		self.code_handler
-			.do_global_set(global_set, &mut self.data_handler);
+			.do_global_set(node, &mut self.data_handler);
 
 		self.code_handler.do_rename(
 			Link(id, GlobalSet::STATE_PORT),
-			global_set.destination,
+			node.destination,
 			&self.data_handler,
 		);
 	}
 
-	fn handle_table_new(&mut self, id: u32, table_new: TableNew) {
-		let table_new = self.data_handler.load_table_new(table_new);
+	fn handle_table_new(&mut self, id: u32, node: TableNew) {
+		let expression = self.data_handler.load_table_new(node);
 
-		self.do_assignment(id, table_new);
+		self.do_assignment(id, expression);
 	}
 
-	fn handle_table_get(&mut self, id: u32, table_get: TableGet) {
-		let result = self.data_handler.load_table_get(table_get);
+	fn handle_table_get(&mut self, id: u32, node: TableGet) {
+		let expression = self.data_handler.load_table_get(node);
 
-		self.do_assignment(id, result);
+		self.do_assignment(id, expression);
 	}
 
-	fn handle_table_set(&mut self, id: u32, table_set: TableSet) {
-		self.code_handler
-			.do_table_set(table_set, &mut self.data_handler);
+	fn handle_table_set(&mut self, id: u32, node: TableSet) {
+		self.code_handler.do_table_set(node, &mut self.data_handler);
 
 		self.code_handler.do_rename(
 			Link(id, TableSet::STATE_PORT),
-			table_set.destination.reference,
+			node.destination.reference,
 			&self.data_handler,
 		);
 	}
 
-	fn handle_table_size(&mut self, id: u32, table_size: TableSize) {
-		let result = self.data_handler.load_table_size(table_size);
+	fn handle_table_size(&mut self, id: u32, node: TableSize) {
+		let expression = self.data_handler.load_table_size(node);
 
-		self.do_assignment(id, result);
+		self.do_assignment(id, expression);
 	}
 
-	fn handle_table_grow(&mut self, id: u32, table_grow: TableGrow) {
-		let result = self.data_handler.load_table_grow(table_grow);
+	fn handle_table_grow(&mut self, id: u32, node: TableGrow) {
+		let expression = self.data_handler.load_table_grow(node);
 
-		self.do_assignment(id, result);
+		self.do_assignment(id, expression);
 
 		self.code_handler.do_rename(
 			Link(id, TableGrow::STATE_PORT),
-			table_grow.destination,
+			node.destination,
 			&self.data_handler,
 		);
 	}
 
-	fn handle_table_fill(&mut self, id: u32, table_fill: TableFill) {
+	fn handle_table_fill(&mut self, id: u32, node: TableFill) {
 		self.code_handler
-			.do_table_fill(table_fill, &mut self.data_handler);
+			.do_table_fill(node, &mut self.data_handler);
 
 		self.code_handler.do_rename(
 			Link(id, TableFill::STATE_PORT),
-			table_fill.destination.reference,
+			node.destination.reference,
 			&self.data_handler,
 		);
 	}
 
-	fn handle_table_copy(&mut self, id: u32, table_copy: TableCopy) {
+	fn handle_table_copy(&mut self, id: u32, node: TableCopy) {
 		self.code_handler
-			.do_table_copy(table_copy, &mut self.data_handler);
+			.do_table_copy(node, &mut self.data_handler);
 
 		self.code_handler.do_rename(
 			Link(id, TableCopy::DESTINATION_STATE_PORT),
-			table_copy.destination.reference,
+			node.destination.reference,
 			&self.data_handler,
 		);
 
 		self.code_handler.do_rename(
 			Link(id, TableCopy::SOURCE_STATE_PORT),
-			table_copy.source.reference,
+			node.source.reference,
 			&self.data_handler,
 		);
 	}
 
-	fn handle_table_init(&mut self, id: u32, table_init: TableInit) {
+	fn handle_table_init(&mut self, id: u32, node: TableInit) {
 		self.code_handler
-			.do_table_init(table_init, &mut self.data_handler);
+			.do_table_init(node, &mut self.data_handler);
 
 		self.code_handler.do_rename(
 			Link(id, TableInit::DESTINATION_STATE_PORT),
-			table_init.destination.reference,
+			node.destination.reference,
 			&self.data_handler,
 		);
 
 		self.code_handler.do_rename(
 			Link(id, TableInit::SOURCE_STATE_PORT),
-			table_init.source.reference,
+			node.source.reference,
 			&self.data_handler,
 		);
 	}
 
-	fn handle_elements_new(&mut self, id: u32, elements_new: &ElementsNew) {
-		let elements_new = self.data_handler.load_elements_new(elements_new);
+	fn handle_elements_new(&mut self, id: u32, node: &ElementsNew) {
+		let expression = self.data_handler.load_elements_new(node);
 
-		self.do_assignment(id, elements_new);
+		self.do_assignment(id, expression);
 	}
 
-	fn handle_elements_drop(&mut self, id: u32, elements_drop: ElementsDrop) {
+	fn handle_elements_drop(&mut self, id: u32, node: ElementsDrop) {
 		self.code_handler
-			.do_elements_drop(elements_drop, &mut self.data_handler);
+			.do_elements_drop(node, &mut self.data_handler);
 
 		self.code_handler.do_rename(
 			Link(id, ElementsDrop::STATE_PORT),
-			elements_drop.source,
+			node.source,
 			&self.data_handler,
 		);
 	}
 
-	fn handle_memory_new(&mut self, id: u32, memory_new: MemoryNew) {
-		let memory_new = Expression::MemoryNew(memory_new);
+	fn handle_memory_new(&mut self, id: u32, node: MemoryNew) {
+		let expression = Expression::MemoryNew(node);
 
-		self.do_assignment(id, memory_new);
+		self.do_assignment(id, expression);
 	}
 
-	fn handle_memory_load(&mut self, id: u32, memory_load: MemoryLoad) {
-		let result = self.data_handler.load_memory_load(memory_load);
+	fn handle_memory_load(&mut self, id: u32, node: MemoryLoad) {
+		let expression = self.data_handler.load_memory_load(node);
 
-		self.do_assignment(id, result);
+		self.do_assignment(id, expression);
 	}
 
-	fn handle_memory_store(&mut self, id: u32, memory_store: MemoryStore) {
+	fn handle_memory_store(&mut self, id: u32, node: MemoryStore) {
 		self.code_handler
-			.do_memory_store(memory_store, &mut self.data_handler);
+			.do_memory_store(node, &mut self.data_handler);
 
 		self.code_handler.do_rename(
 			Link(id, MemoryStore::STATE_PORT),
-			memory_store.destination.reference,
+			node.destination.reference,
 			&self.data_handler,
 		);
 	}
 
-	fn handle_memory_size(&mut self, id: u32, memory_size: MemorySize) {
-		let result = self.data_handler.load_memory_size(memory_size);
+	fn handle_memory_size(&mut self, id: u32, node: MemorySize) {
+		let expression = self.data_handler.load_memory_size(node);
 
-		self.do_assignment(id, result);
+		self.do_assignment(id, expression);
 	}
 
-	fn handle_memory_grow(&mut self, id: u32, memory_grow: MemoryGrow) {
-		let result = self.data_handler.load_memory_grow(memory_grow);
+	fn handle_memory_grow(&mut self, id: u32, node: MemoryGrow) {
+		let expression = self.data_handler.load_memory_grow(node);
 
-		self.do_assignment(id, result);
+		self.do_assignment(id, expression);
 
 		self.code_handler.do_rename(
 			Link(id, MemoryGrow::STATE_PORT),
-			memory_grow.destination,
+			node.destination,
 			&self.data_handler,
 		);
 	}
 
-	fn handle_memory_fill(&mut self, id: u32, memory_fill: MemoryFill) {
+	fn handle_memory_fill(&mut self, id: u32, node: MemoryFill) {
 		self.code_handler
-			.do_memory_fill(memory_fill, &mut self.data_handler);
+			.do_memory_fill(node, &mut self.data_handler);
 
 		self.code_handler.do_rename(
 			Link(id, MemoryFill::STATE_PORT),
-			memory_fill.destination.reference,
+			node.destination.reference,
 			&self.data_handler,
 		);
 	}
 
-	fn handle_memory_copy(&mut self, id: u32, memory_copy: MemoryCopy) {
+	fn handle_memory_copy(&mut self, id: u32, node: MemoryCopy) {
 		self.code_handler
-			.do_memory_copy(memory_copy, &mut self.data_handler);
+			.do_memory_copy(node, &mut self.data_handler);
 
 		self.code_handler.do_rename(
 			Link(id, MemoryCopy::DESTINATION_STATE_PORT),
-			memory_copy.destination.reference,
+			node.destination.reference,
 			&self.data_handler,
 		);
 
 		self.code_handler.do_rename(
 			Link(id, MemoryCopy::SOURCE_STATE_PORT),
-			memory_copy.source.reference,
+			node.source.reference,
 			&self.data_handler,
 		);
 	}
 
-	fn handle_memory_init(&mut self, id: u32, memory_init: MemoryInit) {
+	fn handle_memory_init(&mut self, id: u32, node: MemoryInit) {
 		self.code_handler
-			.do_memory_init(memory_init, &mut self.data_handler);
+			.do_memory_init(node, &mut self.data_handler);
 
 		self.code_handler.do_rename(
 			Link(id, MemoryInit::DESTINATION_STATE_PORT),
-			memory_init.destination.reference,
+			node.destination.reference,
 			&self.data_handler,
 		);
 
 		self.code_handler.do_rename(
 			Link(id, MemoryInit::SOURCE_STATE_PORT),
-			memory_init.source.reference,
+			node.source.reference,
 			&self.data_handler,
 		);
 	}
 
-	fn handle_data_new(&mut self, id: u32, data_new: &DataNew) {
-		let data_new = Expression::DataNew(data_new.clone());
+	fn handle_data_new(&mut self, id: u32, node: &DataNew) {
+		let expression = Expression::DataNew(node.clone());
 
-		self.do_assignment(id, data_new);
+		self.do_assignment(id, expression);
 	}
 
-	fn handle_data_drop(&mut self, id: u32, data_drop: DataDrop) {
-		self.code_handler
-			.do_data_drop(data_drop, &mut self.data_handler);
+	fn handle_data_drop(&mut self, id: u32, node: DataDrop) {
+		self.code_handler.do_data_drop(node, &mut self.data_handler);
 
 		self.code_handler.do_rename(
 			Link(id, DataDrop::STATE_PORT),
-			data_drop.source,
+			node.source,
 			&self.data_handler,
 		);
 	}
@@ -577,86 +571,72 @@ impl LuauBuilder {
 			Node::GammaIn(_) => {}
 
 			Node::LambdaIn(_) => self.handle_lambda_in(),
-			Node::LambdaOut(ref lambda_out) => self.handle_lambda_out(graph, lambda_out),
-			Node::RegionIn(ref region_in) => self.handle_region_in(graph, id, region_in),
+			Node::LambdaOut(ref node) => self.handle_lambda_out(graph, node),
+			Node::RegionIn(ref node) => self.handle_region_in(graph, id, node),
 			Node::RegionOut(_) => self.handle_region_out(id),
-			Node::GammaOut(ref gamma_out) => self.handle_gamma_out(graph, gamma_out),
-			Node::ThetaIn(ref theta_in) => self.handle_theta_in(id, theta_in),
-			Node::ThetaOut(ref theta_out) => self.handle_theta_out(theta_out),
+			Node::GammaOut(ref node) => self.handle_gamma_out(graph, node),
+			Node::ThetaIn(ref node) => self.handle_theta_in(id, node),
+			Node::ThetaOut(ref node) => self.handle_theta_out(node),
 			Node::OmegaIn(_) => self.handle_omega_in(),
-			Node::OmegaOut(ref omega_out) => self.handle_omega_out(omega_out),
+			Node::OmegaOut(ref node) => self.handle_omega_out(node),
 
-			Node::Import(ref import) => self.handle_import(id, import),
-			Node::Host(ref host) => self.handle_host(id, host.as_ref()),
+			Node::Import(ref node) => self.handle_import(id, node),
+			Node::Host(ref node) => self.handle_host(id, node.as_ref()),
 			Node::Trap => self.handle_trap(id),
 			Node::Null => self.handle_null(id),
-			Node::Identity(identity) => self.handle_identity(id, identity),
+			Node::Identity(node) => self.handle_identity(id, node),
 			Node::I32(i32) => self.handle_i32_const(id, i32),
 			Node::I64(i64) => self.handle_i64_const(id, i64),
 			Node::F32(f32) => self.handle_f32_const(id, f32),
 			Node::F64(f64) => self.handle_f64_const(id, f64),
 
-			Node::Call(ref call) => self.handle_call(id, call),
-			Node::Merge(ref merge) => self.handle_merge(merge),
-			Node::RefIsNull(ref_is_null) => self.handle_ref_is_null(id, ref_is_null),
-			Node::IntegerUnaryOperation(integer_unary_operation) => {
-				self.handle_integer_unary_operation(id, integer_unary_operation);
+			Node::Call(ref node) => self.handle_call(id, node),
+			Node::Merge(ref node) => self.handle_merge(node),
+			Node::RefIsNull(node) => self.handle_ref_is_null(id, node),
+			Node::IntegerUnaryOperation(node) => self.handle_integer_unary_operation(id, node),
+			Node::IntegerBinaryOperation(node) => self.handle_integer_binary_operation(id, node),
+			Node::IntegerCompareOperation(node) => self.handle_integer_compare_operation(id, node),
+			Node::IntegerNarrow(node) => self.handle_integer_narrow(id, node),
+			Node::IntegerWiden(node) => self.handle_integer_widen(id, node),
+			Node::IntegerExtend(node) => self.handle_integer_extend(id, node),
+			Node::IntegerConvertToNumber(node) => {
+				self.handle_integer_convert_to_number(id, node);
 			}
-			Node::IntegerBinaryOperation(integer_binary_operation) => {
-				self.handle_integer_binary_operation(id, integer_binary_operation);
+			Node::IntegerTransmuteToNumber(node) => {
+				self.handle_integer_transmute_to_number(id, node);
 			}
-			Node::IntegerCompareOperation(integer_compare_operation) => {
-				self.handle_integer_compare_operation(id, integer_compare_operation);
+			Node::NumberUnaryOperation(node) => self.handle_number_unary_operation(id, node),
+			Node::NumberBinaryOperation(node) => self.handle_number_binary_operation(id, node),
+			Node::NumberCompareOperation(node) => self.handle_number_compare_operation(id, node),
+			Node::NumberNarrow(node) => self.handle_number_narrow(id, node),
+			Node::NumberWiden(node) => self.handle_number_widen(id, node),
+			Node::NumberTruncateToInteger(node) => self.handle_number_truncate_to_integer(id, node),
+			Node::NumberTransmuteToInteger(node) => {
+				self.handle_number_transmute_to_integer(id, node);
 			}
-			Node::IntegerNarrow(integer_narrow) => self.handle_integer_narrow(id, integer_narrow),
-			Node::IntegerWiden(integer_widen) => self.handle_integer_widen(id, integer_widen),
-			Node::IntegerExtend(integer_extend) => self.handle_integer_extend(id, integer_extend),
-			Node::IntegerConvertToNumber(integer_convert_to_number) => {
-				self.handle_integer_convert_to_number(id, integer_convert_to_number);
-			}
-			Node::IntegerTransmuteToNumber(integer_transmute_to_number) => {
-				self.handle_integer_transmute_to_number(id, integer_transmute_to_number);
-			}
-			Node::NumberUnaryOperation(number_unary_operation) => {
-				self.handle_number_unary_operation(id, number_unary_operation);
-			}
-			Node::NumberBinaryOperation(number_binary_operation) => {
-				self.handle_number_binary_operation(id, number_binary_operation);
-			}
-			Node::NumberCompareOperation(number_compare_operation) => {
-				self.handle_number_compare_operation(id, number_compare_operation);
-			}
-			Node::NumberNarrow(number_narrow) => self.handle_number_narrow(id, number_narrow),
-			Node::NumberWiden(number_widen) => self.handle_number_widen(id, number_widen),
-			Node::NumberTruncateToInteger(number_truncate_to_integer) => {
-				self.handle_number_truncate_to_integer(id, number_truncate_to_integer);
-			}
-			Node::NumberTransmuteToInteger(number_transmute_to_integer) => {
-				self.handle_number_transmute_to_integer(id, number_transmute_to_integer);
-			}
-			Node::GlobalNew(global_new) => self.handle_global_new(id, global_new),
-			Node::GlobalGet(global_get) => self.handle_global_get(id, global_get),
-			Node::GlobalSet(global_set) => self.handle_global_set(id, global_set),
-			Node::TableNew(table_new) => self.handle_table_new(id, table_new),
-			Node::TableGet(table_get) => self.handle_table_get(id, table_get),
-			Node::TableSet(table_set) => self.handle_table_set(id, table_set),
-			Node::TableSize(table_size) => self.handle_table_size(id, table_size),
-			Node::TableGrow(table_grow) => self.handle_table_grow(id, table_grow),
-			Node::TableFill(table_fill) => self.handle_table_fill(id, table_fill),
-			Node::TableCopy(table_copy) => self.handle_table_copy(id, table_copy),
-			Node::TableInit(table_init) => self.handle_table_init(id, table_init),
-			Node::ElementsNew(ref elements_new) => self.handle_elements_new(id, elements_new),
-			Node::ElementsDrop(elements_drop) => self.handle_elements_drop(id, elements_drop),
-			Node::MemoryNew(memory_new) => self.handle_memory_new(id, memory_new),
-			Node::MemoryLoad(memory_load) => self.handle_memory_load(id, memory_load),
-			Node::MemoryStore(memory_store) => self.handle_memory_store(id, memory_store),
-			Node::MemorySize(memory_size) => self.handle_memory_size(id, memory_size),
-			Node::MemoryGrow(memory_grow) => self.handle_memory_grow(id, memory_grow),
-			Node::MemoryFill(memory_fill) => self.handle_memory_fill(id, memory_fill),
-			Node::MemoryCopy(memory_copy) => self.handle_memory_copy(id, memory_copy),
-			Node::MemoryInit(memory_init) => self.handle_memory_init(id, memory_init),
-			Node::DataNew(ref data_new) => self.handle_data_new(id, data_new),
-			Node::DataDrop(data_drop) => self.handle_data_drop(id, data_drop),
+			Node::GlobalNew(node) => self.handle_global_new(id, node),
+			Node::GlobalGet(node) => self.handle_global_get(id, node),
+			Node::GlobalSet(node) => self.handle_global_set(id, node),
+			Node::TableNew(node) => self.handle_table_new(id, node),
+			Node::TableGet(node) => self.handle_table_get(id, node),
+			Node::TableSet(node) => self.handle_table_set(id, node),
+			Node::TableSize(node) => self.handle_table_size(id, node),
+			Node::TableGrow(node) => self.handle_table_grow(id, node),
+			Node::TableFill(node) => self.handle_table_fill(id, node),
+			Node::TableCopy(node) => self.handle_table_copy(id, node),
+			Node::TableInit(node) => self.handle_table_init(id, node),
+			Node::ElementsNew(ref node) => self.handle_elements_new(id, node),
+			Node::ElementsDrop(node) => self.handle_elements_drop(id, node),
+			Node::MemoryNew(node) => self.handle_memory_new(id, node),
+			Node::MemoryLoad(node) => self.handle_memory_load(id, node),
+			Node::MemoryStore(node) => self.handle_memory_store(id, node),
+			Node::MemorySize(node) => self.handle_memory_size(id, node),
+			Node::MemoryGrow(node) => self.handle_memory_grow(id, node),
+			Node::MemoryFill(node) => self.handle_memory_fill(id, node),
+			Node::MemoryCopy(node) => self.handle_memory_copy(id, node),
+			Node::MemoryInit(node) => self.handle_memory_init(id, node),
+			Node::DataNew(ref node) => self.handle_data_new(id, node),
+			Node::DataDrop(node) => self.handle_data_drop(id, node),
 		}
 	}
 

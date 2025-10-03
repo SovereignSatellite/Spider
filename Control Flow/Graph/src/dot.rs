@@ -53,70 +53,50 @@ fn fmt_instruction(instruction: Instruction, f: &mut Formatter) -> Result {
 	use core::fmt::Debug;
 
 	match instruction {
-		Instruction::LocalSet(local_set) => Debug::fmt(&local_set, f),
-		Instruction::LocalBranch(local_branch) => Debug::fmt(&local_branch, f),
-		Instruction::I32Constant(i32_constant) => Debug::fmt(&i32_constant, f),
-		Instruction::I64Constant(i64_constant) => Debug::fmt(&i64_constant, f),
-		Instruction::F32Constant(f32_constant) => Debug::fmt(&f32_constant, f),
-		Instruction::F64Constant(f64_constant) => Debug::fmt(&f64_constant, f),
-		Instruction::RefIsNull(ref_is_null) => Debug::fmt(&ref_is_null, f),
-		Instruction::RefNull(ref_null) => Debug::fmt(&ref_null, f),
-		Instruction::RefFunction(ref_function) => Debug::fmt(&ref_function, f),
-		Instruction::Call(call) => Debug::fmt(&call, f),
+		Instruction::LocalSet(instruction) => Debug::fmt(&instruction, f),
+		Instruction::LocalBranch(instruction) => Debug::fmt(&instruction, f),
+		Instruction::I32Constant(instruction) => Debug::fmt(&instruction, f),
+		Instruction::I64Constant(instruction) => Debug::fmt(&instruction, f),
+		Instruction::F32Constant(instruction) => Debug::fmt(&instruction, f),
+		Instruction::F64Constant(instruction) => Debug::fmt(&instruction, f),
+		Instruction::RefIsNull(instruction) => Debug::fmt(&instruction, f),
+		Instruction::RefNull(instruction) => Debug::fmt(&instruction, f),
+		Instruction::RefFunction(instruction) => Debug::fmt(&instruction, f),
+		Instruction::Call(instruction) => Debug::fmt(&instruction, f),
 		Instruction::Unreachable => write!(f, "Unreachable"),
-		Instruction::IntegerUnaryOperation(integer_unary_operation) => {
-			Debug::fmt(&integer_unary_operation, f)
-		}
-		Instruction::IntegerBinaryOperation(integer_binary_operation) => {
-			Debug::fmt(&integer_binary_operation, f)
-		}
-		Instruction::IntegerCompareOperation(integer_compare_operation) => {
-			Debug::fmt(&integer_compare_operation, f)
-		}
-		Instruction::IntegerNarrow(integer_narrow) => Debug::fmt(&integer_narrow, f),
-		Instruction::IntegerWiden(integer_widen) => Debug::fmt(&integer_widen, f),
-		Instruction::IntegerExtend(integer_extend) => Debug::fmt(&integer_extend, f),
-		Instruction::IntegerConvertToNumber(integer_convert_to_number) => {
-			Debug::fmt(&integer_convert_to_number, f)
-		}
-		Instruction::IntegerTransmuteToNumber(integer_transmute_to_number) => {
-			Debug::fmt(&integer_transmute_to_number, f)
-		}
-		Instruction::NumberUnaryOperation(number_unary_operation) => {
-			Debug::fmt(&number_unary_operation, f)
-		}
-		Instruction::NumberBinaryOperation(number_binary_operation) => {
-			Debug::fmt(&number_binary_operation, f)
-		}
-		Instruction::NumberCompareOperation(number_compare_operation) => {
-			Debug::fmt(&number_compare_operation, f)
-		}
-		Instruction::NumberNarrow(number_narrow) => Debug::fmt(&number_narrow, f),
-		Instruction::NumberWiden(number_widen) => Debug::fmt(&number_widen, f),
-		Instruction::NumberTruncateToInteger(number_truncate_to_integer) => {
-			Debug::fmt(&number_truncate_to_integer, f)
-		}
-		Instruction::NumberTransmuteToInteger(number_transmute_to_integer) => {
-			Debug::fmt(&number_transmute_to_integer, f)
-		}
-		Instruction::GlobalGet(global_get) => Debug::fmt(&global_get, f),
-		Instruction::GlobalSet(global_set) => Debug::fmt(&global_set, f),
-		Instruction::TableGet(table_get) => Debug::fmt(&table_get, f),
-		Instruction::TableSet(table_set) => Debug::fmt(&table_set, f),
-		Instruction::TableSize(table_size) => Debug::fmt(&table_size, f),
-		Instruction::TableGrow(table_grow) => Debug::fmt(&table_grow, f),
-		Instruction::TableFill(table_fill) => Debug::fmt(&table_fill, f),
-		Instruction::TableCopy(table_copy) => Debug::fmt(&table_copy, f),
-		Instruction::TableInit(table_init) => Debug::fmt(&table_init, f),
-		Instruction::ElementsDrop(elements_drop) => Debug::fmt(&elements_drop, f),
-		Instruction::MemoryLoad(memory_load) => Debug::fmt(&memory_load, f),
-		Instruction::MemoryStore(memory_store) => Debug::fmt(&memory_store, f),
-		Instruction::MemorySize(memory_size) => Debug::fmt(&memory_size, f),
-		Instruction::MemoryGrow(memory_grow) => Debug::fmt(&memory_grow, f),
-		Instruction::MemoryFill(memory_fill) => Debug::fmt(&memory_fill, f),
-		Instruction::MemoryCopy(memory_copy) => Debug::fmt(&memory_copy, f),
-		Instruction::MemoryInit(memory_init) => Debug::fmt(&memory_init, f),
-		Instruction::DataDrop(data_drop) => Debug::fmt(&data_drop, f),
+		Instruction::IntegerUnaryOperation(instruction) => Debug::fmt(&instruction, f),
+		Instruction::IntegerBinaryOperation(instruction) => Debug::fmt(&instruction, f),
+		Instruction::IntegerCompareOperation(instruction) => Debug::fmt(&instruction, f),
+		Instruction::IntegerNarrow(instruction) => Debug::fmt(&instruction, f),
+		Instruction::IntegerWiden(instruction) => Debug::fmt(&instruction, f),
+		Instruction::IntegerExtend(instruction) => Debug::fmt(&instruction, f),
+		Instruction::IntegerConvertToNumber(instruction) => Debug::fmt(&instruction, f),
+		Instruction::IntegerTransmuteToNumber(instruction) => Debug::fmt(&instruction, f),
+		Instruction::NumberUnaryOperation(instruction) => Debug::fmt(&instruction, f),
+		Instruction::NumberBinaryOperation(instruction) => Debug::fmt(&instruction, f),
+		Instruction::NumberCompareOperation(instruction) => Debug::fmt(&instruction, f),
+		Instruction::NumberNarrow(instruction) => Debug::fmt(&instruction, f),
+		Instruction::NumberWiden(instruction) => Debug::fmt(&instruction, f),
+		Instruction::NumberTruncateToInteger(instruction) => Debug::fmt(&instruction, f),
+		Instruction::NumberTransmuteToInteger(instruction) => Debug::fmt(&instruction, f),
+		Instruction::GlobalGet(instruction) => Debug::fmt(&instruction, f),
+		Instruction::GlobalSet(instruction) => Debug::fmt(&instruction, f),
+		Instruction::TableGet(instruction) => Debug::fmt(&instruction, f),
+		Instruction::TableSet(instruction) => Debug::fmt(&instruction, f),
+		Instruction::TableSize(instruction) => Debug::fmt(&instruction, f),
+		Instruction::TableGrow(instruction) => Debug::fmt(&instruction, f),
+		Instruction::TableFill(instruction) => Debug::fmt(&instruction, f),
+		Instruction::TableCopy(instruction) => Debug::fmt(&instruction, f),
+		Instruction::TableInit(instruction) => Debug::fmt(&instruction, f),
+		Instruction::ElementsDrop(instruction) => Debug::fmt(&instruction, f),
+		Instruction::MemoryLoad(instruction) => Debug::fmt(&instruction, f),
+		Instruction::MemoryStore(instruction) => Debug::fmt(&instruction, f),
+		Instruction::MemorySize(instruction) => Debug::fmt(&instruction, f),
+		Instruction::MemoryGrow(instruction) => Debug::fmt(&instruction, f),
+		Instruction::MemoryFill(instruction) => Debug::fmt(&instruction, f),
+		Instruction::MemoryCopy(instruction) => Debug::fmt(&instruction, f),
+		Instruction::MemoryInit(instruction) => Debug::fmt(&instruction, f),
+		Instruction::DataDrop(instruction) => Debug::fmt(&instruction, f),
 	}
 }
 

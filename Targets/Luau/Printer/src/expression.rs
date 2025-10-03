@@ -347,11 +347,7 @@ impl Print for RefIsNull {
 
 impl Print for IntegerUnaryOperation {
 	fn print(&self, printer: &mut LuauPrinter, out: &mut dyn Write) -> Result<()> {
-		let Self {
-			source,
-			r#type: _,
-			operator: _,
-		} = self;
+		let Self { source, .. } = self;
 
 		let intrinsic = self.needs_name();
 
@@ -365,12 +361,7 @@ impl Print for IntegerUnaryOperation {
 
 impl Print for IntegerBinaryOperation {
 	fn print(&self, printer: &mut LuauPrinter, out: &mut dyn Write) -> Result<()> {
-		let Self {
-			lhs,
-			rhs,
-			r#type: _,
-			operator: _,
-		} = self;
+		let Self { lhs, rhs, .. } = self;
 
 		let intrinsic = self.needs_name();
 
@@ -388,12 +379,7 @@ impl Print for IntegerBinaryOperation {
 
 impl Print for IntegerCompareOperation {
 	fn print(&self, printer: &mut LuauPrinter, out: &mut dyn Write) -> Result<()> {
-		let Self {
-			lhs,
-			rhs,
-			r#type: _,
-			operator: _,
-		} = self;
+		let Self { lhs, rhs, .. } = self;
 
 		let intrinsic = self.needs_name();
 
@@ -439,7 +425,7 @@ impl Print for IntegerWiden {
 
 impl Print for IntegerExtend {
 	fn print(&self, printer: &mut LuauPrinter, out: &mut dyn Write) -> Result<()> {
-		let Self { source, r#type: _ } = self;
+		let Self { source, .. } = self;
 
 		let intrinsic = self.needs_name();
 
@@ -453,12 +439,7 @@ impl Print for IntegerExtend {
 
 impl Print for IntegerConvertToNumber {
 	fn print(&self, printer: &mut LuauPrinter, out: &mut dyn Write) -> Result<()> {
-		let Self {
-			source,
-			signed: _,
-			to: _,
-			from: _,
-		} = self;
+		let Self { source, .. } = self;
 
 		let intrinsic = self.needs_name();
 
@@ -472,7 +453,7 @@ impl Print for IntegerConvertToNumber {
 
 impl Print for IntegerTransmuteToNumber {
 	fn print(&self, printer: &mut LuauPrinter, out: &mut dyn Write) -> Result<()> {
-		let Self { source, from: _ } = self;
+		let Self { source, .. } = self;
 
 		let intrinsic = self.needs_name();
 
@@ -487,9 +468,7 @@ impl Print for IntegerTransmuteToNumber {
 impl Print for NumberUnaryOperation {
 	fn print(&self, printer: &mut LuauPrinter, out: &mut dyn Write) -> Result<()> {
 		let Self {
-			source,
-			r#type: _,
-			operator,
+			source, operator, ..
 		} = self;
 
 		if *operator == NumberUnaryOperator::Negate {
@@ -513,10 +492,7 @@ impl Print for NumberUnaryOperation {
 impl Print for NumberBinaryOperation {
 	fn print(&self, printer: &mut LuauPrinter, out: &mut dyn Write) -> Result<()> {
 		let Self {
-			lhs,
-			rhs,
-			r#type: _,
-			operator,
+			lhs, rhs, operator, ..
 		} = self;
 
 		if let Some(operator) = match operator {
@@ -610,13 +586,7 @@ impl Print for NumberWiden {
 
 impl Print for NumberTruncateToInteger {
 	fn print(&self, printer: &mut LuauPrinter, out: &mut dyn Write) -> Result<()> {
-		let Self {
-			source,
-			signed: _,
-			saturate: _,
-			to: _,
-			from: _,
-		} = self;
+		let Self { source, .. } = self;
 
 		let intrinsic = self.needs_name();
 
@@ -630,7 +600,7 @@ impl Print for NumberTruncateToInteger {
 
 impl Print for NumberTransmuteToInteger {
 	fn print(&self, printer: &mut LuauPrinter, out: &mut dyn Write) -> Result<()> {
-		let Self { source, from: _ } = self;
+		let Self { source, .. } = self;
 
 		let intrinsic = self.needs_name();
 
@@ -774,7 +744,7 @@ impl Print for MemoryNew {
 
 impl Print for MemoryLoad {
 	fn print(&self, printer: &mut LuauPrinter, out: &mut dyn Write) -> Result<()> {
-		let Self { source, r#type: _ } = self;
+		let Self { source, .. } = self;
 
 		let intrinsic = self.needs_name();
 

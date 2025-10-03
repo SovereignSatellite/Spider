@@ -253,19 +253,18 @@ impl BasicBlockBuilder {
 	}
 
 	fn handle_memory_size(&mut self, memory: u32) {
-		let reference = memory.try_into().unwrap();
+		let memory = memory.try_into().unwrap();
 		let destination = self.stack_builder.push_local();
 
-		self.code_builder.add_memory_size(reference, destination);
+		self.code_builder.add_memory_size(destination, memory);
 	}
 
 	fn handle_memory_grow(&mut self, memory: u32) {
-		let reference = memory.try_into().unwrap();
+		let memory = memory.try_into().unwrap();
 		let size = self.stack_builder.pull_local();
 		let destination = self.stack_builder.push_local();
 
-		self.code_builder
-			.add_memory_grow(reference, destination, size);
+		self.code_builder.add_memory_grow(destination, memory, size);
 	}
 
 	fn handle_i32_const(&mut self, data: i32) {
@@ -675,20 +674,20 @@ impl BasicBlockBuilder {
 	}
 
 	fn handle_table_grow(&mut self, table: u32) {
-		let reference = table.try_into().unwrap();
+		let table = table.try_into().unwrap();
 		let size = self.stack_builder.pull_local();
 		let initializer = self.stack_builder.pull_local();
 		let destination = self.stack_builder.push_local();
 
 		self.code_builder
-			.add_table_grow(reference, destination, size, initializer);
+			.add_table_grow(destination, table, size, initializer);
 	}
 
 	fn handle_table_size(&mut self, table: u32) {
-		let reference = table.try_into().unwrap();
+		let table = table.try_into().unwrap();
 		let destination = self.stack_builder.push_local();
 
-		self.code_builder.add_table_size(reference, destination);
+		self.code_builder.add_table_size(destination, table);
 	}
 
 	#[expect(clippy::too_many_lines)]

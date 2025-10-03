@@ -316,14 +316,14 @@ pub struct TableSet {
 
 #[derive(Clone, Copy, Debug)]
 pub struct TableSize {
-	pub reference: u16,
 	pub destination: u16,
+	pub table: u16,
 }
 
 #[derive(Clone, Copy, Debug)]
 pub struct TableGrow {
-	pub reference: u16,
 	pub destination: u16,
+	pub table: u16,
 	pub size: u16,
 	pub initializer: u16,
 }
@@ -407,14 +407,14 @@ pub struct MemoryStore {
 
 #[derive(Clone, Copy, Debug)]
 pub struct MemorySize {
-	pub reference: u16,
 	pub destination: u16,
+	pub memory: u16,
 }
 
 #[derive(Clone, Copy, Debug)]
 pub struct MemoryGrow {
-	pub reference: u16,
 	pub destination: u16,
+	pub memory: u16,
 	pub size: u16,
 }
 

@@ -83,56 +83,64 @@ impl DataFlowGraph {
 	}
 
 	pub fn add_lambda_in(&mut self, r#type: Box<FunctionType>, dependencies: Vec<Link>) -> u32 {
-		self.add_node(Node::LambdaIn(LambdaIn {
+		let node = Node::LambdaIn(LambdaIn {
 			output: u32::MAX,
 			r#type,
 			dependencies,
-		}))
+		});
+
+		self.add_node(node)
 	}
 
 	/// # Panics
 	///
 	/// Panics if `input` is not a [`LambdaIn`] reference.
 	pub fn add_lambda_out(&mut self, input: u32, results: Vec<Link>) -> u32 {
-		let lambda_out = self.add_node(Node::LambdaOut(LambdaOut { input, results }));
+		let node = Node::LambdaOut(LambdaOut { input, results });
+		let id = self.add_node(node);
 
 		let LambdaIn { output, .. } = self.get_mut(input).as_mut_lambda_in().unwrap();
 
-		*output = lambda_out;
+		*output = id;
 
-		lambda_out
+		id
 	}
 
 	pub fn add_region_in(&mut self, input: u32) -> u32 {
-		self.add_node(Node::RegionIn(RegionIn {
+		let node = Node::RegionIn(RegionIn {
 			output: u32::MAX,
 			input,
-		}))
+		});
+
+		self.add_node(node)
 	}
 
 	/// # Panics
 	///
 	/// Panics if `input` is not a [`RegionIn`] reference.
 	pub fn add_region_out(&mut self, input: u32, results: Vec<Link>) -> u32 {
-		let region_out = self.add_node(Node::RegionOut(RegionOut {
+		let node = Node::RegionOut(RegionOut {
 			output: u32::MAX,
 			input,
 			results,
-		}));
+		});
+		let id = self.add_node(node);
 
 		let RegionIn { output, .. } = self.get_mut(input).as_mut_region_in().unwrap();
 
-		*output = region_out;
+		*output = id;
 
-		region_out
+		id
 	}
 
 	pub fn add_gamma_in(&mut self, arguments: Vec<Link>, condition: Link) -> u32 {
-		self.add_node(Node::GammaIn(GammaIn {
+		let node = Node::GammaIn(GammaIn {
 			output: u32::MAX,
 			arguments,
 			condition,
-		}))
+		});
+
+		self.add_node(node)
 	}
 
 	/// # Panics
@@ -140,66 +148,72 @@ impl DataFlowGraph {
 	/// Panics if `input` is not a [`GammaIn`] reference,
 	/// or any of the regions is not a [`RegionOut`] reference.
 	pub fn add_gamma_out(&mut self, input: u32, regions: Vec<u32>) -> u32 {
-		let gamma_out = self.add_trap().0;
+		let id = self.add_trap().0;
 
 		let GammaIn { output, .. } = self.get_mut(input).as_mut_gamma_in().unwrap();
 
-		*output = gamma_out;
+		*output = id;
 
 		for &region in &regions {
 			let RegionOut { output, .. } = self.get_mut(region).as_mut_region_out().unwrap();
 
-			*output = gamma_out;
+			*output = id;
 		}
 
-		*self.get_mut(gamma_out) = Node::GammaOut(GammaOut { input, regions });
+		*self.get_mut(id) = Node::GammaOut(GammaOut { input, regions });
 
-		gamma_out
+		id
 	}
 
 	pub fn add_theta_in(&mut self, arguments: Vec<Link>) -> u32 {
-		self.add_node(Node::ThetaIn(ThetaIn {
+		let node = Node::ThetaIn(ThetaIn {
 			output: u32::MAX,
 			arguments,
-		}))
+		});
+
+		self.add_node(node)
 	}
 
 	/// # Panics
 	///
 	/// Panics if `input` is not a [`ThetaIn`] reference.
 	pub fn add_theta_out(&mut self, input: u32, results: Vec<Link>, condition: Link) -> u32 {
-		let theta_out = self.add_node(Node::ThetaOut(ThetaOut {
+		let node = Node::ThetaOut(ThetaOut {
 			input,
 			results,
 			condition,
-		}));
+		});
+		let id = self.add_node(node);
 
 		let ThetaIn { output, .. } = self.get_mut(input).as_mut_theta_in().unwrap();
 
-		*output = theta_out;
+		*output = id;
 
-		theta_out
+		id
 	}
 
 	pub fn add_omega_in(&mut self) -> u32 {
-		self.add_node(Node::OmegaIn(OmegaIn { output: u32::MAX }))
+		let node = Node::OmegaIn(OmegaIn { output: u32::MAX });
+
+		self.add_node(node)
 	}
 
 	/// # Panics
 	///
 	/// Panics if `input` is not a [`OmegaIn`] reference.
 	pub fn add_omega_out(&mut self, input: u32, state: Link, exports: Vec<Export>) -> u32 {
-		let omega_out = self.add_node(Node::OmegaOut(OmegaOut {
+		let node = Node::OmegaOut(OmegaOut {
 			input,
 			state,
 			exports,
-		}));
+		});
+		let id = self.add_node(node);
 
 		let OmegaIn { output, .. } = self.get_mut(input).as_mut_omega_in().unwrap();
 
-		*output = omega_out;
+		*output = id;
 
-		omega_out
+		id
 	}
 
 	pub fn add_import(
@@ -208,7 +222,7 @@ impl DataFlowGraph {
 		namespace: Arc<str>,
 		identifier: Arc<str>,
 	) -> Link {
-		let import = Node::Import(
+		let node = Node::Import(
 			Import {
 				environment,
 				namespace,
@@ -217,7 +231,7 @@ impl DataFlowGraph {
 			.into(),
 		);
 
-		Link(self.add_node(import), 0)
+		Link(self.add_node(node), 0)
 	}
 
 	pub fn add_trap(&mut self) -> Link {
@@ -229,39 +243,39 @@ impl DataFlowGraph {
 	}
 
 	pub fn add_identity(&mut self, source: Link) -> Link {
-		let identity = Node::Identity(Identity { source });
+		let node = Node::Identity(Identity { source });
 
-		Link(self.add_node(identity), 0)
+		Link(self.add_node(node), 0)
 	}
 
 	pub fn add_i32(&mut self, value: i32) -> Link {
-		let i32 = Node::I32(value);
+		let node = Node::I32(value);
 
-		Link(self.add_node(i32), 0)
+		Link(self.add_node(node), 0)
 	}
 
 	pub fn add_i64(&mut self, value: i64) -> Link {
-		let i64 = Node::I64(value);
+		let node = Node::I64(value);
 
-		Link(self.add_node(i64), 0)
+		Link(self.add_node(node), 0)
 	}
 
 	pub fn add_f32(&mut self, value: f32) -> Link {
-		let f32 = Node::F32(value);
+		let node = Node::F32(value);
 
-		Link(self.add_node(f32), 0)
+		Link(self.add_node(node), 0)
 	}
 
 	pub fn add_f64(&mut self, value: f64) -> Link {
-		let f64 = Node::F64(value);
+		let node = Node::F64(value);
 
-		Link(self.add_node(f64), 0)
+		Link(self.add_node(node), 0)
 	}
 
 	pub fn add_ref_is_null(&mut self, source: Link) -> Link {
-		let ref_is_null = Node::RefIsNull(RefIsNull { source });
+		let node = Node::RefIsNull(RefIsNull { source });
 
-		Link(self.add_node(ref_is_null), 0)
+		Link(self.add_node(node), 0)
 	}
 
 	pub fn add_call(
@@ -271,20 +285,20 @@ impl DataFlowGraph {
 		results: u16,
 		states: u16,
 	) -> u32 {
-		let call = Node::Call(Call {
+		let node = Node::Call(Call {
 			function,
 			arguments,
 			results,
 			states,
 		});
 
-		self.add_node(call)
+		self.add_node(node)
 	}
 
 	pub fn add_merge(&mut self, states: Vec<Link>) -> Link {
-		let merge = Node::Merge(Merge { states });
+		let node = Node::Merge(Merge { states });
 
-		Link(self.add_node(merge), 0)
+		Link(self.add_node(node), 0)
 	}
 
 	pub fn add_integer_unary_operation(
@@ -293,13 +307,13 @@ impl DataFlowGraph {
 		r#type: IntegerType,
 		operator: IntegerUnaryOperator,
 	) -> Link {
-		let unary_operation = Node::IntegerUnaryOperation(IntegerUnaryOperation {
+		let node = Node::IntegerUnaryOperation(IntegerUnaryOperation {
 			source,
 			r#type,
 			operator,
 		});
 
-		Link(self.add_node(unary_operation), 0)
+		Link(self.add_node(node), 0)
 	}
 
 	pub fn add_integer_binary_operation(
@@ -309,14 +323,14 @@ impl DataFlowGraph {
 		r#type: IntegerType,
 		operator: IntegerBinaryOperator,
 	) -> Link {
-		let binary_operation = Node::IntegerBinaryOperation(IntegerBinaryOperation {
+		let node = Node::IntegerBinaryOperation(IntegerBinaryOperation {
 			lhs,
 			rhs,
 			r#type,
 			operator,
 		});
 
-		Link(self.add_node(binary_operation), 0)
+		Link(self.add_node(node), 0)
 	}
 
 	pub fn add_integer_compare_operation(
@@ -326,32 +340,32 @@ impl DataFlowGraph {
 		r#type: IntegerType,
 		operator: IntegerCompareOperator,
 	) -> Link {
-		let compare_operation = Node::IntegerCompareOperation(IntegerCompareOperation {
+		let node = Node::IntegerCompareOperation(IntegerCompareOperation {
 			lhs,
 			rhs,
 			r#type,
 			operator,
 		});
 
-		Link(self.add_node(compare_operation), 0)
+		Link(self.add_node(node), 0)
 	}
 
 	pub fn add_integer_narrow(&mut self, source: Link) -> Link {
-		let narrow = Node::IntegerNarrow(IntegerNarrow { source });
+		let node = Node::IntegerNarrow(IntegerNarrow { source });
 
-		Link(self.add_node(narrow), 0)
+		Link(self.add_node(node), 0)
 	}
 
 	pub fn add_integer_widen(&mut self, source: Link) -> Link {
-		let widen = Node::IntegerWiden(IntegerWiden { source });
+		let node = Node::IntegerWiden(IntegerWiden { source });
 
-		Link(self.add_node(widen), 0)
+		Link(self.add_node(node), 0)
 	}
 
 	pub fn add_integer_extend(&mut self, source: Link, r#type: ExtendType) -> Link {
-		let extend = Node::IntegerExtend(IntegerExtend { source, r#type });
+		let node = Node::IntegerExtend(IntegerExtend { source, r#type });
 
-		Link(self.add_node(extend), 0)
+		Link(self.add_node(node), 0)
 	}
 
 	pub fn add_integer_convert_to_number(
@@ -361,21 +375,20 @@ impl DataFlowGraph {
 		to: NumberType,
 		from: IntegerType,
 	) -> Link {
-		let convert_to_number = Node::IntegerConvertToNumber(IntegerConvertToNumber {
+		let node = Node::IntegerConvertToNumber(IntegerConvertToNumber {
 			source,
 			signed,
 			to,
 			from,
 		});
 
-		Link(self.add_node(convert_to_number), 0)
+		Link(self.add_node(node), 0)
 	}
 
 	pub fn add_integer_transmute_to_number(&mut self, source: Link, from: IntegerType) -> Link {
-		let transmute_to_number =
-			Node::IntegerTransmuteToNumber(IntegerTransmuteToNumber { source, from });
+		let node = Node::IntegerTransmuteToNumber(IntegerTransmuteToNumber { source, from });
 
-		Link(self.add_node(transmute_to_number), 0)
+		Link(self.add_node(node), 0)
 	}
 
 	pub fn add_number_unary_operation(
@@ -384,13 +397,13 @@ impl DataFlowGraph {
 		r#type: NumberType,
 		operator: NumberUnaryOperator,
 	) -> Link {
-		let unary_operation = Node::NumberUnaryOperation(NumberUnaryOperation {
+		let node = Node::NumberUnaryOperation(NumberUnaryOperation {
 			source,
 			r#type,
 			operator,
 		});
 
-		Link(self.add_node(unary_operation), 0)
+		Link(self.add_node(node), 0)
 	}
 
 	pub fn add_number_binary_operation(
@@ -400,14 +413,14 @@ impl DataFlowGraph {
 		r#type: NumberType,
 		operator: NumberBinaryOperator,
 	) -> Link {
-		let binary_operation = Node::NumberBinaryOperation(NumberBinaryOperation {
+		let node = Node::NumberBinaryOperation(NumberBinaryOperation {
 			lhs,
 			rhs,
 			r#type,
 			operator,
 		});
 
-		Link(self.add_node(binary_operation), 0)
+		Link(self.add_node(node), 0)
 	}
 
 	pub fn add_number_compare_operation(
@@ -417,26 +430,26 @@ impl DataFlowGraph {
 		r#type: NumberType,
 		operator: NumberCompareOperator,
 	) -> Link {
-		let compare_operation = Node::NumberCompareOperation(NumberCompareOperation {
+		let node = Node::NumberCompareOperation(NumberCompareOperation {
 			lhs,
 			rhs,
 			r#type,
 			operator,
 		});
 
-		Link(self.add_node(compare_operation), 0)
+		Link(self.add_node(node), 0)
 	}
 
 	pub fn add_number_narrow(&mut self, source: Link) -> Link {
-		let narrow = Node::NumberNarrow(NumberNarrow { source });
+		let node = Node::NumberNarrow(NumberNarrow { source });
 
-		Link(self.add_node(narrow), 0)
+		Link(self.add_node(node), 0)
 	}
 
 	pub fn add_number_widen(&mut self, source: Link) -> Link {
-		let widen = Node::NumberWiden(NumberWiden { source });
+		let node = Node::NumberWiden(NumberWiden { source });
 
-		Link(self.add_node(widen), 0)
+		Link(self.add_node(node), 0)
 	}
 
 	pub fn add_number_truncate_to_integer(
@@ -447,7 +460,7 @@ impl DataFlowGraph {
 		to: IntegerType,
 		from: NumberType,
 	) -> Link {
-		let truncate_to_integer = Node::NumberTruncateToInteger(NumberTruncateToInteger {
+		let node = Node::NumberTruncateToInteger(NumberTruncateToInteger {
 			source,
 			signed,
 			saturate,
@@ -455,66 +468,65 @@ impl DataFlowGraph {
 			from,
 		});
 
-		Link(self.add_node(truncate_to_integer), 0)
+		Link(self.add_node(node), 0)
 	}
 
 	pub fn add_number_transmute_to_integer(&mut self, source: Link, from: NumberType) -> Link {
-		let transmute_to_integer =
-			Node::NumberTransmuteToInteger(NumberTransmuteToInteger { source, from });
+		let node = Node::NumberTransmuteToInteger(NumberTransmuteToInteger { source, from });
 
-		Link(self.add_node(transmute_to_integer), 0)
+		Link(self.add_node(node), 0)
 	}
 
 	pub fn add_global_new(&mut self, initializer: Link) -> Link {
-		let global_new = Node::GlobalNew(GlobalNew { initializer });
+		let node = Node::GlobalNew(GlobalNew { initializer });
 
-		Link(self.add_node(global_new), 0)
+		Link(self.add_node(node), 0)
 	}
 
 	pub fn add_global_get(&mut self, source: Link) -> Link {
-		let global_get = Node::GlobalGet(GlobalGet { source });
+		let node = Node::GlobalGet(GlobalGet { source });
 
-		Link(self.add_node(global_get), 0)
+		Link(self.add_node(node), GlobalGet::RESULT_PORT)
 	}
 
 	pub fn add_global_set(&mut self, destination: Link, source: Link) -> Link {
-		let global_set = Node::GlobalSet(GlobalSet {
+		let node = Node::GlobalSet(GlobalSet {
 			destination,
 			source,
 		});
 
-		Link(self.add_node(global_set), 0)
+		Link(self.add_node(node), GlobalSet::STATE_PORT)
 	}
 
 	pub fn add_table_new(&mut self, initializer: Link, minimum: u32, maximum: u32) -> Link {
-		let table_new = Node::TableNew(TableNew {
+		let node = Node::TableNew(TableNew {
 			initializer,
 			minimum,
 			maximum,
 		});
 
-		Link(self.add_node(table_new), 0)
+		Link(self.add_node(node), 0)
 	}
 
 	pub fn add_table_get(&mut self, source: Location) -> Link {
-		let table_get = Node::TableGet(TableGet { source });
+		let node = Node::TableGet(TableGet { source });
 
-		Link(self.add_node(table_get), 0)
+		Link(self.add_node(node), TableGet::RESULT_PORT)
 	}
 
 	pub fn add_table_set(&mut self, destination: Location, source: Link) -> Link {
-		let table_set = Node::TableSet(TableSet {
+		let node = Node::TableSet(TableSet {
 			destination,
 			source,
 		});
 
-		Link(self.add_node(table_set), 0)
+		Link(self.add_node(node), TableSet::STATE_PORT)
 	}
 
 	pub fn add_table_size(&mut self, source: Link) -> Link {
-		let table_size = Node::TableSize(TableSize { source });
+		let node = Node::TableSize(TableSize { source });
 
-		Link(self.add_node(table_size), 0)
+		Link(self.add_node(node), TableSize::RESULT_PORT)
 	}
 
 	pub fn add_table_grow(
@@ -523,68 +535,71 @@ impl DataFlowGraph {
 		initializer: Link,
 		size: Link,
 	) -> (Link, Link) {
-		let table_grow = Node::TableGrow(TableGrow {
+		let node = Node::TableGrow(TableGrow {
 			destination,
 			initializer,
 			size,
 		});
-		let id = self.add_node(table_grow);
+		let id = self.add_node(node);
 
-		(Link(id, 0), Link(id, 1))
+		(
+			Link(id, TableGrow::RESULT_PORT),
+			Link(id, TableGrow::STATE_PORT),
+		)
 	}
 
 	pub fn add_table_fill(&mut self, destination: Location, source: Link, size: Link) -> Link {
-		let table_fill = Node::TableFill(TableFill {
+		let node = Node::TableFill(TableFill {
 			destination,
 			source,
 			size,
 		});
 
-		Link(self.add_node(table_fill), 0)
+		Link(self.add_node(node), TableFill::STATE_PORT)
 	}
 
 	pub fn add_table_copy(&mut self, destination: Location, source: Location, size: Link) -> Link {
-		let table_copy = Node::TableCopy(TableCopy {
+		let node = Node::TableCopy(TableCopy {
 			destination,
 			source,
 			size,
 		});
 
-		Link(self.add_node(table_copy), 0)
+		Link(self.add_node(node), TableCopy::DESTINATION_STATE_PORT)
 	}
 
 	pub fn add_table_init(&mut self, destination: Location, source: Location, size: Link) -> Link {
-		let table_init = Node::TableInit(TableInit {
+		let node = Node::TableInit(TableInit {
 			destination,
 			source,
 			size,
 		});
 
-		Link(self.add_node(table_init), 0)
+		Link(self.add_node(node), TableInit::DESTINATION_STATE_PORT)
 	}
 
 	pub fn add_elements_new(&mut self, content: Vec<Link>) -> Link {
-		let elements_new = Node::ElementsNew(ElementsNew { content });
+		let node = Node::ElementsNew(ElementsNew { content });
 
-		Link(self.add_node(elements_new), 0)
+		Link(self.add_node(node), 0)
 	}
 
 	pub fn add_elements_drop(&mut self, source: Link) -> Link {
-		let elements_drop = Node::ElementsDrop(ElementsDrop { source });
+		let node = Node::ElementsDrop(ElementsDrop { source });
 
-		Link(self.add_node(elements_drop), 0)
+		Link(self.add_node(node), ElementsDrop::STATE_PORT)
 	}
 
 	pub fn add_memory_new(&mut self, minimum: u32, maximum: u32) -> Link {
-		let memory_new = Node::MemoryNew(MemoryNew { minimum, maximum });
+		let node = Node::MemoryNew(MemoryNew { minimum, maximum });
 
-		Link(self.add_node(memory_new), 0)
+		Link(self.add_node(node), 0)
 	}
 
 	pub fn add_memory_load(&mut self, source: Location, r#type: LoadType) -> Link {
-		let memory_load = Node::MemoryLoad(MemoryLoad { source, r#type });
+		let node = Node::MemoryLoad(MemoryLoad { source, r#type });
 
-		Link(self.add_node(memory_load), 0)
+		Link(self.add_node(node), MemoryLoad::RESULT_PORT)
 	}
 
 	pub fn add_memory_store(
@@ -593,68 +608,71 @@ impl DataFlowGraph {
 		source: Link,
 		r#type: StoreType,
 	) -> Link {
-		let memory_store = Node::MemoryStore(MemoryStore {
+		let node = Node::MemoryStore(MemoryStore {
 			destination,
 			source,
 			r#type,
 		});
 
-		Link(self.add_node(memory_store), 0)
+		Link(self.add_node(node), MemoryStore::STATE_PORT)
 	}
 
 	pub fn add_memory_size(&mut self, source: Link) -> Link {
-		let memory_size = Node::MemorySize(MemorySize { source });
+		let node = Node::MemorySize(MemorySize { source });
 
-		Link(self.add_node(memory_size), 0)
+		Link(self.add_node(node), MemorySize::RESULT_PORT)
 	}
 
 	pub fn add_memory_grow(&mut self, destination: Link, size: Link) -> (Link, Link) {
-		let memory_grow = Node::MemoryGrow(MemoryGrow { destination, size });
-		let id = self.add_node(memory_grow);
+		let node = Node::MemoryGrow(MemoryGrow { destination, size });
+		let id = self.add_node(node);
 
-		(Link(id, 0), Link(id, 1))
+		(
+			Link(id, MemoryGrow::RESULT_PORT),
+			Link(id, MemoryGrow::STATE_PORT),
+		)
 	}
 
 	pub fn add_memory_fill(&mut self, destination: Location, byte: Link, size: Link) -> Link {
-		let memory_fill = Node::MemoryFill(MemoryFill {
+		let node = Node::MemoryFill(MemoryFill {
 			destination,
 			byte,
 			size,
 		});
 
-		Link(self.add_node(memory_fill), 0)
+		Link(self.add_node(node), MemoryFill::STATE_PORT)
 	}
 
 	pub fn add_memory_copy(&mut self, destination: Location, source: Location, size: Link) -> Link {
-		let memory_copy = Node::MemoryCopy(MemoryCopy {
+		let node = Node::MemoryCopy(MemoryCopy {
 			destination,
 			source,
 			size,
 		});
 
-		Link(self.add_node(memory_copy), 0)
+		Link(self.add_node(node), MemoryCopy::DESTINATION_STATE_PORT)
 	}
 
 	pub fn add_memory_init(&mut self, destination: Location, source: Location, size: Link) -> Link {
-		let memory_init = Node::MemoryInit(MemoryInit {
+		let node = Node::MemoryInit(MemoryInit {
 			destination,
 			source,
 			size,
 		});
 
-		Link(self.add_node(memory_init), 0)
+		Link(self.add_node(node), MemoryInit::DESTINATION_STATE_PORT)
 	}
 
 	pub fn add_data_new(&mut self, content: Arc<[u8]>) -> Link {
-		let data_new = Node::DataNew(DataNew { content });
+		let node = Node::DataNew(DataNew { content });
 
-		Link(self.add_node(data_new), 0)
+		Link(self.add_node(node), 0)
 	}
 
 	pub fn add_data_drop(&mut self, source: Link) -> Link {
-		let data_drop = Node::DataDrop(DataDrop { source });
+		let node = Node::DataDrop(DataDrop { source });
 
-		Link(self.add_node(data_drop), 0)
+		Link(self.add_node(node), DataDrop::STATE_PORT)
 	}
 }
 

@@ -119,66 +119,66 @@ impl BasicBlockConverter {
 		self.trap = producer.next().unwrap();
 	}
 
-	fn handle_local_set(&mut self, local_set: LocalSet) {
+	fn handle_local_set(&mut self, instruction: LocalSet) {
 		let LocalSet {
 			destination,
 			source,
-		} = local_set;
+		} = instruction;
 
 		self.locals[usize::from(destination)] = self.locals[usize::from(source)];
 	}
 
-	fn handle_local_branch(&mut self, local_branch: LocalBranch) {
-		let LocalBranch { source } = local_branch;
+	fn handle_local_branch(&mut self, instruction: LocalBranch) {
+		let LocalBranch { source } = instruction;
 
 		self.condition = self.locals[usize::from(source)];
 	}
 
-	fn handle_i32_constant(&mut self, graph: &mut DataFlowGraph, i32_constant: I32Constant) {
-		let I32Constant { destination, data } = i32_constant;
+	fn handle_i32_constant(&mut self, graph: &mut DataFlowGraph, instruction: I32Constant) {
+		let I32Constant { destination, data } = instruction;
 
 		self.locals[usize::from(destination)] = graph.add_i32(data);
 	}
 
-	fn handle_i64_constant(&mut self, graph: &mut DataFlowGraph, i64_constant: I64Constant) {
-		let I64Constant { destination, data } = i64_constant;
+	fn handle_i64_constant(&mut self, graph: &mut DataFlowGraph, instruction: I64Constant) {
+		let I64Constant { destination, data } = instruction;
 
 		self.locals[usize::from(destination)] = graph.add_i64(data);
 	}
 
-	fn handle_f32_constant(&mut self, graph: &mut DataFlowGraph, f32_constant: F32Constant) {
-		let F32Constant { destination, data } = f32_constant;
+	fn handle_f32_constant(&mut self, graph: &mut DataFlowGraph, instruction: F32Constant) {
+		let F32Constant { destination, data } = instruction;
 
 		self.locals[usize::from(destination)] = graph.add_f32(data);
 	}
 
-	fn handle_f64_constant(&mut self, graph: &mut DataFlowGraph, f64_constant: F64Constant) {
-		let F64Constant { destination, data } = f64_constant;
+	fn handle_f64_constant(&mut self, graph: &mut DataFlowGraph, instruction: F64Constant) {
+		let F64Constant { destination, data } = instruction;
 
 		self.locals[usize::from(destination)] = graph.add_f64(data);
 	}
 
-	fn handle_ref_is_null(&mut self, graph: &mut DataFlowGraph, ref_is_null: RefIsNull) {
+	fn handle_ref_is_null(&mut self, graph: &mut DataFlowGraph, instruction: RefIsNull) {
 		let RefIsNull {
 			destination,
 			source,
-		} = ref_is_null;
+		} = instruction;
 
 		self.locals[usize::from(destination)] =
 			graph.add_ref_is_null(self.locals[usize::from(source)]);
 	}
 
-	fn handle_ref_null(&mut self, graph: &mut DataFlowGraph, ref_null: RefNull) {
-		let RefNull { destination } = ref_null;
+	fn handle_ref_null(&mut self, graph: &mut DataFlowGraph, instruction: RefNull) {
+		let RefNull { destination } = instruction;
 
 		self.locals[usize::from(destination)] = graph.add_null();
 	}
 
-	fn handle_ref_function(&mut self, graph: &mut DataFlowGraph, ref_function: RefFunction) {
+	fn handle_ref_function(&mut self, graph: &mut DataFlowGraph, instruction: RefFunction) {
 		let RefFunction {
 			destination,
 			function,
-		} = ref_function;
+		} = instruction;
 
 		let state = self.dependencies.get(ReferenceType::Function, function);
 
@@ -213,12 +213,12 @@ impl BasicBlockConverter {
 		self.dependencies.fill_values(call);
 	}
 
-	fn handle_call(&mut self, graph: &mut DataFlowGraph, call: Call) {
+	fn handle_call(&mut self, graph: &mut DataFlowGraph, instruction: Call) {
 		let Call {
 			destinations,
 			sources,
 			function,
-		} = call;
+		} = instruction;
 
 		let destinations = usize::from(destinations.0)..usize::from(destinations.1);
 		let sources = usize::from(sources.0)..usize::from(sources.1);
@@ -240,14 +240,14 @@ impl BasicBlockConverter {
 	fn handle_integer_unary_operation(
 		&mut self,
 		graph: &mut DataFlowGraph,
-		integer_unary_operation: IntegerUnaryOperation,
+		instruction: IntegerUnaryOperation,
 	) {
 		let IntegerUnaryOperation {
 			destination,
 			source,
 			r#type,
 			operator,
-		} = integer_unary_operation;
+		} = instruction;
 
 		self.locals[usize::from(destination)] =
 			graph.add_integer_unary_operation(self.locals[usize::from(source)], r#type, operator);
@@ -256,7 +256,7 @@ impl BasicBlockConverter {
 	fn handle_integer_binary_operation(
 		&mut self,
 		graph: &mut DataFlowGraph,
-		integer_binary_operation: IntegerBinaryOperation,
+		instruction: IntegerBinaryOperation,
 	) {
 		let IntegerBinaryOperation {
 			destination,
@@ -264,7 +264,7 @@ impl BasicBlockConverter {
 			rhs,
 			r#type,
 			operator,
-		} = integer_binary_operation;
+		} = instruction;
 
 		self.locals[usize::from(destination)] = graph.add_integer_binary_operation(
 			self.locals[usize::from(lhs)],
@@ -277,7 +277,7 @@ impl BasicBlockConverter {
 	fn handle_integer_compare_operation(
 		&mut self,
 		graph: &mut DataFlowGraph,
-		integer_compare_operation: IntegerCompareOperation,
+		instruction: IntegerCompareOperation,
 	) {
 		let IntegerCompareOperation {
 			destination,
@@ -285,7 +285,7 @@ impl BasicBlockConverter {
 			rhs,
 			r#type,
 			operator,
-		} = integer_compare_operation;
+		} = instruction;
 
 		self.locals[usize::from(destination)] = graph.add_integer_compare_operation(
 			self.locals[usize::from(lhs)],
@@ -295,32 +295,32 @@ impl BasicBlockConverter {
 		);
 	}
 
-	fn handle_integer_narrow(&mut self, graph: &mut DataFlowGraph, integer_narrow: IntegerNarrow) {
+	fn handle_integer_narrow(&mut self, graph: &mut DataFlowGraph, instruction: IntegerNarrow) {
 		let IntegerNarrow {
 			destination,
 			source,
-		} = integer_narrow;
+		} = instruction;
 
 		self.locals[usize::from(destination)] =
 			graph.add_integer_narrow(self.locals[usize::from(source)]);
 	}
 
-	fn handle_integer_widen(&mut self, graph: &mut DataFlowGraph, integer_widen: IntegerWiden) {
+	fn handle_integer_widen(&mut self, graph: &mut DataFlowGraph, instruction: IntegerWiden) {
 		let IntegerWiden {
 			destination,
 			source,
-		} = integer_widen;
+		} = instruction;
 
 		self.locals[usize::from(destination)] =
 			graph.add_integer_widen(self.locals[usize::from(source)]);
 	}
 
-	fn handle_integer_extend(&mut self, graph: &mut DataFlowGraph, integer_extend: IntegerExtend) {
+	fn handle_integer_extend(&mut self, graph: &mut DataFlowGraph, instruction: IntegerExtend) {
 		let IntegerExtend {
 			destination,
 			source,
 			r#type,
-		} = integer_extend;
+		} = instruction;
 
 		self.locals[usize::from(destination)] =
 			graph.add_integer_extend(self.locals[usize::from(source)], r#type);
@@ -329,7 +329,7 @@ impl BasicBlockConverter {
 	fn handle_integer_convert_to_number(
 		&mut self,
 		graph: &mut DataFlowGraph,
-		integer_convert_to_number: IntegerConvertToNumber,
+		instruction: IntegerConvertToNumber,
 	) {
 		let IntegerConvertToNumber {
 			destination,
@@ -337,7 +337,7 @@ impl BasicBlockConverter {
 			signed,
 			to,
 			from,
-		} = integer_convert_to_number;
+		} = instruction;
 
 		self.locals[usize::from(destination)] =
 			graph.add_integer_convert_to_number(self.locals[usize::from(source)], signed, to, from);
@@ -346,13 +346,13 @@ impl BasicBlockConverter {
 	fn handle_integer_transmute_to_number(
 		&mut self,
 		graph: &mut DataFlowGraph,
-		integer_transmute_to_number: IntegerTransmuteToNumber,
+		instruction: IntegerTransmuteToNumber,
 	) {
 		let IntegerTransmuteToNumber {
 			destination,
 			source,
 			from,
-		} = integer_transmute_to_number;
+		} = instruction;
 
 		self.locals[usize::from(destination)] =
 			graph.add_integer_transmute_to_number(self.locals[usize::from(source)], from);
@@ -361,14 +361,14 @@ impl BasicBlockConverter {
 	fn handle_number_unary_operation(
 		&mut self,
 		graph: &mut DataFlowGraph,
-		number_unary_operation: NumberUnaryOperation,
+		instruction: NumberUnaryOperation,
 	) {
 		let NumberUnaryOperation {
 			destination,
 			source,
 			r#type,
 			operator,
-		} = number_unary_operation;
+		} = instruction;
 
 		self.locals[usize::from(destination)] =
 			graph.add_number_unary_operation(self.locals[usize::from(source)], r#type, operator);
@@ -377,7 +377,7 @@ impl BasicBlockConverter {
 	fn handle_number_binary_operation(
 		&mut self,
 		graph: &mut DataFlowGraph,
-		number_binary_operation: NumberBinaryOperation,
+		instruction: NumberBinaryOperation,
 	) {
 		let NumberBinaryOperation {
 			destination,
@@ -385,7 +385,7 @@ impl BasicBlockConverter {
 			rhs,
 			r#type,
 			operator,
-		} = number_binary_operation;
+		} = instruction;
 
 		self.locals[usize::from(destination)] = graph.add_number_binary_operation(
 			self.locals[usize::from(lhs)],
@@ -398,7 +398,7 @@ impl BasicBlockConverter {
 	fn handle_number_compare_operation(
 		&mut self,
 		graph: &mut DataFlowGraph,
-		number_compare_operation: NumberCompareOperation,
+		instruction: NumberCompareOperation,
 	) {
 		let NumberCompareOperation {
 			destination,
@@ -406,7 +406,7 @@ impl BasicBlockConverter {
 			rhs,
 			r#type,
 			operator,
-		} = number_compare_operation;
+		} = instruction;
 
 		self.locals[usize::from(destination)] = graph.add_number_compare_operation(
 			self.locals[usize::from(lhs)],
@@ -416,21 +416,21 @@ impl BasicBlockConverter {
 		);
 	}
 
-	fn handle_number_narrow(&mut self, graph: &mut DataFlowGraph, number_narrow: NumberNarrow) {
+	fn handle_number_narrow(&mut self, graph: &mut DataFlowGraph, instruction: NumberNarrow) {
 		let NumberNarrow {
 			destination,
 			source,
-		} = number_narrow;
+		} = instruction;
 
 		self.locals[usize::from(destination)] =
 			graph.add_number_narrow(self.locals[usize::from(source)]);
 	}
 
-	fn handle_number_widen(&mut self, graph: &mut DataFlowGraph, number_widen: NumberWiden) {
+	fn handle_number_widen(&mut self, graph: &mut DataFlowGraph, instruction: NumberWiden) {
 		let NumberWiden {
 			destination,
 			source,
-		} = number_widen;
+		} = instruction;
 
 		self.locals[usize::from(destination)] =
 			graph.add_number_widen(self.locals[usize::from(source)]);
@@ -439,7 +439,7 @@ impl BasicBlockConverter {
 	fn handle_number_truncate_to_integer(
 		&mut self,
 		graph: &mut DataFlowGraph,
-		number_truncate_to_integer: NumberTruncateToInteger,
+		instruction: NumberTruncateToInteger,
 	) {
 		let NumberTruncateToInteger {
 			destination,
@@ -448,7 +448,7 @@ impl BasicBlockConverter {
 			saturate,
 			to,
 			from,
-		} = number_truncate_to_integer;
+		} = instruction;
 
 		self.locals[usize::from(destination)] = graph.add_number_truncate_to_integer(
 			self.locals[usize::from(source)],
@@ -462,34 +462,34 @@ impl BasicBlockConverter {
 	fn handle_number_transmute_to_integer(
 		&mut self,
 		graph: &mut DataFlowGraph,
-		number_transmute_to_integer: NumberTransmuteToInteger,
+		instruction: NumberTransmuteToInteger,
 	) {
 		let NumberTransmuteToInteger {
 			destination,
 			source,
 			from,
-		} = number_transmute_to_integer;
+		} = instruction;
 
 		self.locals[usize::from(destination)] =
 			graph.add_number_transmute_to_integer(self.locals[usize::from(source)], from);
 	}
 
-	fn handle_global_get(&mut self, graph: &mut DataFlowGraph, global_get: GlobalGet) {
+	fn handle_global_get(&mut self, graph: &mut DataFlowGraph, instruction: GlobalGet) {
 		let GlobalGet {
 			destination,
 			source,
-		} = global_get;
+		} = instruction;
 
 		let state = self.dependencies.get(ReferenceType::Global, source);
 
 		self.locals[usize::from(destination)] = graph.add_global_get(state);
 	}
 
-	fn handle_global_set(&mut self, graph: &mut DataFlowGraph, global_set: GlobalSet) {
+	fn handle_global_set(&mut self, graph: &mut DataFlowGraph, instruction: GlobalSet) {
 		let GlobalSet {
 			destination,
 			source,
-		} = global_set;
+		} = instruction;
 
 		let state = graph.add_global_set(
 			self.dependencies.get(ReferenceType::Global, destination),
@@ -511,22 +511,22 @@ impl BasicBlockConverter {
 		}
 	}
 
-	fn handle_table_get(&mut self, graph: &mut DataFlowGraph, table_get: TableGet) {
+	fn handle_table_get(&mut self, graph: &mut DataFlowGraph, instruction: TableGet) {
 		let TableGet {
 			destination,
 			source,
-		} = table_get;
+		} = instruction;
 
 		let state = self.load_location(ReferenceType::Table, source);
 
 		self.locals[usize::from(destination)] = graph.add_table_get(state);
 	}
 
-	fn handle_table_set(&mut self, graph: &mut DataFlowGraph, table_set: TableSet) {
+	fn handle_table_set(&mut self, graph: &mut DataFlowGraph, instruction: TableSet) {
 		let TableSet {
 			destination,
 			source,
-		} = table_set;
+		} = instruction;
 
 		let state = graph.add_table_set(
 			self.load_location(ReferenceType::Table, destination),
@@ -537,43 +537,39 @@ impl BasicBlockConverter {
 			.set(ReferenceType::Table, destination.reference, state);
 	}
 
-	fn handle_table_size(&mut self, graph: &mut DataFlowGraph, table_size: TableSize) {
-		let TableSize {
-			reference,
-			destination,
-		} = table_size;
+	fn handle_table_size(&mut self, graph: &mut DataFlowGraph, instruction: TableSize) {
+		let TableSize { destination, table } = instruction;
 
-		let state = self.dependencies.get(ReferenceType::Table, reference);
+		let state = self.dependencies.get(ReferenceType::Table, table);
 
 		self.locals[usize::from(destination)] = graph.add_table_size(state);
 	}
 
-	fn handle_table_grow(&mut self, graph: &mut DataFlowGraph, table_grow: TableGrow) {
+	fn handle_table_grow(&mut self, graph: &mut DataFlowGraph, instruction: TableGrow) {
 		let TableGrow {
-			reference,
 			destination,
+			table,
 			size,
 			initializer,
-		} = table_grow;
+		} = instruction;
 
 		let (result, state) = graph.add_table_grow(
-			self.dependencies.get(ReferenceType::Table, reference),
+			self.dependencies.get(ReferenceType::Table, table),
 			self.locals[usize::from(initializer)],
 			self.locals[usize::from(size)],
 		);
 
 		self.locals[usize::from(destination)] = result;
 
-		self.dependencies
-			.set(ReferenceType::Table, reference, state);
+		self.dependencies.set(ReferenceType::Table, table, state);
 	}
 
-	fn handle_table_fill(&mut self, graph: &mut DataFlowGraph, table_fill: TableFill) {
+	fn handle_table_fill(&mut self, graph: &mut DataFlowGraph, instruction: TableFill) {
 		let TableFill {
 			destination,
 			source,
 			size,
-		} = table_fill;
+		} = instruction;
 
 		let state = graph.add_table_fill(
 			self.load_location(ReferenceType::Table, destination),
@@ -585,12 +581,12 @@ impl BasicBlockConverter {
 			.set(ReferenceType::Table, destination.reference, state);
 	}
 
-	fn handle_table_copy(&mut self, graph: &mut DataFlowGraph, table_copy: TableCopy) {
+	fn handle_table_copy(&mut self, graph: &mut DataFlowGraph, instruction: TableCopy) {
 		let TableCopy {
 			destination,
 			source,
 			size,
-		} = table_copy;
+		} = instruction;
 
 		let state = graph.add_table_copy(
 			self.load_location(ReferenceType::Table, destination),
@@ -602,12 +598,12 @@ impl BasicBlockConverter {
 			.set(ReferenceType::Table, destination.reference, state);
 	}
 
-	fn handle_table_init(&mut self, graph: &mut DataFlowGraph, table_init: TableInit) {
+	fn handle_table_init(&mut self, graph: &mut DataFlowGraph, instruction: TableInit) {
 		let TableInit {
 			destination,
 			source,
 			size,
-		} = table_init;
+		} = instruction;
 
 		let mut source = self.load_location(ReferenceType::Elements, source);
 
@@ -623,8 +619,8 @@ impl BasicBlockConverter {
 			.set(ReferenceType::Table, destination.reference, state);
 	}
 
-	fn handle_elements_drop(&mut self, graph: &mut DataFlowGraph, elements_drop: ElementsDrop) {
-		let ElementsDrop { source } = elements_drop;
+	fn handle_elements_drop(&mut self, graph: &mut DataFlowGraph, instruction: ElementsDrop) {
+		let ElementsDrop { source } = instruction;
 
 		let state = self.dependencies.get(ReferenceType::Elements, source);
 		let inner = graph.add_global_get(state);
@@ -635,24 +631,24 @@ impl BasicBlockConverter {
 			.set(ReferenceType::Elements, source, state);
 	}
 
-	fn handle_memory_load(&mut self, graph: &mut DataFlowGraph, memory_load: MemoryLoad) {
+	fn handle_memory_load(&mut self, graph: &mut DataFlowGraph, instruction: MemoryLoad) {
 		let MemoryLoad {
 			destination,
 			source,
 			r#type,
-		} = memory_load;
+		} = instruction;
 
 		let state = self.load_location(ReferenceType::Memory, source);
 
 		self.locals[usize::from(destination)] = graph.add_memory_load(state, r#type);
 	}
 
-	fn handle_memory_store(&mut self, graph: &mut DataFlowGraph, memory_store: MemoryStore) {
+	fn handle_memory_store(&mut self, graph: &mut DataFlowGraph, instruction: MemoryStore) {
 		let MemoryStore {
 			destination,
 			source,
 			r#type,
-		} = memory_store;
+		} = instruction;
 
 		let state = graph.add_memory_store(
 			self.load_location(ReferenceType::Memory, destination),
@@ -664,41 +660,40 @@ impl BasicBlockConverter {
 			.set(ReferenceType::Memory, destination.reference, state);
 	}
 
-	fn handle_memory_size(&mut self, graph: &mut DataFlowGraph, memory_size: MemorySize) {
+	fn handle_memory_size(&mut self, graph: &mut DataFlowGraph, instruction: MemorySize) {
 		let MemorySize {
-			reference,
 			destination,
-		} = memory_size;
+			memory,
+		} = instruction;
 
-		let state = self.dependencies.get(ReferenceType::Memory, reference);
+		let state = self.dependencies.get(ReferenceType::Memory, memory);
 
 		self.locals[usize::from(destination)] = graph.add_memory_size(state);
 	}
 
-	fn handle_memory_grow(&mut self, graph: &mut DataFlowGraph, memory_grow: MemoryGrow) {
+	fn handle_memory_grow(&mut self, graph: &mut DataFlowGraph, instruction: MemoryGrow) {
 		let MemoryGrow {
-			reference,
 			destination,
+			memory,
 			size,
-		} = memory_grow;
+		} = instruction;
 
 		let (result, state) = graph.add_memory_grow(
-			self.dependencies.get(ReferenceType::Memory, reference),
+			self.dependencies.get(ReferenceType::Memory, memory),
 			self.locals[usize::from(size)],
 		);
 
 		self.locals[usize::from(destination)] = result;
 
-		self.dependencies
-			.set(ReferenceType::Memory, reference, state);
+		self.dependencies.set(ReferenceType::Memory, memory, state);
 	}
 
-	fn handle_memory_fill(&mut self, graph: &mut DataFlowGraph, memory_fill: MemoryFill) {
+	fn handle_memory_fill(&mut self, graph: &mut DataFlowGraph, instruction: MemoryFill) {
 		let MemoryFill {
 			destination,
 			byte,
 			size,
-		} = memory_fill;
+		} = instruction;
 
 		let state = graph.add_memory_fill(
 			self.load_location(ReferenceType::Memory, destination),
@@ -710,12 +705,12 @@ impl BasicBlockConverter {
 			.set(ReferenceType::Memory, destination.reference, state);
 	}
 
-	fn handle_memory_copy(&mut self, graph: &mut DataFlowGraph, memory_copy: MemoryCopy) {
+	fn handle_memory_copy(&mut self, graph: &mut DataFlowGraph, instruction: MemoryCopy) {
 		let MemoryCopy {
 			destination,
 			source,
 			size,
-		} = memory_copy;
+		} = instruction;
 
 		let state = graph.add_memory_copy(
 			self.load_location(ReferenceType::Memory, destination),
@@ -727,12 +722,12 @@ impl BasicBlockConverter {
 			.set(ReferenceType::Memory, destination.reference, state);
 	}
 
-	fn handle_memory_init(&mut self, graph: &mut DataFlowGraph, memory_init: MemoryInit) {
+	fn handle_memory_init(&mut self, graph: &mut DataFlowGraph, instruction: MemoryInit) {
 		let MemoryInit {
 			destination,
 			source,
 			size,
-		} = memory_init;
+		} = instruction;
 
 		let state = graph.add_memory_init(
 			self.load_location(ReferenceType::Memory, destination),
@@ -744,8 +739,8 @@ impl BasicBlockConverter {
 			.set(ReferenceType::Memory, destination.reference, state);
 	}
 
-	fn handle_data_drop(&mut self, graph: &mut DataFlowGraph, data_drop: DataDrop) {
-		let DataDrop { source } = data_drop;
+	fn handle_data_drop(&mut self, graph: &mut DataFlowGraph, instruction: DataDrop) {
+		let DataDrop { source } = instruction;
 
 		let state = self.dependencies.get(ReferenceType::Data, source);
 		let state = graph.add_data_drop(state);
@@ -755,80 +750,74 @@ impl BasicBlockConverter {
 
 	fn handle_instruction(&mut self, graph: &mut DataFlowGraph, instruction: Instruction) {
 		match instruction {
-			Instruction::LocalSet(local_set) => self.handle_local_set(local_set),
-			Instruction::LocalBranch(local_branch) => self.handle_local_branch(local_branch),
-			Instruction::I32Constant(i32_constant) => self.handle_i32_constant(graph, i32_constant),
-			Instruction::I64Constant(i64_constant) => self.handle_i64_constant(graph, i64_constant),
-			Instruction::F32Constant(f32_constant) => self.handle_f32_constant(graph, f32_constant),
-			Instruction::F64Constant(f64_constant) => self.handle_f64_constant(graph, f64_constant),
-			Instruction::RefIsNull(ref_is_null) => self.handle_ref_is_null(graph, ref_is_null),
-			Instruction::RefNull(ref_null) => self.handle_ref_null(graph, ref_null),
-			Instruction::RefFunction(ref_function) => self.handle_ref_function(graph, ref_function),
-			Instruction::Call(call) => self.handle_call(graph, call),
+			Instruction::LocalSet(instruction) => self.handle_local_set(instruction),
+			Instruction::LocalBranch(instruction) => self.handle_local_branch(instruction),
+			Instruction::I32Constant(instruction) => self.handle_i32_constant(graph, instruction),
+			Instruction::I64Constant(instruction) => self.handle_i64_constant(graph, instruction),
+			Instruction::F32Constant(instruction) => self.handle_f32_constant(graph, instruction),
+			Instruction::F64Constant(instruction) => self.handle_f64_constant(graph, instruction),
+			Instruction::RefIsNull(instruction) => self.handle_ref_is_null(graph, instruction),
+			Instruction::RefNull(instruction) => self.handle_ref_null(graph, instruction),
+			Instruction::RefFunction(instruction) => self.handle_ref_function(graph, instruction),
+			Instruction::Call(instruction) => self.handle_call(graph, instruction),
 			Instruction::Unreachable => self.handle_unreachable(graph),
-			Instruction::IntegerUnaryOperation(integer_unary_operation) => {
-				self.handle_integer_unary_operation(graph, integer_unary_operation);
+			Instruction::IntegerUnaryOperation(instruction) => {
+				self.handle_integer_unary_operation(graph, instruction);
 			}
-			Instruction::IntegerBinaryOperation(integer_binary_operation) => {
-				self.handle_integer_binary_operation(graph, integer_binary_operation);
+			Instruction::IntegerBinaryOperation(instruction) => {
+				self.handle_integer_binary_operation(graph, instruction);
 			}
-			Instruction::IntegerCompareOperation(integer_compare_operation) => {
-				self.handle_integer_compare_operation(graph, integer_compare_operation);
+			Instruction::IntegerCompareOperation(instruction) => {
+				self.handle_integer_compare_operation(graph, instruction);
 			}
-			Instruction::IntegerNarrow(integer_narrow) => {
-				self.handle_integer_narrow(graph, integer_narrow);
+			Instruction::IntegerNarrow(instruction) => {
+				self.handle_integer_narrow(graph, instruction);
 			}
-			Instruction::IntegerWiden(integer_widen) => {
-				self.handle_integer_widen(graph, integer_widen);
+			Instruction::IntegerWiden(instruction) => self.handle_integer_widen(graph, instruction),
+			Instruction::IntegerExtend(instruction) => {
+				self.handle_integer_extend(graph, instruction);
 			}
-			Instruction::IntegerExtend(integer_extend) => {
-				self.handle_integer_extend(graph, integer_extend);
+			Instruction::IntegerConvertToNumber(instruction) => {
+				self.handle_integer_convert_to_number(graph, instruction);
 			}
-			Instruction::IntegerConvertToNumber(integer_convert_to_number) => {
-				self.handle_integer_convert_to_number(graph, integer_convert_to_number);
+			Instruction::IntegerTransmuteToNumber(instruction) => {
+				self.handle_integer_transmute_to_number(graph, instruction);
 			}
-			Instruction::IntegerTransmuteToNumber(integer_transmute_to_number) => {
-				self.handle_integer_transmute_to_number(graph, integer_transmute_to_number);
+			Instruction::NumberUnaryOperation(instruction) => {
+				self.handle_number_unary_operation(graph, instruction);
 			}
-			Instruction::NumberUnaryOperation(number_unary_operation) => {
-				self.handle_number_unary_operation(graph, number_unary_operation);
+			Instruction::NumberBinaryOperation(instruction) => {
+				self.handle_number_binary_operation(graph, instruction);
 			}
-			Instruction::NumberBinaryOperation(number_binary_operation) => {
-				self.handle_number_binary_operation(graph, number_binary_operation);
+			Instruction::NumberCompareOperation(instruction) => {
+				self.handle_number_compare_operation(graph, instruction);
 			}
-			Instruction::NumberCompareOperation(number_compare_operation) => {
-				self.handle_number_compare_operation(graph, number_compare_operation);
+			Instruction::NumberNarrow(instruction) => self.handle_number_narrow(graph, instruction),
+			Instruction::NumberWiden(instruction) => self.handle_number_widen(graph, instruction),
+			Instruction::NumberTruncateToInteger(instruction) => {
+				self.handle_number_truncate_to_integer(graph, instruction);
 			}
-			Instruction::NumberNarrow(number_narrow) => {
-				self.handle_number_narrow(graph, number_narrow);
+			Instruction::NumberTransmuteToInteger(instruction) => {
+				self.handle_number_transmute_to_integer(graph, instruction);
 			}
-			Instruction::NumberWiden(number_widen) => self.handle_number_widen(graph, number_widen),
-			Instruction::NumberTruncateToInteger(number_truncate_to_integer) => {
-				self.handle_number_truncate_to_integer(graph, number_truncate_to_integer);
-			}
-			Instruction::NumberTransmuteToInteger(number_transmute_to_integer) => {
-				self.handle_number_transmute_to_integer(graph, number_transmute_to_integer);
-			}
-			Instruction::GlobalGet(global_get) => self.handle_global_get(graph, global_get),
-			Instruction::GlobalSet(global_set) => self.handle_global_set(graph, global_set),
-			Instruction::TableGet(table_get) => self.handle_table_get(graph, table_get),
-			Instruction::TableSet(table_set) => self.handle_table_set(graph, table_set),
-			Instruction::TableSize(table_size) => self.handle_table_size(graph, table_size),
-			Instruction::TableGrow(table_grow) => self.handle_table_grow(graph, table_grow),
-			Instruction::TableFill(table_fill) => self.handle_table_fill(graph, table_fill),
-			Instruction::TableCopy(table_copy) => self.handle_table_copy(graph, table_copy),
-			Instruction::TableInit(table_init) => self.handle_table_init(graph, table_init),
-			Instruction::ElementsDrop(elements_drop) => {
-				self.handle_elements_drop(graph, elements_drop);
-			}
-			Instruction::MemoryLoad(memory_load) => self.handle_memory_load(graph, memory_load),
-			Instruction::MemoryStore(memory_store) => self.handle_memory_store(graph, memory_store),
-			Instruction::MemorySize(memory_size) => self.handle_memory_size(graph, memory_size),
-			Instruction::MemoryGrow(memory_grow) => self.handle_memory_grow(graph, memory_grow),
-			Instruction::MemoryFill(memory_fill) => self.handle_memory_fill(graph, memory_fill),
-			Instruction::MemoryCopy(memory_copy) => self.handle_memory_copy(graph, memory_copy),
-			Instruction::MemoryInit(memory_init) => self.handle_memory_init(graph, memory_init),
-			Instruction::DataDrop(data_drop) => self.handle_data_drop(graph, data_drop),
+			Instruction::GlobalGet(instruction) => self.handle_global_get(graph, instruction),
+			Instruction::GlobalSet(instruction) => self.handle_global_set(graph, instruction),
+			Instruction::TableGet(instruction) => self.handle_table_get(graph, instruction),
+			Instruction::TableSet(instruction) => self.handle_table_set(graph, instruction),
+			Instruction::TableSize(instruction) => self.handle_table_size(graph, instruction),
+			Instruction::TableGrow(instruction) => self.handle_table_grow(graph, instruction),
+			Instruction::TableFill(instruction) => self.handle_table_fill(graph, instruction),
+			Instruction::TableCopy(instruction) => self.handle_table_copy(graph, instruction),
+			Instruction::TableInit(instruction) => self.handle_table_init(graph, instruction),
+			Instruction::ElementsDrop(instruction) => self.handle_elements_drop(graph, instruction),
+			Instruction::MemoryLoad(instruction) => self.handle_memory_load(graph, instruction),
+			Instruction::MemoryStore(instruction) => self.handle_memory_store(graph, instruction),
+			Instruction::MemorySize(instruction) => self.handle_memory_size(graph, instruction),
+			Instruction::MemoryGrow(instruction) => self.handle_memory_grow(graph, instruction),
+			Instruction::MemoryFill(instruction) => self.handle_memory_fill(graph, instruction),
+			Instruction::MemoryCopy(instruction) => self.handle_memory_copy(graph, instruction),
+			Instruction::MemoryInit(instruction) => self.handle_memory_init(graph, instruction),
+			Instruction::DataDrop(instruction) => self.handle_data_drop(graph, instruction),
 		}
 	}
 

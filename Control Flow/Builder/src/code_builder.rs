@@ -108,9 +108,9 @@ impl CodeBuilder {
 	}
 
 	pub fn add_local_branch(&mut self, source: u16, successors: usize) -> u16 {
-		let branch = Instruction::LocalBranch(LocalBranch { source });
+		let instruction = Instruction::LocalBranch(LocalBranch { source });
 
-		self.instructions.push(branch);
+		self.instructions.push(instruction);
 
 		self.add_basic_block(successors)
 	}
@@ -128,27 +128,27 @@ impl CodeBuilder {
 	}
 
 	pub fn add_i32_constant(&mut self, destination: u16, data: i32) {
-		let i32 = Instruction::I32Constant(I32Constant { destination, data });
+		let instruction = Instruction::I32Constant(I32Constant { destination, data });
 
-		self.instructions.push(i32);
+		self.instructions.push(instruction);
 	}
 
 	pub fn add_i64_constant(&mut self, destination: u16, data: i64) {
-		let i64 = Instruction::I64Constant(I64Constant { destination, data });
+		let instruction = Instruction::I64Constant(I64Constant { destination, data });
 
-		self.instructions.push(i64);
+		self.instructions.push(instruction);
 	}
 
 	pub fn add_f32_constant(&mut self, destination: u16, data: f32) {
-		let f32 = Instruction::F32Constant(F32Constant { destination, data });
+		let instruction = Instruction::F32Constant(F32Constant { destination, data });
 
-		self.instructions.push(f32);
+		self.instructions.push(instruction);
 	}
 
 	pub fn add_f64_constant(&mut self, destination: u16, data: f64) {
-		let f64 = Instruction::F64Constant(F64Constant { destination, data });
+		let instruction = Instruction::F64Constant(F64Constant { destination, data });
 
-		self.instructions.push(f64);
+		self.instructions.push(instruction);
 	}
 
 	pub fn add_unreachable(&mut self) -> u16 {
@@ -158,37 +158,37 @@ impl CodeBuilder {
 	}
 
 	pub fn add_call(&mut self, destinations: (u16, u16), sources: (u16, u16), function: u16) {
-		let call = Instruction::Call(Call {
+		let instruction = Instruction::Call(Call {
 			destinations,
 			sources,
 			function,
 		});
 
-		self.instructions.push(call);
+		self.instructions.push(instruction);
 	}
 
 	pub fn add_ref_is_null(&mut self, destination: u16, source: u16) {
-		let ref_is_null = Instruction::RefIsNull(RefIsNull {
+		let instruction = Instruction::RefIsNull(RefIsNull {
 			destination,
 			source,
 		});
 
-		self.instructions.push(ref_is_null);
+		self.instructions.push(instruction);
 	}
 
 	pub fn add_ref_null(&mut self, destination: u16) {
-		let ref_null = Instruction::RefNull(RefNull { destination });
+		let instruction = Instruction::RefNull(RefNull { destination });
 
-		self.instructions.push(ref_null);
+		self.instructions.push(instruction);
 	}
 
 	pub fn add_ref_function(&mut self, destination: u16, function: u16) {
-		let ref_function = Instruction::RefFunction(RefFunction {
+		let instruction = Instruction::RefFunction(RefFunction {
 			destination,
 			function,
 		});
 
-		self.instructions.push(ref_function);
+		self.instructions.push(instruction);
 	}
 
 	pub fn add_integer_unary_operation(
@@ -198,14 +198,14 @@ impl CodeBuilder {
 		r#type: IntegerType,
 		operator: IntegerUnaryOperator,
 	) {
-		let integer_unary_operation = Instruction::IntegerUnaryOperation(IntegerUnaryOperation {
+		let instruction = Instruction::IntegerUnaryOperation(IntegerUnaryOperation {
 			destination,
 			source,
 			r#type,
 			operator,
 		});
 
-		self.instructions.push(integer_unary_operation);
+		self.instructions.push(instruction);
 	}
 
 	pub fn add_integer_binary_operation(
@@ -216,16 +216,15 @@ impl CodeBuilder {
 		r#type: IntegerType,
 		operator: IntegerBinaryOperator,
 	) {
-		let integer_binary_operation =
-			Instruction::IntegerBinaryOperation(IntegerBinaryOperation {
-				destination,
-				lhs,
-				rhs,
-				r#type,
-				operator,
-			});
+		let instruction = Instruction::IntegerBinaryOperation(IntegerBinaryOperation {
+			destination,
+			lhs,
+			rhs,
+			r#type,
+			operator,
+		});
 
-		self.instructions.push(integer_binary_operation);
+		self.instructions.push(instruction);
 	}
 
 	pub fn add_integer_compare_operation(
@@ -236,44 +235,43 @@ impl CodeBuilder {
 		r#type: IntegerType,
 		operator: IntegerCompareOperator,
 	) {
-		let integer_compare_operation =
-			Instruction::IntegerCompareOperation(IntegerCompareOperation {
-				destination,
-				lhs,
-				rhs,
-				r#type,
-				operator,
-			});
+		let instruction = Instruction::IntegerCompareOperation(IntegerCompareOperation {
+			destination,
+			lhs,
+			rhs,
+			r#type,
+			operator,
+		});
 
-		self.instructions.push(integer_compare_operation);
+		self.instructions.push(instruction);
 	}
 
 	pub fn add_integer_narrow(&mut self, destination: u16, source: u16) {
-		let integer_narrow = Instruction::IntegerNarrow(IntegerNarrow {
+		let instruction = Instruction::IntegerNarrow(IntegerNarrow {
 			destination,
 			source,
 		});
 
-		self.instructions.push(integer_narrow);
+		self.instructions.push(instruction);
 	}
 
 	pub fn add_integer_widen(&mut self, destination: u16, source: u16) {
-		let integer_widen = Instruction::IntegerWiden(IntegerWiden {
+		let instruction = Instruction::IntegerWiden(IntegerWiden {
 			destination,
 			source,
 		});
 
-		self.instructions.push(integer_widen);
+		self.instructions.push(instruction);
 	}
 
 	pub fn add_integer_extend(&mut self, destination: u16, source: u16, r#type: ExtendType) {
-		let integer_extend = Instruction::IntegerExtend(IntegerExtend {
+		let instruction = Instruction::IntegerExtend(IntegerExtend {
 			destination,
 			source,
 			r#type,
 		});
 
-		self.instructions.push(integer_extend);
+		self.instructions.push(instruction);
 	}
 
 	pub fn add_integer_convert_to_number(
@@ -284,16 +282,15 @@ impl CodeBuilder {
 		to: NumberType,
 		from: IntegerType,
 	) {
-		let integer_convert_to_number =
-			Instruction::IntegerConvertToNumber(IntegerConvertToNumber {
-				destination,
-				source,
-				signed,
-				to,
-				from,
-			});
+		let instruction = Instruction::IntegerConvertToNumber(IntegerConvertToNumber {
+			destination,
+			source,
+			signed,
+			to,
+			from,
+		});
 
-		self.instructions.push(integer_convert_to_number);
+		self.instructions.push(instruction);
 	}
 
 	pub fn add_integer_transmute_to_number(
@@ -302,14 +299,13 @@ impl CodeBuilder {
 		source: u16,
 		from: IntegerType,
 	) {
-		let integer_transmute_to_number =
-			Instruction::IntegerTransmuteToNumber(IntegerTransmuteToNumber {
-				destination,
-				source,
-				from,
-			});
+		let instruction = Instruction::IntegerTransmuteToNumber(IntegerTransmuteToNumber {
+			destination,
+			source,
+			from,
+		});
 
-		self.instructions.push(integer_transmute_to_number);
+		self.instructions.push(instruction);
 	}
 
 	pub fn add_number_unary_operation(
@@ -319,14 +315,14 @@ impl CodeBuilder {
 		r#type: NumberType,
 		operator: NumberUnaryOperator,
 	) {
-		let number_unary_operation = Instruction::NumberUnaryOperation(NumberUnaryOperation {
+		let instruction = Instruction::NumberUnaryOperation(NumberUnaryOperation {
 			destination,
 			source,
 			r#type,
 			operator,
 		});
 
-		self.instructions.push(number_unary_operation);
+		self.instructions.push(instruction);
 	}
 
 	pub fn add_number_binary_operation(
@@ -337,7 +333,7 @@ impl CodeBuilder {
 		r#type: NumberType,
 		operator: NumberBinaryOperator,
 	) {
-		let number_binary_operation = Instruction::NumberBinaryOperation(NumberBinaryOperation {
+		let instruction = Instruction::NumberBinaryOperation(NumberBinaryOperation {
 			destination,
 			lhs,
 			rhs,
@@ -345,7 +341,7 @@ impl CodeBuilder {
 			operator,
 		});
 
-		self.instructions.push(number_binary_operation);
+		self.instructions.push(instruction);
 	}
 
 	pub fn add_number_compare_operation(
@@ -356,34 +352,33 @@ impl CodeBuilder {
 		r#type: NumberType,
 		operator: NumberCompareOperator,
 	) {
-		let number_compare_operation =
-			Instruction::NumberCompareOperation(NumberCompareOperation {
-				destination,
-				lhs,
-				rhs,
-				r#type,
-				operator,
-			});
+		let instruction = Instruction::NumberCompareOperation(NumberCompareOperation {
+			destination,
+			lhs,
+			rhs,
+			r#type,
+			operator,
+		});
 
-		self.instructions.push(number_compare_operation);
+		self.instructions.push(instruction);
 	}
 
 	pub fn add_number_narrow(&mut self, destination: u16, source: u16) {
-		let number_narrow = Instruction::NumberNarrow(NumberNarrow {
+		let instruction = Instruction::NumberNarrow(NumberNarrow {
 			destination,
 			source,
 		});
 
-		self.instructions.push(number_narrow);
+		self.instructions.push(instruction);
 	}
 
 	pub fn add_number_widen(&mut self, destination: u16, source: u16) {
-		let number_widen = Instruction::NumberWiden(NumberWiden {
+		let instruction = Instruction::NumberWiden(NumberWiden {
 			destination,
 			source,
 		});
 
-		self.instructions.push(number_widen);
+		self.instructions.push(instruction);
 	}
 
 	pub fn add_number_truncate_to_integer(
@@ -395,17 +390,16 @@ impl CodeBuilder {
 		to: IntegerType,
 		from: NumberType,
 	) {
-		let number_truncate_to_integer =
-			Instruction::NumberTruncateToInteger(NumberTruncateToInteger {
-				destination,
-				source,
-				signed,
-				saturate,
-				to,
-				from,
-			});
+		let instruction = Instruction::NumberTruncateToInteger(NumberTruncateToInteger {
+			destination,
+			source,
+			signed,
+			saturate,
+			to,
+			from,
+		});
 
-		self.instructions.push(number_truncate_to_integer);
+		self.instructions.push(instruction);
 	}
 
 	pub fn add_number_transmute_to_integer(
@@ -414,187 +408,177 @@ impl CodeBuilder {
 		source: u16,
 		from: NumberType,
 	) {
-		let number_transmute_to_integer =
-			Instruction::NumberTransmuteToInteger(NumberTransmuteToInteger {
-				destination,
-				source,
-				from,
-			});
+		let instruction = Instruction::NumberTransmuteToInteger(NumberTransmuteToInteger {
+			destination,
+			source,
+			from,
+		});
 
-		self.instructions.push(number_transmute_to_integer);
+		self.instructions.push(instruction);
 	}
 
 	pub fn add_global_get(&mut self, destination: u16, source: u16) {
-		let global_get = Instruction::GlobalGet(GlobalGet {
+		let instruction = Instruction::GlobalGet(GlobalGet {
 			destination,
 			source,
 		});
 
-		self.instructions.push(global_get);
+		self.instructions.push(instruction);
 	}
 
 	pub fn add_global_set(&mut self, destination: u16, source: u16) {
-		let global_set = Instruction::GlobalSet(GlobalSet {
+		let instruction = Instruction::GlobalSet(GlobalSet {
 			destination,
 			source,
 		});
 
-		self.instructions.push(global_set);
+		self.instructions.push(instruction);
 	}
 
 	pub fn add_table_get(&mut self, destination: u16, source: Location) {
-		let table_get = Instruction::TableGet(TableGet {
+		let instruction = Instruction::TableGet(TableGet {
 			destination,
 			source,
 		});
 
-		self.instructions.push(table_get);
+		self.instructions.push(instruction);
 	}
 
 	pub fn add_table_set(&mut self, destination: Location, source: u16) {
-		let table_set = Instruction::TableSet(TableSet {
+		let instruction = Instruction::TableSet(TableSet {
 			destination,
 			source,
 		});
 
-		self.instructions.push(table_set);
+		self.instructions.push(instruction);
 	}
 
-	pub fn add_table_size(&mut self, reference: u16, destination: u16) {
-		let table_size = Instruction::TableSize(TableSize {
-			reference,
-			destination,
-		});
+	pub fn add_table_size(&mut self, destination: u16, table: u16) {
+		let instruction = Instruction::TableSize(TableSize { destination, table });
 
-		self.instructions.push(table_size);
+		self.instructions.push(instruction);
 	}
 
-	pub fn add_table_grow(
-		&mut self,
-		reference: u16,
-		destination: u16,
-		size: u16,
-		initializer: u16,
-	) {
-		let table_grow = Instruction::TableGrow(TableGrow {
-			reference,
+	pub fn add_table_grow(&mut self, destination: u16, table: u16, size: u16, initializer: u16) {
+		let instruction = Instruction::TableGrow(TableGrow {
 			destination,
+			table,
 			size,
 			initializer,
 		});
 
-		self.instructions.push(table_grow);
+		self.instructions.push(instruction);
 	}
 
 	pub fn add_table_fill(&mut self, destination: Location, source: u16, size: u16) {
-		let table_fill = Instruction::TableFill(TableFill {
+		let instruction = Instruction::TableFill(TableFill {
 			destination,
 			source,
 			size,
 		});
 
-		self.instructions.push(table_fill);
+		self.instructions.push(instruction);
 	}
 
 	pub fn add_table_copy(&mut self, destination: Location, source: Location, size: u16) {
-		let table_copy = Instruction::TableCopy(TableCopy {
+		let instruction = Instruction::TableCopy(TableCopy {
 			destination,
 			source,
 			size,
 		});
 
-		self.instructions.push(table_copy);
+		self.instructions.push(instruction);
 	}
 
 	pub fn add_table_init(&mut self, destination: Location, source: Location, size: u16) {
-		let table_init = Instruction::TableInit(TableInit {
+		let instruction = Instruction::TableInit(TableInit {
 			destination,
 			source,
 			size,
 		});
 
-		self.instructions.push(table_init);
+		self.instructions.push(instruction);
 	}
 
 	pub fn add_elements_drop(&mut self, source: u16) {
-		let elements_drop = Instruction::ElementsDrop(ElementsDrop { source });
+		let instruction = Instruction::ElementsDrop(ElementsDrop { source });
 
-		self.instructions.push(elements_drop);
+		self.instructions.push(instruction);
 	}
 
 	pub fn add_memory_load(&mut self, destination: u16, source: Location, r#type: LoadType) {
-		let memory_load = Instruction::MemoryLoad(MemoryLoad {
+		let instruction = Instruction::MemoryLoad(MemoryLoad {
 			destination,
 			source,
 			r#type,
 		});
 
-		self.instructions.push(memory_load);
+		self.instructions.push(instruction);
 	}
 
 	pub fn add_memory_store(&mut self, destination: Location, source: u16, r#type: StoreType) {
-		let memory_store = Instruction::MemoryStore(MemoryStore {
+		let instruction = Instruction::MemoryStore(MemoryStore {
 			destination,
 			source,
 			r#type,
 		});
 
-		self.instructions.push(memory_store);
+		self.instructions.push(instruction);
 	}
 
-	pub fn add_memory_size(&mut self, reference: u16, destination: u16) {
-		let memory_size = Instruction::MemorySize(MemorySize {
-			reference,
+	pub fn add_memory_size(&mut self, destination: u16, memory: u16) {
+		let instruction = Instruction::MemorySize(MemorySize {
 			destination,
+			memory,
 		});
 
-		self.instructions.push(memory_size);
+		self.instructions.push(instruction);
 	}
 
-	pub fn add_memory_grow(&mut self, reference: u16, destination: u16, size: u16) {
-		let memory_grow = Instruction::MemoryGrow(MemoryGrow {
-			reference,
+	pub fn add_memory_grow(&mut self, destination: u16, memory: u16, size: u16) {
+		let instruction = Instruction::MemoryGrow(MemoryGrow {
 			destination,
+			memory,
 			size,
 		});
 
-		self.instructions.push(memory_grow);
+		self.instructions.push(instruction);
 	}
 
 	pub fn add_memory_fill(&mut self, destination: Location, byte: u16, size: u16) {
-		let memory_fill = Instruction::MemoryFill(MemoryFill {
+		let instruction = Instruction::MemoryFill(MemoryFill {
 			destination,
 			byte,
 			size,
 		});
 
-		self.instructions.push(memory_fill);
+		self.instructions.push(instruction);
 	}
 
 	pub fn add_memory_copy(&mut self, destination: Location, source: Location, size: u16) {
-		let memory_copy = Instruction::MemoryCopy(MemoryCopy {
+		let instruction = Instruction::MemoryCopy(MemoryCopy {
 			destination,
 			source,
 			size,
 		});
 
-		self.instructions.push(memory_copy);
+		self.instructions.push(instruction);
 	}
 
 	pub fn add_memory_init(&mut self, destination: Location, source: Location, size: u16) {
-		let memory_init = Instruction::MemoryInit(MemoryInit {
+		let instruction = Instruction::MemoryInit(MemoryInit {
 			destination,
 			source,
 			size,
 		});
 
-		self.instructions.push(memory_init);
+		self.instructions.push(instruction);
 	}
 
 	pub fn add_data_drop(&mut self, source: u16) {
-		let data_drop = Instruction::DataDrop(DataDrop { source });
+		let instruction = Instruction::DataDrop(DataDrop { source });
 
-		self.instructions.push(data_drop);
+		self.instructions.push(instruction);
 	}
 
 	pub fn set_jump_destination(&mut self, source: u16, branch: u16, destination: u16) {

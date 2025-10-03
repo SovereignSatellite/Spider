@@ -84,182 +84,136 @@ fn write_data(references: &mut Vec<Reference>, data: u16) {
 	read_data(references, data);
 }
 
-fn handle_ref_function(references: &mut Vec<Reference>, ref_function: RefFunction) {
-	let RefFunction {
-		destination: _,
-		function,
-	} = ref_function;
+fn handle_ref_function(references: &mut Vec<Reference>, instruction: RefFunction) {
+	let RefFunction { function, .. } = instruction;
 
 	read_function(references, function);
 }
 
-fn handle_global_get(references: &mut Vec<Reference>, global_get: GlobalGet) {
-	let GlobalGet {
-		destination: _,
-		source,
-	} = global_get;
+fn handle_global_get(references: &mut Vec<Reference>, instruction: GlobalGet) {
+	let GlobalGet { source, .. } = instruction;
 
 	read_global(references, source);
 }
 
-fn handle_global_set(references: &mut Vec<Reference>, global_set: GlobalSet) {
-	let GlobalSet {
-		destination,
-		source: _,
-	} = global_set;
+fn handle_global_set(references: &mut Vec<Reference>, instruction: GlobalSet) {
+	let GlobalSet { destination, .. } = instruction;
 
 	write_global(references, destination);
 }
 
-fn handle_table_get(references: &mut Vec<Reference>, table_get: TableGet) {
-	let TableGet {
-		destination: _,
-		source,
-	} = table_get;
+fn handle_table_get(references: &mut Vec<Reference>, instruction: TableGet) {
+	let TableGet { source, .. } = instruction;
 
 	read_table(references, source.reference);
 }
 
-fn handle_table_set(references: &mut Vec<Reference>, table_set: TableSet) {
-	let TableSet {
-		destination,
-		source: _,
-	} = table_set;
+fn handle_table_set(references: &mut Vec<Reference>, instruction: TableSet) {
+	let TableSet { destination, .. } = instruction;
 
 	write_table(references, destination.reference);
 }
 
-fn handle_table_size(references: &mut Vec<Reference>, table_size: TableSize) {
-	let TableSize {
-		reference,
-		destination: _,
-	} = table_size;
+fn handle_table_size(references: &mut Vec<Reference>, instruction: TableSize) {
+	let TableSize { table, .. } = instruction;
 
-	read_table(references, reference);
+	read_table(references, table);
 }
 
-fn handle_table_grow(references: &mut Vec<Reference>, table_grow: TableGrow) {
-	let TableGrow {
-		reference,
-		destination: _,
-		size: _,
-		initializer: _,
-	} = table_grow;
+fn handle_table_grow(references: &mut Vec<Reference>, instruction: TableGrow) {
+	let TableGrow { table, .. } = instruction;
 
-	write_table(references, reference);
+	write_table(references, table);
 }
 
-fn handle_table_fill(references: &mut Vec<Reference>, table_fill: TableFill) {
-	let TableFill {
-		destination,
-		source: _,
-		size: _,
-	} = table_fill;
+fn handle_table_fill(references: &mut Vec<Reference>, instruction: TableFill) {
+	let TableFill { destination, .. } = instruction;
 
 	write_table(references, destination.reference);
 }
 
-fn handle_table_copy(references: &mut Vec<Reference>, table_copy: TableCopy) {
+fn handle_table_copy(references: &mut Vec<Reference>, instruction: TableCopy) {
 	let TableCopy {
 		destination,
 		source,
-		size: _,
-	} = table_copy;
+		..
+	} = instruction;
 
 	write_table(references, destination.reference);
 	read_table(references, source.reference);
 }
 
-fn handle_table_init(references: &mut Vec<Reference>, table_init: TableInit) {
+fn handle_table_init(references: &mut Vec<Reference>, instruction: TableInit) {
 	let TableInit {
 		destination,
 		source,
-		size: _,
-	} = table_init;
+		..
+	} = instruction;
 
 	write_table(references, destination.reference);
 	read_elements(references, source.reference);
 }
 
-fn handle_elements_drop(references: &mut Vec<Reference>, elements_drop: ElementsDrop) {
-	let ElementsDrop { source } = elements_drop;
+fn handle_elements_drop(references: &mut Vec<Reference>, instruction: ElementsDrop) {
+	let ElementsDrop { source } = instruction;
 
 	write_elements(references, source);
 }
 
-fn handle_memory_load(references: &mut Vec<Reference>, memory_load: MemoryLoad) {
-	let MemoryLoad {
-		destination: _,
-		source,
-		r#type: _,
-	} = memory_load;
+fn handle_memory_load(references: &mut Vec<Reference>, instruction: MemoryLoad) {
+	let MemoryLoad { source, .. } = instruction;
 
 	read_memory(references, source.reference);
 }
 
-fn handle_memory_store(references: &mut Vec<Reference>, memory_store: MemoryStore) {
-	let MemoryStore {
-		destination,
-		source: _,
-		r#type: _,
-	} = memory_store;
+fn handle_memory_store(references: &mut Vec<Reference>, instruction: MemoryStore) {
+	let MemoryStore { destination, .. } = instruction;
 
 	write_memory(references, destination.reference);
 }
 
-fn handle_memory_size(references: &mut Vec<Reference>, memory_size: MemorySize) {
-	let MemorySize {
-		reference,
-		destination: _,
-	} = memory_size;
+fn handle_memory_size(references: &mut Vec<Reference>, instruction: MemorySize) {
+	let MemorySize { memory, .. } = instruction;
 
-	read_memory(references, reference);
+	read_memory(references, memory);
 }
 
-fn handle_memory_grow(references: &mut Vec<Reference>, memory_grow: MemoryGrow) {
-	let MemoryGrow {
-		reference,
-		destination: _,
-		size: _,
-	} = memory_grow;
+fn handle_memory_grow(references: &mut Vec<Reference>, instruction: MemoryGrow) {
+	let MemoryGrow { memory, .. } = instruction;
 
-	write_memory(references, reference);
+	write_memory(references, memory);
 }
 
-fn handle_memory_fill(references: &mut Vec<Reference>, memory_fill: MemoryFill) {
-	let MemoryFill {
-		destination,
-		byte: _,
-		size: _,
-	} = memory_fill;
+fn handle_memory_fill(references: &mut Vec<Reference>, instruction: MemoryFill) {
+	let MemoryFill { destination, .. } = instruction;
 
 	write_memory(references, destination.reference);
 }
 
-fn handle_memory_copy(references: &mut Vec<Reference>, memory_copy: MemoryCopy) {
+fn handle_memory_copy(references: &mut Vec<Reference>, instruction: MemoryCopy) {
 	let MemoryCopy {
 		destination,
 		source,
-		size: _,
-	} = memory_copy;
+		..
+	} = instruction;
 
 	write_memory(references, destination.reference);
 	read_memory(references, source.reference);
 }
 
-fn handle_memory_init(references: &mut Vec<Reference>, memory_init: MemoryInit) {
+fn handle_memory_init(references: &mut Vec<Reference>, instruction: MemoryInit) {
 	let MemoryInit {
 		destination,
 		source,
-		size: _,
-	} = memory_init;
+		..
+	} = instruction;
 
 	write_memory(references, destination.reference);
 	read_data(references, source.reference);
 }
 
-fn handle_data_drop(references: &mut Vec<Reference>, data_drop: DataDrop) {
-	let DataDrop { source } = data_drop;
+fn handle_data_drop(references: &mut Vec<Reference>, instruction: DataDrop) {
+	let DataDrop { source } = instruction;
 
 	write_data(references, source);
 }
@@ -292,25 +246,25 @@ fn handle_instruction(references: &mut Vec<Reference>, instruction: Instruction)
 		| Instruction::NumberTruncateToInteger(_)
 		| Instruction::NumberTransmuteToInteger(_) => {}
 
-		Instruction::RefFunction(ref_function) => handle_ref_function(references, ref_function),
-		Instruction::GlobalGet(global_get) => handle_global_get(references, global_get),
-		Instruction::GlobalSet(global_set) => handle_global_set(references, global_set),
-		Instruction::TableGet(table_get) => handle_table_get(references, table_get),
-		Instruction::TableSet(table_set) => handle_table_set(references, table_set),
-		Instruction::TableSize(table_size) => handle_table_size(references, table_size),
-		Instruction::TableGrow(table_grow) => handle_table_grow(references, table_grow),
-		Instruction::TableFill(table_fill) => handle_table_fill(references, table_fill),
-		Instruction::TableCopy(table_copy) => handle_table_copy(references, table_copy),
-		Instruction::TableInit(table_init) => handle_table_init(references, table_init),
-		Instruction::ElementsDrop(elements_drop) => handle_elements_drop(references, elements_drop),
-		Instruction::MemoryLoad(memory_load) => handle_memory_load(references, memory_load),
-		Instruction::MemoryStore(memory_store) => handle_memory_store(references, memory_store),
-		Instruction::MemorySize(memory_size) => handle_memory_size(references, memory_size),
-		Instruction::MemoryGrow(memory_grow) => handle_memory_grow(references, memory_grow),
-		Instruction::MemoryFill(memory_fill) => handle_memory_fill(references, memory_fill),
-		Instruction::MemoryCopy(memory_copy) => handle_memory_copy(references, memory_copy),
-		Instruction::MemoryInit(memory_init) => handle_memory_init(references, memory_init),
-		Instruction::DataDrop(data_drop) => handle_data_drop(references, data_drop),
+		Instruction::RefFunction(instruction) => handle_ref_function(references, instruction),
+		Instruction::GlobalGet(instruction) => handle_global_get(references, instruction),
+		Instruction::GlobalSet(instruction) => handle_global_set(references, instruction),
+		Instruction::TableGet(instruction) => handle_table_get(references, instruction),
+		Instruction::TableSet(instruction) => handle_table_set(references, instruction),
+		Instruction::TableSize(instruction) => handle_table_size(references, instruction),
+		Instruction::TableGrow(instruction) => handle_table_grow(references, instruction),
+		Instruction::TableFill(instruction) => handle_table_fill(references, instruction),
+		Instruction::TableCopy(instruction) => handle_table_copy(references, instruction),
+		Instruction::TableInit(instruction) => handle_table_init(references, instruction),
+		Instruction::ElementsDrop(instruction) => handle_elements_drop(references, instruction),
+		Instruction::MemoryLoad(instruction) => handle_memory_load(references, instruction),
+		Instruction::MemoryStore(instruction) => handle_memory_store(references, instruction),
+		Instruction::MemorySize(instruction) => handle_memory_size(references, instruction),
+		Instruction::MemoryGrow(instruction) => handle_memory_grow(references, instruction),
+		Instruction::MemoryFill(instruction) => handle_memory_fill(references, instruction),
+		Instruction::MemoryCopy(instruction) => handle_memory_copy(references, instruction),
+		Instruction::MemoryInit(instruction) => handle_memory_init(references, instruction),
+		Instruction::DataDrop(instruction) => handle_data_drop(references, instruction),
 	}
 }
 

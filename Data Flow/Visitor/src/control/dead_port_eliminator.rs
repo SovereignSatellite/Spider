@@ -46,36 +46,36 @@ impl DeadPortEliminator {
 		}
 	}
 
-	fn mark_lambda_in(&mut self, lambda_in: &LambdaIn, id: u32) {
-		let LambdaIn { dependencies, .. } = lambda_in;
+	fn mark_lambda_in(&mut self, node: &LambdaIn, id: u32) {
+		let LambdaIn { dependencies, .. } = node;
 
 		self.add_region_sides(dependencies, id);
 	}
 
-	fn mark_lambda_out(&mut self, lambda_out: &LambdaOut, id: u32) {
-		let LambdaOut { results, .. } = lambda_out;
+	fn mark_lambda_out(&mut self, node: &LambdaOut, id: u32) {
+		let LambdaOut { results, .. } = node;
 
 		self.add_region_sides(results, id);
 	}
 
-	fn mark_region_in(&mut self, region_in: &RegionIn, port: u16) {
-		let RegionIn { input, .. } = *region_in;
+	fn mark_region_in(&mut self, node: &RegionIn, port: u16) {
+		let RegionIn { input, .. } = *node;
 
 		self.add_predecessor(Link(input, port));
 	}
 
-	fn mark_region_out(&mut self, region_out: &RegionOut, port: u16) {
-		let RegionOut { results, .. } = region_out;
+	fn mark_region_out(&mut self, node: &RegionOut, port: u16) {
+		let RegionOut { results, .. } = node;
 
 		self.add_predecessor(results[usize::from(port)]);
 	}
 
-	fn mark_gamma_in(&mut self, graph: &DataFlowGraph, gamma_in: &GammaIn, port: u16) {
+	fn mark_gamma_in(&mut self, graph: &DataFlowGraph, node: &GammaIn, port: u16) {
 		let GammaIn {
 			output,
 			ref arguments,
 			..
-		} = *gamma_in;
+		} = *node;
 		let GammaOut { regions, .. } = graph.get(output).as_gamma_out().unwrap();
 
 		for &region in regions {
@@ -87,8 +87,8 @@ impl DeadPortEliminator {
 		self.add_predecessor(arguments[usize::from(port)]);
 	}
 
-	fn mark_gamma_out(&mut self, graph: &DataFlowGraph, gamma_out: &GammaOut, port: u16) {
-		let GammaOut { input, ref regions } = *gamma_out;
+	fn mark_gamma_out(&mut self, graph: &DataFlowGraph, node: &GammaOut, port: u16) {
+		let GammaOut { input, ref regions } = *node;
 		let GammaIn { condition, .. } = *graph.get(input).as_gamma_in().unwrap();
 
 		self.add_predecessor(condition);
@@ -98,22 +98,22 @@ impl DeadPortEliminator {
 		}
 	}
 
-	fn mark_theta_in(&mut self, theta_in: &ThetaIn, port: u16) {
+	fn mark_theta_in(&mut self, node: &ThetaIn, port: u16) {
 		let ThetaIn {
 			output,
 			ref arguments,
-		} = *theta_in;
+		} = *node;
 
 		self.add_predecessor(Link(output, port));
 		self.add_predecessor(arguments[usize::from(port)]);
 	}
 
-	fn mark_theta_out(&mut self, theta_out: &ThetaOut, port: u16) {
+	fn mark_theta_out(&mut self, node: &ThetaOut, port: u16) {
 		let ThetaOut {
 			input,
 			ref results,
 			condition,
-		} = *theta_out;
+		} = *node;
 
 		self.add_predecessor(Link(input, port));
 		self.add_predecessor(results[usize::from(port)]);
@@ -131,14 +131,14 @@ impl DeadPortEliminator {
 
 		while let Some(Link(id, port)) = self.stack.pop() {
 			match graph.get(id) {
-				Node::LambdaIn(lambda_in) => self.mark_lambda_in(lambda_in, id),
-				Node::LambdaOut(lambda_out) => self.mark_lambda_out(lambda_out, id),
-				Node::RegionIn(region_in) => self.mark_region_in(region_in, port),
-				Node::RegionOut(region_out) => self.mark_region_out(region_out, port),
-				Node::GammaIn(gamma_in) => self.mark_gamma_in(graph, gamma_in, port),
-				Node::GammaOut(gamma_out) => self.mark_gamma_out(graph, gamma_out, port),
-				Node::ThetaIn(theta_in) => self.mark_theta_in(theta_in, port),
-				Node::ThetaOut(theta_out) => self.mark_theta_out(theta_out, port),
+				Node::LambdaIn(node) => self.mark_lambda_in(node, id),
+				Node::LambdaOut(node) => self.mark_lambda_out(node, id),
+				Node::RegionIn(node) => self.mark_region_in(node, port),
+				Node::RegionOut(node) => self.mark_region_out(node, port),
+				Node::GammaIn(node) => self.mark_gamma_in(graph, node, port),
+				Node::GammaOut(node) => self.mark_gamma_out(graph, node, port),
+				Node::ThetaIn(node) => self.mark_theta_in(node, port),
+				Node::ThetaOut(node) => self.mark_theta_out(node, port),
 
 				node => self.mark_operation(node),
 			}
