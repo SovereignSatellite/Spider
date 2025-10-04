@@ -5,13 +5,11 @@ use data_flow_graph::{
 		MemoryGrow, MemoryInit, MemoryLoad, MemorySize, MemoryStore, Merge, TableCopy, TableFill,
 		TableGet, TableGrow, TableInit, TableSet, TableSize,
 	},
-	control::{
-		GammaIn, GammaOut, LambdaIn, LambdaOut, OmegaIn, OmegaOut, RegionOut, ThetaIn, ThetaOut,
-	},
+	control::{GammaIn, GammaOut, LambdaIn, OmegaIn, OmegaOut, RegionOut, ThetaIn, ThetaOut},
 };
 use hashbrown::HashMap;
 
-use super::scalar_finder::{add_value_assignments, result_count_of};
+use super::scalar_finder::result_count_of;
 
 fn add_state_assignment(assignments: &mut HashMap<Link, Link>, graph: &DataFlowGraph, link: Link) {
 	let Link(id, port) = link;
@@ -24,19 +22,6 @@ fn add_state_assignment(assignments: &mut HashMap<Link, Link>, graph: &DataFlowG
 fn handle_lambda_in(assignments: &mut HashMap<Link, Link>, id: u32, node: &LambdaIn) {
 	for port in node.output_ports() {
 		let _ = assignments.try_insert(Link(id, port), Link::DANGLING);
-	}
-}
-
-fn handle_lambda_out(
-	assignments: &mut HashMap<Link, Link>,
-	graph: &DataFlowGraph,
-	node: &LambdaOut,
-) {
-	let LambdaOut { results, .. } = node;
-
-	for &result in results {
-		add_value_assignments(assignments, graph, result.0);
-		add_state_assignment(assignments, graph, result);
 	}
 }
 
@@ -329,7 +314,8 @@ fn handle_data_drop(assignments: &mut HashMap<Link, Link>, id: u32, node: DataDr
 
 fn handle_node(assignments: &mut HashMap<Link, Link>, graph: &DataFlowGraph, id: u32, node: &Node) {
 	match *node {
-		Node::RegionIn(_)
+		Node::LambdaOut(_)
+		| Node::RegionIn(_)
 		| Node::GammaIn(_)
 		| Node::ThetaIn(_)
 		| Node::OmegaOut(_)
@@ -363,7 +349,6 @@ fn handle_node(assignments: &mut HashMap<Link, Link>, graph: &DataFlowGraph, id:
 		| Node::DataNew(_) => {}
 
 		Node::LambdaIn(ref node) => handle_lambda_in(assignments, id, node),
-		Node::LambdaOut(ref node) => handle_lambda_out(assignments, graph, node),
 		Node::RegionOut(ref node) => handle_region_out(assignments, node),
 		Node::GammaOut(ref node) => handle_gamma_out(assignments, graph, node),
 		Node::ThetaOut(ref node) => handle_theta_out(assignments, graph, node),

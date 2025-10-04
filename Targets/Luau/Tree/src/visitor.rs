@@ -33,10 +33,14 @@ impl Function {
 			locals: _,
 			stack: _,
 			code,
-			returns: _,
+			returns,
 		} = self;
 
-		code.accept(visitor)
+		code.accept(visitor)?;
+
+		returns
+			.iter()
+			.try_for_each(|r#return| r#return.accept(visitor))
 	}
 }
 

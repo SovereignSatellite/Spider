@@ -69,11 +69,7 @@ pub fn result_count_of(node: &Node) -> u16 {
 	}
 }
 
-pub fn add_value_assignments(
-	assignments: &mut HashMap<Link, Link>,
-	graph: &DataFlowGraph,
-	id: u32,
-) {
+fn add_value_assignments(assignments: &mut HashMap<Link, Link>, graph: &DataFlowGraph, id: u32) {
 	let results = result_count_of(graph.get(id));
 
 	for link in (0..results).map(|port| Link(id, port)) {

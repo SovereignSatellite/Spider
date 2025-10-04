@@ -13,7 +13,7 @@ pub struct Function {
 	pub locals: Vec<Name>,
 	pub stack: u16,
 	pub code: Sequence,
-	pub returns: Vec<Local>,
+	pub returns: Vec<Expression>,
 }
 
 pub struct Scoped {

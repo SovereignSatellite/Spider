@@ -120,11 +120,11 @@ impl DataHandler {
 	}
 
 	pub fn load_returns(
-		&self,
+		&mut self,
 		results: &[Link],
 		function_type: &control::FunctionType,
-	) -> Vec<Local> {
-		let returns = results.iter().map(|&name| self.assignments[&name]);
+	) -> Vec<Expression> {
+		let returns = results.iter().map(|&name| self.load(name));
 		let len = function_type.results.len();
 
 		returns.take(len).collect()
@@ -136,7 +136,7 @@ impl DataHandler {
 		locals: Vec<Name>,
 		stack: u16,
 		code: Sequence,
-		returns: Vec<Local>,
+		returns: Vec<Expression>,
 	) -> Expression {
 		let function = Function {
 			arguments,
