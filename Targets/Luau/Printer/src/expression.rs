@@ -180,53 +180,94 @@ impl Print for Scoped {
 	}
 }
 
-impl Print for Match {
-	fn print(&self, printer: &mut LuauPrinter, out: &mut dyn Write) -> Result<()> {
-		fn print_recursive(
-			branches: &[Expression],
-			condition: &Expression,
-			start: usize,
-			end: usize,
-			printer: &mut LuauPrinter,
-			out: &mut dyn Write,
-		) -> Result<()> {
-			let center = start + (end - start) / 2;
+mod conditional {
+	use std::io::{Result, Write};
 
-			if start != center {
+	use luau_tree::expression::Expression;
+
+	use crate::{LuauPrinter, print::Print};
+
+	fn print_recursive(
+		branches: &[Expression],
+		condition: &Expression,
+		start: usize,
+		end: usize,
+		printer: &mut LuauPrinter,
+		out: &mut dyn Write,
+	) -> Result<()> {
+		let center = start + (end - start) / 2;
+
+		if start != center {
+			write!(out, "if (")?;
+
+			condition.print(printer, out)?;
+
+			write!(out, ") < {center} then ")?;
+
+			print_recursive(branches, condition, start, center, printer, out)?;
+
+			write!(out, " else")?;
+
+			if end != center + 1 {
 				write!(out, "if (")?;
 
 				condition.print(printer, out)?;
 
-				write!(out, ") < {center} then ")?;
+				write!(out, ") > {center} then ")?;
 
-				print_recursive(branches, condition, start, center, printer, out)?;
+				print_recursive(branches, condition, center + 1, end, printer, out)?;
 
 				write!(out, " else")?;
-
-				if end != center + 1 {
-					write!(out, "if (")?;
-
-					condition.print(printer, out)?;
-
-					write!(out, ") > {center} then ")?;
-
-					print_recursive(branches, condition, center + 1, end, printer, out)?;
-
-					write!(out, " else")?;
-				}
-
-				write!(out, " ")?;
 			}
 
-			branches[center].print(printer, out)
+			write!(out, " ")?;
 		}
 
+		branches[center].print(printer, out)
+	}
+
+	pub fn print_match(
+		branches: &[Expression],
+		condition: &Expression,
+		printer: &mut LuauPrinter,
+		out: &mut dyn Write,
+	) -> Result<()> {
+		print_recursive(branches, condition, 0, branches.len(), printer, out)
+	}
+
+	pub fn print_if(
+		on_false: &Expression,
+		on_true: &Expression,
+		condition: &Expression,
+		printer: &mut LuauPrinter,
+		out: &mut dyn Write,
+	) -> Result<()> {
+		write!(out, "if ")?;
+
+		condition.print(printer, out)?;
+
+		write!(out, " then ")?;
+
+		on_true.print(printer, out)?;
+
+		write!(out, " else ")?;
+
+		on_false.print(printer, out)
+	}
+}
+
+impl Print for Match {
+	fn print(&self, printer: &mut LuauPrinter, out: &mut dyn Write) -> Result<()> {
 		let Self {
 			condition,
 			branches,
 		} = self;
 
-		print_recursive(branches, condition, 0, branches.len(), printer, out)
+		if let [on_false, on_true] = branches.as_slice() {
+			conditional::print_if(on_false, on_true, condition, printer, out)
+		} else {
+			conditional::print_match(branches, condition, printer, out)
+		}
 	}
 }
 

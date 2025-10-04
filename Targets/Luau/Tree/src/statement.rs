@@ -9,13 +9,22 @@ pub struct Sequence {
 }
 
 impl Sequence {
-	#[must_use]
-	pub fn as_assign_destination(&self) -> Option<Local> {
+	fn as_assign_destination(&self) -> Option<Local> {
 		match self.list.as_slice() {
 			[Statement::AssignAll(assign_all)] => assign_all.as_assign_destination(),
 			[Statement::Assign(assign)] => Some(assign.destination),
 			_ => None,
 		}
+	}
+
+	#[must_use]
+	pub fn as_branch_destination(branches: &[Self]) -> Option<Local> {
+		let mut locals = branches.iter().map(Self::as_assign_destination);
+
+		locals
+			.next()
+			.flatten()
+			.filter(|&local| locals.all(|other| other == Some(local)))
 	}
 
 	#[must_use]

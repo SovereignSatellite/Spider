@@ -44,19 +44,7 @@ impl CodeHandler {
 		self.scopes.push(Vec::new());
 	}
 
-	pub fn do_match(&mut self, regions: &[u32], condition: Link, data_handler: &mut DataHandler) {
-		let condition = data_handler.load(condition);
-		let condition = if regions.len() == 2 {
-			condition.into_boolean()
-		} else {
-			condition
-		};
-
-		let branches = regions
-			.iter()
-			.map(|id| self.regions.remove(id).unwrap())
-			.collect();
-
+	fn do_match_statement(&mut self, condition: Expression, branches: Vec<Sequence>) {
 		let statement = Statement::Match(
 			Match {
 				branches,
@@ -66,6 +54,28 @@ impl CodeHandler {
 		);
 
 		self.scopes.last_mut().unwrap().push(statement);
+	}
+
+	pub fn do_match(&mut self, regions: &[u32], condition: Link, data_handler: &mut DataHandler) {
+		let condition = data_handler.load(condition);
+		let condition = if regions.len() == 2 {
+			condition.into_boolean()
+		} else {
+			condition
+		};
+
+		let branches: Vec<_> = regions
+			.iter()
+			.map(|id| self.regions.remove(id).unwrap())
+			.collect();
+
+		if let Some(destination) = Sequence::as_branch_destination(&branches) {
+			let source = DataHandler::load_match_expression(condition, branches);
+
+			self.do_assign(destination, source);
+		} else {
+			self.do_match_statement(condition, branches);
+		}
 	}
 
 	pub fn do_repeat(&mut self, condition: Link, data_handler: &mut DataHandler) {
