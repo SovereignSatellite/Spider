@@ -251,7 +251,6 @@ local function rt_memory_grow(destination: Memory, size: number): number
 	buffer.copy(result, 0, destination[1])
 
 	destination[1] = result
-	destination.minimum = new
 
 	return old
 end
