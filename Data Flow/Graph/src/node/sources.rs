@@ -5,7 +5,7 @@ use crate::DataFlowGraph;
 use super::{
 	Link, Node,
 	base::{
-		Call, DataDrop, DataNew, ElementsDrop, ElementsNew, GlobalGet, GlobalNew, GlobalSet,
+		Apply, DataDrop, DataNew, ElementsDrop, ElementsNew, GlobalGet, GlobalNew, GlobalSet,
 		Identity, IntegerBinaryOperation, IntegerCompareOperation, IntegerConvertToNumber,
 		IntegerExtend, IntegerNarrow, IntegerTransmuteToNumber, IntegerUnaryOperation,
 		IntegerWiden, Location, MemoryCopy, MemoryFill, MemoryGrow, MemoryInit, MemoryLoad,
@@ -38,8 +38,8 @@ macro_rules! for_each_visit {
 			Self::Trap | Self::Null | Self::I32(_) | Self::I64(_) | Self::F32(_) | Self::F64(_) => {
 			}
 			Self::Identity(node) => node.$visit($handler),
-			Self::Call(node) => node.$visit($handler),
 			Self::Merge(node) => node.$visit($handler),
+			Self::Apply(node) => node.$visit($handler),
 			Self::RefIsNull(node) => node.$visit($handler),
 			Self::IntegerUnaryOperation(node) => node.$visit($handler),
 			Self::IntegerBinaryOperation(node) => node.$visit($handler),
@@ -680,7 +680,33 @@ impl Identity {
 	}
 }
 
-impl Call {
+impl Merge {
+	fn for_each_id<H: FnMut(u32)>(&self, handler: H) {
+		let Self { states } = self;
+
+		for_each_link_list(states, handler);
+	}
+
+	fn for_each_mut_id<H: FnMut(&mut u32)>(&mut self, handler: H) {
+		let Self { states } = self;
+
+		for_each_mut_link_list(states, handler);
+	}
+
+	fn for_each_argument<H: FnMut(Link)>(&self, handler: H) {
+		let Self { states } = self;
+
+		states.iter().copied().for_each(handler);
+	}
+
+	fn for_each_mut_argument<H: FnMut(&mut Link)>(&mut self, handler: H) {
+		let Self { states } = self;
+
+		states.iter_mut().for_each(handler);
+	}
+}
+
+impl Apply {
 	fn for_each_id<H: FnMut(u32)>(&self, mut handler: H) {
 		let Self {
 			function,
@@ -727,32 +753,6 @@ impl Call {
 
 		handler(function);
 		arguments.iter_mut().for_each(handler);
-	}
-}
-
-impl Merge {
-	fn for_each_id<H: FnMut(u32)>(&self, handler: H) {
-		let Self { states } = self;
-
-		for_each_link_list(states, handler);
-	}
-
-	fn for_each_mut_id<H: FnMut(&mut u32)>(&mut self, handler: H) {
-		let Self { states } = self;
-
-		for_each_mut_link_list(states, handler);
-	}
-
-	fn for_each_argument<H: FnMut(Link)>(&self, handler: H) {
-		let Self { states } = self;
-
-		states.iter().copied().for_each(handler);
-	}
-
-	fn for_each_mut_argument<H: FnMut(&mut Link)>(&mut self, handler: H) {
-		let Self { states } = self;
-
-		states.iter_mut().for_each(handler);
 	}
 }
 

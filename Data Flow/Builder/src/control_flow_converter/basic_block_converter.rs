@@ -227,7 +227,7 @@ impl BasicBlockConverter {
 		let results = destinations.len();
 
 		self.handle_post_call(
-			graph.add_call(
+			graph.add_apply(
 				self.locals[usize::from(function)],
 				arguments,
 				results.try_into().unwrap(),

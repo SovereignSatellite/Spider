@@ -495,9 +495,9 @@ impl DataFlowBuilder {
 		start.map_or(state, |start| {
 			let function = self.global_state.functions[usize::try_from(start).unwrap()];
 			let function = graph.add_global_get(function).0;
-			let call = graph.add_call(function, alloc::vec![state], 0, 1);
+			let apply = graph.add_apply(function, alloc::vec![state], 0, 1);
 
-			Link(call, 0)
+			Link(apply, 0)
 		})
 	}
 

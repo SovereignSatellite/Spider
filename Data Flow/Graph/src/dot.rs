@@ -39,13 +39,13 @@ impl Vertex {
 			| Node::Host(_)
 			| Node::Trap
 			| Node::Null
-			| Node::Identity(_)
 			| Node::I32(_)
 			| Node::I64(_)
 			| Node::F32(_)
 			| Node::F64(_)
-			| Node::Call(_)
+			| Node::Identity(_)
 			| Node::Merge(_)
+			| Node::Apply(_)
 			| Node::RefIsNull(_)
 			| Node::IntegerUnaryOperation(_)
 			| Node::IntegerBinaryOperation(_)
@@ -149,8 +149,8 @@ impl<'inner> Dot<'inner> {
 			Node::Trap => "Trap",
 			Node::Null => "Null",
 			Node::Identity(_) => "Identity",
-			Node::Call(_) => "Call",
 			Node::Merge(_) => "Merge",
+			Node::Apply(_) => "Apply",
 			Node::RefIsNull(_) => "Ref Is Null",
 			Node::IntegerNarrow(_) => "Integer Narrow",
 			Node::IntegerWiden(_) => "Integer Widen",

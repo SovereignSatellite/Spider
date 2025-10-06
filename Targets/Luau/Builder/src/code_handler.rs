@@ -129,7 +129,7 @@ impl CodeHandler {
 		self.scopes.last_mut().unwrap().push(statement);
 	}
 
-	pub fn do_call(&mut self, node: &base::Call, id: u32, data_handler: &mut DataHandler) {
+	pub fn do_call(&mut self, node: &base::Apply, id: u32, data_handler: &mut DataHandler) {
 		let end = node.arguments.len() - usize::from(node.states);
 		let statement = Statement::Call(
 			Call {

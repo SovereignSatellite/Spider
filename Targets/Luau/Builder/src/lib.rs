@@ -4,7 +4,7 @@
 use data_flow_graph::{
 	DataFlowGraph, Link, Node,
 	base::{
-		Call, DataDrop, DataNew, ElementsDrop, ElementsNew, GlobalGet, GlobalNew, GlobalSet, Host,
+		Apply, DataDrop, DataNew, ElementsDrop, ElementsNew, GlobalGet, GlobalNew, GlobalSet, Host,
 		Identity, IntegerBinaryOperation, IntegerCompareOperation, IntegerConvertToNumber,
 		IntegerExtend, IntegerNarrow, IntegerTransmuteToNumber, IntegerUnaryOperation,
 		IntegerWiden, MemoryCopy, MemoryFill, MemoryGrow, MemoryInit, MemoryLoad, MemoryNew,
@@ -181,12 +181,6 @@ impl LuauBuilder {
 		self.do_assignment(id, Expression::Null);
 	}
 
-	fn handle_identity(&mut self, id: u32, node: Identity) {
-		let expression = self.data_handler.load_identity(node);
-
-		self.do_assignment(id, expression);
-	}
-
 	fn handle_i32_const(&mut self, id: u32, value: i32) {
 		self.do_assignment(id, Expression::I32(value));
 	}
@@ -203,24 +197,38 @@ impl LuauBuilder {
 		self.do_assignment(id, Expression::F64(value));
 	}
 
-	fn handle_call_statement(&mut self, id: u32, node: &Call) {
+	fn handle_identity(&mut self, id: u32, node: Identity) {
+		let expression = self.data_handler.load_identity(node);
+
+		self.do_assignment(id, expression);
+	}
+
+	fn handle_merge(&mut self, node: &Merge) {
+		let Merge { states } = node;
+
+		for &source in states {
+			let _source = self.data_handler.load(source);
+		}
+	}
+
+	fn handle_call_statement(&mut self, id: u32, node: &Apply) {
 		self.code_handler.do_call(node, id, &mut self.data_handler);
 	}
 
-	fn handle_call_expression(&mut self, id: u32, node: &Call) {
+	fn handle_call_expression(&mut self, id: u32, node: &Apply) {
 		let expression = self.data_handler.load_call(node);
 
 		self.do_assignment(id, expression);
 	}
 
-	fn handle_call(&mut self, id: u32, node: &Call) {
+	fn handle_call(&mut self, id: u32, node: &Apply) {
 		if node.results == 0 || self.data_handler.get_local(Link(id, 0)).is_some() {
 			self.handle_call_statement(id, node);
 		} else {
 			self.handle_call_expression(id, node);
 		}
 
-		let Call {
+		let Apply {
 			ref arguments,
 			results,
 			states,
@@ -232,14 +240,6 @@ impl LuauBuilder {
 
 			self.code_handler
 				.do_rename(destination, source, &self.data_handler);
-		}
-	}
-
-	fn handle_merge(&mut self, node: &Merge) {
-		let Merge { states } = node;
-
-		for &source in states {
-			let _source = self.data_handler.load(source);
 		}
 	}
 
@@ -614,14 +614,14 @@ impl LuauBuilder {
 			Node::Host(ref node) => self.handle_host(id, node.as_ref()),
 			Node::Trap => self.handle_trap(id),
 			Node::Null => self.handle_null(id),
-			Node::Identity(node) => self.handle_identity(id, node),
 			Node::I32(i32) => self.handle_i32_const(id, i32),
 			Node::I64(i64) => self.handle_i64_const(id, i64),
 			Node::F32(f32) => self.handle_f32_const(id, f32),
 			Node::F64(f64) => self.handle_f64_const(id, f64),
 
-			Node::Call(ref node) => self.handle_call(id, node),
+			Node::Identity(node) => self.handle_identity(id, node),
 			Node::Merge(ref node) => self.handle_merge(node),
+			Node::Apply(ref node) => self.handle_call(id, node),
 			Node::RefIsNull(node) => self.handle_ref_is_null(id, node),
 			Node::IntegerUnaryOperation(node) => self.handle_integer_unary_operation(id, node),
 			Node::IntegerBinaryOperation(node) => self.handle_integer_binary_operation(id, node),

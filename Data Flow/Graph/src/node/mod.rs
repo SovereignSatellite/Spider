@@ -2,7 +2,7 @@ use alloc::boxed::Box;
 
 use self::{
 	base::{
-		Call, DataDrop, DataNew, ElementsDrop, ElementsNew, GlobalGet, GlobalNew, GlobalSet, Host,
+		Apply, DataDrop, DataNew, ElementsDrop, ElementsNew, GlobalGet, GlobalNew, GlobalSet, Host,
 		Identity, IntegerBinaryOperation, IntegerCompareOperation, IntegerConvertToNumber,
 		IntegerExtend, IntegerNarrow, IntegerTransmuteToNumber, IntegerUnaryOperation,
 		IntegerWiden, MemoryCopy, MemoryFill, MemoryGrow, MemoryInit, MemoryLoad, MemoryNew,
@@ -61,15 +61,15 @@ pub enum Node {
 	Trap,
 	Null,
 
-	Identity(Identity),
-
 	I32(i32),
 	I64(i64),
 	F32(f32),
 	F64(f64),
 
-	Call(Call),
+	Identity(Identity),
 	Merge(Merge),
+
+	Apply(Apply),
 
 	RefIsNull(RefIsNull),
 

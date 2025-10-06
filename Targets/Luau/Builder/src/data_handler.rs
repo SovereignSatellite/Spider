@@ -201,7 +201,7 @@ impl DataHandler {
 		self.load(node.source)
 	}
 
-	pub fn load_call(&mut self, node: &base::Call) -> Expression {
+	pub fn load_call(&mut self, node: &base::Apply) -> Expression {
 		let end = node.arguments.len() - usize::from(node.states);
 		let call = Call {
 			function: self.load(node.function),
@@ -209,13 +209,6 @@ impl DataHandler {
 		};
 
 		Expression::Call(call.into())
-	}
-
-	pub fn load_location(&mut self, location: base::Location) -> Location {
-		Location {
-			reference: self.load(location.reference),
-			offset: self.load(location.offset),
-		}
 	}
 
 	pub fn load_ref_is_null(&mut self, node: base::RefIsNull) -> Expression {
@@ -425,6 +418,13 @@ impl DataHandler {
 		};
 
 		Expression::GlobalGet(expression.into())
+	}
+
+	pub fn load_location(&mut self, location: base::Location) -> Location {
+		Location {
+			reference: self.load(location.reference),
+			offset: self.load(location.offset),
+		}
 	}
 
 	pub fn load_table_new(&mut self, node: base::TableNew) -> Expression {

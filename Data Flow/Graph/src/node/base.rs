@@ -27,15 +27,15 @@ pub struct Identity {
 	pub source: Link,
 }
 
-pub struct Call {
+pub struct Merge {
+	pub states: Vec<Link>,
+}
+
+pub struct Apply {
 	pub function: Link,
 	pub arguments: Vec<Link>,
 	pub results: u16,
 	pub states: u16,
-}
-
-pub struct Merge {
-	pub states: Vec<Link>,
 }
 
 #[derive(Clone, Copy)]

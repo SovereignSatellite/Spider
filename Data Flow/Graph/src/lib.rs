@@ -10,7 +10,7 @@ use alloc::{boxed::Box, sync::Arc, vec::Vec};
 
 use self::node::{
 	base::{
-		Call, DataDrop, DataNew, ElementsDrop, ElementsNew, ExtendType, GlobalGet, GlobalNew,
+		Apply, DataDrop, DataNew, ElementsDrop, ElementsNew, ExtendType, GlobalGet, GlobalNew,
 		GlobalSet, Identity, IntegerBinaryOperation, IntegerBinaryOperator,
 		IntegerCompareOperation, IntegerCompareOperator, IntegerConvertToNumber, IntegerExtend,
 		IntegerNarrow, IntegerTransmuteToNumber, IntegerType, IntegerUnaryOperation,
@@ -242,12 +242,6 @@ impl DataFlowGraph {
 		Link(self.add_node(Node::Null), 0)
 	}
 
-	pub fn add_identity(&mut self, source: Link) -> Link {
-		let node = Node::Identity(Identity { source });
-
-		Link(self.add_node(node), 0)
-	}
-
 	pub fn add_i32(&mut self, value: i32) -> Link {
 		let node = Node::I32(value);
 
@@ -272,20 +266,26 @@ impl DataFlowGraph {
 		Link(self.add_node(node), 0)
 	}
 
-	pub fn add_ref_is_null(&mut self, source: Link) -> Link {
-		let node = Node::RefIsNull(RefIsNull { source });
+	pub fn add_identity(&mut self, source: Link) -> Link {
+		let node = Node::Identity(Identity { source });
 
 		Link(self.add_node(node), 0)
 	}
 
-	pub fn add_call(
+	pub fn add_merge(&mut self, states: Vec<Link>) -> Link {
+		let node = Node::Merge(Merge { states });
+
+		Link(self.add_node(node), 0)
+	}
+
+	pub fn add_apply(
 		&mut self,
 		function: Link,
 		arguments: Vec<Link>,
 		results: u16,
 		states: u16,
 	) -> u32 {
-		let node = Node::Call(Call {
+		let node = Node::Apply(Apply {
 			function,
 			arguments,
 			results,
@@ -295,8 +295,8 @@ impl DataFlowGraph {
 		self.add_node(node)
 	}
 
-	pub fn add_merge(&mut self, states: Vec<Link>) -> Link {
-		let node = Node::Merge(Merge { states });
+	pub fn add_ref_is_null(&mut self, source: Link) -> Link {
+		let node = Node::RefIsNull(RefIsNull { source });
 
 		Link(self.add_node(node), 0)
 	}

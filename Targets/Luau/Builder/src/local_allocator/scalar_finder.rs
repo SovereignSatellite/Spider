@@ -31,11 +31,11 @@ pub fn result_count_of(node: &Node) -> u16 {
 		| Node::Import(_)
 		| Node::Trap
 		| Node::Null
-		| Node::Identity(_)
 		| Node::I32(_)
 		| Node::I64(_)
 		| Node::F32(_)
 		| Node::F64(_)
+		| Node::Identity(_)
 		| Node::RefIsNull(_)
 		| Node::IntegerUnaryOperation(_)
 		| Node::IntegerBinaryOperation(_)
@@ -65,7 +65,7 @@ pub fn result_count_of(node: &Node) -> u16 {
 		| Node::MemoryGrow(_)
 		| Node::DataNew(_) => 1,
 
-		Node::Call(node) => node.results,
+		Node::Apply(node) => node.results,
 	}
 }
 
@@ -99,7 +99,7 @@ impl ScalarFinder {
 		// of these expressions.
 		if !matches!(
 			node,
-			Node::Call(_) | Node::TableGrow(_) | Node::MemoryGrow(_)
+			Node::Apply(_) | Node::TableGrow(_) | Node::MemoryGrow(_)
 		) {
 			return;
 		}

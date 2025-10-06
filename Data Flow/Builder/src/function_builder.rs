@@ -170,8 +170,8 @@ impl FunctionBuilder {
 
 		let function_type = load_type_from_result(result);
 		let function = self.build_data_flow(graph, function_type, global_state);
-		let call = graph.add_call(Link(function, 0), Vec::new(), 1, 0);
+		let apply = graph.add_apply(Link(function, 0), Vec::new(), 1, 0);
 
-		Link(call, 0)
+		Link(apply, 0)
 	}
 }

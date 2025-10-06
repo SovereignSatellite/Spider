@@ -1,7 +1,7 @@
 use data_flow_graph::{
 	DataFlowGraph, Link, Node,
 	base::{
-		Call, DataDrop, ElementsDrop, GlobalGet, GlobalSet, Identity, MemoryCopy, MemoryFill,
+		Apply, DataDrop, ElementsDrop, GlobalGet, GlobalSet, Identity, MemoryCopy, MemoryFill,
 		MemoryGrow, MemoryInit, MemoryLoad, MemorySize, MemoryStore, Merge, TableCopy, TableFill,
 		TableGet, TableGrow, TableInit, TableSet, TableSize,
 	},
@@ -134,8 +134,16 @@ fn handle_identity(assignments: &mut HashMap<Link, Link>, id: u32, node: Identit
 	assignments.insert(source, Link(id, 0));
 }
 
-fn handle_call(assignments: &mut HashMap<Link, Link>, id: u32, node: &Call) {
-	let Call {
+fn handle_merge(assignments: &mut HashMap<Link, Link>, node: &Merge) {
+	let Merge { states } = node;
+
+	for &state in states {
+		let _ = assignments.try_insert(state, Link::DANGLING);
+	}
+}
+
+fn handle_apply(assignments: &mut HashMap<Link, Link>, id: u32, node: &Apply) {
+	let Apply {
 		ref arguments,
 		results,
 		states,
@@ -152,14 +160,6 @@ fn handle_call(assignments: &mut HashMap<Link, Link>, id: u32, node: &Call) {
 	}
 
 	assignments.extend(arguments.copied().zip(states));
-}
-
-fn handle_merge(assignments: &mut HashMap<Link, Link>, node: &Merge) {
-	let Merge { states } = node;
-
-	for &state in states {
-		let _ = assignments.try_insert(state, Link::DANGLING);
-	}
 }
 
 fn handle_global_get(assignments: &mut HashMap<Link, Link>, id: u32, node: GlobalGet) {
@@ -357,8 +357,8 @@ fn handle_node(assignments: &mut HashMap<Link, Link>, graph: &DataFlowGraph, id:
 		Node::Trap => handle_trap(assignments, id),
 
 		Node::Identity(node) => handle_identity(assignments, id, node),
-		Node::Call(ref node) => handle_call(assignments, id, node),
 		Node::Merge(ref node) => handle_merge(assignments, node),
+		Node::Apply(ref node) => handle_apply(assignments, id, node),
 		Node::GlobalGet(node) => handle_global_get(assignments, id, node),
 		Node::GlobalSet(node) => handle_global_set(assignments, graph, id, node),
 		Node::TableGet(node) => handle_table_get(assignments, id, node),
