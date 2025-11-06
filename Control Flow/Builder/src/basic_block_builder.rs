@@ -146,24 +146,8 @@ impl BasicBlockBuilder {
 		let on_true = self.stack_builder.pull_local();
 		let destination = self.stack_builder.push_local();
 
-		let condition = self.code_builder.add_local_branch(condition, 2);
-
-		self.code_builder.add_local_set(destination, on_false);
-
-		let on_false = self.code_builder.add_basic_block(1);
-
-		self.code_builder.add_local_set(destination, on_true);
-
-		let on_true = self.code_builder.add_basic_block(1);
-
 		self.code_builder
-			.set_jump_destination(on_false, 0, on_true + 1);
-
-		self.code_builder
-			.set_jump_destination(condition, 0, on_false);
-
-		self.code_builder
-			.set_jump_destination(condition, 1, on_true);
+			.add_select(destination, condition, on_false, on_true);
 	}
 
 	fn handle_local_get(&mut self, local: u32) {
