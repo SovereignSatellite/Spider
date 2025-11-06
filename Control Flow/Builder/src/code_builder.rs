@@ -115,20 +115,32 @@ impl CodeBuilder {
 		self.add_basic_block(successors)
 	}
 
+	pub fn add_if<F, T>(&mut self, condition: u16, on_false: F, on_true: T)
+	where
+		F: FnOnce(&mut Self),
+		T: FnOnce(&mut Self),
+	{
+		let condition_id = self.add_local_branch(condition, 2);
+
+		on_false(self);
+
+		let false_id = self.add_basic_block(1);
+
+		on_true(self);
+
+		let true_id = self.add_basic_block(1);
+
+		self.set_jump_destination(condition_id, 0, condition_id + 1);
+		self.set_jump_destination(condition_id, 1, false_id + 1);
+		self.set_jump_destination(false_id, 0, true_id + 1);
+	}
+
 	pub fn add_select(&mut self, destination: u16, condition: u16, on_false: u16, on_true: u16) {
-		let condition = self.add_local_branch(condition, 2);
-
-		self.add_local_set(destination, on_false);
-
-		let on_false = self.add_basic_block(1);
-
-		self.add_local_set(destination, on_true);
-
-		let on_true = self.add_basic_block(1);
-
-		self.set_jump_destination(on_false, 0, on_true + 1);
-		self.set_jump_destination(condition, 0, on_false);
-		self.set_jump_destination(condition, 1, on_true);
+		self.add_if(
+			condition,
+			|this| this.add_local_set(destination, on_false),
+			|this| this.add_local_set(destination, on_true),
+		);
 	}
 
 	pub fn try_add_stack_adjustment(&mut self, base: u16, top: u16, count: u16) -> bool {
