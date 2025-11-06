@@ -551,6 +551,24 @@ impl CodeBuilder {
 		self.instructions.push(instruction);
 	}
 
+	pub fn apply_memory_offset(&mut self, destination: u16, offset: u64) {
+		if offset == 0 {
+			return;
+		}
+
+		let offset = u32::try_from(offset).unwrap();
+		let offset = i32::from_ne_bytes(offset.to_ne_bytes());
+
+		self.add_i32_constant(SHARED_LOCAL, offset);
+		self.add_integer_binary_operation(
+			destination,
+			destination,
+			SHARED_LOCAL,
+			IntegerType::I32,
+			IntegerBinaryOperator::Add,
+		);
+	}
+
 	pub fn add_memory_load(&mut self, destination: u16, source: Location, r#type: LoadType) {
 		let instruction = Instruction::MemoryLoad(MemoryLoad {
 			destination,

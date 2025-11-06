@@ -191,31 +191,14 @@ impl BasicBlockBuilder {
 		self.code_builder.add_global_set(destination, source);
 	}
 
-	fn add_memory_offset(&mut self, destination: u16, offset: u64) {
-		if offset == 0 {
-			return;
-		}
-
-		let offset = u32::try_from(offset).unwrap();
-		let offset = i32::from_ne_bytes(offset.to_ne_bytes());
-
-		self.code_builder.add_i32_constant(SHARED_LOCAL, offset);
-		self.code_builder.add_integer_binary_operation(
-			destination,
-			destination,
-			SHARED_LOCAL,
-			IntegerType::I32,
-			IntegerBinaryOperator::Add,
-		);
-	}
-
 	fn handle_load(&mut self, info: MemArg, r#type: LoadType) {
 		let source = Location {
 			reference: info.memory.try_into().unwrap(),
 			offset: self.stack_builder.pull_local(),
 		};
 
-		self.add_memory_offset(source.offset, info.offset);
+		self.code_builder
+			.apply_memory_offset(source.offset, info.offset);
 
 		let destination = self.stack_builder.push_local();
 
@@ -230,7 +213,8 @@ impl BasicBlockBuilder {
 			offset: self.stack_builder.pull_local(),
 		};
 
-		self.add_memory_offset(destination.offset, info.offset);
+		self.code_builder
+			.apply_memory_offset(destination.offset, info.offset);
 
 		self.code_builder
 			.add_memory_store(destination, source, r#type);
