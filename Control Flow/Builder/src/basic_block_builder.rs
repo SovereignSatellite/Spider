@@ -275,20 +275,28 @@ impl BasicBlockBuilder {
 		self.code_builder.add_f64_constant(destination, data.into());
 	}
 
-	fn handle_integer_equals_zero(&mut self, r#type: IntegerType) {
+	fn handle_i32_equals_zero(&mut self) {
 		let lhs = self.stack_builder.pull_local();
 		let destination = self.stack_builder.push_local();
 
-		match r#type {
-			IntegerType::I32 => self.code_builder.add_i32_constant(SHARED_LOCAL, 0),
-			IntegerType::I64 => self.code_builder.add_i64_constant(SHARED_LOCAL, 0),
-		}
+		self.code_builder.add_i32_compare_constant(
+			destination,
+			lhs,
+			0,
+			IntegerCompareOperator::Equal,
+		);
+	}
 
+	fn handle_i64_equals_zero(&mut self) {
+		let lhs = self.stack_builder.pull_local();
+		let destination = self.stack_builder.push_local();
+
+		self.code_builder.add_i64_constant(SHARED_LOCAL, 0);
 		self.code_builder.add_integer_compare_operation(
 			destination,
 			lhs,
 			SHARED_LOCAL,
-			r#type,
+			IntegerType::I64,
 			IntegerCompareOperator::Equal,
 		);
 	}
@@ -731,7 +739,7 @@ impl BasicBlockBuilder {
 			Operator::I64Const { value } => self.handle_i64_const(value),
 			Operator::F32Const { value } => self.handle_f32_const(value),
 			Operator::F64Const { value } => self.handle_f64_const(value),
-			Operator::I32Eqz => self.handle_integer_equals_zero(IntegerType::I32),
+			Operator::I32Eqz => self.handle_i32_equals_zero(),
 			Operator::I32Eq => self.handle_i32_compare(IntegerCompareOperator::Equal),
 			Operator::I32Ne => self.handle_i32_compare(IntegerCompareOperator::NotEqual),
 			Operator::I32LtS => {
@@ -758,7 +766,7 @@ impl BasicBlockBuilder {
 			Operator::I32GeU => {
 				self.handle_i32_compare(IntegerCompareOperator::GreaterThanEqual { signed: false });
 			}
-			Operator::I64Eqz => self.handle_integer_equals_zero(IntegerType::I64),
+			Operator::I64Eqz => self.handle_i64_equals_zero(),
 			Operator::I64Eq => self.handle_i64_compare(IntegerCompareOperator::Equal),
 			Operator::I64Ne => self.handle_i64_compare(IntegerCompareOperator::NotEqual),
 			Operator::I64LtS => {

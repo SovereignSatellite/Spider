@@ -16,7 +16,7 @@ use control_flow_graph::{
 };
 use list::resizable::Resizable;
 
-use crate::stack_builder::{Jump, Level};
+use crate::stack_builder::{Jump, Level, SHARED_LOCAL};
 
 fn fill_predecessors(basic_blocks: &mut [BasicBlock]) {
 	for predecessor_usize in 0..basic_blocks.len() {
@@ -272,6 +272,23 @@ impl CodeBuilder {
 		});
 
 		self.instructions.push(instruction);
+	}
+
+	pub fn add_i32_compare_constant(
+		&mut self,
+		destination: u16,
+		lhs: u16,
+		rhs: i32,
+		operator: IntegerCompareOperator,
+	) {
+		self.add_i32_constant(SHARED_LOCAL, rhs);
+		self.add_integer_compare_operation(
+			destination,
+			lhs,
+			SHARED_LOCAL,
+			IntegerType::I32,
+			operator,
+		);
 	}
 
 	pub fn add_integer_narrow(&mut self, destination: u16, source: u16) {
