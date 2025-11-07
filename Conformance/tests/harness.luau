@@ -62,7 +62,7 @@ end
 -- SECTION assert_ref_null
 local function hn_assert_ref_null(source: unknown)
 	if source ~= nil then
-		error(string.format("`%s` should be null", source), 2)
+		error(string.format("`%*` should be null", source), 2)
 	end
 end
 
