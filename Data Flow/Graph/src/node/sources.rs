@@ -5,14 +5,13 @@ use crate::DataFlowGraph;
 use super::{
 	Link, Node,
 	base::{
-		Apply, DataDrop, DataNew, ElementsDrop, ElementsNew, GlobalGet, GlobalNew, GlobalSet,
-		Identity, IntegerBinaryOperation, IntegerCompareOperation, IntegerConvertToNumber,
-		IntegerExtend, IntegerNarrow, IntegerTransmuteToNumber, IntegerUnaryOperation,
-		IntegerWiden, Location, MemoryCopy, MemoryFill, MemoryGrow, MemoryInit, MemoryLoad,
-		MemoryNew, MemorySize, MemoryStore, Merge, NumberBinaryOperation, NumberCompareOperation,
-		NumberNarrow, NumberTransmuteToInteger, NumberTruncateToInteger, NumberUnaryOperation,
-		NumberWiden, RefIsNull, TableCopy, TableFill, TableGet, TableGrow, TableInit, TableNew,
-		TableSet, TableSize,
+		Apply, GlobalGet, GlobalNew, GlobalSet, Identity, IntegerBinaryOperation,
+		IntegerCompareOperation, IntegerConvertToNumber, IntegerExtend, IntegerNarrow,
+		IntegerTransmuteToNumber, IntegerUnaryOperation, IntegerWiden, Location, MemoryCopy,
+		MemoryDrop, MemoryFill, MemoryGrow, MemoryLoad, MemoryNew, MemorySize, MemoryStore, Merge,
+		NumberBinaryOperation, NumberCompareOperation, NumberNarrow, NumberTransmuteToInteger,
+		NumberTruncateToInteger, NumberUnaryOperation, NumberWiden, RefIsNull, TableCopy,
+		TableDrop, TableFill, TableGet, TableGrow, TableNew, TableSet, TableSize,
 	},
 	control::{
 		Export, GammaIn, GammaOut, Import, LambdaIn, LambdaOut, OmegaIn, OmegaOut, RegionIn,
@@ -37,6 +36,7 @@ macro_rules! for_each_visit {
 			Self::Host(host) => host.$visit(&mut $handler),
 			Self::Trap | Self::Null | Self::I32(_) | Self::I64(_) | Self::F32(_) | Self::F64(_) => {
 			}
+
 			Self::Identity(node) => node.$visit($handler),
 			Self::Merge(node) => node.$visit($handler),
 			Self::Apply(node) => node.$visit($handler),
@@ -66,9 +66,7 @@ macro_rules! for_each_visit {
 			Self::TableGrow(node) => node.$visit($handler),
 			Self::TableFill(node) => node.$visit($handler),
 			Self::TableCopy(node) => node.$visit($handler),
-			Self::TableInit(node) => node.$visit($handler),
-			Self::ElementsNew(node) => node.$visit($handler),
-			Self::ElementsDrop(node) => node.$visit($handler),
+			Self::TableDrop(node) => node.$visit($handler),
 			Self::MemoryNew(node) => node.$visit($handler),
 			Self::MemoryLoad(node) => node.$visit($handler),
 			Self::MemoryStore(node) => node.$visit($handler),
@@ -76,9 +74,7 @@ macro_rules! for_each_visit {
 			Self::MemoryGrow(node) => node.$visit($handler),
 			Self::MemoryFill(node) => node.$visit($handler),
 			Self::MemoryCopy(node) => node.$visit($handler),
-			Self::MemoryInit(node) => node.$visit($handler),
-			Self::DataNew(node) => node.$visit($handler),
-			Self::DataDrop(node) => node.$visit($handler),
+			Self::MemoryDrop(node) => node.$visit($handler),
 		}
 	};
 }
@@ -171,7 +167,6 @@ impl LambdaOut {
 	}
 }
 
-// TODO: Dereference at the source where possible.
 impl RegionIn {
 	fn ports_output(&self, graph: &DataFlowGraph) -> usize {
 		graph.get(self.input).as_gamma_in().unwrap().ports_output()
@@ -1474,14 +1469,16 @@ impl GlobalSet {
 }
 
 impl TableNew {
-	fn for_each_id<H: FnMut(u32)>(self, mut handler: H) {
+	fn for_each_id<H: FnMut(u32)>(&self, mut handler: H) {
 		let Self {
 			initializer,
 			minimum: _,
 			maximum: _,
 		} = self;
 
-		handler(initializer.0);
+		for item in initializer {
+			handler(item.0.0);
+		}
 	}
 
 	fn for_each_mut_id<H: FnMut(&mut u32)>(&mut self, mut handler: H) {
@@ -1491,17 +1488,21 @@ impl TableNew {
 			maximum: _,
 		} = self;
 
-		handler(&mut initializer.0);
+		for item in initializer {
+			handler(&mut item.0.0);
+		}
 	}
 
-	fn for_each_argument<H: FnMut(Link)>(self, mut handler: H) {
+	fn for_each_argument<H: FnMut(Link)>(&self, mut handler: H) {
 		let Self {
 			initializer,
 			minimum: _,
 			maximum: _,
 		} = self;
 
-		handler(initializer);
+		for item in initializer {
+			handler(item.0);
+		}
 	}
 
 	fn for_each_mut_argument<H: FnMut(&mut Link)>(&mut self, mut handler: H) {
@@ -1511,7 +1512,9 @@ impl TableNew {
 			maximum: _,
 		} = self;
 
-		handler(initializer);
+		for item in initializer {
+			handler(&mut item.0);
+		}
 	}
 }
 
@@ -1775,86 +1778,7 @@ impl TableCopy {
 	}
 }
 
-impl TableInit {
-	pub const DESTINATION_STATE_PORT: u16 = 0;
-	pub const SOURCE_STATE_PORT: u16 = 1;
-
-	fn for_each_id<H: FnMut(u32)>(self, mut handler: H) {
-		let Self {
-			destination,
-			source,
-			size,
-		} = self;
-
-		destination.for_each_id(&mut handler);
-		source.for_each_id(&mut handler);
-		handler(size.0);
-	}
-
-	fn for_each_mut_id<H: FnMut(&mut u32)>(&mut self, mut handler: H) {
-		let Self {
-			destination,
-			source,
-			size,
-		} = self;
-
-		destination.for_each_mut_id(&mut handler);
-		source.for_each_mut_id(&mut handler);
-		handler(&mut size.0);
-	}
-
-	fn for_each_argument<H: FnMut(Link)>(self, mut handler: H) {
-		let Self {
-			destination,
-			source,
-			size,
-		} = self;
-
-		destination.for_each_argument(&mut handler);
-		source.for_each_argument(&mut handler);
-		handler(size);
-	}
-
-	fn for_each_mut_argument<H: FnMut(&mut Link)>(&mut self, mut handler: H) {
-		let Self {
-			destination,
-			source,
-			size,
-		} = self;
-
-		destination.for_each_mut_argument(&mut handler);
-		source.for_each_mut_argument(&mut handler);
-		handler(size);
-	}
-}
-
-impl ElementsNew {
-	fn for_each_id<H: FnMut(u32)>(&self, handler: H) {
-		let Self { content } = self;
-
-		for_each_link_list(content, handler);
-	}
-
-	fn for_each_mut_id<H: FnMut(&mut u32)>(&mut self, handler: H) {
-		let Self { content } = self;
-
-		for_each_mut_link_list(content, handler);
-	}
-
-	fn for_each_argument<H: FnMut(Link)>(&self, handler: H) {
-		let Self { content } = self;
-
-		content.iter().copied().for_each(handler);
-	}
-
-	fn for_each_mut_argument<H: FnMut(&mut Link)>(&mut self, handler: H) {
-		let Self { content } = self;
-
-		content.iter_mut().for_each(handler);
-	}
-}
-
-impl ElementsDrop {
+impl TableDrop {
 	pub const STATE_PORT: u16 = 0;
 
 	fn for_each_id<H: FnMut(u32)>(self, mut handler: H) {
@@ -1883,29 +1807,33 @@ impl ElementsDrop {
 }
 
 impl MemoryNew {
-	fn for_each_id<H: FnMut(u32)>(self, _handler: H) {
+	fn for_each_id<H: FnMut(u32)>(&self, _handler: H) {
 		let Self {
+			initializer: _,
 			minimum: _,
 			maximum: _,
 		} = self;
 	}
 
-	fn for_each_mut_id<H: FnMut(&mut u32)>(self, _handler: H) {
+	fn for_each_mut_id<H: FnMut(&mut u32)>(&self, _handler: H) {
 		let Self {
+			initializer: _,
 			minimum: _,
 			maximum: _,
 		} = self;
 	}
 
-	fn for_each_argument<H: FnMut(Link)>(self, _handler: H) {
+	fn for_each_argument<H: FnMut(Link)>(&self, _handler: H) {
 		let Self {
+			initializer: _,
 			minimum: _,
 			maximum: _,
 		} = self;
 	}
 
-	fn for_each_mut_argument<H: FnMut(&mut Link)>(self, _handler: H) {
+	fn for_each_mut_argument<H: FnMut(&mut Link)>(&self, _handler: H) {
 		let Self {
+			initializer: _,
 			minimum: _,
 			maximum: _,
 		} = self;
@@ -2156,78 +2084,7 @@ impl MemoryCopy {
 	}
 }
 
-impl MemoryInit {
-	pub const DESTINATION_STATE_PORT: u16 = 0;
-	pub const SOURCE_STATE_PORT: u16 = 1;
-
-	fn for_each_id<H: FnMut(u32)>(self, mut handler: H) {
-		let Self {
-			destination,
-			source,
-			size,
-		} = self;
-
-		destination.for_each_id(&mut handler);
-		source.for_each_id(&mut handler);
-		handler(size.0);
-	}
-
-	fn for_each_mut_id<H: FnMut(&mut u32)>(&mut self, mut handler: H) {
-		let Self {
-			destination,
-			source,
-			size,
-		} = self;
-
-		destination.for_each_mut_id(&mut handler);
-		source.for_each_mut_id(&mut handler);
-		handler(&mut size.0);
-	}
-
-	fn for_each_argument<H: FnMut(Link)>(self, mut handler: H) {
-		let Self {
-			destination,
-			source,
-			size,
-		} = self;
-
-		destination.for_each_argument(&mut handler);
-		source.for_each_argument(&mut handler);
-		handler(size);
-	}
-
-	fn for_each_mut_argument<H: FnMut(&mut Link)>(&mut self, mut handler: H) {
-		let Self {
-			destination,
-			source,
-			size,
-		} = self;
-
-		destination.for_each_mut_argument(&mut handler);
-		source.for_each_mut_argument(&mut handler);
-		handler(size);
-	}
-}
-
-impl DataNew {
-	fn for_each_id<H: FnMut(u32)>(&self, _handler: H) {
-		let Self { content: _ } = self;
-	}
-
-	fn for_each_mut_id<H: FnMut(&mut u32)>(&self, _handler: H) {
-		let Self { content: _ } = self;
-	}
-
-	fn for_each_argument<H: FnMut(Link)>(&self, _handler: H) {
-		let Self { content: _ } = self;
-	}
-
-	fn for_each_mut_argument<H: FnMut(&mut Link)>(&self, _handler: H) {
-		let Self { content: _ } = self;
-	}
-}
-
-impl DataDrop {
+impl MemoryDrop {
 	pub const STATE_PORT: u16 = 0;
 
 	fn for_each_id<H: FnMut(u32)>(self, mut handler: H) {

@@ -10,16 +10,15 @@ use alloc::{boxed::Box, sync::Arc, vec::Vec};
 
 use self::node::{
 	base::{
-		Apply, DataDrop, DataNew, ElementsDrop, ElementsNew, ExtendType, GlobalGet, GlobalNew,
-		GlobalSet, Identity, IntegerBinaryOperation, IntegerBinaryOperator,
-		IntegerCompareOperation, IntegerCompareOperator, IntegerConvertToNumber, IntegerExtend,
-		IntegerNarrow, IntegerTransmuteToNumber, IntegerType, IntegerUnaryOperation,
-		IntegerUnaryOperator, IntegerWiden, LoadType, Location, MemoryCopy, MemoryFill, MemoryGrow,
-		MemoryInit, MemoryLoad, MemoryNew, MemorySize, MemoryStore, Merge, NumberBinaryOperation,
-		NumberBinaryOperator, NumberCompareOperation, NumberCompareOperator, NumberNarrow,
-		NumberTransmuteToInteger, NumberTruncateToInteger, NumberType, NumberUnaryOperation,
-		NumberUnaryOperator, NumberWiden, RefIsNull, StoreType, TableCopy, TableFill, TableGet,
-		TableGrow, TableInit, TableNew, TableSet, TableSize,
+		Apply, ExtendType, GlobalGet, GlobalNew, GlobalSet, Identity, IntegerBinaryOperation,
+		IntegerBinaryOperator, IntegerCompareOperation, IntegerCompareOperator,
+		IntegerConvertToNumber, IntegerExtend, IntegerNarrow, IntegerTransmuteToNumber,
+		IntegerType, IntegerUnaryOperation, IntegerUnaryOperator, IntegerWiden, LoadType, Location,
+		MemoryCopy, MemoryDrop, MemoryFill, MemoryGrow, MemoryLoad, MemoryNew, MemorySize,
+		MemoryStore, Merge, NumberBinaryOperation, NumberBinaryOperator, NumberCompareOperation,
+		NumberCompareOperator, NumberNarrow, NumberTransmuteToInteger, NumberTruncateToInteger,
+		NumberType, NumberUnaryOperation, NumberUnaryOperator, NumberWiden, RefIsNull, StoreType,
+		TableCopy, TableDrop, TableFill, TableGet, TableGrow, TableNew, TableSet, TableSize,
 	},
 	control::{
 		Export, FunctionType, GammaIn, GammaOut, Import, LambdaIn, LambdaOut, OmegaIn, OmegaOut,
@@ -502,7 +501,12 @@ impl DataFlowGraph {
 		Link(self.add_node(node), GlobalSet::STATE_PORT)
 	}
 
-	pub fn add_table_new(&mut self, initializer: Link, minimum: u32, maximum: u32) -> Link {
+	pub fn add_table_new(
+		&mut self,
+		initializer: Vec<(Link, u32)>,
+		minimum: u32,
+		maximum: u32,
+	) -> Link {
 		let node = Node::TableNew(TableNew {
 			initializer,
 			minimum,
@@ -589,39 +593,23 @@ impl DataFlowGraph {
 		)
 	}
 
-	pub fn add_table_init(
+	pub fn add_table_drop(&mut self, source: Link) -> Link {
+		let node = Node::TableDrop(TableDrop { source });
+
+		Link(self.add_node(node), TableDrop::STATE_PORT)
+	}
+
+	pub fn add_memory_new(
 		&mut self,
-		destination: Location,
-		source: Location,
-		size: Link,
-	) -> (Link, Link) {
-		let node = Node::TableInit(TableInit {
-			destination,
-			source,
-			size,
+		initializer: Vec<(Arc<[u8]>, u32)>,
+		minimum: u32,
+		maximum: u32,
+	) -> Link {
+		let node = Node::MemoryNew(MemoryNew {
+			initializer,
+			minimum,
+			maximum,
 		});
-		let id = self.add_node(node);
-
-		(
-			Link(id, TableInit::DESTINATION_STATE_PORT),
-			Link(id, TableInit::SOURCE_STATE_PORT),
-		)
-	}
-
-	pub fn add_elements_new(&mut self, content: Vec<Link>) -> Link {
-		let node = Node::ElementsNew(ElementsNew { content });
-
-		Link(self.add_node(node), 0)
-	}
-
-	pub fn add_elements_drop(&mut self, source: Link) -> Link {
-		let node = Node::ElementsDrop(ElementsDrop { source });
-
-		Link(self.add_node(node), ElementsDrop::STATE_PORT)
-	}
-
-	pub fn add_memory_new(&mut self, minimum: u32, maximum: u32) -> Link {
-		let node = Node::MemoryNew(MemoryNew { minimum, maximum });
 
 		Link(self.add_node(node), 0)
 	}
@@ -700,35 +688,10 @@ impl DataFlowGraph {
 		)
 	}
 
-	pub fn add_memory_init(
-		&mut self,
-		destination: Location,
-		source: Location,
-		size: Link,
-	) -> (Link, Link) {
-		let node = Node::MemoryInit(MemoryInit {
-			destination,
-			source,
-			size,
-		});
-		let id = self.add_node(node);
-
-		(
-			Link(id, MemoryInit::DESTINATION_STATE_PORT),
-			Link(id, MemoryInit::SOURCE_STATE_PORT),
-		)
-	}
-
-	pub fn add_data_new(&mut self, content: Arc<[u8]>) -> Link {
-		let node = Node::DataNew(DataNew { content });
+	pub fn add_memory_drop(&mut self, source: Link) -> Link {
+		let node = Node::MemoryDrop(MemoryDrop { source });
 
 		Link(self.add_node(node), 0)
-	}
-
-	pub fn add_data_drop(&mut self, source: Link) -> Link {
-		let node = Node::DataDrop(DataDrop { source });
-
-		Link(self.add_node(node), DataDrop::STATE_PORT)
 	}
 }
 

@@ -3,8 +3,8 @@ use core::ops::ControlFlow;
 use crate::{
 	LuauTree,
 	expression::{
-		BooleanToInteger, Call as ExpressionCall, ElementsNew, Expression, Function, GlobalGet,
-		GlobalNew, Import, IntegerBinaryOperation, IntegerCompareOperation, IntegerConvertToNumber,
+		BooleanToInteger, Call as ExpressionCall, Expression, Function, GlobalGet, GlobalNew,
+		Import, IntegerBinaryOperation, IntegerCompareOperation, IntegerConvertToNumber,
 		IntegerExtend, IntegerNarrow, IntegerTransmuteToNumber, IntegerUnaryOperation,
 		IntegerWiden, Location, Match as ExpressionMatch, MemoryGrow, MemoryLoad, MemorySize,
 		NumberBinaryOperation, NumberCompareOperation, NumberNarrow, NumberTransmuteToInteger,
@@ -12,9 +12,9 @@ use crate::{
 		TableGrow, TableNew, TableSize,
 	},
 	statement::{
-		Assign, Call as StatementCall, DataDrop, ElementsDrop, Export, GlobalSet,
-		Match as StatementMatch, MemoryCopy, MemoryFill, MemoryInit, MemoryStore, Repeat, Sequence,
-		Statement, TableCopy, TableFill, TableInit, TableSet,
+		Assign, Call as StatementCall, Export, GlobalSet, Match as StatementMatch, MemoryCopy,
+		MemoryDrop, MemoryFill, MemoryStore, Repeat, Sequence, Statement, TableCopy, TableDrop,
+		TableFill, TableSet,
 	},
 };
 
@@ -311,7 +311,9 @@ impl TableNew {
 			maximum: _,
 		} = self;
 
-		initializer.accept(visitor)
+		initializer
+			.iter()
+			.try_for_each(|item| item.0.accept(visitor))
 	}
 }
 
@@ -342,16 +344,6 @@ impl TableGrow {
 		destination.accept(visitor)?;
 		initializer.accept(visitor)?;
 		size.accept(visitor)
-	}
-}
-
-impl ElementsNew {
-	fn accept<T: Visitor>(&self, visitor: &mut T) -> ControlFlow<T::Output> {
-		let Self { content } = self;
-
-		content
-			.iter()
-			.try_for_each(|element| element.accept(visitor))
 	}
 }
 
@@ -392,8 +384,7 @@ impl Expression {
 			| Self::I64(_)
 			| Self::F32(_)
 			| Self::F64(_)
-			| Self::MemoryNew(_)
-			| Self::DataNew(_) => ControlFlow::Continue(()),
+			| Self::MemoryNew(_) => ControlFlow::Continue(()),
 
 			Self::Function(function) => function.accept(visitor),
 			Self::Scoped(scoped) => scoped.accept(visitor),
@@ -443,7 +434,6 @@ impl Expression {
 			Self::TableGet(table_get) => table_get.accept(visitor),
 			Self::TableSize(table_size) => table_size.accept(visitor),
 			Self::TableGrow(table_grow) => table_grow.accept(visitor),
-			Self::ElementsNew(elements_new) => elements_new.accept(visitor),
 			Self::MemoryLoad(memory_load) => memory_load.accept(visitor),
 			Self::MemorySize(memory_size) => memory_size.accept(visitor),
 			Self::MemoryGrow(memory_grow) => memory_grow.accept(visitor),
@@ -562,21 +552,7 @@ impl TableCopy {
 	}
 }
 
-impl TableInit {
-	fn accept<T: Visitor>(&self, visitor: &mut T) -> ControlFlow<T::Output> {
-		let Self {
-			destination,
-			source,
-			size,
-		} = self;
-
-		destination.accept(visitor)?;
-		source.accept(visitor)?;
-		size.accept(visitor)
-	}
-}
-
-impl ElementsDrop {
+impl TableDrop {
 	fn accept<T: Visitor>(&self, visitor: &mut T) -> ControlFlow<T::Output> {
 		let Self { source } = self;
 
@@ -625,21 +601,7 @@ impl MemoryCopy {
 	}
 }
 
-impl MemoryInit {
-	fn accept<T: Visitor>(&self, visitor: &mut T) -> ControlFlow<T::Output> {
-		let Self {
-			destination,
-			source,
-			size,
-		} = self;
-
-		destination.accept(visitor)?;
-		source.accept(visitor)?;
-		size.accept(visitor)
-	}
-}
-
-impl DataDrop {
+impl MemoryDrop {
 	fn accept<T: Visitor>(&self, visitor: &mut T) -> ControlFlow<T::Output> {
 		let Self { source } = self;
 
@@ -662,13 +624,11 @@ impl Statement {
 			Self::TableSet(table_set) => table_set.accept(visitor),
 			Self::TableFill(table_fill) => table_fill.accept(visitor),
 			Self::TableCopy(table_copy) => table_copy.accept(visitor),
-			Self::TableInit(table_init) => table_init.accept(visitor),
-			Self::ElementsDrop(elements_drop) => elements_drop.accept(visitor),
+			Self::TableDrop(elements_drop) => elements_drop.accept(visitor),
 			Self::MemoryStore(memory_store) => memory_store.accept(visitor),
 			Self::MemoryFill(memory_fill) => memory_fill.accept(visitor),
 			Self::MemoryCopy(memory_copy) => memory_copy.accept(visitor),
-			Self::MemoryInit(memory_init) => memory_init.accept(visitor),
-			Self::DataDrop(data_drop) => data_drop.accept(visitor),
+			Self::MemoryDrop(data_drop) => data_drop.accept(visitor),
 		}
 	}
 }

@@ -589,7 +589,20 @@ impl CodeBuilder {
 		self.instructions.push(instruction);
 	}
 
-	pub fn add_memory_size(&mut self, destination: u16, memory: u16) {
+	// Our IR supports allocation to byte alignment, so we need
+	// to adjust this to work with WebAssembly pages.
+	fn apply_page_size(
+		&mut self,
+		destination: u16,
+		lhs: u16,
+		rhs: u16,
+		operator: IntegerBinaryOperator,
+	) {
+		self.add_i32_constant(rhs, MemorySize::PAGE_SIZE.try_into().unwrap());
+		self.add_integer_binary_operation(destination, lhs, rhs, IntegerType::I32, operator);
+	}
+
+	fn add_memory_size(&mut self, destination: u16, memory: u16) {
 		let instruction = Instruction::MemorySize(MemorySize {
 			destination,
 			memory,
@@ -598,7 +611,17 @@ impl CodeBuilder {
 		self.instructions.push(instruction);
 	}
 
-	pub fn add_memory_grow(&mut self, destination: u16, memory: u16, size: u16) {
+	pub fn add_paged_memory_size(&mut self, destination: u16, memory: u16) {
+		self.add_memory_size(destination, memory);
+		self.apply_page_size(
+			destination,
+			destination,
+			SHARED_LOCAL,
+			IntegerBinaryOperator::Divide { signed: false },
+		);
+	}
+
+	fn add_memory_grow(&mut self, destination: u16, memory: u16, size: u16) {
 		let instruction = Instruction::MemoryGrow(MemoryGrow {
 			destination,
 			memory,
@@ -606,6 +629,48 @@ impl CodeBuilder {
 		});
 
 		self.instructions.push(instruction);
+	}
+
+	fn add_sized_memory_grow(&mut self, destination: u16, memory: u16, size: u16) {
+		self.apply_page_size(
+			SHARED_LOCAL,
+			size,
+			SHARED_LOCAL,
+			IntegerBinaryOperator::Multiply,
+		);
+
+		self.add_memory_grow(destination, memory, SHARED_LOCAL);
+		self.add_i32_compare_constant(SHARED_LOCAL, destination, -1, IntegerCompareOperator::Equal);
+
+		self.add_if(
+			SHARED_LOCAL,
+			|this| {
+				this.apply_page_size(
+					destination,
+					destination,
+					SHARED_LOCAL,
+					IntegerBinaryOperator::Divide { signed: false },
+				);
+			},
+			|_| {},
+		);
+	}
+
+	pub fn add_paged_memory_grow(&mut self, destination: u16, memory: u16, size: u16) {
+		let page_limit = MemorySize::PAGE_LIMIT.try_into().unwrap();
+
+		self.add_i32_compare_constant(
+			SHARED_LOCAL,
+			size,
+			page_limit,
+			IntegerCompareOperator::LessThanEqual { signed: false },
+		);
+
+		self.add_if(
+			SHARED_LOCAL,
+			|this| this.add_i32_constant(destination, -1),
+			|this| this.add_sized_memory_grow(destination, memory, size),
+		);
 	}
 
 	pub fn add_memory_fill(&mut self, destination: Location, byte: u16, size: u16) {

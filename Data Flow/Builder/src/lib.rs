@@ -2,14 +2,15 @@
 
 extern crate alloc;
 
-use alloc::vec::Vec;
+use alloc::{sync::Arc, vec::Vec};
 use control_flow_builder::Types;
+use control_flow_graph::instruction::MemorySize;
 use data_flow_graph::{
 	DataFlowGraph, Link,
 	base::Location,
 	control::{Export, OmegaIn},
 };
-use wasmparser::{ConstExpr, ElementItems, FunctionBody, RecGroup, SectionLimited, ValType};
+use wasmparser::{ConstExpr, ElementItems, FunctionBody, SectionLimited, ValType};
 
 use self::{function_builder::FunctionBuilder, global_state::GlobalState, sections::Sections};
 
@@ -17,6 +18,61 @@ mod control_flow_converter;
 mod function_builder;
 mod global_state;
 mod sections;
+
+fn get_element_count(items: &ElementItems) -> u32 {
+	match items {
+		ElementItems::Functions(section) => section.count(),
+		ElementItems::Expressions(_, section) => section.count(),
+	}
+}
+
+fn add_table_from_type(graph: &mut DataFlowGraph, table_type: wasmparser::TableType) -> Link {
+	let wasmparser::TableType {
+		initial, maximum, ..
+	} = table_type;
+
+	let minimum = initial.try_into().unwrap();
+	let maximum = maximum.map_or(u32::MAX, |maximum| maximum.try_into().unwrap());
+
+	graph.add_table_new(Vec::new(), minimum, maximum)
+}
+
+fn add_table_from_items(graph: &mut DataFlowGraph, items: ElementItems) -> Link {
+	let count = match items {
+		ElementItems::Functions(section) => section.count(),
+		ElementItems::Expressions(_, section) => section.count(),
+	};
+
+	graph.add_table_new(Vec::new(), count, count)
+}
+
+fn add_memory_from_type(graph: &mut DataFlowGraph, memory_type: wasmparser::MemoryType) -> Link {
+	let wasmparser::MemoryType {
+		initial, maximum, ..
+	} = memory_type;
+
+	let page = u32::try_from(MemorySize::PAGE_SIZE).unwrap();
+
+	let minimum = u32::try_from(initial).unwrap().saturating_mul(page);
+	let maximum = maximum.map_or(u32::MAX, |maximum| {
+		u32::try_from(maximum).unwrap().saturating_mul(page)
+	});
+
+	graph.add_memory_new(Vec::new(), minimum, maximum)
+}
+
+fn add_memory_from_data(graph: &mut DataFlowGraph, data: &[u8]) -> Link {
+	let data = Arc::<[u8]>::from(data);
+	let len = data.len().try_into().unwrap();
+
+	graph.add_memory_new(alloc::vec![(data, 0)], len, len)
+}
+
+fn add_global_from_null(graph: &mut DataFlowGraph) -> Link {
+	let null = graph.add_null();
+
+	graph.add_global_new(null)
+}
 
 pub struct DataFlowBuilder {
 	function_builder: FunctionBuilder,
@@ -32,10 +88,6 @@ impl DataFlowBuilder {
 			global_state: GlobalState::new(),
 			types: Types::new(),
 		}
-	}
-
-	fn handle_type_section(&mut self, section: SectionLimited<RecGroup>) {
-		self.types.add_sub_types(section);
 	}
 
 	fn handle_import_section(
@@ -64,14 +116,9 @@ impl DataFlowBuilder {
 
 		self.types.add_functions(section);
 
-		self.global_state.functions.extend(
-			core::iter::repeat_with(|| {
-				let null = graph.add_null();
-
-				graph.add_global_new(null)
-			})
-			.take(len),
-		);
+		self.global_state
+			.functions
+			.extend(core::iter::repeat_with(|| add_global_from_null(graph)).take(len));
 	}
 
 	fn build_expression(
@@ -86,17 +133,7 @@ impl DataFlowBuilder {
 			.build_expression(graph, code, result, &self.types, &self.global_state)
 	}
 
-	fn load_table_node(graph: &mut DataFlowGraph, table_type: wasmparser::TableType) -> Link {
-		let initializer = graph.add_null();
-		let minimum = table_type.initial.try_into().unwrap();
-		let maximum = table_type
-			.maximum
-			.map_or(u32::MAX, |maximum| maximum.try_into().unwrap());
-
-		graph.add_table_new(initializer, minimum, maximum)
-	}
-
-	fn handle_table_declaration(
+	fn handle_table_declarations(
 		&mut self,
 		graph: &mut DataFlowGraph,
 		section: SectionLimited<wasmparser::Table>,
@@ -105,7 +142,7 @@ impl DataFlowBuilder {
 			section
 				.into_iter()
 				.map(Result::unwrap)
-				.map(|wasmparser::Table { ty, .. }| Self::load_table_node(graph, ty)),
+				.map(|wasmparser::Table { ty, .. }| add_table_from_type(graph, ty)),
 		);
 	}
 
@@ -127,7 +164,7 @@ impl DataFlowBuilder {
 		graph.add_table_fill(destination, source, size)
 	}
 
-	fn do_table_fill(
+	fn initialize_table(
 		&mut self,
 		graph: &mut DataFlowGraph,
 		index: usize,
@@ -142,7 +179,7 @@ impl DataFlowBuilder {
 		self.global_state.tables[index] = self.load_table_fill(graph, destination, code, table.ty);
 	}
 
-	fn handle_table_initialization(
+	fn handle_table_initializations(
 		&mut self,
 		graph: &mut DataFlowGraph,
 		section: SectionLimited<wasmparser::Table>,
@@ -150,57 +187,80 @@ impl DataFlowBuilder {
 		let start = self.global_state.tables.len() - usize::try_from(section.count()).unwrap();
 
 		for (offset, table) in section.into_iter().map(Result::unwrap).enumerate() {
-			self.do_table_fill(graph, start + offset, &table);
+			self.initialize_table(graph, start + offset, &table);
 		}
 	}
 
-	fn load_elements_functions(
+	fn handle_element_declarations(
+		&mut self,
+		graph: &mut DataFlowGraph,
+		section: SectionLimited<wasmparser::Element>,
+	) {
+		self.global_state.elements.extend(
+			section
+				.into_iter()
+				.map(Result::unwrap)
+				.map(|wasmparser::Element { items, .. }| add_table_from_items(graph, items)),
+		);
+	}
+
+	fn set_table_functions(
 		&self,
 		graph: &mut DataFlowGraph,
 		section: SectionLimited<u32>,
-	) -> Vec<Link> {
+		mut element: Link,
+	) -> Link {
 		let functions = &self.global_state.functions;
 
-		section
-			.into_iter()
-			.map(Result::unwrap)
-			.map(|index| functions[usize::try_from(index).unwrap()])
-			.map(|link| graph.add_global_get(link).0)
-			.collect()
+		for (function, offset) in section.into_iter().map(Result::unwrap).zip(0..) {
+			let function = functions[usize::try_from(function).unwrap()];
+			let source = graph.add_global_get(function).0;
+			let destination = Location {
+				reference: element,
+				offset: graph.add_i32(offset),
+			};
+
+			element = graph.add_table_set(destination, source);
+		}
+
+		element
 	}
 
-	fn load_elements_expressions(
+	fn set_table_expressions(
 		&mut self,
 		graph: &mut DataFlowGraph,
 		section: SectionLimited<ConstExpr>,
 		r#type: wasmparser::RefType,
-	) -> Vec<Link> {
-		section
-			.into_iter()
-			.map(Result::unwrap)
-			.map(|initializer| self.build_expression(graph, &initializer, ValType::Ref(r#type)))
-			.collect()
+		mut element: Link,
+	) -> Link {
+		for (code, offset) in section.into_iter().map(Result::unwrap).zip(0..) {
+			let source = self.build_expression(graph, &code, ValType::Ref(r#type));
+			let destination = Location {
+				reference: element,
+				offset: graph.add_i32(offset),
+			};
+
+			element = graph.add_table_set(destination, source);
+		}
+
+		element
 	}
 
-	fn load_elements_node(
+	fn initialize_element(
 		&mut self,
 		graph: &mut DataFlowGraph,
 		items: ElementItems,
-	) -> (Link, i32) {
-		let content = match items {
-			ElementItems::Functions(section) => self.load_elements_functions(graph, section),
+		element: Link,
+	) -> Link {
+		match items {
+			ElementItems::Functions(section) => self.set_table_functions(graph, section, element),
 			ElementItems::Expressions(r#type, section) => {
-				self.load_elements_expressions(graph, section, r#type)
+				self.set_table_expressions(graph, section, r#type, element)
 			}
-		};
-
-		let size = u32::try_from(content.len()).unwrap();
-		let size = i32::from_ne_bytes(size.to_ne_bytes());
-
-		(graph.add_elements_new(content), size)
+		}
 	}
 
-	fn load_table_init(
+	fn load_table_copy(
 		&mut self,
 		graph: &mut DataFlowGraph,
 		reference: Link,
@@ -220,10 +280,10 @@ impl DataFlowBuilder {
 
 		let size = graph.add_i32(size);
 
-		graph.add_table_init(destination, source, size).0
+		graph.add_table_copy(destination, source, size).0
 	}
 
-	fn handle_element_kind(
+	fn action_element(
 		&mut self,
 		graph: &mut DataFlowGraph,
 		elements: Link,
@@ -239,53 +299,30 @@ impl DataFlowBuilder {
 				let reference = self.global_state.tables[index];
 
 				self.global_state.tables[index] =
-					self.load_table_init(graph, reference, offset_expr, elements, size);
+					self.load_table_copy(graph, reference, offset_expr, elements, size);
 
-				graph.add_elements_drop(elements)
+				graph.add_table_drop(elements)
 			}
 			wasmparser::ElementKind::Passive => elements,
-			wasmparser::ElementKind::Declared => graph.add_elements_drop(elements),
+			wasmparser::ElementKind::Declared => graph.add_table_drop(elements),
 		}
 	}
 
-	fn handle_element_declaration(
-		&mut self,
-		graph: &mut DataFlowGraph,
-		section: &SectionLimited<wasmparser::Element>,
-	) {
-		let len = section.count().try_into().unwrap();
-
-		self.global_state.elements.extend(
-			core::iter::repeat_with(|| {
-				let null = graph.add_null();
-
-				graph.add_global_new(null)
-			})
-			.take(len),
-		);
-	}
-
-	fn handle_element_initialization(
+	fn handle_element_initializations(
 		&mut self,
 		graph: &mut DataFlowGraph,
 		section: SectionLimited<wasmparser::Element>,
 	) {
 		for (index, element) in section.into_iter().map(Result::unwrap).enumerate() {
-			let (link, size) = self.load_elements_node(graph, element.items);
-			let link = self.handle_element_kind(graph, link, size, &element.kind);
+			let size = get_element_count(&element.items);
+			let size = i32::from_ne_bytes(size.to_ne_bytes());
 
-			self.global_state.elements[index] =
-				graph.add_global_set(self.global_state.elements[index], link);
+			let link = self.global_state.elements[index];
+			let link = self.initialize_element(graph, element.items, link);
+			let link = self.action_element(graph, link, size, &element.kind);
+
+			self.global_state.elements[index] = link;
 		}
-	}
-
-	fn load_memory_node(graph: &mut DataFlowGraph, memory_type: wasmparser::MemoryType) -> Link {
-		let minimum = memory_type.initial.try_into().unwrap();
-		let maximum = memory_type
-			.maximum
-			.map_or(u32::MAX, |maximum| maximum.try_into().unwrap());
-
-		graph.add_memory_new(minimum, maximum)
 	}
 
 	fn handle_memory_section(
@@ -297,11 +334,11 @@ impl DataFlowBuilder {
 			section
 				.into_iter()
 				.map(Result::unwrap)
-				.map(|memory_type| Self::load_memory_node(graph, memory_type)),
+				.map(|memory_type| add_memory_from_type(graph, memory_type)),
 		);
 	}
 
-	fn load_memory_init(
+	fn load_memory_copy(
 		&mut self,
 		graph: &mut DataFlowGraph,
 		reference: Link,
@@ -321,10 +358,23 @@ impl DataFlowBuilder {
 
 		let size = graph.add_i32(size);
 
-		graph.add_memory_init(destination, source, size).0
+		graph.add_memory_copy(destination, source, size).0
 	}
 
-	fn handle_data_kind(
+	fn handle_data_declarations(
+		&mut self,
+		graph: &mut DataFlowGraph,
+		section: SectionLimited<wasmparser::Data>,
+	) {
+		self.global_state.datas.extend(
+			section
+				.into_iter()
+				.map(Result::unwrap)
+				.map(|wasmparser::Data { data, .. }| add_memory_from_data(graph, data)),
+		);
+	}
+
+	fn action_data(
 		&mut self,
 		graph: &mut DataFlowGraph,
 		data: Link,
@@ -341,58 +391,42 @@ impl DataFlowBuilder {
 				let reference = self.global_state.memories[index];
 
 				self.global_state.memories[index] =
-					self.load_memory_init(graph, reference, offset_expr, data, size);
+					self.load_memory_copy(graph, reference, offset_expr, data, size);
 
-				graph.add_data_drop(data)
+				graph.add_memory_drop(data)
 			}
 		}
 	}
 
-	fn handle_data_declaration(
-		&mut self,
-		graph: &mut DataFlowGraph,
-		section: SectionLimited<wasmparser::Data>,
-	) {
-		self.global_state.datas.extend(
-			section
-				.into_iter()
-				.map(Result::unwrap)
-				.map(|wasmparser::Data { data, .. }| graph.add_data_new(data.into())),
-		);
-	}
-
-	fn handle_data_initialization(
+	fn handle_data_initializations(
 		&mut self,
 		graph: &mut DataFlowGraph,
 		section: SectionLimited<wasmparser::Data>,
 	) {
 		for (index, data) in section.into_iter().map(Result::unwrap).enumerate() {
-			let link = self.global_state.datas[index];
 			let size = u32::try_from(data.data.len()).unwrap();
 			let size = i32::from_ne_bytes(size.to_ne_bytes());
 
-			self.global_state.datas[index] = self.handle_data_kind(graph, link, size, &data.kind);
+			let link = self.global_state.datas[index];
+			let link = self.action_data(graph, link, size, &data.kind);
+
+			self.global_state.datas[index] = link;
 		}
 	}
 
-	fn handle_global_declaration(
+	fn handle_global_declarations(
 		&mut self,
 		graph: &mut DataFlowGraph,
 		section: &SectionLimited<wasmparser::Global>,
 	) {
 		let len = section.count().try_into().unwrap();
 
-		self.global_state.globals.extend(
-			core::iter::repeat_with(|| {
-				let null = graph.add_null();
-
-				graph.add_global_new(null)
-			})
-			.take(len),
-		);
+		self.global_state
+			.globals
+			.extend(core::iter::repeat_with(|| add_global_from_null(graph)).take(len));
 	}
 
-	fn do_global_set(
+	fn initialize_global(
 		&mut self,
 		graph: &mut DataFlowGraph,
 		index: usize,
@@ -404,7 +438,7 @@ impl DataFlowBuilder {
 			graph.add_global_set(self.global_state.globals[index], source);
 	}
 
-	fn handle_global_initialization(
+	fn handle_global_initializations(
 		&mut self,
 		graph: &mut DataFlowGraph,
 		section: SectionLimited<wasmparser::Global>,
@@ -412,7 +446,7 @@ impl DataFlowBuilder {
 		let start = self.global_state.globals.len() - usize::try_from(section.count()).unwrap();
 
 		for (offset, global) in section.into_iter().map(Result::unwrap).enumerate() {
-			self.do_global_set(graph, start + offset, &global);
+			self.initialize_global(graph, start + offset, &global);
 		}
 	}
 
@@ -521,11 +555,9 @@ impl DataFlowBuilder {
 	pub fn run(&mut self, graph: &mut DataFlowGraph, data: &[u8]) -> u32 {
 		let sections = Sections::load(data);
 
-		graph.inner_mut().clear();
 		self.global_state.clear();
 		self.types.clear();
-
-		self.handle_type_section(sections.types);
+		self.types.add_sub_types(sections.types);
 
 		let omega_in = graph.add_omega_in();
 
@@ -533,20 +565,20 @@ impl DataFlowBuilder {
 
 		let function_imports = self.global_state.functions.len();
 
-		self.handle_table_declaration(graph, sections.tables.clone());
-		self.handle_element_declaration(graph, &sections.elements);
-		self.handle_data_declaration(graph, sections.datas.clone());
-		self.handle_global_declaration(graph, &sections.globals);
+		self.handle_table_declarations(graph, sections.tables.clone());
+		self.handle_element_declarations(graph, sections.elements.clone());
+		self.handle_data_declarations(graph, sections.datas.clone());
+		self.handle_global_declarations(graph, &sections.globals);
 
 		self.handle_function_section(graph, sections.functions);
 		self.handle_memory_section(graph, sections.memories);
 		self.handle_tag_section(graph, sections.tags);
 		self.handle_code_section(graph, &sections.code, function_imports);
 
-		self.handle_table_initialization(graph, sections.tables);
-		self.handle_element_initialization(graph, sections.elements);
-		self.handle_data_initialization(graph, sections.datas);
-		self.handle_global_initialization(graph, sections.globals);
+		self.handle_table_initializations(graph, sections.tables);
+		self.handle_element_initializations(graph, sections.elements);
+		self.handle_data_initializations(graph, sections.datas);
+		self.handle_global_initializations(graph, sections.globals);
 
 		let start = self.handle_start_section(graph, omega_in, sections.start);
 		let exports = self.handle_export_section(graph, sections.exports);

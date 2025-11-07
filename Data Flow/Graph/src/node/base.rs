@@ -166,9 +166,8 @@ pub struct GlobalSet {
 	pub source: Link,
 }
 
-#[derive(Clone, Copy)]
 pub struct TableNew {
-	pub initializer: Link,
+	pub initializer: Vec<(Link, u32)>,
 	pub minimum: u32,
 	pub maximum: u32,
 }
@@ -211,23 +210,13 @@ pub struct TableCopy {
 }
 
 #[derive(Clone, Copy)]
-pub struct TableInit {
-	pub destination: Location,
-	pub source: Location,
-	pub size: Link,
-}
-
-pub struct ElementsNew {
-	pub content: Vec<Link>,
-}
-
-#[derive(Clone, Copy)]
-pub struct ElementsDrop {
+pub struct TableDrop {
 	pub source: Link,
 }
 
-#[derive(Clone, Copy)]
+#[derive(Clone)]
 pub struct MemoryNew {
+	pub initializer: Vec<(Arc<[u8]>, u32)>,
 	pub minimum: u32,
 	pub maximum: u32,
 }
@@ -271,18 +260,6 @@ pub struct MemoryCopy {
 }
 
 #[derive(Clone, Copy)]
-pub struct MemoryInit {
-	pub destination: Location,
-	pub source: Location,
-	pub size: Link,
-}
-
-#[derive(Clone)]
-pub struct DataNew {
-	pub content: Arc<[u8]>,
-}
-
-#[derive(Clone, Copy)]
-pub struct DataDrop {
+pub struct MemoryDrop {
 	pub source: Link,
 }

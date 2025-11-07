@@ -224,7 +224,7 @@ impl BasicBlockBuilder {
 		let memory = memory.try_into().unwrap();
 		let destination = self.stack_builder.push_local();
 
-		self.code_builder.add_memory_size(destination, memory);
+		self.code_builder.add_paged_memory_size(destination, memory);
 	}
 
 	fn handle_memory_grow(&mut self, memory: u32) {
@@ -232,7 +232,8 @@ impl BasicBlockBuilder {
 		let size = self.stack_builder.pull_local();
 		let destination = self.stack_builder.push_local();
 
-		self.code_builder.add_memory_grow(destination, memory, size);
+		self.code_builder
+			.add_paged_memory_grow(destination, memory, size);
 	}
 
 	fn handle_i32_const(&mut self, data: i32) {

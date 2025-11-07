@@ -4,14 +4,13 @@
 use data_flow_graph::{
 	DataFlowGraph, Link, Node,
 	base::{
-		Apply, DataDrop, DataNew, ElementsDrop, ElementsNew, GlobalGet, GlobalNew, GlobalSet, Host,
-		Identity, IntegerBinaryOperation, IntegerCompareOperation, IntegerConvertToNumber,
-		IntegerExtend, IntegerNarrow, IntegerTransmuteToNumber, IntegerUnaryOperation,
-		IntegerWiden, MemoryCopy, MemoryFill, MemoryGrow, MemoryInit, MemoryLoad, MemoryNew,
-		MemorySize, MemoryStore, Merge, NumberBinaryOperation, NumberCompareOperation,
-		NumberNarrow, NumberTransmuteToInteger, NumberTruncateToInteger, NumberUnaryOperation,
-		NumberWiden, RefIsNull, TableCopy, TableFill, TableGet, TableGrow, TableInit, TableNew,
-		TableSet, TableSize,
+		Apply, GlobalGet, GlobalNew, GlobalSet, Host, Identity, IntegerBinaryOperation,
+		IntegerCompareOperation, IntegerConvertToNumber, IntegerExtend, IntegerNarrow,
+		IntegerTransmuteToNumber, IntegerUnaryOperation, IntegerWiden, MemoryCopy, MemoryDrop,
+		MemoryFill, MemoryGrow, MemoryLoad, MemoryNew, MemorySize, MemoryStore, Merge,
+		NumberBinaryOperation, NumberCompareOperation, NumberNarrow, NumberTransmuteToInteger,
+		NumberTruncateToInteger, NumberUnaryOperation, NumberWiden, RefIsNull, TableCopy,
+		TableDrop, TableFill, TableGet, TableGrow, TableNew, TableSet, TableSize,
 	},
 	control::{
 		GammaIn, GammaOut, Import, LambdaIn, LambdaOut, OmegaIn, OmegaOut, RegionIn, ThetaIn,
@@ -368,7 +367,7 @@ impl LuauBuilder {
 		);
 	}
 
-	fn handle_table_new(&mut self, id: u32, node: TableNew) {
+	fn handle_table_new(&mut self, id: u32, node: &TableNew) {
 		let expression = self.data_handler.load_table_new(node);
 
 		self.do_assignment(id, expression);
@@ -448,42 +447,19 @@ impl LuauBuilder {
 		);
 	}
 
-	fn handle_table_init(&mut self, id: u32, node: TableInit) {
+	fn handle_table_drop(&mut self, id: u32, node: TableDrop) {
 		self.code_handler
-			.do_table_init(node, &mut self.data_handler);
+			.do_table_drop(node, &mut self.data_handler);
 
 		self.code_handler.do_rename(
-			Link(id, TableInit::DESTINATION_STATE_PORT),
-			node.destination.reference,
-			&self.data_handler,
-		);
-
-		self.code_handler.do_rename(
-			Link(id, TableInit::SOURCE_STATE_PORT),
-			node.source.reference,
-			&self.data_handler,
-		);
-	}
-
-	fn handle_elements_new(&mut self, id: u32, node: &ElementsNew) {
-		let expression = self.data_handler.load_elements_new(node);
-
-		self.do_assignment(id, expression);
-	}
-
-	fn handle_elements_drop(&mut self, id: u32, node: ElementsDrop) {
-		self.code_handler
-			.do_elements_drop(node, &mut self.data_handler);
-
-		self.code_handler.do_rename(
-			Link(id, ElementsDrop::STATE_PORT),
+			Link(id, TableDrop::STATE_PORT),
 			node.source,
 			&self.data_handler,
 		);
 	}
 
-	fn handle_memory_new(&mut self, id: u32, node: MemoryNew) {
-		let expression = Expression::MemoryNew(node);
+	fn handle_memory_new(&mut self, id: u32, node: &MemoryNew) {
+		let expression = Expression::MemoryNew(node.clone());
 
 		self.do_assignment(id, expression);
 	}
@@ -563,34 +539,12 @@ impl LuauBuilder {
 		);
 	}
 
-	fn handle_memory_init(&mut self, id: u32, node: MemoryInit) {
+	fn handle_memory_drop(&mut self, id: u32, node: MemoryDrop) {
 		self.code_handler
-			.do_memory_init(node, &mut self.data_handler);
+			.do_memory_drop(node, &mut self.data_handler);
 
 		self.code_handler.do_rename(
-			Link(id, MemoryInit::DESTINATION_STATE_PORT),
-			node.destination.reference,
-			&self.data_handler,
-		);
-
-		self.code_handler.do_rename(
-			Link(id, MemoryInit::SOURCE_STATE_PORT),
-			node.source.reference,
-			&self.data_handler,
-		);
-	}
-
-	fn handle_data_new(&mut self, id: u32, node: &DataNew) {
-		let expression = Expression::DataNew(node.clone());
-
-		self.do_assignment(id, expression);
-	}
-
-	fn handle_data_drop(&mut self, id: u32, node: DataDrop) {
-		self.code_handler.do_data_drop(node, &mut self.data_handler);
-
-		self.code_handler.do_rename(
-			Link(id, DataDrop::STATE_PORT),
+			Link(id, MemoryDrop::STATE_PORT),
 			node.source,
 			&self.data_handler,
 		);
@@ -647,26 +601,22 @@ impl LuauBuilder {
 			Node::GlobalNew(node) => self.handle_global_new(id, node),
 			Node::GlobalGet(node) => self.handle_global_get(id, node),
 			Node::GlobalSet(node) => self.handle_global_set(id, node),
-			Node::TableNew(node) => self.handle_table_new(id, node),
+			Node::TableNew(ref node) => self.handle_table_new(id, node),
 			Node::TableGet(node) => self.handle_table_get(id, node),
 			Node::TableSet(node) => self.handle_table_set(id, node),
 			Node::TableSize(node) => self.handle_table_size(id, node),
 			Node::TableGrow(node) => self.handle_table_grow(id, node),
 			Node::TableFill(node) => self.handle_table_fill(id, node),
 			Node::TableCopy(node) => self.handle_table_copy(id, node),
-			Node::TableInit(node) => self.handle_table_init(id, node),
-			Node::ElementsNew(ref node) => self.handle_elements_new(id, node),
-			Node::ElementsDrop(node) => self.handle_elements_drop(id, node),
-			Node::MemoryNew(node) => self.handle_memory_new(id, node),
+			Node::TableDrop(node) => self.handle_table_drop(id, node),
+			Node::MemoryNew(ref node) => self.handle_memory_new(id, node),
 			Node::MemoryLoad(node) => self.handle_memory_load(id, node),
 			Node::MemoryStore(node) => self.handle_memory_store(id, node),
 			Node::MemorySize(node) => self.handle_memory_size(id, node),
 			Node::MemoryGrow(node) => self.handle_memory_grow(id, node),
 			Node::MemoryFill(node) => self.handle_memory_fill(id, node),
 			Node::MemoryCopy(node) => self.handle_memory_copy(id, node),
-			Node::MemoryInit(node) => self.handle_memory_init(id, node),
-			Node::DataNew(ref node) => self.handle_data_new(id, node),
-			Node::DataDrop(node) => self.handle_data_drop(id, node),
+			Node::MemoryDrop(node) => self.handle_memory_drop(id, node),
 		}
 	}
 

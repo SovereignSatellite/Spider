@@ -411,6 +411,11 @@ pub struct MemorySize {
 	pub memory: u16,
 }
 
+impl MemorySize {
+	pub const PAGE_SIZE: usize = 0x1_0000;
+	pub const PAGE_LIMIT: usize = 0xFFFF;
+}
+
 #[derive(Clone, Copy, Debug)]
 pub struct MemoryGrow {
 	pub destination: u16,

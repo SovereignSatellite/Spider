@@ -15,8 +15,8 @@ do
 		global_f32 = { vector_create(666.6, 0, 0) },
 		global_f64 = { 666.6 },
 
-		table = rt_table_new(10, 10),
-		memory = rt_memory_new(1, 2),
+		table = rt_table_new({}, 10, 10),
+		memory = rt_memory_new({}, 65536, 131072),
 	}
 
 	spectest.print = print

@@ -1,8 +1,8 @@
 use std::io::{Result, Write};
 
 use luau_tree::expression::{
-	BooleanToInteger, Call, DataNew, ElementsNew, Expression, Function, GlobalGet, GlobalNew,
-	Import, IntegerBinaryOperation, IntegerCompareOperation, IntegerConvertToNumber, IntegerExtend,
+	BooleanToInteger, Call, Expression, Function, GlobalGet, GlobalNew, Import,
+	IntegerBinaryOperation, IntegerCompareOperation, IntegerConvertToNumber, IntegerExtend,
 	IntegerNarrow, IntegerTransmuteToNumber, IntegerUnaryOperation, IntegerWiden, Local, Location,
 	Match, MemoryGrow, MemoryLoad, MemoryNew, MemorySize, Name, NumberBinaryOperation,
 	NumberBinaryOperator, NumberCompareOperation, NumberCompareOperator, NumberNarrow,
@@ -697,11 +697,17 @@ impl Print for TableNew {
 
 		let intrinsic = self.needs_name();
 
-		write!(out, "rt_{intrinsic}(")?;
+		write!(out, "rt_{intrinsic}({{ ")?;
 
-		initializer.print(printer, out)?;
+		for (expression, offset) in initializer {
+			write!(out, "[{offset}] = ")?;
 
-		write!(out, ", {minimum}, {maximum})")
+			expression.print(printer, out)?;
+
+			write!(out, ", ")?;
+		}
+
+		write!(out, "}}, {minimum}, {maximum})")
 	}
 }
 
@@ -755,31 +761,23 @@ impl Print for TableGrow {
 	}
 }
 
-impl Print for ElementsNew {
-	fn print(&self, printer: &mut LuauPrinter, out: &mut dyn Write) -> Result<()> {
-		let Self { content } = self;
-
-		write!(out, "{{ ")?;
-
-		fmt_delimited(content, printer, out)?;
-
-		let count = content.len();
-
-		if count != 0 {
-			write!(out, ", ")?;
-		}
-
-		write!(out, "count = {count} }}")
-	}
-}
-
 impl Print for MemoryNew {
 	fn print(&self, _printer: &mut LuauPrinter, out: &mut dyn Write) -> Result<()> {
-		let Self { minimum, maximum } = self;
+		let Self {
+			initializer,
+			minimum,
+			maximum,
+		} = self;
 
 		let intrinsic = self.needs_name();
 
-		write!(out, "rt_{intrinsic}({minimum}, {maximum})")
+		write!(out, "rt_{intrinsic}({{ ")?;
+
+		for (data, offset) in initializer {
+			write!(out, "[{offset}] = \"{}\", ", data.escape_ascii())?;
+		}
+
+		write!(out, "}}, {minimum}, {maximum})")
 	}
 }
 
@@ -826,18 +824,6 @@ impl Print for MemoryGrow {
 		size.print(printer, out)?;
 
 		write!(out, ")")
-	}
-}
-
-impl Print for DataNew {
-	fn print(&self, _printer: &mut LuauPrinter, out: &mut dyn Write) -> Result<()> {
-		let Self { content } = self;
-
-		write!(
-			out,
-			"{{ buffer.fromstring(\"{}\") }}",
-			content.escape_ascii()
-		)
 	}
 }
 
@@ -899,12 +885,10 @@ impl Print for Expression {
 			Self::TableGet(table_get) => table_get.print(printer, out),
 			Self::TableSize(table_size) => table_size.print(printer, out),
 			Self::TableGrow(table_grow) => table_grow.print(printer, out),
-			Self::ElementsNew(elements_new) => elements_new.print(printer, out),
 			Self::MemoryNew(memory_new) => memory_new.print(printer, out),
 			Self::MemoryLoad(memory_load) => memory_load.print(printer, out),
 			Self::MemorySize(memory_size) => memory_size.print(printer, out),
 			Self::MemoryGrow(memory_grow) => memory_grow.print(printer, out),
-			Self::DataNew(data_new) => data_new.print(printer, out),
 		}
 	}
 }

@@ -5,9 +5,8 @@ use hashbrown::HashMap;
 use luau_tree::{
 	expression::{Expression, Local},
 	statement::{
-		Assign, AssignAll, Call, DataDrop, ElementsDrop, GlobalSet, Match, MemoryCopy, MemoryFill,
-		MemoryInit, MemoryStore, Repeat, Sequence, Statement, TableCopy, TableFill, TableInit,
-		TableSet,
+		Assign, AssignAll, Call, GlobalSet, Match, MemoryCopy, MemoryDrop, MemoryFill, MemoryStore,
+		Repeat, Sequence, Statement, TableCopy, TableDrop, TableFill, TableSet,
 	},
 };
 
@@ -193,22 +192,9 @@ impl CodeHandler {
 		self.scopes.last_mut().unwrap().push(statement);
 	}
 
-	pub fn do_table_init(&mut self, node: base::TableInit, data_handler: &mut DataHandler) {
-		let statement = Statement::TableInit(
-			TableInit {
-				destination: data_handler.load_location(node.destination),
-				source: data_handler.load_location(node.source),
-				size: data_handler.load(node.size),
-			}
-			.into(),
-		);
-
-		self.scopes.last_mut().unwrap().push(statement);
-	}
-
-	pub fn do_elements_drop(&mut self, node: base::ElementsDrop, data_handler: &mut DataHandler) {
-		let statement = Statement::ElementsDrop(
-			ElementsDrop {
+	pub fn do_table_drop(&mut self, node: base::TableDrop, data_handler: &mut DataHandler) {
+		let statement = Statement::TableDrop(
+			TableDrop {
 				source: data_handler.load(node.source),
 			}
 			.into(),
@@ -256,26 +242,9 @@ impl CodeHandler {
 		self.scopes.last_mut().unwrap().push(statement);
 	}
 
-	pub fn do_memory_init(
-		&mut self,
-		memory_init: base::MemoryInit,
-		data_handler: &mut DataHandler,
-	) {
-		let statement = Statement::MemoryInit(
-			MemoryInit {
-				destination: data_handler.load_location(memory_init.destination),
-				source: data_handler.load_location(memory_init.source),
-				size: data_handler.load(memory_init.size),
-			}
-			.into(),
-		);
-
-		self.scopes.last_mut().unwrap().push(statement);
-	}
-
-	pub fn do_data_drop(&mut self, node: base::DataDrop, data_handler: &mut DataHandler) {
-		let statement = Statement::DataDrop(
-			DataDrop {
+	pub fn do_memory_drop(&mut self, node: base::MemoryDrop, data_handler: &mut DataHandler) {
+		let statement = Statement::MemoryDrop(
+			MemoryDrop {
 				source: data_handler.load(node.source),
 			}
 			.into(),

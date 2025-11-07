@@ -3,7 +3,7 @@ use data_flow_graph::{Link, base, control};
 use hashbrown::HashMap;
 use luau_tree::{
 	expression::{
-		BooleanToInteger, Call, ElementsNew, Expression, Function, GlobalGet, GlobalNew, Import,
+		BooleanToInteger, Call, Expression, Function, GlobalGet, GlobalNew, Import,
 		IntegerBinaryOperation, IntegerCompareOperation, IntegerConvertToNumber, IntegerExtend,
 		IntegerNarrow, IntegerTransmuteToNumber, IntegerUnaryOperation, IntegerWiden, Local,
 		Location, Match, MemoryGrow, MemoryLoad, MemorySize, Name, NumberBinaryOperation,
@@ -427,9 +427,15 @@ impl DataHandler {
 		}
 	}
 
-	pub fn load_table_new(&mut self, node: base::TableNew) -> Expression {
+	pub fn load_table_new(&mut self, node: &base::TableNew) -> Expression {
+		let initializer = node
+			.initializer
+			.iter()
+			.map(|&(link, offset)| (self.load(link), offset))
+			.collect();
+
 		let expression = TableNew {
-			initializer: self.load(node.initializer),
+			initializer,
 			minimum: node.minimum,
 			maximum: node.maximum,
 		};
@@ -461,14 +467,6 @@ impl DataHandler {
 		};
 
 		Expression::TableGrow(expression.into())
-	}
-
-	pub fn load_elements_new(&mut self, node: &base::ElementsNew) -> Expression {
-		let expression = ElementsNew {
-			content: self.load_all(&node.content),
-		};
-
-		Expression::ElementsNew(expression.into())
 	}
 
 	pub fn load_memory_load(&mut self, node: base::MemoryLoad) -> Expression {

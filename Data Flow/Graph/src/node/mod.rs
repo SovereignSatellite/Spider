@@ -2,14 +2,13 @@ use alloc::boxed::Box;
 
 use self::{
 	base::{
-		Apply, DataDrop, DataNew, ElementsDrop, ElementsNew, GlobalGet, GlobalNew, GlobalSet, Host,
-		Identity, IntegerBinaryOperation, IntegerCompareOperation, IntegerConvertToNumber,
-		IntegerExtend, IntegerNarrow, IntegerTransmuteToNumber, IntegerUnaryOperation,
-		IntegerWiden, MemoryCopy, MemoryFill, MemoryGrow, MemoryInit, MemoryLoad, MemoryNew,
-		MemorySize, MemoryStore, Merge, NumberBinaryOperation, NumberCompareOperation,
-		NumberNarrow, NumberTransmuteToInteger, NumberTruncateToInteger, NumberUnaryOperation,
-		NumberWiden, RefIsNull, TableCopy, TableFill, TableGet, TableGrow, TableInit, TableNew,
-		TableSet, TableSize,
+		Apply, GlobalGet, GlobalNew, GlobalSet, Host, Identity, IntegerBinaryOperation,
+		IntegerCompareOperation, IntegerConvertToNumber, IntegerExtend, IntegerNarrow,
+		IntegerTransmuteToNumber, IntegerUnaryOperation, IntegerWiden, MemoryCopy, MemoryDrop,
+		MemoryFill, MemoryGrow, MemoryLoad, MemoryNew, MemorySize, MemoryStore, Merge,
+		NumberBinaryOperation, NumberCompareOperation, NumberNarrow, NumberTransmuteToInteger,
+		NumberTruncateToInteger, NumberUnaryOperation, NumberWiden, RefIsNull, TableCopy,
+		TableDrop, TableFill, TableGet, TableGrow, TableNew, TableSet, TableSize,
 	},
 	control::{
 		GammaIn, GammaOut, Import, LambdaIn, LambdaOut, OmegaIn, OmegaOut, RegionIn, RegionOut,
@@ -101,10 +100,7 @@ pub enum Node {
 	TableGrow(TableGrow),
 	TableFill(TableFill),
 	TableCopy(TableCopy),
-	TableInit(TableInit),
-
-	ElementsNew(ElementsNew),
-	ElementsDrop(ElementsDrop),
+	TableDrop(TableDrop),
 
 	MemoryNew(MemoryNew),
 	MemoryLoad(MemoryLoad),
@@ -113,10 +109,7 @@ pub enum Node {
 	MemoryGrow(MemoryGrow),
 	MemoryFill(MemoryFill),
 	MemoryCopy(MemoryCopy),
-	MemoryInit(MemoryInit),
-
-	DataNew(DataNew),
-	DataDrop(DataDrop),
+	MemoryDrop(MemoryDrop),
 }
 
 macro_rules! as_ref_inner {

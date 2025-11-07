@@ -1,9 +1,9 @@
 use data_flow_graph::{
 	DataFlowGraph, Link, Node,
 	base::{
-		Apply, DataDrop, ElementsDrop, GlobalGet, GlobalSet, Identity, MemoryCopy, MemoryFill,
-		MemoryGrow, MemoryInit, MemoryLoad, MemorySize, MemoryStore, Merge, TableCopy, TableFill,
-		TableGet, TableGrow, TableInit, TableSet, TableSize,
+		Apply, GlobalGet, GlobalSet, Identity, MemoryCopy, MemoryDrop, MemoryFill, MemoryGrow,
+		MemoryLoad, MemorySize, MemoryStore, Merge, TableCopy, TableDrop, TableFill, TableGet,
+		TableGrow, TableSet, TableSize,
 	},
 	control::{GammaIn, GammaOut, LambdaIn, OmegaIn, OmegaOut, RegionOut, ThetaIn, ThetaOut},
 };
@@ -228,24 +228,10 @@ fn handle_table_copy(assignments: &mut HashMap<Link, Link>, id: u32, node: Table
 	assignments.insert(source.reference, Link(id, TableCopy::SOURCE_STATE_PORT));
 }
 
-fn handle_table_init(assignments: &mut HashMap<Link, Link>, id: u32, node: TableInit) {
-	let TableInit {
-		destination,
-		source,
-		..
-	} = node;
+fn handle_table_drop(assignments: &mut HashMap<Link, Link>, id: u32, node: TableDrop) {
+	let TableDrop { source } = node;
 
-	assignments.insert(
-		destination.reference,
-		Link(id, TableInit::DESTINATION_STATE_PORT),
-	);
-	assignments.insert(source.reference, Link(id, TableInit::SOURCE_STATE_PORT));
-}
-
-fn handle_elements_drop(assignments: &mut HashMap<Link, Link>, id: u32, node: ElementsDrop) {
-	let ElementsDrop { source } = node;
-
-	assignments.insert(source, Link(id, ElementsDrop::STATE_PORT));
+	assignments.insert(source, Link(id, TableDrop::STATE_PORT));
 }
 
 fn handle_memory_load(assignments: &mut HashMap<Link, Link>, id: u32, node: MemoryLoad) {
@@ -292,24 +278,10 @@ fn handle_memory_copy(assignments: &mut HashMap<Link, Link>, id: u32, node: Memo
 	assignments.insert(source.reference, Link(id, MemoryCopy::SOURCE_STATE_PORT));
 }
 
-fn handle_memory_init(assignments: &mut HashMap<Link, Link>, id: u32, node: MemoryInit) {
-	let MemoryInit {
-		destination,
-		source,
-		..
-	} = node;
+fn handle_memory_drop(assignments: &mut HashMap<Link, Link>, id: u32, node: MemoryDrop) {
+	let MemoryDrop { source } = node;
 
-	assignments.insert(
-		destination.reference,
-		Link(id, MemoryInit::DESTINATION_STATE_PORT),
-	);
-	assignments.insert(source.reference, Link(id, MemoryInit::SOURCE_STATE_PORT));
-}
-
-fn handle_data_drop(assignments: &mut HashMap<Link, Link>, id: u32, node: DataDrop) {
-	let DataDrop { source } = node;
-
-	assignments.insert(source, Link(id, DataDrop::STATE_PORT));
+	assignments.insert(source, Link(id, MemoryDrop::STATE_PORT));
 }
 
 fn handle_node(assignments: &mut HashMap<Link, Link>, graph: &DataFlowGraph, id: u32, node: &Node) {
@@ -344,9 +316,7 @@ fn handle_node(assignments: &mut HashMap<Link, Link>, graph: &DataFlowGraph, id:
 		| Node::NumberTransmuteToInteger(_)
 		| Node::GlobalNew(_)
 		| Node::TableNew(_)
-		| Node::ElementsNew(_)
-		| Node::MemoryNew(_)
-		| Node::DataNew(_) => {}
+		| Node::MemoryNew(_) => {}
 
 		Node::LambdaIn(ref node) => handle_lambda_in(assignments, id, node),
 		Node::RegionOut(ref node) => handle_region_out(assignments, node),
@@ -367,16 +337,14 @@ fn handle_node(assignments: &mut HashMap<Link, Link>, graph: &DataFlowGraph, id:
 		Node::TableGrow(node) => handle_table_grow(assignments, id, node),
 		Node::TableFill(node) => handle_table_fill(assignments, id, node),
 		Node::TableCopy(node) => handle_table_copy(assignments, id, node),
-		Node::TableInit(node) => handle_table_init(assignments, id, node),
-		Node::ElementsDrop(node) => handle_elements_drop(assignments, id, node),
+		Node::TableDrop(node) => handle_table_drop(assignments, id, node),
 		Node::MemoryLoad(node) => handle_memory_load(assignments, id, node),
 		Node::MemoryStore(node) => handle_memory_store(assignments, id, node),
 		Node::MemorySize(node) => handle_memory_size(assignments, id, node),
 		Node::MemoryGrow(node) => handle_memory_grow(assignments, id, node),
 		Node::MemoryFill(node) => handle_memory_fill(assignments, id, node),
 		Node::MemoryCopy(node) => handle_memory_copy(assignments, id, node),
-		Node::MemoryInit(node) => handle_memory_init(assignments, id, node),
-		Node::DataDrop(node) => handle_data_drop(assignments, id, node),
+		Node::MemoryDrop(node) => handle_memory_drop(assignments, id, node),
 	}
 }
 

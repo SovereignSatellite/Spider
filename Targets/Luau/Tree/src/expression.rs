@@ -1,9 +1,9 @@
 use alloc::{boxed::Box, sync::Arc, vec::Vec};
 
 pub use data_flow_graph::base::{
-	DataNew, ExtendType, IntegerBinaryOperator, IntegerCompareOperator, IntegerType,
-	IntegerUnaryOperator, LoadType, MemoryNew, NumberBinaryOperator, NumberCompareOperator,
-	NumberType, NumberUnaryOperator,
+	ExtendType, IntegerBinaryOperator, IntegerCompareOperator, IntegerType, IntegerUnaryOperator,
+	LoadType, MemoryNew, NumberBinaryOperator, NumberCompareOperator, NumberType,
+	NumberUnaryOperator,
 };
 
 use crate::statement::Sequence;
@@ -197,7 +197,7 @@ pub struct GlobalGet {
 }
 
 pub struct TableNew {
-	pub initializer: Expression,
+	pub initializer: Vec<(Expression, u32)>,
 	pub minimum: u32,
 	pub maximum: u32,
 }
@@ -214,10 +214,6 @@ pub struct TableGrow {
 	pub destination: Expression,
 	pub initializer: Expression,
 	pub size: Expression,
-}
-
-pub struct ElementsNew {
-	pub content: Vec<Expression>,
 }
 
 pub struct MemoryLoad {
@@ -293,14 +289,10 @@ pub enum Expression {
 	TableSize(Box<TableSize>),
 	TableGrow(Box<TableGrow>),
 
-	ElementsNew(Box<ElementsNew>),
-
 	MemoryNew(MemoryNew),
 	MemoryLoad(Box<MemoryLoad>),
 	MemorySize(Box<MemorySize>),
 	MemoryGrow(Box<MemoryGrow>),
-
-	DataNew(DataNew),
 }
 
 impl Expression {

@@ -8,11 +8,11 @@ use crate::{
 	node::{
 		Node,
 		base::{
-			DataNew, ExtendType, IntegerBinaryOperation, IntegerBinaryOperator,
-			IntegerCompareOperation, IntegerCompareOperator, IntegerExtend, IntegerType,
-			IntegerUnaryOperation, IntegerUnaryOperator, NumberBinaryOperation,
-			NumberBinaryOperator, NumberCompareOperation, NumberCompareOperator, NumberType,
-			NumberUnaryOperation, NumberUnaryOperator,
+			ExtendType, IntegerBinaryOperation, IntegerBinaryOperator, IntegerCompareOperation,
+			IntegerCompareOperator, IntegerExtend, IntegerType, IntegerUnaryOperation,
+			IntegerUnaryOperator, NumberBinaryOperation, NumberBinaryOperator,
+			NumberCompareOperation, NumberCompareOperator, NumberType, NumberUnaryOperation,
+			NumberUnaryOperator,
 		},
 	},
 };
@@ -72,9 +72,7 @@ impl Vertex {
 			| Node::TableGrow(_)
 			| Node::TableFill(_)
 			| Node::TableCopy(_)
-			| Node::TableInit(_)
-			| Node::ElementsNew(_)
-			| Node::ElementsDrop(_)
+			| Node::TableDrop(_)
 			| Node::MemoryNew(_)
 			| Node::MemoryLoad(_)
 			| Node::MemoryStore(_)
@@ -82,9 +80,7 @@ impl Vertex {
 			| Node::MemoryGrow(_)
 			| Node::MemoryFill(_)
 			| Node::MemoryCopy(_)
-			| Node::MemoryInit(_)
-			| Node::DataNew(_)
-			| Node::DataDrop(_) => Self::Operation,
+			| Node::MemoryDrop(_) => Self::Operation,
 		}
 	}
 
@@ -170,9 +166,7 @@ impl<'inner> Dot<'inner> {
 			Node::TableGrow(_) => "Table Grow",
 			Node::TableFill(_) => "Table Fill",
 			Node::TableCopy(_) => "Table Copy",
-			Node::TableInit(_) => "Table Init",
-			Node::ElementsNew(_) => "Elements New",
-			Node::ElementsDrop(_) => "Elements Drop",
+			Node::TableDrop(_) => "Table Drop",
 			Node::MemoryNew(_) => "Memory New",
 			Node::MemoryLoad(_) => "Memory Load",
 			Node::MemoryStore(_) => "Memory Store",
@@ -180,8 +174,7 @@ impl<'inner> Dot<'inner> {
 			Node::MemoryGrow(_) => "Memory Grow",
 			Node::MemoryFill(_) => "Memory Fill",
 			Node::MemoryCopy(_) => "Memory Copy",
-			Node::MemoryInit(_) => "Memory Init",
-			Node::DataDrop(_) => "Data Drop",
+			Node::MemoryDrop(_) => "Memory Drop",
 
 			_ => return None,
 		};
@@ -359,12 +352,6 @@ impl<'inner> Dot<'inner> {
 		)
 	}
 
-	fn fmt_data_new(node: &DataNew, f: &mut Formatter<'_>) -> Result {
-		let content = &node.content[..node.content.len().min(16)];
-
-		write!(f, "Data New {content:?}")
-	}
-
 	fn fmt_node(node: &Node, f: &mut Formatter<'_>) -> Result {
 		if let Some(name) = Self::try_node_name(node) {
 			return f.write_str(name);
@@ -383,7 +370,6 @@ impl<'inner> Dot<'inner> {
 			Node::NumberUnaryOperation(node) => Self::fmt_number_unary_operation(node, f),
 			Node::NumberBinaryOperation(node) => Self::fmt_number_binary_operation(node, f),
 			Node::NumberCompareOperation(node) => Self::fmt_number_compare_operation(node, f),
-			Node::DataNew(ref node) => Self::fmt_data_new(node, f),
 
 			_ => unreachable!(),
 		}

@@ -4,18 +4,16 @@ type Memory = {
 	maximum: number,
 }
 
--- SECTION data_type
-type Data = {
-	[number]: buffer,
-}
-
 -- SECTION memory_new
 -- NEEDS memory_type
-local function rt_memory_new(minimum: number, maximum: number): Memory
-	return {
-		buffer.create(minimum * 0x1_0000),
-		maximum = maximum,
-	}
+local function rt_memory_new(initializer: { string }, minimum: number, maximum: number): Memory
+	local data = buffer.create(minimum)
+
+	for offset, content in initializer do
+		buffer.writestring(data, offset, content)
+	end
+
+	return { data, maximum = maximum }
 end
 
 -- SECTION load_i32_from_s8
@@ -229,20 +227,20 @@ end
 -- SECTION memory_size
 -- NEEDS memory_type
 local function rt_memory_size(source: Memory): number
-	return buffer.len(source[1]) // 0x1_0000
+	return buffer.len(source[1])
 end
 
 -- SECTION memory_grow
 -- NEEDS memory_type
 local function rt_memory_grow(destination: Memory, size: number): number
-	local old = buffer.len(destination[1]) // 0x1_0000
+	local old = buffer.len(destination[1])
 	local new = old + size
 
 	if new > destination.maximum then
 		return 0xFFFF_FFFF
 	end
 
-	local ok, result = pcall(buffer.create, new * 0x1_0000)
+	local ok, result = pcall(buffer.create, new)
 
 	if not ok then
 		return 0xFFFF_FFFF
@@ -267,23 +265,18 @@ local function rt_memory_copy(destination: Memory, offset_1: number, source: Mem
 	buffer.copy(destination[1], offset_1, source[1], offset_2, size)
 end
 
--- SECTION memory_init
--- NEEDS data_type
+-- SECTION memory_drop
 -- NEEDS memory_type
-local function rt_memory_init(destination: Memory, offset_1: number, source: Data, offset_2: number, size: number)
-	buffer.copy(destination[1], offset_1, source[1], offset_2, size)
-end
-
--- SECTION data_drop
--- NEEDS data_type
-local function rt_data_drop(data: Data)
-	if table.isfrozen(data) then
+local function rt_memory_drop(destination: Memory)
+	if table.isfrozen(destination) then
 		return
 	end
 
-	table.clear(data)
+	table.clear(destination)
 
-	data[1] = buffer.create(0)
+	destination[1] = buffer.create(0)
 
-	table.freeze(data)
+	destination.maximum = 0
+
+	table.freeze(destination)
 end

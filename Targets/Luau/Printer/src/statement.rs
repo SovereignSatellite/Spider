@@ -3,9 +3,8 @@ use std::io::{Result, Write};
 use luau_tree::{
 	LuauTree,
 	statement::{
-		Assign, AssignAll, Call, DataDrop, ElementsDrop, Export, GlobalSet, Match, MemoryCopy,
-		MemoryFill, MemoryInit, MemoryStore, Repeat, Sequence, Statement, TableCopy, TableFill,
-		TableInit, TableSet,
+		Assign, AssignAll, Call, Export, GlobalSet, Match, MemoryCopy, MemoryDrop, MemoryFill,
+		MemoryStore, Repeat, Sequence, Statement, TableCopy, TableDrop, TableFill, TableSet,
 	},
 };
 
@@ -373,34 +372,7 @@ impl Print for TableCopy {
 	}
 }
 
-impl Print for TableInit {
-	fn print(&self, printer: &mut LuauPrinter, out: &mut dyn Write) -> Result<()> {
-		let Self {
-			destination,
-			source,
-			size,
-		} = self;
-
-		let intrinsic = self.needs_name();
-
-		printer.tab(out)?;
-		write!(out, "rt_{intrinsic}(")?;
-
-		destination.print(printer, out)?;
-
-		write!(out, ", ")?;
-
-		source.print(printer, out)?;
-
-		write!(out, ", ")?;
-
-		size.print(printer, out)?;
-
-		writeln!(out, ")")
-	}
-}
-
-impl Print for ElementsDrop {
+impl Print for TableDrop {
 	fn print(&self, printer: &mut LuauPrinter, out: &mut dyn Write) -> Result<()> {
 		let Self { source } = self;
 
@@ -492,34 +464,7 @@ impl Print for MemoryCopy {
 	}
 }
 
-impl Print for MemoryInit {
-	fn print(&self, printer: &mut LuauPrinter, out: &mut dyn Write) -> Result<()> {
-		let Self {
-			destination,
-			source,
-			size,
-		} = self;
-
-		let intrinsic = self.needs_name();
-
-		printer.tab(out)?;
-		write!(out, "rt_{intrinsic}(")?;
-
-		destination.print(printer, out)?;
-
-		write!(out, ", ")?;
-
-		source.print(printer, out)?;
-
-		write!(out, ", ")?;
-
-		size.print(printer, out)?;
-
-		writeln!(out, ")")
-	}
-}
-
-impl Print for DataDrop {
+impl Print for MemoryDrop {
 	fn print(&self, printer: &mut LuauPrinter, out: &mut dyn Write) -> Result<()> {
 		let Self { source } = self;
 
@@ -546,13 +491,11 @@ impl Print for Statement {
 			Self::TableSet(table_set) => table_set.print(printer, out),
 			Self::TableFill(table_fill) => table_fill.print(printer, out),
 			Self::TableCopy(table_copy) => table_copy.print(printer, out),
-			Self::TableInit(table_init) => table_init.print(printer, out),
-			Self::ElementsDrop(elements_drop) => elements_drop.print(printer, out),
+			Self::TableDrop(elements_drop) => elements_drop.print(printer, out),
 			Self::MemoryStore(memory_store) => memory_store.print(printer, out),
 			Self::MemoryFill(memory_fill) => memory_fill.print(printer, out),
 			Self::MemoryCopy(memory_copy) => memory_copy.print(printer, out),
-			Self::MemoryInit(memory_init) => memory_init.print(printer, out),
-			Self::DataDrop(data_drop) => data_drop.print(printer, out),
+			Self::MemoryDrop(data_drop) => data_drop.print(printer, out),
 		}
 	}
 }

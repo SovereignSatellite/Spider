@@ -106,13 +106,7 @@ pub struct TableCopy {
 	pub size: Expression,
 }
 
-pub struct TableInit {
-	pub destination: Location,
-	pub source: Location,
-	pub size: Expression,
-}
-
-pub struct ElementsDrop {
+pub struct TableDrop {
 	pub source: Expression,
 }
 
@@ -134,13 +128,7 @@ pub struct MemoryCopy {
 	pub size: Expression,
 }
 
-pub struct MemoryInit {
-	pub destination: Location,
-	pub source: Location,
-	pub size: Expression,
-}
-
-pub struct DataDrop {
+pub struct MemoryDrop {
 	pub source: Expression,
 }
 
@@ -158,16 +146,12 @@ pub enum Statement {
 	TableSet(Box<TableSet>),
 	TableFill(Box<TableFill>),
 	TableCopy(Box<TableCopy>),
-	TableInit(Box<TableInit>),
-
-	ElementsDrop(Box<ElementsDrop>),
+	TableDrop(Box<TableDrop>),
 
 	MemoryStore(Box<MemoryStore>),
 	MemoryFill(Box<MemoryFill>),
 	MemoryCopy(Box<MemoryCopy>),
-	MemoryInit(Box<MemoryInit>),
-
-	DataDrop(Box<DataDrop>),
+	MemoryDrop(Box<MemoryDrop>),
 }
 
 pub struct Export {

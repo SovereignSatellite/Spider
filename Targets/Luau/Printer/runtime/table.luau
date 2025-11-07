@@ -1,9 +1,3 @@
--- SECTION elements_type
-type Elements<T> = {
-	[number]: T,
-	count: number,
-}
-
 -- SECTION table_type
 type Table<T> = {
 	[number]: T,
@@ -13,8 +7,12 @@ type Table<T> = {
 
 -- SECTION table_new
 -- NEEDS table_type
-local function rt_table_new<T>(source: T, minimum: number, maximum: number): Table<T>
-	local result = table.create(minimum, source)
+local function rt_table_new<T>(initializer: { T }, minimum: number, maximum: number): Table<T>
+	local result = table.create(minimum)
+
+	for offset, element in initializer do
+		result[offset] = element
+	end
 
 	result.minimum = minimum
 	result.maximum = maximum
@@ -82,32 +80,17 @@ local function rt_table_copy<T>(destination: Table<T>, offset_1: number, source:
 	table.move(source, offset_2, offset_2 + size - 1, offset_1, destination)
 end
 
--- SECTION table_init
--- NEEDS elements_type
+-- SECTION table_drop
 -- NEEDS table_type
-local function rt_table_init<T>(
-	destination: Table<T>,
-	offset_1: number,
-	source: Elements<T>,
-	offset_2: number,
-	size: number
-)
-	assert(offset_1 + size <= destination.minimum, "out of bounds table access")
-	assert(offset_2 + size <= source.count, "out of bounds elements access")
-
-	table.move(source, offset_2 + 1, offset_2 + size, offset_1, destination)
-end
-
--- SECTION elements_drop
--- NEEDS elements_type
-local function rt_elements_drop<T>(elements: Elements<T>)
-	if table.isfrozen(elements) then
+local function rt_table_drop<T>(destination: Table<T>)
+	if table.isfrozen(destination) then
 		return
 	end
 
-	table.clear(elements)
+	table.clear(destination)
 
-	elements.count = 0
+	destination.minimum = 0
+	destination.maximum = 0
 
-	table.freeze(elements)
+	table.freeze(destination)
 end

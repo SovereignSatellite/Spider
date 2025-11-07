@@ -16,13 +16,11 @@ pub fn result_count_of(node: &Node) -> u16 {
 		| Node::TableSet(_)
 		| Node::TableFill(_)
 		| Node::TableCopy(_)
-		| Node::TableInit(_)
-		| Node::ElementsDrop(_)
+		| Node::TableDrop(_)
 		| Node::MemoryStore(_)
 		| Node::MemoryFill(_)
 		| Node::MemoryCopy(_)
-		| Node::MemoryInit(_)
-		| Node::DataDrop(_) => 0,
+		| Node::MemoryDrop(_) => 0,
 
 		Node::Host(_node) => 0,
 
@@ -58,12 +56,10 @@ pub fn result_count_of(node: &Node) -> u16 {
 		| Node::TableGet(_)
 		| Node::TableSize(_)
 		| Node::TableGrow(_)
-		| Node::ElementsNew(_)
 		| Node::MemoryNew(_)
 		| Node::MemoryLoad(_)
 		| Node::MemorySize(_)
-		| Node::MemoryGrow(_)
-		| Node::DataNew(_) => 1,
+		| Node::MemoryGrow(_) => 1,
 
 		Node::Apply(node) => node.results,
 	}

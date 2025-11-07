@@ -3,7 +3,7 @@ use std::ops::ControlFlow;
 use luau_tree::{
 	LuauTree,
 	expression::{
-		DataNew, ElementsNew, Expression, ExtendType, GlobalGet, GlobalNew, IntegerBinaryOperation,
+		Expression, ExtendType, GlobalGet, GlobalNew, IntegerBinaryOperation,
 		IntegerBinaryOperator, IntegerCompareOperation, IntegerCompareOperator,
 		IntegerConvertToNumber, IntegerExtend, IntegerNarrow, IntegerTransmuteToNumber,
 		IntegerType, IntegerUnaryOperation, IntegerUnaryOperator, IntegerWiden, LoadType,
@@ -13,8 +13,8 @@ use luau_tree::{
 		NumberWiden, TableGet, TableGrow, TableNew, TableSize,
 	},
 	statement::{
-		DataDrop, ElementsDrop, GlobalSet, MemoryCopy, MemoryFill, MemoryInit, MemoryStore,
-		Statement, StoreType, TableCopy, TableFill, TableInit, TableSet,
+		GlobalSet, MemoryCopy, MemoryDrop, MemoryFill, MemoryStore, Statement, StoreType,
+		TableCopy, TableDrop, TableFill, TableSet,
 	},
 	visitor::Visitor,
 };
@@ -411,12 +411,6 @@ impl NeedsName for TableGrow {
 	}
 }
 
-impl NeedsName for ElementsNew {
-	fn needs_name(&self) -> &'static str {
-		""
-	}
-}
-
 impl NeedsName for MemoryNew {
 	fn needs_name(&self) -> &'static str {
 		"memory_new"
@@ -455,12 +449,6 @@ impl NeedsName for MemorySize {
 impl NeedsName for MemoryGrow {
 	fn needs_name(&self) -> &'static str {
 		"memory_grow"
-	}
-}
-
-impl NeedsName for DataNew {
-	fn needs_name(&self) -> &'static str {
-		""
 	}
 }
 
@@ -524,12 +512,10 @@ impl NeedsName for Expression {
 			Self::TableGet(table_get) => table_get.needs_name(),
 			Self::TableSize(table_size) => table_size.needs_name(),
 			Self::TableGrow(table_grow) => table_grow.needs_name(),
-			Self::ElementsNew(elements_new) => elements_new.needs_name(),
 			Self::MemoryNew(memory_new) => memory_new.needs_name(),
 			Self::MemoryLoad(memory_load) => memory_load.needs_name(),
 			Self::MemorySize(memory_size) => memory_size.needs_name(),
 			Self::MemoryGrow(memory_grow) => memory_grow.needs_name(),
-			Self::DataNew(data_new) => data_new.needs_name(),
 		}
 	}
 }
@@ -558,15 +544,9 @@ impl NeedsName for TableCopy {
 	}
 }
 
-impl NeedsName for TableInit {
+impl NeedsName for TableDrop {
 	fn needs_name(&self) -> &'static str {
-		"table_init"
-	}
-}
-
-impl NeedsName for ElementsDrop {
-	fn needs_name(&self) -> &'static str {
-		"elements_drop"
+		"table_drop"
 	}
 }
 
@@ -600,15 +580,9 @@ impl NeedsName for MemoryCopy {
 	}
 }
 
-impl NeedsName for MemoryInit {
+impl NeedsName for MemoryDrop {
 	fn needs_name(&self) -> &'static str {
-		"memory_init"
-	}
-}
-
-impl NeedsName for DataDrop {
-	fn needs_name(&self) -> &'static str {
-		"data_drop"
+		"memory_drop"
 	}
 }
 
@@ -625,13 +599,11 @@ impl NeedsName for Statement {
 			Self::TableSet(table_set) => table_set.needs_name(),
 			Self::TableFill(table_fill) => table_fill.needs_name(),
 			Self::TableCopy(table_copy) => table_copy.needs_name(),
-			Self::TableInit(table_init) => table_init.needs_name(),
-			Self::ElementsDrop(elements_drop) => elements_drop.needs_name(),
+			Self::TableDrop(elements_drop) => elements_drop.needs_name(),
 			Self::MemoryStore(memory_store) => memory_store.needs_name(),
 			Self::MemoryFill(memory_fill) => memory_fill.needs_name(),
 			Self::MemoryCopy(memory_copy) => memory_copy.needs_name(),
-			Self::MemoryInit(memory_init) => memory_init.needs_name(),
-			Self::DataDrop(data_drop) => data_drop.needs_name(),
+			Self::MemoryDrop(data_drop) => data_drop.needs_name(),
 		}
 	}
 }

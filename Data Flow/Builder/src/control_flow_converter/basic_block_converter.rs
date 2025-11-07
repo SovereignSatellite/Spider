@@ -621,12 +621,9 @@ impl BasicBlockConverter {
 			size,
 		} = instruction;
 
-		let mut elements = self.load_location(ReferenceType::Elements, source);
-		let (reference, state) = graph.add_global_get(elements.reference);
+		let elements = self.load_location(ReferenceType::Elements, source);
 
-		elements.reference = reference;
-
-		let (destination_state, source_state) = graph.add_table_init(
+		let (destination_state, source_state) = graph.add_table_copy(
 			self.load_location(ReferenceType::Table, destination),
 			elements,
 			self.locals[usize::from(size)],
@@ -638,8 +635,6 @@ impl BasicBlockConverter {
 			destination_state,
 		);
 
-		let source_state = graph.add_global_set(state, source_state);
-
 		self.dependencies
 			.set(ReferenceType::Elements, source.reference, source_state);
 	}
@@ -648,9 +643,7 @@ impl BasicBlockConverter {
 		let ElementsDrop { source } = instruction;
 
 		let state = self.dependencies.get(ReferenceType::Elements, source);
-		let (inner, state) = graph.add_global_get(state);
-		let inner = graph.add_elements_drop(inner);
-		let state = graph.add_global_set(state, inner);
+		let state = graph.add_table_drop(state);
 
 		self.dependencies
 			.set(ReferenceType::Elements, source, state);
@@ -767,7 +760,7 @@ impl BasicBlockConverter {
 			size,
 		} = instruction;
 
-		let (destination_state, source_state) = graph.add_memory_init(
+		let (destination_state, source_state) = graph.add_memory_copy(
 			self.load_location(ReferenceType::Memory, destination),
 			self.load_location(ReferenceType::Data, source),
 			self.locals[usize::from(size)],
@@ -787,7 +780,7 @@ impl BasicBlockConverter {
 		let DataDrop { source } = instruction;
 
 		let state = self.dependencies.get(ReferenceType::Data, source);
-		let state = graph.add_data_drop(state);
+		let state = graph.add_memory_drop(state);
 
 		self.dependencies.set(ReferenceType::Data, source, state);
 	}
