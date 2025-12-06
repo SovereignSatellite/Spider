@@ -79,398 +79,212 @@ macro_rules! for_each_visit {
 	};
 }
 
-fn for_each_link_list<H: FnMut(u32)>(list: &[Link], handler: H) {
-	list.iter().map(|link| link.0).for_each(handler);
+macro_rules! handle_field {
+	($handler:ident, $name:ident, call) => {
+		$handler($name);
+	};
+	($handler:ident, $name:ident, dereference_call) => {
+		$handler(*$name);
+	};
+	($handler:ident, $name:ident, first_call) => {
+		$handler($name.0);
+	};
+	($handler:ident, $name:ident, first_mut_call) => {
+		$handler(&mut $name.0);
+	};
+	($handler:ident, $name:ident, for_each, $($rest:tt)*) => {
+		for item in $name {
+			handle_field!($handler, item, $($rest)*);
+		}
+	};
+	($handler:ident, $name:ident, method, $method:ident) => {
+		$name.$method(&mut $handler);
+	};
 }
 
-fn for_each_mut_link_list<H: FnMut(&mut u32)>(list: &mut [Link], handler: H) {
-	list.iter_mut().map(|link| &mut link.0).for_each(handler);
+macro_rules! handle_id_source {
+	($handler:ident, $name:ident, ignore) => {};
+	($handler:ident, $name:ident, id) => {
+		handle_field!($handler, $name, dereference_call)
+	};
+	($handler:ident, $name:ident, id_list) => {
+		handle_field!($handler, $name, for_each, dereference_call)
+	};
+	($handler:ident, $name:ident, link) => {
+		handle_field!($handler, $name, first_call)
+	};
+	($handler:ident, $name:ident, link_list) => {
+		handle_field!($handler, $name, for_each, first_call)
+	};
+	($handler:ident, $name:ident, method) => {
+		handle_field!($handler, $name, method, for_each_id)
+	};
+	($handler:ident, $name:ident, method_list) => {
+		handle_field!($handler, $name, for_each, method, for_each_id)
+	};
+}
+
+macro_rules! handle_mut_id_source {
+	($handler:ident, $name:ident, ignore) => {};
+	($handler:ident, $name:ident, id) => {
+		handle_field!($handler, $name, call)
+	};
+	($handler:ident, $name:ident, id_list) => {
+		handle_field!($handler, $name, for_each, call)
+	};
+	($handler:ident, $name:ident, link) => {
+		handle_field!($handler, $name, first_mut_call)
+	};
+	($handler:ident, $name:ident, link_list) => {
+		handle_field!($handler, $name, for_each, first_mut_call)
+	};
+	($handler:ident, $name:ident, method) => {
+		handle_field!($handler, $name, method, for_each_mut_id)
+	};
+	($handler:ident, $name:ident, method_list) => {
+		handle_field!($handler, $name, for_each, method, for_each_mut_id)
+	};
+}
+
+macro_rules! handle_argument_source {
+	($handler:ident, $name:ident, ignore) => {};
+	($handler:ident, $name:ident, id) => {};
+	($handler:ident, $name:ident, id_list) => {};
+	($handler:ident, $name:ident, link) => {
+		handle_field!($handler, $name, dereference_call)
+	};
+	($handler:ident, $name:ident, link_list) => {
+		handle_field!($handler, $name, for_each, dereference_call)
+	};
+	($handler:ident, $name:ident, method) => {
+		handle_field!($handler, $name, method, for_each_argument)
+	};
+	($handler:ident, $name:ident, method_list) => {
+		handle_field!($handler, $name, for_each, method, for_each_argument)
+	};
+}
+
+macro_rules! handle_mut_argument_source {
+	($handler:ident, $name:ident, ignore) => {};
+	($handler:ident, $name:ident, id) => {};
+	($handler:ident, $name:ident, id_list) => {};
+	($handler:ident, $name:ident, link) => {
+		handle_field!($handler, $name, call)
+	};
+	($handler:ident, $name:ident, link_list) => {
+		handle_field!($handler, $name, for_each, call)
+	};
+	($handler:ident, $name:ident, method) => {
+		handle_field!($handler, $name, method, for_each_mut_argument)
+	};
+	($handler:ident, $name:ident, method_list) => {
+		handle_field!($handler, $name, for_each, method, for_each_mut_argument)
+	};
+}
+
+macro_rules! handle_visitor {
+	($name:ident, $type:ty, $visitor:ident, ( $( ($field:ident, $variant:ident) ),* )) => {
+		#[allow(unused_variables, unused_mut)]
+        fn $name<H: FnMut($type)>(&self, mut handler: H) {
+        	let Self { $($field),* } = self;
+
+			$(
+				$visitor!(handler, $field, $variant)
+			);*;
+        }
+    };
+}
+
+macro_rules! handle_mut_visitor {
+	($name:ident, $type:ty, $visitor:ident, ( $( ($field:ident, $variant:ident) ),* )) => {
+		#[allow(unused_variables, unused_mut)]
+		fn $name<H: FnMut(&mut $type)>(&mut self, mut handler: H) {
+        	let Self { $($field),* } = self;
+
+			$(
+				$visitor!(handler, $field, $variant)
+			);*;
+        }
+    };
+}
+
+macro_rules! handle_sources {
+	($( ($field:ident, $action:ident) ),*) => {
+		handle_visitor!(for_each_id, u32, handle_id_source, ( $( ($field, $action) ),* ));
+		handle_visitor!(for_each_argument, Link, handle_argument_source, ( $( ($field, $action) ),* ));
+
+		handle_mut_visitor!(for_each_mut_id, u32, handle_mut_id_source, ( $( ($field, $action) ),* ));
+		handle_mut_visitor!(for_each_mut_argument, Link, handle_mut_argument_source, ( $( ($field, $action) ),* ));
+	};
+}
+
+macro_rules! handle_requirements {
+	($( ($field:ident, $action:ident) ),*) => {
+		handle_visitor!(for_each_requirement, u32, handle_id_source, ( $( ($field, $action) ),* ));
+	}
 }
 
 impl LambdaIn {
-	fn for_each_id<H: FnMut(u32)>(&self, mut handler: H) {
-		let Self {
-			output,
-			r#type: _,
-			ref dependencies,
-		} = *self;
-
-		handler(output);
-
-		for_each_link_list(dependencies, handler);
-	}
-
-	fn for_each_mut_id<H: FnMut(&mut u32)>(&mut self, mut handler: H) {
-		let Self {
-			output,
-			r#type: _,
-			dependencies,
-		} = self;
-
-		handler(output);
-
-		for_each_mut_link_list(dependencies, handler);
-	}
-
-	fn for_each_argument<H: FnMut(Link)>(&self, handler: H) {
-		let Self {
-			output: _,
-			r#type: _,
-			dependencies,
-		} = self;
-
-		dependencies.iter().copied().for_each(handler);
-	}
-
-	fn for_each_mut_argument<H: FnMut(&mut Link)>(&mut self, handler: H) {
-		let Self {
-			output: _,
-			r#type: _,
-			dependencies,
-		} = self;
-
-		dependencies.iter_mut().for_each(handler);
-	}
+	handle_sources!((output, id), (r#type, ignore), (dependencies, link_list));
 }
 
 impl LambdaOut {
-	fn for_each_requirement<H: FnMut(u32)>(&self, mut handler: H) {
-		let Self { input, results: _ } = *self;
-
-		handler(input);
-	}
-
-	fn for_each_id<H: FnMut(u32)>(&self, mut handler: H) {
-		let Self { input, ref results } = *self;
-
-		handler(input);
-		for_each_link_list(results, handler);
-	}
-
-	fn for_each_mut_id<H: FnMut(&mut u32)>(&mut self, mut handler: H) {
-		let Self { input, results } = self;
-
-		handler(input);
-		for_each_mut_link_list(results, handler);
-	}
-
-	fn for_each_argument<H: FnMut(Link)>(&self, handler: H) {
-		let Self { input: _, results } = self;
-
-		results.iter().copied().for_each(handler);
-	}
-
-	fn for_each_mut_argument<H: FnMut(&mut Link)>(&mut self, handler: H) {
-		let Self { input: _, results } = self;
-
-		results.iter_mut().for_each(handler);
-	}
+	handle_requirements!((input, id), (results, ignore));
+	handle_sources!((input, id), (results, link_list));
 }
 
 impl RegionIn {
+	handle_requirements!((input, id), (output, ignore));
+	handle_sources!((input, id), (output, id));
+
 	fn ports_output(&self, graph: &DataFlowGraph) -> usize {
 		graph.get(self.input).as_gamma_in().unwrap().ports_output()
-	}
-
-	fn for_each_requirement<H: FnMut(u32)>(&self, mut handler: H) {
-		let Self { input, output: _ } = *self;
-
-		handler(input);
-	}
-
-	fn for_each_id<H: FnMut(u32)>(&self, mut handler: H) {
-		let Self { input, output } = *self;
-
-		handler(input);
-		handler(output);
-	}
-
-	fn for_each_mut_id<H: FnMut(&mut u32)>(&mut self, mut handler: H) {
-		let Self { input, output } = self;
-
-		handler(input);
-		handler(output);
-	}
-
-	fn for_each_argument<H: FnMut(Link)>(&self, _handler: H) {
-		let Self {
-			input: _,
-			output: _,
-		} = self;
-	}
-
-	fn for_each_mut_argument<H: FnMut(&mut Link)>(&self, _handler: H) {
-		let Self {
-			input: _,
-			output: _,
-		} = self;
 	}
 }
 
 impl RegionOut {
+	handle_requirements!((input, id), (output, ignore), (results, ignore));
+	handle_sources!((input, id), (output, id), (results, link_list));
+
 	const fn ports_output(&self) -> usize {
 		self.results.len()
-	}
-
-	fn for_each_requirement<H: FnMut(u32)>(&self, mut handler: H) {
-		let Self {
-			input,
-			output: _,
-			results: _,
-		} = *self;
-
-		handler(input);
-	}
-
-	fn for_each_id<H: FnMut(u32)>(&self, mut handler: H) {
-		let Self {
-			input,
-			output,
-			ref results,
-		} = *self;
-
-		handler(input);
-		handler(output);
-		for_each_link_list(results, handler);
-	}
-
-	fn for_each_mut_id<H: FnMut(&mut u32)>(&mut self, mut handler: H) {
-		let Self {
-			input,
-			output,
-			results,
-		} = self;
-
-		handler(input);
-		handler(output);
-		for_each_mut_link_list(results, handler);
-	}
-
-	fn for_each_argument<H: FnMut(Link)>(&self, handler: H) {
-		let Self {
-			input: _,
-			output: _,
-			results,
-		} = self;
-
-		results.iter().copied().for_each(handler);
-	}
-
-	fn for_each_mut_argument<H: FnMut(&mut Link)>(&mut self, handler: H) {
-		let Self {
-			input: _,
-			output: _,
-			results,
-		} = self;
-
-		results.iter_mut().for_each(handler);
 	}
 }
 
 impl GammaIn {
+	handle_sources!((output, id), (arguments, link_list), (condition, link));
+
 	const fn ports_output(&self) -> usize {
 		self.arguments.len()
-	}
-
-	fn for_each_id<H: FnMut(u32)>(&self, mut handler: H) {
-		let Self {
-			output,
-			ref arguments,
-			condition,
-		} = *self;
-
-		handler(output);
-		for_each_link_list(arguments, &mut handler);
-
-		handler(condition.0);
-	}
-
-	fn for_each_mut_id<H: FnMut(&mut u32)>(&mut self, mut handler: H) {
-		let Self {
-			output,
-			arguments,
-			condition,
-		} = self;
-
-		handler(output);
-		for_each_mut_link_list(arguments, &mut handler);
-
-		handler(&mut condition.0);
-	}
-
-	fn for_each_argument<H: FnMut(Link)>(&self, mut handler: H) {
-		let Self {
-			output: _,
-			ref arguments,
-			condition,
-		} = *self;
-
-		arguments.iter().copied().for_each(&mut handler);
-
-		handler(condition);
-	}
-
-	fn for_each_mut_argument<H: FnMut(&mut Link)>(&mut self, mut handler: H) {
-		let Self {
-			output: _,
-			arguments,
-			condition,
-		} = self;
-
-		arguments.iter_mut().for_each(&mut handler);
-
-		handler(condition);
 	}
 }
 
 impl GammaOut {
+	handle_requirements!((input, id), (regions, id_list));
+	handle_sources!((input, id), (regions, id_list));
+
 	#[must_use]
 	pub fn ports_output(&self, graph: &DataFlowGraph) -> usize {
 		let first = *self.regions.first().unwrap();
 
 		graph.get(first).as_region_out().unwrap().ports_output()
 	}
-
-	fn for_each_requirement<H: FnMut(u32)>(&self, mut handler: H) {
-		let Self { input, ref regions } = *self;
-
-		handler(input);
-		regions.iter().copied().for_each(handler);
-	}
-
-	fn for_each_id<H: FnMut(u32)>(&self, mut handler: H) {
-		let Self { input, ref regions } = *self;
-
-		handler(input);
-		regions.iter().copied().for_each(handler);
-	}
-
-	fn for_each_mut_id<H: FnMut(&mut u32)>(&mut self, mut handler: H) {
-		let Self { input, regions } = self;
-
-		handler(input);
-		regions.iter_mut().for_each(handler);
-	}
-
-	fn for_each_argument<H: FnMut(Link)>(&self, _handler: H) {
-		let Self {
-			input: _,
-			regions: _,
-		} = self;
-	}
-
-	fn for_each_mut_argument<H: FnMut(&mut Link)>(&self, _handler: H) {
-		let Self {
-			input: _,
-			regions: _,
-		} = self;
-	}
 }
 
 impl ThetaIn {
+	handle_sources!((output, id), (arguments, link_list));
+
 	const fn ports_output(&self) -> usize {
 		self.arguments.len()
-	}
-
-	fn for_each_id<H: FnMut(u32)>(&self, mut handler: H) {
-		let Self {
-			output,
-			ref arguments,
-		} = *self;
-
-		handler(output);
-		for_each_link_list(arguments, handler);
-	}
-
-	fn for_each_mut_id<H: FnMut(&mut u32)>(&mut self, mut handler: H) {
-		let Self { output, arguments } = self;
-
-		handler(output);
-		for_each_mut_link_list(arguments, handler);
-	}
-
-	fn for_each_argument<H: FnMut(Link)>(&self, handler: H) {
-		let Self {
-			output: _,
-			arguments,
-		} = self;
-
-		arguments.iter().copied().for_each(handler);
-	}
-
-	fn for_each_mut_argument<H: FnMut(&mut Link)>(&mut self, handler: H) {
-		let Self {
-			output: _,
-			arguments,
-		} = self;
-
-		arguments.iter_mut().for_each(handler);
 	}
 }
 
 impl ThetaOut {
+	handle_requirements!((input, id), (results, ignore), (condition, ignore));
+	handle_sources!((input, id), (results, link_list), (condition, link));
+
 	const fn ports_output(&self) -> usize {
 		self.results.len()
-	}
-
-	fn for_each_requirement<H: FnMut(u32)>(&self, mut handler: H) {
-		let Self {
-			input,
-			results: _,
-			condition: _,
-		} = *self;
-
-		handler(input);
-	}
-
-	fn for_each_id<H: FnMut(u32)>(&self, mut handler: H) {
-		let Self {
-			input,
-			ref results,
-			condition,
-		} = *self;
-
-		handler(input);
-		for_each_link_list(results, &mut handler);
-
-		handler(condition.0);
-	}
-
-	fn for_each_mut_id<H: FnMut(&mut u32)>(&mut self, mut handler: H) {
-		let Self {
-			input,
-			results,
-			condition,
-		} = self;
-
-		handler(input);
-		for_each_mut_link_list(results, &mut handler);
-
-		handler(&mut condition.0);
-	}
-
-	fn for_each_argument<H: FnMut(Link)>(&self, mut handler: H) {
-		let Self {
-			input: _,
-			ref results,
-			condition,
-		} = *self;
-
-		results.iter().copied().for_each(&mut handler);
-
-		handler(condition);
-	}
-
-	fn for_each_mut_argument<H: FnMut(&mut Link)>(&mut self, mut handler: H) {
-		let Self {
-			input: _,
-			results,
-			condition,
-		} = self;
-
-		results.iter_mut().for_each(&mut handler);
-
-		handler(condition);
 	}
 }
 
@@ -478,994 +292,157 @@ impl OmegaIn {
 	pub const ENVIRONMENT_PORT: u16 = 0;
 	pub const STATE_PORT: u16 = 1;
 
-	fn for_each_id<H: FnMut(u32)>(&self, mut handler: H) {
-		let Self { output } = *self;
-
-		handler(output);
-	}
-
-	fn for_each_mut_id<H: FnMut(&mut u32)>(&mut self, mut handler: H) {
-		let Self { output } = self;
-
-		handler(output);
-	}
-
-	fn for_each_argument<H: FnMut(Link)>(&self, _handler: H) {
-		let Self { output: _ } = self;
-	}
-
-	fn for_each_mut_argument<H: FnMut(&mut Link)>(&self, _handler: H) {
-		let Self { output: _ } = self;
-	}
+	handle_sources!((output, id));
 }
 
 impl Export {
-	fn for_each_id<H: FnMut(u32)>(&self, mut handler: H) {
-		let Self {
-			identifier: _,
-			reference,
-		} = self;
-
-		handler(reference.0);
-	}
-
-	fn for_each_mut_id<H: FnMut(&mut u32)>(&mut self, mut handler: H) {
-		let Self {
-			identifier: _,
-			reference,
-		} = self;
-
-		handler(&mut reference.0);
-	}
-
-	fn for_each_argument<H: FnMut(Link)>(&self, mut handler: H) {
-		let Self {
-			identifier: _,
-			reference,
-		} = *self;
-
-		handler(reference);
-	}
-
-	fn for_each_mut_argument<H: FnMut(&mut Link)>(&mut self, mut handler: H) {
-		let Self {
-			identifier: _,
-			reference,
-		} = self;
-
-		handler(reference);
-	}
+	handle_sources!((identifier, ignore), (reference, link));
 }
 
 impl OmegaOut {
-	fn for_each_requirement<H: FnMut(u32)>(&self, mut handler: H) {
-		let Self {
-			input,
-			state: _,
-			exports: _,
-		} = *self;
-
-		handler(input);
-	}
-
-	fn for_each_id<H: FnMut(u32)>(&self, mut handler: H) {
-		let Self {
-			input,
-			state,
-			ref exports,
-		} = *self;
-
-		handler(input);
-		handler(state.0);
-
-		for export in exports {
-			export.for_each_id(&mut handler);
-		}
-	}
-
-	fn for_each_mut_id<H: FnMut(&mut u32)>(&mut self, mut handler: H) {
-		let Self {
-			input,
-			state,
-			exports,
-		} = self;
-
-		handler(input);
-		handler(&mut state.0);
-
-		for export in exports {
-			export.for_each_mut_id(&mut handler);
-		}
-	}
-
-	fn for_each_argument<H: FnMut(Link)>(&self, mut handler: H) {
-		let Self {
-			input: _,
-			state,
-			ref exports,
-		} = *self;
-
-		handler(state);
-
-		for export in exports {
-			export.for_each_argument(&mut handler);
-		}
-	}
-
-	fn for_each_mut_argument<H: FnMut(&mut Link)>(&mut self, mut handler: H) {
-		let Self {
-			input: _,
-			state,
-			exports,
-		} = self;
-
-		handler(state);
-
-		for export in exports {
-			export.for_each_mut_argument(&mut handler);
-		}
-	}
+	handle_requirements!((input, id), (state, ignore), (exports, ignore));
+	handle_sources!((input, id), (state, link), (exports, method_list));
 }
 
 impl Import {
-	fn for_each_id<H: FnMut(u32)>(&self, mut handler: H) {
-		let Self {
-			environment,
-			namespace: _,
-			identifier: _,
-		} = self;
-
-		handler(environment.0);
-	}
-
-	fn for_each_mut_id<H: FnMut(&mut u32)>(&mut self, mut handler: H) {
-		let Self {
-			environment,
-			namespace: _,
-			identifier: _,
-		} = self;
-
-		handler(&mut environment.0);
-	}
-
-	fn for_each_argument<H: FnMut(Link)>(&self, mut handler: H) {
-		let Self {
-			environment,
-			namespace: _,
-			identifier: _,
-		} = *self;
-
-		handler(environment);
-	}
-
-	fn for_each_mut_argument<H: FnMut(&mut Link)>(&mut self, mut handler: H) {
-		let Self {
-			environment,
-			namespace: _,
-			identifier: _,
-		} = self;
-
-		handler(environment);
-	}
+	handle_sources!(
+		(environment, link),
+		(namespace, ignore),
+		(identifier, ignore)
+	);
 }
 
 impl Identity {
-	fn for_each_id<H: FnMut(u32)>(&self, handler: H) {
-		let Self { sources } = self;
-
-		for_each_link_list(sources, handler);
-	}
-
-	fn for_each_mut_id<H: FnMut(&mut u32)>(&mut self, handler: H) {
-		let Self { sources } = self;
-
-		for_each_mut_link_list(sources, handler);
-	}
-
-	fn for_each_argument<H: FnMut(Link)>(&self, handler: H) {
-		let Self { sources } = self;
-
-		sources.iter().copied().for_each(handler);
-	}
-
-	fn for_each_mut_argument<H: FnMut(&mut Link)>(&mut self, handler: H) {
-		let Self { sources } = self;
-
-		sources.iter_mut().for_each(handler);
-	}
+	handle_sources!((sources, link_list));
 }
 
 impl Merge {
-	fn for_each_id<H: FnMut(u32)>(&self, handler: H) {
-		let Self { sources } = self;
-
-		for_each_link_list(sources, handler);
-	}
-
-	fn for_each_mut_id<H: FnMut(&mut u32)>(&mut self, handler: H) {
-		let Self { sources } = self;
-
-		for_each_mut_link_list(sources, handler);
-	}
-
-	fn for_each_argument<H: FnMut(Link)>(&self, handler: H) {
-		let Self { sources } = self;
-
-		sources.iter().copied().for_each(handler);
-	}
-
-	fn for_each_mut_argument<H: FnMut(&mut Link)>(&mut self, handler: H) {
-		let Self { sources } = self;
-
-		sources.iter_mut().for_each(handler);
-	}
+	handle_sources!((sources, link_list));
 }
 
 impl Apply {
-	fn for_each_id<H: FnMut(u32)>(&self, mut handler: H) {
-		let Self {
-			function,
-			arguments,
-			results: _,
-			states: _,
-		} = self;
-
-		handler(function.0);
-		for_each_link_list(arguments, handler);
-	}
-
-	fn for_each_mut_id<H: FnMut(&mut u32)>(&mut self, mut handler: H) {
-		let Self {
-			function,
-			arguments,
-			results: _,
-			states: _,
-		} = self;
-
-		handler(&mut function.0);
-		for_each_mut_link_list(arguments, handler);
-	}
-
-	fn for_each_argument<H: FnMut(Link)>(&self, mut handler: H) {
-		let Self {
-			function,
-			ref arguments,
-			results: _,
-			states: _,
-		} = *self;
-
-		handler(function);
-		arguments.iter().copied().for_each(handler);
-	}
-
-	fn for_each_mut_argument<H: FnMut(&mut Link)>(&mut self, mut handler: H) {
-		let Self {
-			function,
-			arguments,
-			results: _,
-			states: _,
-		} = self;
-
-		handler(function);
-		arguments.iter_mut().for_each(handler);
-	}
+	handle_sources!(
+		(function, link),
+		(arguments, link_list),
+		(results, ignore),
+		(states, ignore)
+	);
 }
 
 impl RefIsNull {
-	fn for_each_id<H: FnMut(u32)>(self, mut handler: H) {
-		let Self { source } = self;
-
-		handler(source.0);
-	}
-
-	fn for_each_mut_id<H: FnMut(&mut u32)>(&mut self, mut handler: H) {
-		let Self { source } = self;
-
-		handler(&mut source.0);
-	}
-
-	fn for_each_argument<H: FnMut(Link)>(self, mut handler: H) {
-		let Self { source } = self;
-
-		handler(source);
-	}
-
-	fn for_each_mut_argument<H: FnMut(&mut Link)>(&mut self, mut handler: H) {
-		let Self { source } = self;
-
-		handler(source);
-	}
+	handle_sources!((source, link));
 }
 
 impl IntegerUnaryOperation {
-	fn for_each_id<H: FnMut(u32)>(self, mut handler: H) {
-		let Self {
-			source,
-			r#type: _,
-			operator: _,
-		} = self;
-
-		handler(source.0);
-	}
-
-	fn for_each_mut_id<H: FnMut(&mut u32)>(&mut self, mut handler: H) {
-		let Self {
-			source,
-			r#type: _,
-			operator: _,
-		} = self;
-
-		handler(&mut source.0);
-	}
-
-	fn for_each_argument<H: FnMut(Link)>(self, mut handler: H) {
-		let Self {
-			source,
-			r#type: _,
-			operator: _,
-		} = self;
-
-		handler(source);
-	}
-
-	fn for_each_mut_argument<H: FnMut(&mut Link)>(&mut self, mut handler: H) {
-		let Self {
-			source,
-			r#type: _,
-			operator: _,
-		} = self;
-
-		handler(source);
-	}
+	handle_sources!((source, link), (r#type, ignore), (operator, ignore));
 }
 
 impl IntegerBinaryOperation {
-	fn for_each_id<H: FnMut(u32)>(self, mut handler: H) {
-		let Self {
-			lhs,
-			rhs,
-			r#type: _,
-			operator: _,
-		} = self;
-
-		handler(lhs.0);
-		handler(rhs.0);
-	}
-
-	fn for_each_mut_id<H: FnMut(&mut u32)>(&mut self, mut handler: H) {
-		let Self {
-			lhs,
-			rhs,
-			r#type: _,
-			operator: _,
-		} = self;
-
-		handler(&mut lhs.0);
-		handler(&mut rhs.0);
-	}
-
-	fn for_each_argument<H: FnMut(Link)>(self, mut handler: H) {
-		let Self {
-			lhs,
-			rhs,
-			r#type: _,
-			operator: _,
-		} = self;
-
-		handler(lhs);
-		handler(rhs);
-	}
-
-	fn for_each_mut_argument<H: FnMut(&mut Link)>(&mut self, mut handler: H) {
-		let Self {
-			lhs,
-			rhs,
-			r#type: _,
-			operator: _,
-		} = self;
-
-		handler(lhs);
-		handler(rhs);
-	}
+	handle_sources!(
+		(lhs, link),
+		(rhs, link),
+		(r#type, ignore),
+		(operator, ignore)
+	);
 }
 
 impl IntegerCompareOperation {
-	fn for_each_id<H: FnMut(u32)>(self, mut handler: H) {
-		let Self {
-			lhs,
-			rhs,
-			r#type: _,
-			operator: _,
-		} = self;
-
-		handler(lhs.0);
-		handler(rhs.0);
-	}
-
-	fn for_each_mut_id<H: FnMut(&mut u32)>(&mut self, mut handler: H) {
-		let Self {
-			lhs,
-			rhs,
-			r#type: _,
-			operator: _,
-		} = self;
-
-		handler(&mut lhs.0);
-		handler(&mut rhs.0);
-	}
-
-	fn for_each_argument<H: FnMut(Link)>(self, mut handler: H) {
-		let Self {
-			lhs,
-			rhs,
-			r#type: _,
-			operator: _,
-		} = self;
-
-		handler(lhs);
-		handler(rhs);
-	}
-
-	fn for_each_mut_argument<H: FnMut(&mut Link)>(&mut self, mut handler: H) {
-		let Self {
-			lhs,
-			rhs,
-			r#type: _,
-			operator: _,
-		} = self;
-
-		handler(lhs);
-		handler(rhs);
-	}
+	handle_sources!(
+		(lhs, link),
+		(rhs, link),
+		(r#type, ignore),
+		(operator, ignore)
+	);
 }
 
 impl IntegerNarrow {
-	fn for_each_id<H: FnMut(u32)>(self, mut handler: H) {
-		let Self { source } = self;
-
-		handler(source.0);
-	}
-
-	fn for_each_mut_id<H: FnMut(&mut u32)>(&mut self, mut handler: H) {
-		let Self { source } = self;
-
-		handler(&mut source.0);
-	}
-
-	fn for_each_argument<H: FnMut(Link)>(self, mut handler: H) {
-		let Self { source } = self;
-
-		handler(source);
-	}
-
-	fn for_each_mut_argument<H: FnMut(&mut Link)>(&mut self, mut handler: H) {
-		let Self { source } = self;
-
-		handler(source);
-	}
+	handle_sources!((source, link));
 }
 
 impl IntegerWiden {
-	fn for_each_id<H: FnMut(u32)>(self, mut handler: H) {
-		let Self { source } = self;
-
-		handler(source.0);
-	}
-
-	fn for_each_mut_id<H: FnMut(&mut u32)>(&mut self, mut handler: H) {
-		let Self { source } = self;
-
-		handler(&mut source.0);
-	}
-
-	fn for_each_argument<H: FnMut(Link)>(self, mut handler: H) {
-		let Self { source } = self;
-
-		handler(source);
-	}
-
-	fn for_each_mut_argument<H: FnMut(&mut Link)>(&mut self, mut handler: H) {
-		let Self { source } = self;
-
-		handler(source);
-	}
+	handle_sources!((source, link));
 }
 
 impl IntegerExtend {
-	fn for_each_id<H: FnMut(u32)>(self, mut handler: H) {
-		let Self { source, r#type: _ } = self;
-
-		handler(source.0);
-	}
-
-	fn for_each_mut_id<H: FnMut(&mut u32)>(&mut self, mut handler: H) {
-		let Self { source, r#type: _ } = self;
-
-		handler(&mut source.0);
-	}
-
-	fn for_each_argument<H: FnMut(Link)>(self, mut handler: H) {
-		let Self { source, r#type: _ } = self;
-
-		handler(source);
-	}
-
-	fn for_each_mut_argument<H: FnMut(&mut Link)>(&mut self, mut handler: H) {
-		let Self { source, r#type: _ } = self;
-
-		handler(source);
-	}
+	handle_sources!((source, link), (r#type, ignore));
 }
 
 impl IntegerConvertToNumber {
-	fn for_each_id<H: FnMut(u32)>(self, mut handler: H) {
-		let Self {
-			source,
-			signed: _,
-			to: _,
-			from: _,
-		} = self;
-
-		handler(source.0);
-	}
-
-	fn for_each_mut_id<H: FnMut(&mut u32)>(&mut self, mut handler: H) {
-		let Self {
-			source,
-			signed: _,
-			to: _,
-			from: _,
-		} = self;
-
-		handler(&mut source.0);
-	}
-
-	fn for_each_argument<H: FnMut(Link)>(self, mut handler: H) {
-		let Self {
-			source,
-			signed: _,
-			to: _,
-			from: _,
-		} = self;
-
-		handler(source);
-	}
-
-	fn for_each_mut_argument<H: FnMut(&mut Link)>(&mut self, mut handler: H) {
-		let Self {
-			source,
-			signed: _,
-			to: _,
-			from: _,
-		} = self;
-
-		handler(source);
-	}
+	handle_sources!(
+		(source, link),
+		(signed, ignore),
+		(to, ignore),
+		(from, ignore)
+	);
 }
 
 impl IntegerTransmuteToNumber {
-	fn for_each_id<H: FnMut(u32)>(self, mut handler: H) {
-		let Self { source, from: _ } = self;
-
-		handler(source.0);
-	}
-
-	fn for_each_mut_id<H: FnMut(&mut u32)>(&mut self, mut handler: H) {
-		let Self { source, from: _ } = self;
-
-		handler(&mut source.0);
-	}
-
-	fn for_each_argument<H: FnMut(Link)>(self, mut handler: H) {
-		let Self { source, from: _ } = self;
-
-		handler(source);
-	}
-
-	fn for_each_mut_argument<H: FnMut(&mut Link)>(&mut self, mut handler: H) {
-		let Self { source, from: _ } = self;
-
-		handler(source);
-	}
+	handle_sources!((source, link), (from, ignore));
 }
 
 impl NumberUnaryOperation {
-	fn for_each_id<H: FnMut(u32)>(self, mut handler: H) {
-		let Self {
-			source,
-			r#type: _,
-			operator: _,
-		} = self;
-
-		handler(source.0);
-	}
-
-	fn for_each_mut_id<H: FnMut(&mut u32)>(&mut self, mut handler: H) {
-		let Self {
-			source,
-			r#type: _,
-			operator: _,
-		} = self;
-
-		handler(&mut source.0);
-	}
-
-	fn for_each_argument<H: FnMut(Link)>(self, mut handler: H) {
-		let Self {
-			source,
-			r#type: _,
-			operator: _,
-		} = self;
-
-		handler(source);
-	}
-
-	fn for_each_mut_argument<H: FnMut(&mut Link)>(&mut self, mut handler: H) {
-		let Self {
-			source,
-			r#type: _,
-			operator: _,
-		} = self;
-
-		handler(source);
-	}
+	handle_sources!((source, link), (r#type, ignore), (operator, ignore));
 }
 
 impl NumberBinaryOperation {
-	fn for_each_id<H: FnMut(u32)>(self, mut handler: H) {
-		let Self {
-			lhs,
-			rhs,
-			r#type: _,
-			operator: _,
-		} = self;
-
-		handler(lhs.0);
-		handler(rhs.0);
-	}
-
-	fn for_each_mut_id<H: FnMut(&mut u32)>(&mut self, mut handler: H) {
-		let Self {
-			lhs,
-			rhs,
-			r#type: _,
-			operator: _,
-		} = self;
-
-		handler(&mut lhs.0);
-		handler(&mut rhs.0);
-	}
-
-	fn for_each_argument<H: FnMut(Link)>(self, mut handler: H) {
-		let Self {
-			lhs,
-			rhs,
-			r#type: _,
-			operator: _,
-		} = self;
-
-		handler(lhs);
-		handler(rhs);
-	}
-
-	fn for_each_mut_argument<H: FnMut(&mut Link)>(&mut self, mut handler: H) {
-		let Self {
-			lhs,
-			rhs,
-			r#type: _,
-			operator: _,
-		} = self;
-
-		handler(lhs);
-		handler(rhs);
-	}
+	handle_sources!(
+		(lhs, link),
+		(rhs, link),
+		(r#type, ignore),
+		(operator, ignore)
+	);
 }
 
 impl NumberCompareOperation {
-	fn for_each_id<H: FnMut(u32)>(self, mut handler: H) {
-		let Self {
-			lhs,
-			rhs,
-			r#type: _,
-			operator: _,
-		} = self;
-
-		handler(lhs.0);
-		handler(rhs.0);
-	}
-
-	fn for_each_mut_id<H: FnMut(&mut u32)>(&mut self, mut handler: H) {
-		let Self {
-			lhs,
-			rhs,
-			r#type: _,
-			operator: _,
-		} = self;
-
-		handler(&mut lhs.0);
-		handler(&mut rhs.0);
-	}
-
-	fn for_each_argument<H: FnMut(Link)>(self, mut handler: H) {
-		let Self {
-			lhs,
-			rhs,
-			r#type: _,
-			operator: _,
-		} = self;
-
-		handler(lhs);
-		handler(rhs);
-	}
-
-	fn for_each_mut_argument<H: FnMut(&mut Link)>(&mut self, mut handler: H) {
-		let Self {
-			lhs,
-			rhs,
-			r#type: _,
-			operator: _,
-		} = self;
-
-		handler(lhs);
-		handler(rhs);
-	}
+	handle_sources!(
+		(lhs, link),
+		(rhs, link),
+		(r#type, ignore),
+		(operator, ignore)
+	);
 }
 
 impl NumberTruncateToInteger {
-	fn for_each_id<H: FnMut(u32)>(self, mut handler: H) {
-		let Self {
-			source,
-			signed: _,
-			saturate: _,
-			to: _,
-			from: _,
-		} = self;
-
-		handler(source.0);
-	}
-
-	fn for_each_mut_id<H: FnMut(&mut u32)>(&mut self, mut handler: H) {
-		let Self {
-			source,
-			signed: _,
-			saturate: _,
-			to: _,
-			from: _,
-		} = self;
-
-		handler(&mut source.0);
-	}
-
-	fn for_each_argument<H: FnMut(Link)>(self, mut handler: H) {
-		let Self {
-			source,
-			signed: _,
-			saturate: _,
-			to: _,
-			from: _,
-		} = self;
-
-		handler(source);
-	}
-
-	fn for_each_mut_argument<H: FnMut(&mut Link)>(&mut self, mut handler: H) {
-		let Self {
-			source,
-			signed: _,
-			saturate: _,
-			to: _,
-			from: _,
-		} = self;
-
-		handler(source);
-	}
+	handle_sources!(
+		(source, link),
+		(signed, ignore),
+		(saturate, ignore),
+		(to, ignore),
+		(from, ignore)
+	);
 }
 
 impl NumberTransmuteToInteger {
-	fn for_each_id<H: FnMut(u32)>(self, mut handler: H) {
-		let Self { source, from: _ } = self;
-
-		handler(source.0);
-	}
-
-	fn for_each_mut_id<H: FnMut(&mut u32)>(&mut self, mut handler: H) {
-		let Self { source, from: _ } = self;
-
-		handler(&mut source.0);
-	}
-
-	fn for_each_argument<H: FnMut(Link)>(self, mut handler: H) {
-		let Self { source, from: _ } = self;
-
-		handler(source);
-	}
-
-	fn for_each_mut_argument<H: FnMut(&mut Link)>(&mut self, mut handler: H) {
-		let Self { source, from: _ } = self;
-
-		handler(source);
-	}
+	handle_sources!((source, link), (from, ignore));
 }
 
 impl NumberNarrow {
-	fn for_each_id<H: FnMut(u32)>(self, mut handler: H) {
-		let Self { source } = self;
-
-		handler(source.0);
-	}
-
-	fn for_each_mut_id<H: FnMut(&mut u32)>(&mut self, mut handler: H) {
-		let Self { source } = self;
-
-		handler(&mut source.0);
-	}
-
-	fn for_each_argument<H: FnMut(Link)>(self, mut handler: H) {
-		let Self { source } = self;
-
-		handler(source);
-	}
-
-	fn for_each_mut_argument<H: FnMut(&mut Link)>(&mut self, mut handler: H) {
-		let Self { source } = self;
-
-		handler(source);
-	}
+	handle_sources!((source, link));
 }
 
 impl NumberWiden {
-	fn for_each_id<H: FnMut(u32)>(self, mut handler: H) {
-		let Self { source } = self;
-
-		handler(source.0);
-	}
-
-	fn for_each_mut_id<H: FnMut(&mut u32)>(&mut self, mut handler: H) {
-		let Self { source } = self;
-
-		handler(&mut source.0);
-	}
-
-	fn for_each_argument<H: FnMut(Link)>(self, mut handler: H) {
-		let Self { source } = self;
-
-		handler(source);
-	}
-
-	fn for_each_mut_argument<H: FnMut(&mut Link)>(&mut self, mut handler: H) {
-		let Self { source } = self;
-
-		handler(source);
-	}
+	handle_sources!((source, link));
 }
 
 impl Location {
-	fn for_each_id<H: FnMut(u32)>(self, mut handler: H) {
-		let Self { reference, offset } = self;
-
-		handler(reference.0);
-		handler(offset.0);
-	}
-
-	fn for_each_mut_id<H: FnMut(&mut u32)>(&mut self, mut handler: H) {
-		let Self { reference, offset } = self;
-
-		handler(&mut reference.0);
-		handler(&mut offset.0);
-	}
-
-	fn for_each_argument<H: FnMut(Link)>(self, mut handler: H) {
-		let Self { reference, offset } = self;
-
-		handler(reference);
-		handler(offset);
-	}
-
-	fn for_each_mut_argument<H: FnMut(&mut Link)>(&mut self, mut handler: H) {
-		let Self { reference, offset } = self;
-
-		handler(reference);
-		handler(offset);
-	}
+	handle_sources!((reference, link), (offset, link));
 }
 
 impl GlobalNew {
-	fn for_each_id<H: FnMut(u32)>(self, mut handler: H) {
-		let Self { initializer } = self;
-
-		handler(initializer.0);
-	}
-
-	fn for_each_mut_id<H: FnMut(&mut u32)>(&mut self, mut handler: H) {
-		let Self { initializer } = self;
-
-		handler(&mut initializer.0);
-	}
-
-	fn for_each_argument<H: FnMut(Link)>(self, mut handler: H) {
-		let Self { initializer } = self;
-
-		handler(initializer);
-	}
-
-	fn for_each_mut_argument<H: FnMut(&mut Link)>(&mut self, mut handler: H) {
-		let Self { initializer } = self;
-
-		handler(initializer);
-	}
+	handle_sources!((initializer, link));
 }
 
 impl GlobalGet {
 	pub const RESULT_PORT: u16 = 0;
 	pub const STATE_PORT: u16 = 1;
 
-	fn for_each_id<H: FnMut(u32)>(self, mut handler: H) {
-		let Self { source } = self;
-
-		handler(source.0);
-	}
-
-	fn for_each_mut_id<H: FnMut(&mut u32)>(&mut self, mut handler: H) {
-		let Self { source } = self;
-
-		handler(&mut source.0);
-	}
-
-	fn for_each_argument<H: FnMut(Link)>(self, mut handler: H) {
-		let Self { source } = self;
-
-		handler(source);
-	}
-
-	fn for_each_mut_argument<H: FnMut(&mut Link)>(&mut self, mut handler: H) {
-		let Self { source } = self;
-
-		handler(source);
-	}
+	handle_sources!((source, link));
 }
 
 impl GlobalSet {
 	pub const STATE_PORT: u16 = 0;
 
-	fn for_each_id<H: FnMut(u32)>(self, mut handler: H) {
-		let Self {
-			destination,
-			source,
-		} = self;
-
-		handler(destination.0);
-		handler(source.0);
-	}
-
-	fn for_each_mut_id<H: FnMut(&mut u32)>(&mut self, mut handler: H) {
-		let Self {
-			destination,
-			source,
-		} = self;
-
-		handler(&mut destination.0);
-		handler(&mut source.0);
-	}
-
-	fn for_each_argument<H: FnMut(Link)>(self, mut handler: H) {
-		let Self {
-			destination,
-			source,
-		} = self;
-
-		handler(destination);
-		handler(source);
-	}
-
-	fn for_each_mut_argument<H: FnMut(&mut Link)>(&mut self, mut handler: H) {
-		let Self {
-			destination,
-			source,
-		} = self;
-
-		handler(destination);
-		handler(source);
-	}
+	handle_sources!((destination, link), (source, link));
 }
 
 impl TableNew {
@@ -1522,594 +499,96 @@ impl TableGet {
 	pub const RESULT_PORT: u16 = 0;
 	pub const STATE_PORT: u16 = 1;
 
-	fn for_each_id<H: FnMut(u32)>(self, handler: H) {
-		let Self { source } = self;
-
-		source.for_each_id(handler);
-	}
-
-	fn for_each_mut_id<H: FnMut(&mut u32)>(&mut self, handler: H) {
-		let Self { source } = self;
-
-		source.for_each_mut_id(handler);
-	}
-
-	fn for_each_argument<H: FnMut(Link)>(self, handler: H) {
-		let Self { source } = self;
-
-		source.for_each_argument(handler);
-	}
-
-	fn for_each_mut_argument<H: FnMut(&mut Link)>(&mut self, handler: H) {
-		let Self { source } = self;
-
-		source.for_each_mut_argument(handler);
-	}
+	handle_sources!((source, method));
 }
 
 impl TableSet {
 	pub const STATE_PORT: u16 = 0;
 
-	fn for_each_id<H: FnMut(u32)>(self, mut handler: H) {
-		let Self {
-			destination,
-			source,
-		} = self;
-
-		destination.for_each_id(&mut handler);
-		handler(source.0);
-	}
-
-	fn for_each_mut_id<H: FnMut(&mut u32)>(&mut self, mut handler: H) {
-		let Self {
-			destination,
-			source,
-		} = self;
-
-		destination.for_each_mut_id(&mut handler);
-		handler(&mut source.0);
-	}
-
-	fn for_each_argument<H: FnMut(Link)>(self, mut handler: H) {
-		let Self {
-			destination,
-			source,
-		} = self;
-
-		destination.for_each_argument(&mut handler);
-		handler(source);
-	}
-
-	fn for_each_mut_argument<H: FnMut(&mut Link)>(&mut self, mut handler: H) {
-		let Self {
-			destination,
-			source,
-		} = self;
-
-		destination.for_each_mut_argument(&mut handler);
-		handler(source);
-	}
+	handle_sources!((destination, method), (source, link));
 }
 
 impl TableSize {
 	pub const RESULT_PORT: u16 = 0;
 	pub const STATE_PORT: u16 = 1;
 
-	fn for_each_id<H: FnMut(u32)>(self, mut handler: H) {
-		let Self { source } = self;
-
-		handler(source.0);
-	}
-
-	fn for_each_mut_id<H: FnMut(&mut u32)>(&mut self, mut handler: H) {
-		let Self { source } = self;
-
-		handler(&mut source.0);
-	}
-
-	fn for_each_argument<H: FnMut(Link)>(self, mut handler: H) {
-		let Self { source } = self;
-
-		handler(source);
-	}
-
-	fn for_each_mut_argument<H: FnMut(&mut Link)>(&mut self, mut handler: H) {
-		let Self { source } = self;
-
-		handler(source);
-	}
+	handle_sources!((source, link));
 }
 
 impl TableGrow {
 	pub const RESULT_PORT: u16 = 0;
 	pub const STATE_PORT: u16 = 1;
 
-	fn for_each_id<H: FnMut(u32)>(self, mut handler: H) {
-		let Self {
-			destination,
-			initializer,
-			size,
-		} = self;
-
-		handler(destination.0);
-		handler(initializer.0);
-		handler(size.0);
-	}
-
-	fn for_each_mut_id<H: FnMut(&mut u32)>(&mut self, mut handler: H) {
-		let Self {
-			destination,
-			initializer,
-			size,
-		} = self;
-
-		handler(&mut destination.0);
-		handler(&mut initializer.0);
-		handler(&mut size.0);
-	}
-
-	fn for_each_argument<H: FnMut(Link)>(self, mut handler: H) {
-		let Self {
-			destination,
-			initializer,
-			size,
-		} = self;
-
-		handler(destination);
-		handler(initializer);
-		handler(size);
-	}
-
-	fn for_each_mut_argument<H: FnMut(&mut Link)>(&mut self, mut handler: H) {
-		let Self {
-			destination,
-			initializer,
-			size,
-		} = self;
-
-		handler(destination);
-		handler(initializer);
-		handler(size);
-	}
+	handle_sources!((destination, link), (initializer, link), (size, link));
 }
 
 impl TableFill {
 	pub const STATE_PORT: u16 = 0;
 
-	fn for_each_id<H: FnMut(u32)>(self, mut handler: H) {
-		let Self {
-			destination,
-			source,
-			size,
-		} = self;
-
-		destination.for_each_id(&mut handler);
-		handler(source.0);
-		handler(size.0);
-	}
-
-	fn for_each_mut_id<H: FnMut(&mut u32)>(&mut self, mut handler: H) {
-		let Self {
-			destination,
-			source,
-			size,
-		} = self;
-
-		destination.for_each_mut_id(&mut handler);
-		handler(&mut source.0);
-		handler(&mut size.0);
-	}
-
-	fn for_each_argument<H: FnMut(Link)>(self, mut handler: H) {
-		let Self {
-			destination,
-			source,
-			size,
-		} = self;
-
-		destination.for_each_argument(&mut handler);
-		handler(source);
-		handler(size);
-	}
-
-	fn for_each_mut_argument<H: FnMut(&mut Link)>(&mut self, mut handler: H) {
-		let Self {
-			destination,
-			source,
-			size,
-		} = self;
-
-		destination.for_each_mut_argument(&mut handler);
-		handler(source);
-		handler(size);
-	}
+	handle_sources!((destination, method), (source, link), (size, link));
 }
 
 impl TableCopy {
 	pub const DESTINATION_STATE_PORT: u16 = 0;
 	pub const SOURCE_STATE_PORT: u16 = 1;
 
-	fn for_each_id<H: FnMut(u32)>(self, mut handler: H) {
-		let Self {
-			destination,
-			source,
-			size,
-		} = self;
-
-		destination.for_each_id(&mut handler);
-		source.for_each_id(&mut handler);
-		handler(size.0);
-	}
-
-	fn for_each_mut_id<H: FnMut(&mut u32)>(&mut self, mut handler: H) {
-		let Self {
-			destination,
-			source,
-			size,
-		} = self;
-
-		destination.for_each_mut_id(&mut handler);
-		source.for_each_mut_id(&mut handler);
-		handler(&mut size.0);
-	}
-
-	fn for_each_argument<H: FnMut(Link)>(self, mut handler: H) {
-		let Self {
-			destination,
-			source,
-			size,
-		} = self;
-
-		destination.for_each_argument(&mut handler);
-		source.for_each_argument(&mut handler);
-		handler(size);
-	}
-
-	fn for_each_mut_argument<H: FnMut(&mut Link)>(&mut self, mut handler: H) {
-		let Self {
-			destination,
-			source,
-			size,
-		} = self;
-
-		destination.for_each_mut_argument(&mut handler);
-		source.for_each_mut_argument(&mut handler);
-		handler(size);
-	}
+	handle_sources!((destination, method), (source, method), (size, link));
 }
 
 impl TableDrop {
 	pub const STATE_PORT: u16 = 0;
 
-	fn for_each_id<H: FnMut(u32)>(self, mut handler: H) {
-		let Self { source } = self;
-
-		handler(source.0);
-	}
-
-	fn for_each_mut_id<H: FnMut(&mut u32)>(&mut self, mut handler: H) {
-		let Self { source } = self;
-
-		handler(&mut source.0);
-	}
-
-	fn for_each_argument<H: FnMut(Link)>(self, mut handler: H) {
-		let Self { source } = self;
-
-		handler(source);
-	}
-
-	fn for_each_mut_argument<H: FnMut(&mut Link)>(&mut self, mut handler: H) {
-		let Self { source } = self;
-
-		handler(source);
-	}
+	handle_sources!((source, link));
 }
 
 impl MemoryNew {
-	fn for_each_id<H: FnMut(u32)>(&self, _handler: H) {
-		let Self {
-			initializer: _,
-			minimum: _,
-			maximum: _,
-		} = self;
-	}
-
-	fn for_each_mut_id<H: FnMut(&mut u32)>(&self, _handler: H) {
-		let Self {
-			initializer: _,
-			minimum: _,
-			maximum: _,
-		} = self;
-	}
-
-	fn for_each_argument<H: FnMut(Link)>(&self, _handler: H) {
-		let Self {
-			initializer: _,
-			minimum: _,
-			maximum: _,
-		} = self;
-	}
-
-	fn for_each_mut_argument<H: FnMut(&mut Link)>(&self, _handler: H) {
-		let Self {
-			initializer: _,
-			minimum: _,
-			maximum: _,
-		} = self;
-	}
+	handle_sources!((initializer, ignore), (minimum, ignore), (maximum, ignore));
 }
 
 impl MemoryLoad {
 	pub const RESULT_PORT: u16 = 0;
 	pub const STATE_PORT: u16 = 1;
 
-	fn for_each_id<H: FnMut(u32)>(self, mut handler: H) {
-		let Self { source, r#type: _ } = self;
-
-		source.for_each_id(&mut handler);
-	}
-
-	fn for_each_mut_id<H: FnMut(&mut u32)>(&mut self, mut handler: H) {
-		let Self { source, r#type: _ } = self;
-
-		source.for_each_mut_id(&mut handler);
-	}
-
-	fn for_each_argument<H: FnMut(Link)>(self, mut handler: H) {
-		let Self { source, r#type: _ } = self;
-
-		source.for_each_argument(&mut handler);
-	}
-
-	fn for_each_mut_argument<H: FnMut(&mut Link)>(&mut self, mut handler: H) {
-		let Self { source, r#type: _ } = self;
-
-		source.for_each_mut_argument(&mut handler);
-	}
+	handle_sources!((source, method), (r#type, ignore));
 }
 
 impl MemoryStore {
 	pub const STATE_PORT: u16 = 0;
 
-	fn for_each_id<H: FnMut(u32)>(self, mut handler: H) {
-		let Self {
-			destination,
-			source,
-			r#type: _,
-		} = self;
-
-		destination.for_each_id(&mut handler);
-		handler(source.0);
-	}
-
-	fn for_each_mut_id<H: FnMut(&mut u32)>(&mut self, mut handler: H) {
-		let Self {
-			destination,
-			source,
-			r#type: _,
-		} = self;
-
-		destination.for_each_mut_id(&mut handler);
-		handler(&mut source.0);
-	}
-
-	fn for_each_argument<H: FnMut(Link)>(self, mut handler: H) {
-		let Self {
-			destination,
-			source,
-			r#type: _,
-		} = self;
-
-		destination.for_each_argument(&mut handler);
-		handler(source);
-	}
-
-	fn for_each_mut_argument<H: FnMut(&mut Link)>(&mut self, mut handler: H) {
-		let Self {
-			destination,
-			source,
-			r#type: _,
-		} = self;
-
-		destination.for_each_mut_argument(&mut handler);
-		handler(source);
-	}
+	handle_sources!((destination, method), (source, link), (r#type, ignore));
 }
 
 impl MemorySize {
 	pub const RESULT_PORT: u16 = 0;
 	pub const STATE_PORT: u16 = 1;
 
-	fn for_each_id<H: FnMut(u32)>(self, mut handler: H) {
-		let Self { source } = self;
-
-		handler(source.0);
-	}
-
-	fn for_each_mut_id<H: FnMut(&mut u32)>(&mut self, mut handler: H) {
-		let Self { source } = self;
-
-		handler(&mut source.0);
-	}
-
-	fn for_each_argument<H: FnMut(Link)>(self, mut handler: H) {
-		let Self { source } = self;
-
-		handler(source);
-	}
-
-	fn for_each_mut_argument<H: FnMut(&mut Link)>(&mut self, mut handler: H) {
-		let Self { source } = self;
-
-		handler(source);
-	}
+	handle_sources!((source, link));
 }
 
 impl MemoryGrow {
 	pub const RESULT_PORT: u16 = 0;
 	pub const STATE_PORT: u16 = 1;
 
-	fn for_each_id<H: FnMut(u32)>(self, mut handler: H) {
-		let Self { destination, size } = self;
-
-		handler(destination.0);
-		handler(size.0);
-	}
-
-	fn for_each_mut_id<H: FnMut(&mut u32)>(&mut self, mut handler: H) {
-		let Self { destination, size } = self;
-
-		handler(&mut destination.0);
-		handler(&mut size.0);
-	}
-
-	fn for_each_argument<H: FnMut(Link)>(self, mut handler: H) {
-		let Self { destination, size } = self;
-
-		handler(destination);
-		handler(size);
-	}
-
-	fn for_each_mut_argument<H: FnMut(&mut Link)>(&mut self, mut handler: H) {
-		let Self { destination, size } = self;
-
-		handler(destination);
-		handler(size);
-	}
+	handle_sources!((destination, link), (size, link));
 }
 
 impl MemoryFill {
 	pub const STATE_PORT: u16 = 0;
 
-	fn for_each_id<H: FnMut(u32)>(self, mut handler: H) {
-		let Self {
-			destination,
-			byte,
-			size,
-		} = self;
-
-		destination.for_each_id(&mut handler);
-		handler(byte.0);
-		handler(size.0);
-	}
-
-	fn for_each_mut_id<H: FnMut(&mut u32)>(&mut self, mut handler: H) {
-		let Self {
-			destination,
-			byte,
-			size,
-		} = self;
-
-		destination.for_each_mut_id(&mut handler);
-		handler(&mut byte.0);
-		handler(&mut size.0);
-	}
-
-	fn for_each_argument<H: FnMut(Link)>(self, mut handler: H) {
-		let Self {
-			destination,
-			byte,
-			size,
-		} = self;
-
-		destination.for_each_argument(&mut handler);
-		handler(byte);
-		handler(size);
-	}
-
-	fn for_each_mut_argument<H: FnMut(&mut Link)>(&mut self, mut handler: H) {
-		let Self {
-			destination,
-			byte,
-			size,
-		} = self;
-
-		destination.for_each_mut_argument(&mut handler);
-		handler(byte);
-		handler(size);
-	}
+	handle_sources!((destination, method), (byte, link), (size, link));
 }
 
 impl MemoryCopy {
 	pub const DESTINATION_STATE_PORT: u16 = 0;
 	pub const SOURCE_STATE_PORT: u16 = 1;
 
-	fn for_each_id<H: FnMut(u32)>(self, mut handler: H) {
-		let Self {
-			destination,
-			source,
-			size,
-		} = self;
-
-		destination.for_each_id(&mut handler);
-		source.for_each_id(&mut handler);
-		handler(size.0);
-	}
-
-	fn for_each_mut_id<H: FnMut(&mut u32)>(&mut self, mut handler: H) {
-		let Self {
-			destination,
-			source,
-			size,
-		} = self;
-
-		destination.for_each_mut_id(&mut handler);
-		source.for_each_mut_id(&mut handler);
-		handler(&mut size.0);
-	}
-
-	fn for_each_argument<H: FnMut(Link)>(self, mut handler: H) {
-		let Self {
-			destination,
-			source,
-			size,
-		} = self;
-
-		destination.for_each_argument(&mut handler);
-		source.for_each_argument(&mut handler);
-		handler(size);
-	}
-
-	fn for_each_mut_argument<H: FnMut(&mut Link)>(&mut self, mut handler: H) {
-		let Self {
-			destination,
-			source,
-			size,
-		} = self;
-
-		destination.for_each_mut_argument(&mut handler);
-		source.for_each_mut_argument(&mut handler);
-		handler(size);
-	}
+	handle_sources!((destination, method), (source, method), (size, link));
 }
 
 impl MemoryDrop {
 	pub const STATE_PORT: u16 = 0;
 
-	fn for_each_id<H: FnMut(u32)>(self, mut handler: H) {
-		let Self { source } = self;
-
-		handler(source.0);
-	}
-
-	fn for_each_mut_id<H: FnMut(&mut u32)>(&mut self, mut handler: H) {
-		let Self { source } = self;
-
-		handler(&mut source.0);
-	}
-
-	fn for_each_argument<H: FnMut(Link)>(self, mut handler: H) {
-		let Self { source } = self;
-
-		handler(source);
-	}
-
-	fn for_each_mut_argument<H: FnMut(&mut Link)>(&mut self, mut handler: H) {
-		let Self { source } = self;
-
-		handler(source);
-	}
+	handle_sources!((source, link));
 }
 
 impl Node {
