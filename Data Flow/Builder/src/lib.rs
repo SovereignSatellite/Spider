@@ -6,9 +6,12 @@ use alloc::{sync::Arc, vec::Vec};
 use control_flow_builder::Types;
 use control_flow_graph::instruction::MemorySize;
 use data_flow_graph::{
-	DataFlowGraph, Link,
-	base::Location,
-	control::{Export, OmegaIn},
+	DataFlowGraph, Link, Node,
+	control::{Export, Import, OmegaIn, OmegaOut},
+	simple::{
+		Apply, GlobalGet, GlobalNew, GlobalSet, Location, MemoryCopy, MemoryDrop, MemoryNew, Merge,
+		TableCopy, TableDrop, TableFill, TableNew, TableSet,
+	},
 };
 use wasmparser::{ConstExpr, ElementItems, FunctionBody, SectionLimited, ValType};
 
@@ -34,7 +37,7 @@ fn add_table_from_type(graph: &mut DataFlowGraph, table_type: wasmparser::TableT
 	let minimum = initial.try_into().unwrap();
 	let maximum = maximum.map_or(u32::MAX, |maximum| maximum.try_into().unwrap());
 
-	graph.add_table_new(Vec::new(), minimum, maximum)
+	TableNew::add_into(graph, Vec::new(), minimum, maximum)
 }
 
 fn add_table_from_items(graph: &mut DataFlowGraph, items: ElementItems) -> Link {
@@ -43,7 +46,7 @@ fn add_table_from_items(graph: &mut DataFlowGraph, items: ElementItems) -> Link 
 		ElementItems::Expressions(_, section) => section.count(),
 	};
 
-	graph.add_table_new(Vec::new(), count, count)
+	TableNew::add_into(graph, Vec::new(), count, count)
 }
 
 fn add_memory_from_type(graph: &mut DataFlowGraph, memory_type: wasmparser::MemoryType) -> Link {
@@ -58,20 +61,20 @@ fn add_memory_from_type(graph: &mut DataFlowGraph, memory_type: wasmparser::Memo
 		u32::try_from(maximum).unwrap().saturating_mul(page)
 	});
 
-	graph.add_memory_new(Vec::new(), minimum, maximum)
+	MemoryNew::add_into(graph, Vec::new(), minimum, maximum)
 }
 
 fn add_memory_from_data(graph: &mut DataFlowGraph, data: &[u8]) -> Link {
 	let data = Arc::<[u8]>::from(data);
 	let len = data.len().try_into().unwrap();
 
-	graph.add_memory_new(alloc::vec![(data, 0)], len, len)
+	MemoryNew::add_into(graph, alloc::vec![(data, 0)], len, len)
 }
 
 fn add_global_from_null(graph: &mut DataFlowGraph) -> Link {
-	let null = graph.add_null();
+	let null = Node::add_null_into(graph);
 
-	graph.add_global_new(null)
+	GlobalNew::add_into(graph, null)
 }
 
 pub struct DataFlowBuilder {
@@ -99,12 +102,12 @@ impl DataFlowBuilder {
 		let environment = Link(omega_in, OmegaIn::ENVIRONMENT_PORT);
 
 		for wasmparser::Import { module, name, ty } in section.into_iter().map(Result::unwrap) {
-			let mut link = graph.add_import(environment, module.into(), name.into());
+			let mut link = Import::add_into(graph, environment, module.into(), name.into());
 
 			if let wasmparser::TypeRef::Func(function) = ty {
 				self.types.add_function(function);
 
-				link = graph.add_global_new(link);
+				link = GlobalNew::add_into(graph, link);
 			}
 
 			self.global_state.get_mut_type_ref(ty).push(link);
@@ -155,13 +158,13 @@ impl DataFlowBuilder {
 	) -> Link {
 		let destination = Location {
 			reference,
-			offset: graph.add_i32(0),
+			offset: Node::add_i32_into(graph, 0),
 		};
 
 		let source = self.build_expression(graph, code, ValType::Ref(ty.element_type));
-		let size = graph.add_i32(ty.initial.try_into().unwrap());
+		let size = Node::add_i32_into(graph, ty.initial.try_into().unwrap());
 
-		graph.add_table_fill(destination, source, size)
+		TableFill::add_into(graph, destination, source, size)
 	}
 
 	fn initialize_table(
@@ -214,13 +217,13 @@ impl DataFlowBuilder {
 
 		for (function, offset) in section.into_iter().map(Result::unwrap).zip(0..) {
 			let function = functions[usize::try_from(function).unwrap()];
-			let source = graph.add_global_get(function).0;
+			let source = GlobalGet::add_into(graph, function).0;
 			let destination = Location {
 				reference: element,
-				offset: graph.add_i32(offset),
+				offset: Node::add_i32_into(graph, offset),
 			};
 
-			element = graph.add_table_set(destination, source);
+			element = TableSet::add_into(graph, destination, source);
 		}
 
 		element
@@ -237,10 +240,10 @@ impl DataFlowBuilder {
 			let source = self.build_expression(graph, &code, ValType::Ref(r#type));
 			let destination = Location {
 				reference: element,
-				offset: graph.add_i32(offset),
+				offset: Node::add_i32_into(graph, offset),
 			};
 
-			element = graph.add_table_set(destination, source);
+			element = TableSet::add_into(graph, destination, source);
 		}
 
 		element
@@ -275,12 +278,12 @@ impl DataFlowBuilder {
 
 		let source = Location {
 			reference: elements,
-			offset: graph.add_i32(0),
+			offset: Node::add_i32_into(graph, 0),
 		};
 
-		let size = graph.add_i32(size);
+		let size = Node::add_i32_into(graph, size);
 
-		graph.add_table_copy(destination, source, size).0
+		TableCopy::add_into(graph, destination, source, size).0
 	}
 
 	fn action_element(
@@ -301,10 +304,10 @@ impl DataFlowBuilder {
 				self.global_state.tables[index] =
 					self.load_table_copy(graph, reference, offset_expr, elements, size);
 
-				graph.add_table_drop(elements)
+				TableDrop::add_into(graph, elements)
 			}
 			wasmparser::ElementKind::Passive => elements,
-			wasmparser::ElementKind::Declared => graph.add_table_drop(elements),
+			wasmparser::ElementKind::Declared => TableDrop::add_into(graph, elements),
 		}
 	}
 
@@ -353,12 +356,12 @@ impl DataFlowBuilder {
 
 		let source = Location {
 			reference: data,
-			offset: graph.add_i32(0),
+			offset: Node::add_i32_into(graph, 0),
 		};
 
-		let size = graph.add_i32(size);
+		let size = Node::add_i32_into(graph, size);
 
-		graph.add_memory_copy(destination, source, size).0
+		MemoryCopy::add_into(graph, destination, source, size).0
 	}
 
 	fn handle_data_declarations(
@@ -393,7 +396,7 @@ impl DataFlowBuilder {
 				self.global_state.memories[index] =
 					self.load_memory_copy(graph, reference, offset_expr, data, size);
 
-				graph.add_memory_drop(data)
+				MemoryDrop::add_into(graph, data)
 			}
 		}
 	}
@@ -435,7 +438,7 @@ impl DataFlowBuilder {
 		let source = self.build_expression(graph, &global.init_expr, global.ty.content_type);
 
 		self.global_state.globals[index] =
-			graph.add_global_set(self.global_state.globals[index], source);
+			GlobalSet::add_into(graph, self.global_state.globals[index], source);
 	}
 
 	fn handle_global_initializations(
@@ -482,7 +485,8 @@ impl DataFlowBuilder {
 			let lambda_out = self.build_function(graph, body, imports);
 			let functions = &mut self.global_state.functions;
 
-			functions[imports] = graph.add_global_set(functions[imports], Link(lambda_out, 0));
+			functions[imports] =
+				GlobalSet::add_into(graph, functions[imports], Link(lambda_out, 0));
 
 			imports += 1;
 		}
@@ -497,7 +501,7 @@ impl DataFlowBuilder {
 		let mut reference = self.global_state.get_external_kind(export.kind)[index];
 
 		if export.kind == wasmparser::ExternalKind::Func {
-			reference = graph.add_global_get(reference).0;
+			reference = GlobalGet::add_into(graph, reference).0;
 		}
 
 		Export {
@@ -528,8 +532,8 @@ impl DataFlowBuilder {
 
 		start.map_or(state, |start| {
 			let function = self.global_state.functions[usize::try_from(start).unwrap()];
-			let function = graph.add_global_get(function).0;
-			let apply = graph.add_apply(function, alloc::vec![state], 0, 1);
+			let function = GlobalGet::add_into(graph, function).0;
+			let apply = Apply::add_into(graph, function, alloc::vec![state], 0, 1);
 
 			Link(apply, 0)
 		})
@@ -547,9 +551,9 @@ impl DataFlowBuilder {
 		self.global_state.retrieve_all_mutable(&mut states);
 		states.push(start);
 
-		let start = graph.add_merge(list::resizable::Resizable::Heap(states));
+		let start = Merge::add_into(graph, list::resizable::Resizable::Heap(states));
 
-		graph.add_omega_out(omega_in, start, exports)
+		OmegaOut::add_into(graph, omega_in, start, exports)
 	}
 
 	pub fn run(&mut self, graph: &mut DataFlowGraph, data: &[u8]) -> u32 {
@@ -559,7 +563,7 @@ impl DataFlowBuilder {
 		self.types.clear();
 		self.types.add_sub_types(sections.types);
 
-		let omega_in = graph.add_omega_in();
+		let omega_in = OmegaIn::add_into(graph);
 
 		self.handle_import_section(graph, omega_in, sections.imports);
 

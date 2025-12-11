@@ -1,21 +1,20 @@
-use alloc::vec::Vec;
-
-use crate::DataFlowGraph;
-
-use super::{
+use crate::{
 	Link, Node,
-	base::{
-		Apply, GlobalGet, GlobalNew, GlobalSet, Identity, IntegerBinaryOperation,
-		IntegerCompareOperation, IntegerConvertToNumber, IntegerExtend, IntegerNarrow,
-		IntegerTransmuteToNumber, IntegerUnaryOperation, IntegerWiden, Location, MemoryCopy,
-		MemoryDrop, MemoryFill, MemoryGrow, MemoryLoad, MemoryNew, MemorySize, MemoryStore, Merge,
-		NumberBinaryOperation, NumberCompareOperation, NumberNarrow, NumberTransmuteToInteger,
-		NumberTruncateToInteger, NumberUnaryOperation, NumberWiden, RefIsNull, TableCopy,
-		TableDrop, TableFill, TableGet, TableGrow, TableNew, TableSet, TableSize,
-	},
-	control::{
-		Export, GammaIn, GammaOut, Import, LambdaIn, LambdaOut, OmegaIn, OmegaOut, RegionIn,
-		RegionOut, ThetaIn, ThetaOut,
+	node::{
+		control::{
+			Export, GammaIn, GammaOut, Import, LambdaIn, LambdaOut, OmegaIn, OmegaOut, RegionIn,
+			RegionOut, ThetaIn, ThetaOut,
+		},
+		simple::{
+			Apply, GlobalGet, GlobalNew, GlobalSet, Identity, IntegerBinaryOperation,
+			IntegerCompareOperation, IntegerConvertToNumber, IntegerExtend, IntegerNarrow,
+			IntegerTransmuteToNumber, IntegerUnaryOperation, IntegerWiden, Location, MemoryCopy,
+			MemoryDrop, MemoryFill, MemoryGrow, MemoryLoad, MemoryNew, MemorySize, MemoryStore,
+			Merge, NumberBinaryOperation, NumberCompareOperation, NumberNarrow,
+			NumberTransmuteToInteger, NumberTruncateToInteger, NumberUnaryOperation, NumberWiden,
+			RefIsNull, TableCopy, TableDrop, TableFill, TableGet, TableGrow, TableNew, TableSet,
+			TableSize,
+		},
 	},
 };
 
@@ -236,62 +235,32 @@ impl LambdaOut {
 impl RegionIn {
 	handle_requirements!((input, id), (output, ignore));
 	handle_sources!((input, id), (output, id));
-
-	fn ports_output(&self, graph: &DataFlowGraph) -> usize {
-		graph.get(self.input).as_gamma_in().unwrap().ports_output()
-	}
 }
 
 impl RegionOut {
 	handle_requirements!((input, id), (output, ignore), (results, ignore));
 	handle_sources!((input, id), (output, id), (results, link_list));
-
-	const fn ports_output(&self) -> usize {
-		self.results.len()
-	}
 }
 
 impl GammaIn {
 	handle_sources!((output, id), (arguments, link_list), (condition, link));
-
-	const fn ports_output(&self) -> usize {
-		self.arguments.len()
-	}
 }
 
 impl GammaOut {
 	handle_requirements!((input, id), (regions, id_list));
 	handle_sources!((input, id), (regions, id_list));
-
-	#[must_use]
-	pub fn ports_output(&self, graph: &DataFlowGraph) -> usize {
-		let first = *self.regions.first().unwrap();
-
-		graph.get(first).as_region_out().unwrap().ports_output()
-	}
 }
 
 impl ThetaIn {
 	handle_sources!((output, id), (arguments, link_list));
-
-	const fn ports_output(&self) -> usize {
-		self.arguments.len()
-	}
 }
 
 impl ThetaOut {
 	handle_requirements!((input, id), (results, ignore), (condition, ignore));
 	handle_sources!((input, id), (results, link_list), (condition, link));
-
-	const fn ports_output(&self) -> usize {
-		self.results.len()
-	}
 }
 
 impl OmegaIn {
-	pub const ENVIRONMENT_PORT: u16 = 0;
-	pub const STATE_PORT: u16 = 1;
-
 	handle_sources!((output, id));
 }
 
@@ -433,15 +402,10 @@ impl GlobalNew {
 }
 
 impl GlobalGet {
-	pub const RESULT_PORT: u16 = 0;
-	pub const STATE_PORT: u16 = 1;
-
 	handle_sources!((source, link));
 }
 
 impl GlobalSet {
-	pub const STATE_PORT: u16 = 0;
-
 	handle_sources!((destination, link), (source, link));
 }
 
@@ -496,48 +460,30 @@ impl TableNew {
 }
 
 impl TableGet {
-	pub const RESULT_PORT: u16 = 0;
-	pub const STATE_PORT: u16 = 1;
-
 	handle_sources!((source, method));
 }
 
 impl TableSet {
-	pub const STATE_PORT: u16 = 0;
-
 	handle_sources!((destination, method), (source, link));
 }
 
 impl TableSize {
-	pub const RESULT_PORT: u16 = 0;
-	pub const STATE_PORT: u16 = 1;
-
 	handle_sources!((source, link));
 }
 
 impl TableGrow {
-	pub const RESULT_PORT: u16 = 0;
-	pub const STATE_PORT: u16 = 1;
-
 	handle_sources!((destination, link), (initializer, link), (size, link));
 }
 
 impl TableFill {
-	pub const STATE_PORT: u16 = 0;
-
 	handle_sources!((destination, method), (source, link), (size, link));
 }
 
 impl TableCopy {
-	pub const DESTINATION_STATE_PORT: u16 = 0;
-	pub const SOURCE_STATE_PORT: u16 = 1;
-
 	handle_sources!((destination, method), (source, method), (size, link));
 }
 
 impl TableDrop {
-	pub const STATE_PORT: u16 = 0;
-
 	handle_sources!((source, link));
 }
 
@@ -546,98 +492,34 @@ impl MemoryNew {
 }
 
 impl MemoryLoad {
-	pub const RESULT_PORT: u16 = 0;
-	pub const STATE_PORT: u16 = 1;
-
 	handle_sources!((source, method), (r#type, ignore));
 }
 
 impl MemoryStore {
-	pub const STATE_PORT: u16 = 0;
-
 	handle_sources!((destination, method), (source, link), (r#type, ignore));
 }
 
 impl MemorySize {
-	pub const RESULT_PORT: u16 = 0;
-	pub const STATE_PORT: u16 = 1;
-
 	handle_sources!((source, link));
 }
 
 impl MemoryGrow {
-	pub const RESULT_PORT: u16 = 0;
-	pub const STATE_PORT: u16 = 1;
-
 	handle_sources!((destination, link), (size, link));
 }
 
 impl MemoryFill {
-	pub const STATE_PORT: u16 = 0;
-
 	handle_sources!((destination, method), (byte, link), (size, link));
 }
 
 impl MemoryCopy {
-	pub const DESTINATION_STATE_PORT: u16 = 0;
-	pub const SOURCE_STATE_PORT: u16 = 1;
-
 	handle_sources!((destination, method), (source, method), (size, link));
 }
 
 impl MemoryDrop {
-	pub const STATE_PORT: u16 = 0;
-
 	handle_sources!((source, link));
 }
 
 impl Node {
-	#[must_use]
-	pub fn ports_output(&self, graph: &DataFlowGraph) -> Option<usize> {
-		let result = match self {
-			Self::RegionIn(node) => node.ports_output(graph),
-			Self::GammaOut(node) => node.ports_output(graph),
-			Self::ThetaIn(node) => node.ports_output(),
-			Self::ThetaOut(node) => node.ports_output(),
-
-			_ => return None,
-		};
-
-		Some(result)
-	}
-
-	#[must_use]
-	pub const fn as_ports(&self) -> Option<&Vec<Link>> {
-		let ports = match self {
-			Self::LambdaIn(node) => &node.dependencies,
-			Self::LambdaOut(node) => &node.results,
-			Self::RegionOut(node) => &node.results,
-			Self::GammaIn(node) => &node.arguments,
-			Self::ThetaIn(node) => &node.arguments,
-			Self::ThetaOut(node) => &node.results,
-
-			_ => return None,
-		};
-
-		Some(ports)
-	}
-
-	#[must_use]
-	pub const fn as_mut_ports(&mut self) -> Option<&mut Vec<Link>> {
-		let ports = match self {
-			Self::LambdaIn(node) => &mut node.dependencies,
-			Self::LambdaOut(node) => &mut node.results,
-			Self::RegionOut(node) => &mut node.results,
-			Self::GammaIn(node) => &mut node.arguments,
-			Self::ThetaIn(node) => &mut node.arguments,
-			Self::ThetaOut(node) => &mut node.results,
-
-			_ => return None,
-		};
-
-		Some(ports)
-	}
-
 	pub fn for_each_requirement<H: FnMut(u32)>(&self, handler: H) {
 		match self {
 			Self::LambdaOut(node) => node.for_each_requirement(handler),

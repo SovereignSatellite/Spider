@@ -1,5 +1,5 @@
 use alloc::vec::Vec;
-use data_flow_graph::{Link, base};
+use data_flow_graph::{Link, simple};
 
 use hashbrown::HashMap;
 use luajit_tree::{
@@ -134,7 +134,7 @@ impl CodeHandler {
 		});
 	}
 
-	pub fn do_call(&mut self, node: &base::Apply, id: u32, data_handler: &mut DataHandler) {
+	pub fn do_call(&mut self, node: &simple::Apply, id: u32, data_handler: &mut DataHandler) {
 		let end = node.arguments.len() - usize::from(node.states);
 		let statement = Statement::Call(
 			Call {
@@ -148,7 +148,7 @@ impl CodeHandler {
 		self.scopes.last_mut().unwrap().push(statement);
 	}
 
-	pub fn do_global_set(&mut self, node: base::GlobalSet, data_handler: &mut DataHandler) {
+	pub fn do_global_set(&mut self, node: simple::GlobalSet, data_handler: &mut DataHandler) {
 		let statement = Statement::GlobalSet(
 			GlobalSet {
 				destination: data_handler.load(node.destination),
@@ -160,7 +160,7 @@ impl CodeHandler {
 		self.scopes.last_mut().unwrap().push(statement);
 	}
 
-	pub fn do_table_set(&mut self, node: base::TableSet, data_handler: &mut DataHandler) {
+	pub fn do_table_set(&mut self, node: simple::TableSet, data_handler: &mut DataHandler) {
 		let statement = Statement::TableSet(
 			TableSet {
 				destination: data_handler.load_location(node.destination),
@@ -172,7 +172,7 @@ impl CodeHandler {
 		self.scopes.last_mut().unwrap().push(statement);
 	}
 
-	pub fn do_table_fill(&mut self, node: base::TableFill, data_handler: &mut DataHandler) {
+	pub fn do_table_fill(&mut self, node: simple::TableFill, data_handler: &mut DataHandler) {
 		let statement = Statement::TableFill(
 			TableFill {
 				destination: data_handler.load_location(node.destination),
@@ -185,7 +185,7 @@ impl CodeHandler {
 		self.scopes.last_mut().unwrap().push(statement);
 	}
 
-	pub fn do_table_copy(&mut self, node: base::TableCopy, data_handler: &mut DataHandler) {
+	pub fn do_table_copy(&mut self, node: simple::TableCopy, data_handler: &mut DataHandler) {
 		let statement = Statement::TableCopy(
 			TableCopy {
 				destination: data_handler.load_location(node.destination),
@@ -198,7 +198,7 @@ impl CodeHandler {
 		self.scopes.last_mut().unwrap().push(statement);
 	}
 
-	pub fn do_table_drop(&mut self, node: base::TableDrop, data_handler: &mut DataHandler) {
+	pub fn do_table_drop(&mut self, node: simple::TableDrop, data_handler: &mut DataHandler) {
 		let statement = Statement::TableDrop(
 			TableDrop {
 				source: data_handler.load(node.source),
@@ -209,7 +209,7 @@ impl CodeHandler {
 		self.scopes.last_mut().unwrap().push(statement);
 	}
 
-	pub fn do_memory_store(&mut self, node: base::MemoryStore, data_handler: &mut DataHandler) {
+	pub fn do_memory_store(&mut self, node: simple::MemoryStore, data_handler: &mut DataHandler) {
 		let statement = Statement::MemoryStore(
 			MemoryStore {
 				destination: data_handler.load_location(node.destination),
@@ -222,7 +222,7 @@ impl CodeHandler {
 		self.scopes.last_mut().unwrap().push(statement);
 	}
 
-	pub fn do_memory_fill(&mut self, node: base::MemoryFill, data_handler: &mut DataHandler) {
+	pub fn do_memory_fill(&mut self, node: simple::MemoryFill, data_handler: &mut DataHandler) {
 		let statement = Statement::MemoryFill(
 			MemoryFill {
 				destination: data_handler.load_location(node.destination),
@@ -235,7 +235,7 @@ impl CodeHandler {
 		self.scopes.last_mut().unwrap().push(statement);
 	}
 
-	pub fn do_memory_copy(&mut self, node: base::MemoryCopy, data_handler: &mut DataHandler) {
+	pub fn do_memory_copy(&mut self, node: simple::MemoryCopy, data_handler: &mut DataHandler) {
 		let statement = Statement::MemoryCopy(
 			MemoryCopy {
 				destination: data_handler.load_location(node.destination),
@@ -248,7 +248,7 @@ impl CodeHandler {
 		self.scopes.last_mut().unwrap().push(statement);
 	}
 
-	pub fn do_memory_drop(&mut self, node: base::MemoryDrop, data_handler: &mut DataHandler) {
+	pub fn do_memory_drop(&mut self, node: simple::MemoryDrop, data_handler: &mut DataHandler) {
 		let statement = Statement::MemoryDrop(
 			MemoryDrop {
 				source: data_handler.load(node.source),

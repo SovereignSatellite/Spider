@@ -3,7 +3,11 @@
 
 use data_flow_graph::{
 	DataFlowGraph, Link, Node,
-	base::{
+	control::{
+		GammaIn, GammaOut, Import, LambdaIn, LambdaOut, OmegaIn, OmegaOut, RegionIn, ThetaIn,
+		ThetaOut,
+	},
+	simple::{
 		Apply, GlobalGet, GlobalNew, GlobalSet, Host, Identity, IntegerBinaryOperation,
 		IntegerCompareOperation, IntegerConvertToNumber, IntegerExtend, IntegerNarrow,
 		IntegerTransmuteToNumber, IntegerUnaryOperation, IntegerWiden, MemoryCopy, MemoryDrop,
@@ -11,10 +15,6 @@ use data_flow_graph::{
 		NumberBinaryOperation, NumberCompareOperation, NumberNarrow, NumberTransmuteToInteger,
 		NumberTruncateToInteger, NumberUnaryOperation, NumberWiden, RefIsNull, TableCopy,
 		TableDrop, TableFill, TableGet, TableGrow, TableNew, TableSet, TableSize,
-	},
-	control::{
-		GammaIn, GammaOut, Import, LambdaIn, LambdaOut, OmegaIn, OmegaOut, RegionIn, ThetaIn,
-		ThetaOut,
 	},
 };
 use luau_tree::{LuauTree, expression::Expression};

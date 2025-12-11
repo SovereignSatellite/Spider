@@ -1,8 +1,8 @@
 use data_flow_graph::{
 	DataFlowGraph, Link, Node,
-	base::Identity,
 	control::{RegionOut, ThetaIn, ThetaOut},
 	list,
+	simple::Identity,
 };
 
 fn replace_with_producer(graph: &DataFlowGraph, from: &mut Link) {
@@ -38,9 +38,8 @@ pub fn remove(graph: &mut DataFlowGraph) {
 
 fn replace_with_identity(graph: &mut DataFlowGraph, from: &mut Link) {
 	let sources = list::resizable![*from];
-	let identity = graph.add_identity(sources);
 
-	*from = Link(identity, 0);
+	*from = Identity::add_into(graph, sources);
 }
 
 // We insert at...

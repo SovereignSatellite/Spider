@@ -7,20 +7,26 @@ pub use control_flow_graph::instruction::{
 };
 use list::resizable::Resizable;
 
-use super::Link;
+use crate::Link;
 
 pub trait Host {
 	fn identifier(&self) -> &'static str;
 
-	fn for_each_requirement(&self, handler: &mut dyn FnMut(u32));
+	fn for_each_id(&self, handler: &mut dyn FnMut(u32)) {
+		let _handler = handler;
+	}
 
-	fn for_each_id(&self, handler: &mut dyn FnMut(u32));
+	fn for_each_mut_id(&mut self, handler: &mut dyn FnMut(&mut u32)) {
+		let _handler = handler;
+	}
 
-	fn for_each_mut_id(&mut self, handler: &mut dyn FnMut(&mut u32));
+	fn for_each_argument(&self, handler: &mut dyn FnMut(Link)) {
+		let _handler = handler;
+	}
 
-	fn for_each_argument(&self, handler: &mut dyn FnMut(Link));
-
-	fn for_each_mut_argument(&mut self, handler: &mut dyn FnMut(&mut Link));
+	fn for_each_mut_argument(&mut self, handler: &mut dyn FnMut(&mut Link)) {
+		let _handler = handler;
+	}
 }
 
 pub struct Identity {

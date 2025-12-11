@@ -3,11 +3,10 @@ use core::fmt::{Display, Formatter, Result};
 use alloc::vec::Vec;
 
 use crate::{
-	DataFlowGraph,
-	control::Import,
+	DataFlowGraph, Node,
 	node::{
-		Node,
-		base::{
+		control::Import,
+		simple::{
 			ExtendType, IntegerBinaryOperation, IntegerBinaryOperator, IntegerCompareOperation,
 			IntegerCompareOperator, IntegerExtend, IntegerType, IntegerUnaryOperation,
 			IntegerUnaryOperator, NumberBinaryOperation, NumberBinaryOperator,

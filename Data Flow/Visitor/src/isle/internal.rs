@@ -9,8 +9,8 @@
 
 use data_flow_graph::{
 	Link,
-	base::{IntegerBinaryOperator, IntegerType},
 	list::{self, fixed::Fixed},
+	simple::{IntegerBinaryOperator, IntegerType},
 };
 
 include!(concat!(env!("OUT_DIR"), "/isle.rs"));

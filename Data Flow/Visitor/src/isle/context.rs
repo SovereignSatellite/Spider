@@ -1,6 +1,6 @@
 use data_flow_graph::{
 	DataFlowGraph, Link, Node,
-	base::{
+	simple::{
 		GlobalGet, GlobalNew, GlobalSet, IntegerBinaryOperation, IntegerBinaryOperator,
 		IntegerType, Location, TableGet, TableSet,
 	},
@@ -18,7 +18,7 @@ impl Context for DataFlowGraph {
 	}
 
 	fn add_i32(&mut self, value: i32) -> Link {
-		self.add_i32(value)
+		Node::add_i32_into(self, value)
 	}
 
 	fn get_i64(&mut self, source: Link) -> Option<i64> {
@@ -30,7 +30,7 @@ impl Context for DataFlowGraph {
 	}
 
 	fn add_i64(&mut self, value: i64) -> Link {
-		self.add_i64(value)
+		Node::add_i64_into(self, value)
 	}
 
 	fn get_integer_binary_operation(
@@ -57,7 +57,7 @@ impl Context for DataFlowGraph {
 		r#type: &IntegerType,
 		operator: &IntegerBinaryOperator,
 	) -> Link {
-		self.add_integer_binary_operation(lhs, rhs, *r#type, *operator)
+		IntegerBinaryOperation::add_into(self, lhs, rhs, *r#type, *operator)
 	}
 
 	fn raw_add_i32(&mut self, lhs: i32, rhs: i32) -> i32 {
@@ -77,7 +77,7 @@ impl Context for DataFlowGraph {
 	}
 
 	fn add_f32(&mut self, value: f32) -> Link {
-		self.add_f32(value)
+		Node::add_f32_into(self, value)
 	}
 
 	fn get_f64(&mut self, source: Link) -> Option<f64> {
@@ -89,7 +89,7 @@ impl Context for DataFlowGraph {
 	}
 
 	fn add_f64(&mut self, value: f64) -> Link {
-		self.add_f64(value)
+		Node::add_f64_into(self, value)
 	}
 
 	fn get_table_get(&mut self, source: Link) -> Option<(Link, Link)> {
