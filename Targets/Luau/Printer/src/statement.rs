@@ -3,8 +3,8 @@ use std::io::{Result, Write};
 use luau_tree::{
 	LuauTree,
 	statement::{
-		Assign, AssignAll, Call, Export, GlobalSet, Match, MemoryCopy, MemoryDrop, MemoryFill,
-		MemoryStore, Repeat, Sequence, Statement, TableCopy, TableDrop, TableFill, TableSet,
+		Assign, Call, Export, GlobalSet, Match, MemoryCopy, MemoryDrop, MemoryFill, MemoryStore,
+		Repeat, Sequence, Statement, SwapAll, TableCopy, TableDrop, TableFill, TableSet,
 	},
 };
 
@@ -230,25 +230,31 @@ impl Print for Assign {
 	}
 }
 
-impl Print for AssignAll {
+impl Print for SwapAll {
 	fn print(&self, printer: &mut LuauPrinter, out: &mut dyn Write) -> Result<()> {
-		let Self { assignments } = self;
+		let Self { locals } = self;
 
-		if assignments.is_empty() {
-			return Ok(());
+		for pair in locals.windows(2) {
+			printer.tab(out)?;
+
+			pair[0].print(printer, out)?;
+
+			write!(out, ", ")?;
+
+			pair[1].print(printer, out)?;
+
+			write!(out, " = ")?;
+
+			pair[1].print(printer, out)?;
+
+			write!(out, ", ")?;
+
+			pair[0].print(printer, out)?;
+
+			writeln!(out, ";")?;
 		}
 
-		let locals = assignments.iter().map(|item| item.0);
-		let sources = assignments.iter().map(|item| &item.1);
-
-		printer.tab(out)?;
-		fmt_delimited(locals, printer, out)?;
-
-		write!(out, " = ")?;
-
-		fmt_delimited(sources, printer, out)?;
-
-		writeln!(out, ";")
+		Ok(())
 	}
 }
 
@@ -485,7 +491,7 @@ impl Print for Statement {
 			Self::Match(r#match) => r#match.print(printer, out),
 			Self::Repeat(repeat) => repeat.print(printer, out),
 			Self::Assign(assign) => assign.print(printer, out),
-			Self::AssignAll(assign_all) => assign_all.print(printer, out),
+			Self::SwapAll(swap_all) => swap_all.print(printer, out),
 			Self::Call(call) => call.print(printer, out),
 			Self::GlobalSet(global_set) => global_set.print(printer, out),
 			Self::TableSet(table_set) => table_set.print(printer, out),

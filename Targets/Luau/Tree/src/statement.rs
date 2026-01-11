@@ -10,10 +10,10 @@ pub struct Sequence {
 
 impl Sequence {
 	fn as_assign_destination(&self) -> Option<Local> {
-		match self.list.as_slice() {
-			[Statement::AssignAll(assign_all)] => assign_all.as_assign_destination(),
-			[Statement::Assign(assign)] => Some(assign.destination),
-			_ => None,
+		if let [Statement::Assign(assign)] = self.list.as_slice() {
+			Some(assign.destination)
+		} else {
+			None
 		}
 	}
 
@@ -29,10 +29,10 @@ impl Sequence {
 
 	#[must_use]
 	pub fn into_assign_source(mut self) -> Expression {
-		let source = match self.list.pop().unwrap() {
-			Statement::AssignAll(assign_all) => Expression::Local(assign_all.into_assign_source()),
-			Statement::Assign(assign) => assign.source,
-			_ => panic!("should be an assignment"),
+		let source = if let Some(Statement::Assign(assign)) = self.list.pop() {
+			assign.source
+		} else {
+			panic!("should be an assignment")
 		};
 
 		assert!(self.list.is_empty(), "should be only statement");
@@ -56,26 +56,8 @@ pub struct Assign {
 	pub source: Expression,
 }
 
-pub struct AssignAll {
-	pub assignments: Vec<(Local, Local)>,
-}
-
-impl AssignAll {
-	const fn as_assign_destination(&self) -> Option<Local> {
-		if let &[(destination, _)] = self.assignments.as_slice() {
-			Some(destination)
-		} else {
-			None
-		}
-	}
-
-	fn into_assign_source(mut self) -> Local {
-		let (_, source) = self.assignments.pop().unwrap();
-
-		assert!(self.assignments.is_empty(), "should be only statement");
-
-		source
-	}
+pub struct SwapAll {
+	pub locals: Vec<Local>,
 }
 
 pub struct Call {
@@ -137,7 +119,7 @@ pub enum Statement {
 	Repeat(Box<Repeat>),
 
 	Assign(Box<Assign>),
-	AssignAll(Box<AssignAll>),
+	SwapAll(Box<SwapAll>),
 
 	Call(Box<Call>),
 

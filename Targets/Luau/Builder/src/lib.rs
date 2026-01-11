@@ -23,6 +23,7 @@ use self::{code_handler::CodeHandler, data_handler::DataHandler, local_allocator
 
 extern crate alloc;
 
+mod assignment_simplifier;
 mod code_handler;
 mod data_handler;
 mod local_allocator;
@@ -99,7 +100,7 @@ impl LuauBuilder {
 
 		self.code_handler.push_scope();
 		self.code_handler
-			.do_assign_all(id, arguments, &self.data_handler);
+			.do_bulk_assignment(id, arguments, &self.data_handler);
 	}
 
 	fn handle_region_out(&mut self, id: u32) {
@@ -119,7 +120,7 @@ impl LuauBuilder {
 
 		self.code_handler.push_scope();
 		self.code_handler
-			.do_assign_all(id, arguments, &self.data_handler);
+			.do_bulk_assignment(id, arguments, &self.data_handler);
 	}
 
 	fn handle_theta_out(&mut self, theta_out: &ThetaOut) {
@@ -200,7 +201,7 @@ impl LuauBuilder {
 		let Identity { sources } = node;
 
 		self.code_handler
-			.do_assign_all(id, sources, &self.data_handler);
+			.do_bulk_assignment(id, sources, &self.data_handler);
 	}
 
 	fn handle_merge(&mut self, node: &Merge) {

@@ -83,17 +83,13 @@ impl DataHandler {
 	}
 
 	pub fn load_assign_all(&self, id: u32, sources: &[Link]) -> Vec<(Local, Local)> {
-		let destinations = (0..).map(|port| Link(id, port));
-		let iter = destinations
-			.zip(sources)
-			.filter_map(|(destination, &source)| {
-				let destination = self.assignments[&destination];
-				let source = self.assignments[&source];
+		let destinations = (0..)
+			.map(|port| Link(id, port))
+			.map(|link| self.assignments[&link]);
 
-				(destination != source).then_some((destination, source))
-			});
+		let sources = sources.iter().map(|&link| self.assignments[&link]);
 
-		iter.collect()
+		destinations.zip(sources).collect()
 	}
 
 	pub fn load_dependencies(

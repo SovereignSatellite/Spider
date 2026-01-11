@@ -5,12 +5,12 @@ use hashbrown::HashMap;
 use luau_tree::{
 	expression::{Expression, Local},
 	statement::{
-		Assign, AssignAll, Call, GlobalSet, Match, MemoryCopy, MemoryDrop, MemoryFill, MemoryStore,
-		Repeat, Sequence, Statement, TableCopy, TableDrop, TableFill, TableSet,
+		Assign, Call, GlobalSet, Match, MemoryCopy, MemoryDrop, MemoryFill, MemoryStore, Repeat,
+		Sequence, Statement, SwapAll, TableCopy, TableDrop, TableFill, TableSet,
 	},
 };
 
-use super::data_handler::DataHandler;
+use super::{assignment_simplifier::AssignmentSimplifier, data_handler::DataHandler};
 
 pub struct CodeHandler {
 	scopes: Vec<Vec<Statement>>,
@@ -114,18 +114,34 @@ impl CodeHandler {
 		self.scopes.last_mut().unwrap().push(statement);
 	}
 
-	pub fn do_assign_all(&mut self, id: u32, sources: &[Link], data_handler: &DataHandler) {
-		let mut assignments = data_handler.load_assign_all(id, sources);
+	pub fn do_bulk_assignment(&mut self, id: u32, sources: &[Link], data_handler: &DataHandler) {
+		let scope = self.scopes.last_mut().unwrap();
 
-		if assignments.is_empty() {
-			return;
-		}
+		let mut handler = AssignmentSimplifier::new(data_handler.load_assign_all(id, sources));
 
-		assignments.sort_unstable();
+		handler.find_all_assigns(|destination, source| {
+			let source = Expression::Local(source);
+			let statement = Statement::Assign(
+				Assign {
+					destination,
+					source,
+				}
+				.into(),
+			);
 
-		let statement = Statement::AssignAll(AssignAll { assignments }.into());
+			scope.push(statement);
+		});
 
-		self.scopes.last_mut().unwrap().push(statement);
+		handler.find_all_swaps(|locals| {
+			if locals.len() <= 1 {
+				return;
+			}
+
+			let locals = locals.to_vec();
+			let statement = Statement::SwapAll(SwapAll { locals }.into());
+
+			scope.push(statement);
+		});
 	}
 
 	pub fn do_call(&mut self, node: &base::Apply, id: u32, data_handler: &mut DataHandler) {

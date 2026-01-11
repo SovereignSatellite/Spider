@@ -592,7 +592,7 @@ impl NeedsName for Statement {
 			Self::Match(_)
 			| Self::Repeat(_)
 			| Self::Assign(_)
-			| Self::AssignAll(_)
+			| Self::SwapAll(_)
 			| Self::Call(_) => "",
 
 			Self::GlobalSet(global_set) => global_set.needs_name(),

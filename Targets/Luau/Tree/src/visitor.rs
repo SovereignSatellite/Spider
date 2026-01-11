@@ -614,7 +614,7 @@ impl Statement {
 		visitor.visit_statement(self)?;
 
 		match self {
-			Self::AssignAll(_) => ControlFlow::Continue(()),
+			Self::SwapAll(_) => ControlFlow::Continue(()),
 
 			Self::Match(r#match) => r#match.accept(visitor),
 			Self::Repeat(repeat) => repeat.accept(visitor),
