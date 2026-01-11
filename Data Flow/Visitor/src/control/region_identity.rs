@@ -2,14 +2,15 @@ use data_flow_graph::{
 	DataFlowGraph, Link, Node,
 	base::Identity,
 	control::{RegionOut, ThetaIn, ThetaOut},
+	list,
 };
 
 fn replace_with_producer(graph: &DataFlowGraph, from: &mut Link) {
-	let Node::Identity(Identity { source }) = *graph.get(from.0) else {
+	let Node::Identity(Identity { sources }) = graph.get(from.0) else {
 		return;
 	};
 
-	*from = source;
+	*from = sources[usize::from(from.1)];
 }
 
 fn remove_at(graph: &DataFlowGraph, node: &mut Node) {
@@ -36,9 +37,10 @@ pub fn remove(graph: &mut DataFlowGraph) {
 }
 
 fn replace_with_identity(graph: &mut DataFlowGraph, from: &mut Link) {
-	let identity = graph.add_identity(*from);
+	let sources = list::resizable![*from];
+	let identity = graph.add_identity(sources);
 
-	*from = identity;
+	*from = Link(identity, 0);
 }
 
 // We insert at...

@@ -196,16 +196,17 @@ impl LuauBuilder {
 		self.do_assignment(id, Expression::F64(value));
 	}
 
-	fn handle_identity(&mut self, id: u32, node: Identity) {
-		let expression = self.data_handler.load_identity(node);
+	fn handle_identity(&mut self, id: u32, node: &Identity) {
+		let Identity { sources } = node;
 
-		self.do_assignment(id, expression);
+		self.code_handler
+			.do_assign_all(id, sources, &self.data_handler);
 	}
 
 	fn handle_merge(&mut self, node: &Merge) {
-		let Merge { states } = node;
+		let Merge { sources } = node;
 
-		for &source in states {
+		for &source in sources {
 			let _source = self.data_handler.load(source);
 		}
 	}
@@ -573,7 +574,7 @@ impl LuauBuilder {
 			Node::F32(f32) => self.handle_f32_const(id, f32),
 			Node::F64(f64) => self.handle_f64_const(id, f64),
 
-			Node::Identity(node) => self.handle_identity(id, node),
+			Node::Identity(ref node) => self.handle_identity(id, node),
 			Node::Merge(ref node) => self.handle_merge(node),
 			Node::Apply(ref node) => self.handle_call(id, node),
 			Node::RefIsNull(node) => self.handle_ref_is_null(id, node),

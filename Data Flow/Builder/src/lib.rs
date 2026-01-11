@@ -547,7 +547,7 @@ impl DataFlowBuilder {
 		self.global_state.retrieve_all_mutable(&mut states);
 		states.push(start);
 
-		let start = graph.add_merge(states);
+		let start = graph.add_merge(list::resizable::Resizable::Heap(states));
 
 		graph.add_omega_out(omega_in, start, exports)
 	}

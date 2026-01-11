@@ -197,10 +197,6 @@ impl DataHandler {
 			.collect()
 	}
 
-	pub fn load_identity(&mut self, node: base::Identity) -> Expression {
-		self.load(node.source)
-	}
-
 	pub fn load_call(&mut self, node: &base::Apply) -> Expression {
 		let end = node.arguments.len() - usize::from(node.states);
 		let call = Call {

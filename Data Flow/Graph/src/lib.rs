@@ -7,6 +7,7 @@ mod dot;
 mod node;
 
 use alloc::{boxed::Box, sync::Arc, vec::Vec};
+use list::resizable::Resizable;
 
 use self::node::{
 	base::{
@@ -25,6 +26,8 @@ use self::node::{
 		RegionIn, RegionOut, ThetaIn, ThetaOut,
 	},
 };
+
+pub use list;
 
 pub use self::{
 	dot::Dot,
@@ -265,14 +268,14 @@ impl DataFlowGraph {
 		Link(self.add_node(node), 0)
 	}
 
-	pub fn add_identity(&mut self, source: Link) -> Link {
-		let node = Node::Identity(Identity { source });
+	pub fn add_identity(&mut self, sources: Resizable<Link, 4>) -> u32 {
+		let node = Node::Identity(Identity { sources });
 
-		Link(self.add_node(node), 0)
+		self.add_node(node)
 	}
 
-	pub fn add_merge(&mut self, states: Vec<Link>) -> Link {
-		let node = Node::Merge(Merge { states });
+	pub fn add_merge(&mut self, sources: Resizable<Link, 4>) -> Link {
+		let node = Node::Merge(Merge { sources });
 
 		Link(self.add_node(node), 0)
 	}

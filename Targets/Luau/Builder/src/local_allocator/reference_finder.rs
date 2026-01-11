@@ -128,17 +128,24 @@ fn handle_trap(assignments: &mut HashMap<Link, Link>, id: u32) {
 	let _ = assignments.try_insert(Link(id, 0), Link::DANGLING);
 }
 
-fn handle_identity(assignments: &mut HashMap<Link, Link>, id: u32, node: Identity) {
-	let Identity { source } = node;
+fn handle_identity(assignments: &mut HashMap<Link, Link>, id: u32, node: &Identity) {
+	let Identity { sources } = node;
 
-	assignments.insert(source, Link(id, 0));
+	let len = sources.len();
+	let outputs = (0..).map(|port| Link(id, port));
+
+	assignments.extend(sources.iter().copied().zip(outputs.clone()));
+
+	for output in outputs.take(len) {
+		let _ = assignments.try_insert(output, Link::DANGLING);
+	}
 }
 
 fn handle_merge(assignments: &mut HashMap<Link, Link>, node: &Merge) {
-	let Merge { states } = node;
+	let Merge { sources } = node;
 
-	for &state in states {
-		let _ = assignments.try_insert(state, Link::DANGLING);
+	for &source in sources {
+		let _ = assignments.try_insert(source, Link::DANGLING);
 	}
 }
 
@@ -326,7 +333,7 @@ fn handle_node(assignments: &mut HashMap<Link, Link>, graph: &DataFlowGraph, id:
 
 		Node::Trap => handle_trap(assignments, id),
 
-		Node::Identity(node) => handle_identity(assignments, id, node),
+		Node::Identity(ref node) => handle_identity(assignments, id, node),
 		Node::Merge(ref node) => handle_merge(assignments, node),
 		Node::Apply(ref node) => handle_apply(assignments, id, node),
 		Node::GlobalGet(node) => handle_global_get(assignments, id, node),

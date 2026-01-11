@@ -33,7 +33,6 @@ pub fn result_count_of(node: &Node) -> u16 {
 		| Node::I64(_)
 		| Node::F32(_)
 		| Node::F64(_)
-		| Node::Identity(_)
 		| Node::RefIsNull(_)
 		| Node::IntegerUnaryOperation(_)
 		| Node::IntegerBinaryOperation(_)
@@ -60,6 +59,8 @@ pub fn result_count_of(node: &Node) -> u16 {
 		| Node::MemoryLoad(_)
 		| Node::MemorySize(_)
 		| Node::MemoryGrow(_) => 1,
+
+		Node::Identity(node) => node.sources.len().try_into().unwrap(),
 
 		Node::Apply(node) => node.results,
 	}

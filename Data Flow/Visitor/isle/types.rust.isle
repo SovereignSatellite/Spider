@@ -2,6 +2,13 @@
 (type f32 (primitive f32))
 (type f64 (primitive f64))
 
+(type Links
+	(enum
+		(N1 (field_1 Link))
+		(N2 (field_1 Link) (field_2 Link))
+	)
+)
+
 (type IntegerType extern
 	(enum
 		(I32)

@@ -10,6 +10,16 @@
 use data_flow_graph::{
 	Link,
 	base::{IntegerBinaryOperator, IntegerType},
+	list::{self, fixed::Fixed},
 };
 
 include!(concat!(env!("OUT_DIR"), "/isle.rs"));
+
+impl Links {
+	pub fn as_fixed(&self) -> Fixed<Link, 2> {
+		match *self {
+			Self::N1 { field_1 } => list::fixed![field_1],
+			Self::N2 { field_1, field_2 } => list::fixed![field_1, field_2],
+		}
+	}
+}

@@ -650,54 +650,54 @@ impl Import {
 }
 
 impl Identity {
-	fn for_each_id<H: FnMut(u32)>(self, mut handler: H) {
-		let Self { source } = self;
+	fn for_each_id<H: FnMut(u32)>(&self, handler: H) {
+		let Self { sources } = self;
 
-		handler(source.0);
+		for_each_link_list(sources, handler);
 	}
 
-	fn for_each_mut_id<H: FnMut(&mut u32)>(&mut self, mut handler: H) {
-		let Self { source } = self;
+	fn for_each_mut_id<H: FnMut(&mut u32)>(&mut self, handler: H) {
+		let Self { sources } = self;
 
-		handler(&mut source.0);
+		for_each_mut_link_list(sources, handler);
 	}
 
-	fn for_each_argument<H: FnMut(Link)>(self, mut handler: H) {
-		let Self { source } = self;
+	fn for_each_argument<H: FnMut(Link)>(&self, handler: H) {
+		let Self { sources } = self;
 
-		handler(source);
+		sources.iter().copied().for_each(handler);
 	}
 
-	fn for_each_mut_argument<H: FnMut(&mut Link)>(&mut self, mut handler: H) {
-		let Self { source } = self;
+	fn for_each_mut_argument<H: FnMut(&mut Link)>(&mut self, handler: H) {
+		let Self { sources } = self;
 
-		handler(source);
+		sources.iter_mut().for_each(handler);
 	}
 }
 
 impl Merge {
 	fn for_each_id<H: FnMut(u32)>(&self, handler: H) {
-		let Self { states } = self;
+		let Self { sources } = self;
 
-		for_each_link_list(states, handler);
+		for_each_link_list(sources, handler);
 	}
 
 	fn for_each_mut_id<H: FnMut(&mut u32)>(&mut self, handler: H) {
-		let Self { states } = self;
+		let Self { sources } = self;
 
-		for_each_mut_link_list(states, handler);
+		for_each_mut_link_list(sources, handler);
 	}
 
 	fn for_each_argument<H: FnMut(Link)>(&self, handler: H) {
-		let Self { states } = self;
+		let Self { sources } = self;
 
-		states.iter().copied().for_each(handler);
+		sources.iter().copied().for_each(handler);
 	}
 
 	fn for_each_mut_argument<H: FnMut(&mut Link)>(&mut self, handler: H) {
-		let Self { states } = self;
+		let Self { sources } = self;
 
-		states.iter_mut().for_each(handler);
+		sources.iter_mut().for_each(handler);
 	}
 }
 

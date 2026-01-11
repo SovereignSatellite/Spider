@@ -5,6 +5,7 @@ pub use control_flow_graph::instruction::{
 	LoadType, NumberBinaryOperator, NumberCompareOperator, NumberType, NumberUnaryOperator,
 	StoreType,
 };
+use list::resizable::Resizable;
 
 use super::Link;
 
@@ -22,13 +23,12 @@ pub trait Host {
 	fn for_each_mut_argument(&mut self, handler: &mut dyn FnMut(&mut Link));
 }
 
-#[derive(Clone, Copy)]
 pub struct Identity {
-	pub source: Link,
+	pub sources: Resizable<Link, 4>,
 }
 
 pub struct Merge {
-	pub states: Vec<Link>,
+	pub sources: Resizable<Link, 4>,
 }
 
 pub struct Apply {
