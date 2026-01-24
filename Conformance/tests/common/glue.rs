@@ -49,11 +49,11 @@ pub fn get_path_target(extension: &OsStr, name: &OsStr) -> PathBuf {
 		.with_extension(extension)
 }
 
-pub fn run(path: &OsStr, source: &OsStr) -> Result<()> {
+pub fn run(path: &OsStr, arguments: &[&OsStr]) -> Result<()> {
 	const TEST_TIMEOUT: Duration = Duration::from_secs(1);
 
 	let mut child = Command::new(path)
-		.arg(source)
+		.args(arguments)
 		.stdout(Stdio::piped())
 		.stderr(Stdio::piped())
 		.spawn()?;

@@ -1,4 +1,5 @@
 use std::{
+	ffi::OsStr,
 	fs::File,
 	io::{BufWriter, Write},
 	path::Path,
@@ -557,7 +558,7 @@ fn compile_into(destination: &Path, source: &str) -> Result<()> {
 	Ok(())
 }
 
-fn luau(path: &Path) -> Result<()> {
+fn compile_and_run(path: &Path, optimized: bool, native: bool) -> Result<()> {
 	let program = std::env::var_os("LUAU_PATH").ok_or("`LUAU_PATH` should be set")?;
 	let source = std::fs::read_to_string(path)?;
 	let destination = glue::get_path_target("luau".as_ref(), path.file_name().unwrap());
@@ -569,11 +570,33 @@ fn luau(path: &Path) -> Result<()> {
 
 	compile_into(&destination, &source)?;
 
-	glue::run(&program, destination.as_ref())?;
+	let mut arguments = vec![
+		destination.as_ref(),
+		OsStr::new(if optimized { "-O2" } else { "-O0" }),
+	];
+
+	if native {
+		arguments.push(OsStr::new("--codegen"));
+	}
+
+	glue::run(&program, &arguments)?;
 
 	Ok(())
 }
 
+mod luau {
+	use std::path::Path;
+
+	pub fn interpreter(path: &Path) -> datatest_stable::Result<()> {
+		crate::compile_and_run(path, false, false)
+	}
+
+	pub fn native(path: &Path) -> datatest_stable::Result<()> {
+		crate::compile_and_run(path, true, true)
+	}
+}
+
 datatest_stable::harness! {
-	{ test = luau, root = "Suite", pattern = r"^(?!simd_)\w+\.wast$" },
+	{ test = luau::interpreter, root = "Suite", pattern = r"^(?!simd_)\w+\.wast$" },
+	{ test = luau::native, root = "Suite", pattern = r"^(?!simd_)\w+\.wast$" },
 }
