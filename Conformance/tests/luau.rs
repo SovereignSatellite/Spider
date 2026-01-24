@@ -587,16 +587,26 @@ fn compile_and_run(path: &Path, optimized: bool, native: bool) -> Result<()> {
 mod luau {
 	use std::path::Path;
 
-	pub fn interpreter(path: &Path) -> datatest_stable::Result<()> {
+	pub fn bytecode_o0(path: &Path) -> datatest_stable::Result<()> {
 		crate::compile_and_run(path, false, false)
 	}
 
-	pub fn native(path: &Path) -> datatest_stable::Result<()> {
+	pub fn bytecode_o2(path: &Path) -> datatest_stable::Result<()> {
+		crate::compile_and_run(path, true, false)
+	}
+
+	pub fn native_o0(path: &Path) -> datatest_stable::Result<()> {
+		crate::compile_and_run(path, false, true)
+	}
+
+	pub fn native_o2(path: &Path) -> datatest_stable::Result<()> {
 		crate::compile_and_run(path, true, true)
 	}
 }
 
 datatest_stable::harness! {
-	{ test = luau::interpreter, root = "Suite", pattern = r"^(?!simd_)\w+\.wast$" },
-	{ test = luau::native, root = "Suite", pattern = r"^(?!simd_)\w+\.wast$" },
+	{ test = luau::bytecode_o0, root = "Suite", pattern = r"^(?!simd_)\w+\.wast$" },
+	{ test = luau::bytecode_o2, root = "Suite", pattern = r"^(?!simd_)\w+\.wast$" },
+	{ test = luau::native_o0, root = "Suite", pattern = r"^(?!simd_)\w+\.wast$" },
+	{ test = luau::native_o2, root = "Suite", pattern = r"^(?!simd_)\w+\.wast$" },
 }
