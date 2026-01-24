@@ -21,7 +21,8 @@ use common::{compiler::Compiler, glue, visitor::Visitor};
 
 mod common;
 
-const HARNESS_SOURCE: &str = include_str!("harness/luau.luau");
+const HARNESS_START_SOURCE: &str = include_str!("harness/luau.start.luau");
+const HARNESS_END_SOURCE: &str = include_str!("harness/luau.end.luau");
 
 struct Luau {
 	library_sections: LibrarySections,
@@ -39,7 +40,7 @@ impl Luau {
 	fn new() -> Self {
 		let mut library_sections = LibrarySections::with_built_ins();
 
-		library_sections.parse_from(HARNESS_SOURCE);
+		library_sections.parse_from(HARNESS_START_SOURCE);
 		library_sections.resolve();
 
 		Self {
@@ -56,7 +57,8 @@ impl Luau {
 	}
 
 	fn write_into(mut self, out: &mut dyn Write) -> Result<()> {
-		self.references.push("environment");
+		self.references.push("spectest");
+		self.references.push("report_failure");
 
 		self.references.sort_unstable();
 		self.references.dedup();
@@ -67,6 +69,7 @@ impl Luau {
 		self.library_printer.print(&self.library_sections, out)?;
 
 		out.write_all(&self.file)?;
+		out.write_all(HARNESS_END_SOURCE.as_bytes())?;
 
 		Ok(())
 	}
@@ -563,10 +566,7 @@ fn compile_and_run(path: &Path, optimized: bool, native: bool) -> Result<()> {
 	let source = std::fs::read_to_string(path)?;
 	let destination = glue::get_path_target("luau".as_ref(), path.file_name().unwrap());
 
-	// SAFETY: I'm not sure, but it's not a problem in practice.
-	unsafe {
-		std::env::set_var("RUST_BACKTRACE", "1");
-	}
+	glue::enable_back_trace();
 
 	compile_into(&destination, &source)?;
 

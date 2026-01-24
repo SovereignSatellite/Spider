@@ -1,13 +1,15 @@
 -- SECTION environment
--- NEEDS create_i64_from_u32
--- NEEDS create_u32_from_i64
--- NEEDS memory_new
--- NEEDS table_new
--- NEEDS vector_create
 local environment = {}
 local named = {}
 local selected = nil
 
+-- SECTION spectest
+-- NEEDS create_i64_from_u32
+-- NEEDS create_u32_from_i64
+-- NEEDS environment
+-- NEEDS memory_new
+-- NEEDS table_new
+-- NEEDS vector_create
 do
 	local spectest = {
 		global_i32 = { 666 },
@@ -21,67 +23,91 @@ do
 
 	spectest.print = print
 
-	function spectest.print_i32(argument: number)
+	function spectest.print_i32(argument)
 		print(string.format("I32 `0x%08X`", argument))
 	end
 
-	function spectest.print_i64(argument: number)
+	function spectest.print_i64(argument)
 		local argument_1, argument_2 = rt_create_u32_from_i64(argument)
 
 		print(string.format("I64 `0x%08X%08X`", argument_2, argument_1))
 	end
 
-	function spectest.print_f32(argument: vector)
+	function spectest.print_f32(argument)
 		print(string.format("F32 `%g`", argument.x))
 	end
 
-	function spectest.print_f64(argument: number)
+	function spectest.print_f64(argument)
 		print(string.format("F64 `%g`", argument))
 	end
 
-	function spectest.print_i32_f32(argument_1: number, argument_2: vector)
+	function spectest.print_i32_f32(argument_1, argument_2)
 		print(string.format("I32 `0x%08X`, F32 `%g`", argument_1, argument_2.x))
 	end
 
-	function spectest.print_f64_f64(argument_1: number, argument_2: number)
+	function spectest.print_f64_f64(argument_1, argument_2)
 		print(string.format("F64 `%g`, F64 `%g`", argument_1, argument_2))
 	end
 
 	environment.spectest = spectest
 end
 
+-- SECTION report_failure
+local hn_failed_test_list = {}
+
+function hn_report_failure(content: string, level: number, ...: any)
+	local reason = string.format(content, ...)
+	local report = debug.traceback(reason, level + 1)
+
+	table.insert(hn_failed_test_list, report)
+end
+
+-- SECTION assert_ok
+-- NEEDS report_failure
+function hn_assert_ok(callback: () -> ())
+	xpcall(callback, function(reason: unknown)
+		hn_report_failure("%*", 2, reason)
+	end)
+end
+
 -- SECTION assert_trap
-local function hn_assert_trap(message: string, callback: () -> ())
+-- NEEDS report_failure
+function hn_assert_trap(reason: string, callback: () -> ())
 	if not pcall(callback) then
 		return
 	end
 
-	error("should trap: " .. message, 2)
+	hn_report_failure("should trap: %*", 2, reason)
 end
 
 -- SECTION assert_ref_null
-local function hn_assert_ref_null(source: unknown)
-	if source ~= nil then
-		error(string.format("`%*` should be null", source), 2)
+-- NEEDS report_failure
+function hn_assert_ref_null(source: unknown)
+	if source == nil then
+		return
 	end
+
+	hn_report_failure("`%*` should be null", 2, source)
 end
 
 -- SECTION assert_ref_extern
-local function hn_assert_ref_extern(source: unknown)
-	if source == nil then
-		error("source should be non null", 2)
+-- NEEDS report_failure
+function hn_assert_ref_extern(source: unknown)
+	if source ~= nil then
+		return
 	end
+
+	hn_report_failure("source should be non null", 2)
 end
 
 -- SECTION assert_equal_i32
-local function hn_assert_equal_i32(target: number): (unknown) -> ()
+-- NEEDS report_failure
+function hn_assert_equal_i32(target: number): (unknown) -> ()
 	return function(source: unknown)
 		if type(source) ~= "number" then
-			error(string.format("`%*` should be type `i32`", source), 2)
-		end
-
-		if source ~= target then
-			error(string.format("`%08X` (%*) should equal `%08X` (%*)", source, source, target, target), 2)
+			hn_report_failure("`%*` should be type `i32`", 2, source)
+		elseif source ~= target then
+			hn_report_failure("`%08X` (%*) should equal `%08X` (%*)", 2, source, source, target, target)
 		end
 	end
 end
@@ -90,12 +116,15 @@ end
 -- NEEDS convert_u64_to_f64
 -- NEEDS create_i64_from_u32
 -- NEEDS create_u32_from_i64
-local function hn_assert_equal_i64(target_1: number, target_2: number): (unknown) -> ()
+-- NEEDS report_failure
+function hn_assert_equal_i64(target_1: number, target_2: number): (unknown) -> ()
 	local target = rt_create_i64_from_u32(target_1, target_2)
 
-	return function(source: unknown)
+	return function(source)
 		if type(source) ~= "number" then
-			error(string.format("`%*` should be type `i64`", source), 2)
+			hn_report_failure("`%*` should be type `i64`", 2, source)
+
+			return
 		end
 
 		local source_1, source_2 = rt_create_u32_from_i64(source)
@@ -104,17 +133,15 @@ local function hn_assert_equal_i64(target_1: number, target_2: number): (unknown
 			local source = rt_convert_u64_to_f64(source)
 			local target = rt_convert_u64_to_f64(target)
 
-			error(
-				string.format(
-					"`%08X%08X` (%*) should equal `%08X%08X` (%*)",
-					source_2,
-					source_1,
-					source,
-					target_2,
-					target_1,
-					target
-				),
-				2
+			hn_report_failure(
+				"`%08X%08X` (%*) should equal `%08X%08X` (%*)",
+				2,
+				source_2,
+				source_1,
+				source,
+				target_2,
+				target_1,
+				target
 			)
 		end
 	end
@@ -122,25 +149,28 @@ end
 
 -- SECTION is_f32_nan_canonical
 -- NEEDS is_f64_nan_canonical
-function hn_is_f32_nan_canonical(source: vector): boolean
+function hn_is_f32_nan_canonical(source)
 	return hn_is_f64_nan_canonical(source.x)
 end
 
 -- SECTION is_f32_nan_arithmetic
 -- NEEDS is_f64_nan_arithmetic
-function hn_is_f32_nan_arithmetic(source: vector): boolean
+function hn_is_f32_nan_arithmetic(source)
 	return hn_is_f64_nan_arithmetic(source.x)
 end
 
 -- SECTION assert_equal_f32
+-- NEEDS report_failure
 -- NEEDS transmute_f32_to_i32
 -- NEEDS transmute_i32_to_f32
-local function hn_assert_equal_f32(target: number): (unknown) -> ()
+function hn_assert_equal_f32(target: number): (unknown) -> ()
 	local target = rt_transmute_i32_to_f32(target)
 
-	return function(source: unknown)
+	return function(source)
 		if type(source) ~= "vector" then
-			error(string.format("`%*` should type `f32`", source), 2)
+			hn_report_failure("`%*` should type `f32`", 2, source)
+
+			return
 		end
 
 		local source_1 = rt_transmute_f32_to_i32(source)
@@ -150,14 +180,14 @@ local function hn_assert_equal_f32(target: number): (unknown) -> ()
 			local source = source.x
 			local target = target.x
 
-			error(string.format("`%08X` (%*) should equal `%08X` (%*)", source_1, source, target_1, target), 2)
+			hn_report_failure("`%08X` (%*) should equal `%08X` (%*)", 2, source_1, source, target_1, target)
 		end
 	end
 end
 
 -- SECTION is_f64_nan_canonical
 -- NEEDS create_u32_from_i64
-function hn_is_f64_nan_canonical(source: number): boolean
+function hn_is_f64_nan_canonical(source)
 	local source_1, source_2 = rt_create_u32_from_i64(source)
 
 	return source_1 == 0 and (source_2 == 0x7FF80000 or source_2 == 0xFFF80000)
@@ -165,36 +195,37 @@ end
 
 -- SECTION is_f64_nan_arithmetic
 -- NEEDS is_f64_nan_canonical
-function hn_is_f64_nan_arithmetic(source: number): boolean
+function hn_is_f64_nan_arithmetic(source)
 	return source ~= source and not hn_is_f64_nan_canonical(source)
 end
 
 -- SECTION assert_equal_f64
 -- NEEDS create_f64_from_u32
 -- NEEDS create_u32_from_i64
+-- NEEDS report_failure
 -- NEEDS transmute_f64_to_i64
-local function hn_assert_equal_f64(target_1: number, target_2: number): (unknown) -> ()
+function hn_assert_equal_f64(target_1: number, target_2: number): (unknown) -> ()
 	local target = rt_create_f64_from_u32(target_1, target_2)
 
-	return function(source: unknown)
+	return function(source)
 		if type(source) ~= "number" then
-			error(string.format("`%*` should type `f64`", source), 2)
+			hn_report_failure("`%*` should type `f64`", 2, source)
+
+			return
 		end
 
 		local source_1, source_2 = rt_create_u32_from_i64(rt_transmute_f64_to_i64(source))
 
 		if source_1 ~= target_1 or source_2 ~= target_2 then
-			error(
-				string.format(
-					"`%08X%08X` (%*) should equal `%08X%08X` (%*)",
-					source_2,
-					source_1,
-					source,
-					target_2,
-					target_1,
-					target
-				),
-				2
+			hn_report_failure(
+				"`%08X%08X` (%*) should equal `%08X%08X` (%*)",
+				2,
+				source_2,
+				source_1,
+				source,
+				target_2,
+				target_1,
+				target
 			)
 		end
 	end

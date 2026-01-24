@@ -6,6 +6,13 @@ use std::{
 	time::{Duration, Instant},
 };
 
+pub fn enable_back_trace() {
+	// SAFETY: I'm not sure, but it's not a problem in practice.
+	unsafe {
+		std::env::set_var("RUST_BACKTRACE", "1");
+	}
+}
+
 fn poll_until_timeout(child: &mut Child, duration: Duration) -> Result<ExitStatus> {
 	let now = Instant::now();
 
@@ -25,20 +32,16 @@ fn poll_until_timeout(child: &mut Child, duration: Duration) -> Result<ExitStatu
 	))
 }
 
-fn fail_with_output(child: Child) -> Result<()> {
+fn fmt_process_output(child: Child, out: &mut String) -> Result<()> {
 	let Child { stdout, stderr, .. } = child;
 
-	let mut result = String::new();
+	out.push_str("\nLUAU STANDARD ERROR\n");
+	stderr.unwrap().read_to_string(out)?;
 
-	stdout.unwrap().read_to_string(&mut result)?;
+	out.push_str("\nLUAU STANDARD OUTPUT\n");
+	stdout.unwrap().read_to_string(out)?;
 
-	if !result.is_empty() {
-		result.push('\n');
-	}
-
-	stderr.unwrap().read_to_string(&mut result)?;
-
-	panic!("{result}");
+	Ok(())
 }
 
 pub fn get_path_target(extension: &OsStr, name: &OsStr) -> PathBuf {
@@ -58,9 +61,17 @@ pub fn run(path: &OsStr, arguments: &[&OsStr]) -> Result<()> {
 		.stderr(Stdio::piped())
 		.spawn()?;
 
-	if poll_until_timeout(&mut child, TEST_TIMEOUT)?.success() {
+	let mut output = match poll_until_timeout(&mut child, TEST_TIMEOUT) {
+		Ok(status) if status.success() => return Ok(()),
+		Ok(_) => String::new(),
+		Err(error) => error.to_string(),
+	};
+
+	fmt_process_output(child, &mut output)?;
+
+	if output.is_empty() {
 		Ok(())
 	} else {
-		fail_with_output(child)
+		panic!("{output}");
 	}
 }
