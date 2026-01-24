@@ -1,9 +1,7 @@
 use std::{
 	fs::File,
-	io::{Read, Write},
-	path::{Path, PathBuf},
-	process::{Child, Command, ExitStatus, Stdio},
-	time::{Duration, Instant},
+	io::{BufWriter, Write},
+	path::Path,
 };
 
 use datatest_stable::Result;
@@ -18,24 +16,22 @@ use wast::{
 	token::{F32, F64, Id, Span},
 };
 
-use self::common::{loader::Loader, runner::Runner};
+use common::{compiler::Compiler, glue, visitor::Visitor};
 
 mod common;
 
-const LUAU_TIMEOUT: Duration = Duration::from_secs(1);
-
-const HARNESS_SOURCE: &str = include_str!("harness.luau");
+const HARNESS_SOURCE: &str = include_str!("harness/luau.luau");
 
 struct Luau {
-	file: Vec<u8>,
-
 	library_sections: LibrarySections,
 	library_printer: LibraryPrinter,
 	references: Vec<&'static str>,
 
-	loader: Loader,
+	compiler: Compiler,
 	builder: LuauBuilder,
 	printer: LuauPrinter,
+
+	file: Vec<u8>,
 }
 
 impl Luau {
@@ -46,21 +42,19 @@ impl Luau {
 		library_sections.resolve();
 
 		Self {
-			file: Vec::new(),
-
 			library_sections,
 			library_printer: LibraryPrinter::new(),
 			references: Vec::new(),
 
-			loader: Loader::new(),
+			compiler: Compiler::new(),
 			builder: LuauBuilder::new(),
 			printer: LuauPrinter::new(),
+
+			file: Vec::new(),
 		}
 	}
 
-	fn write_into(mut self, path: &Path) -> Result<()> {
-		let end = self.file.len();
-
+	fn write_into(mut self, out: &mut dyn Write) -> Result<()> {
 		self.references.push("environment");
 
 		self.references.sort_unstable();
@@ -69,21 +63,15 @@ impl Luau {
 		self.library_printer
 			.resolve(&self.references, &self.library_sections);
 
-		self.library_printer
-			.print(&self.library_sections, &mut self.file)?;
+		self.library_printer.print(&self.library_sections, out)?;
 
-		let (source, library) = self.file.split_at(end);
-
-		let mut file = File::create(path)?;
-
-		file.write_all(library)?;
-		file.write_all(source)?;
+		out.write_all(&self.file)?;
 
 		Ok(())
 	}
 
 	fn fmt_source(&mut self, data: &[u8]) -> Result<()> {
-		let graph = self.loader.run(data);
+		let graph = self.compiler.run(data);
 		let tree = self.builder.run(&graph);
 
 		NamesFinder::new(&mut self.references).run(&tree);
@@ -416,8 +404,8 @@ impl Luau {
 	}
 }
 
-impl Runner for Luau {
-	fn on_module(&mut self, mut quote_wat: QuoteWat) -> Result<()> {
+impl Visitor for Luau {
+	fn visit_module(&mut self, mut quote_wat: QuoteWat) -> Result<()> {
 		let data = quote_wat.encode()?;
 
 		writeln!(self.file, "do")?;
@@ -429,11 +417,11 @@ impl Runner for Luau {
 		Ok(())
 	}
 
-	fn on_module_definition(&mut self, _quote_wat: QuoteWat) -> Result<()> {
+	fn visit_module_definition(&mut self, _quote_wat: QuoteWat) -> Result<()> {
 		unimplemented!()
 	}
 
-	fn on_module_instance(
+	fn visit_module_instance(
 		&mut self,
 		_span: Span,
 		_instance: Option<Id>,
@@ -442,7 +430,7 @@ impl Runner for Luau {
 		unimplemented!()
 	}
 
-	fn on_assert_malformed(
+	fn visit_assert_malformed(
 		&mut self,
 		_span: Span,
 		_module: QuoteWat,
@@ -451,11 +439,16 @@ impl Runner for Luau {
 		Ok(())
 	}
 
-	fn on_assert_invalid(&mut self, _span: Span, _module: QuoteWat, _message: &str) -> Result<()> {
+	fn visit_assert_invalid(
+		&mut self,
+		_span: Span,
+		_module: QuoteWat,
+		_message: &str,
+	) -> Result<()> {
 		Ok(())
 	}
 
-	fn on_register(&mut self, _span: Span, name: &str, module: Option<Id>) -> Result<()> {
+	fn visit_register(&mut self, _span: Span, name: &str, module: Option<Id>) -> Result<()> {
 		let name = name.as_bytes().escape_ascii();
 
 		write!(self.file, "environment[\"{name}\"] = ")?;
@@ -467,7 +460,7 @@ impl Runner for Luau {
 		Ok(())
 	}
 
-	fn on_invoke(&mut self, wast_invoke: WastInvoke) -> Result<()> {
+	fn visit_invoke(&mut self, wast_invoke: WastInvoke) -> Result<()> {
 		self.fmt_invoke(wast_invoke)?;
 
 		writeln!(self.file)?;
@@ -475,7 +468,7 @@ impl Runner for Luau {
 		Ok(())
 	}
 
-	fn on_assert_trap(&mut self, _span: Span, exec: WastExecute, message: &str) -> Result<()> {
+	fn visit_assert_trap(&mut self, _span: Span, exec: WastExecute, message: &str) -> Result<()> {
 		let message = message.as_bytes().escape_ascii();
 
 		self.references.push("assert_trap");
@@ -489,7 +482,7 @@ impl Runner for Luau {
 		Ok(())
 	}
 
-	fn on_assert_return(
+	fn visit_assert_return(
 		&mut self,
 		_span: Span,
 		exec: WastExecute,
@@ -515,7 +508,7 @@ impl Runner for Luau {
 		Ok(())
 	}
 
-	fn on_assert_exhaustion(
+	fn visit_assert_exhaustion(
 		&mut self,
 		_span: Span,
 		_call: WastInvoke,
@@ -524,15 +517,15 @@ impl Runner for Luau {
 		Ok(())
 	}
 
-	fn on_assert_unlinkable(&mut self, _span: Span, _module: Wat, _message: &str) -> Result<()> {
+	fn visit_assert_unlinkable(&mut self, _span: Span, _module: Wat, _message: &str) -> Result<()> {
 		Ok(())
 	}
 
-	fn on_assert_exception(&mut self, _span: Span, _exec: WastExecute) -> Result<()> {
+	fn visit_assert_exception(&mut self, _span: Span, _exec: WastExecute) -> Result<()> {
 		Ok(())
 	}
 
-	fn on_assert_suspension(
+	fn visit_assert_suspension(
 		&mut self,
 		_span: Span,
 		_exec: WastExecute,
@@ -541,81 +534,44 @@ impl Runner for Luau {
 		Ok(())
 	}
 
-	fn on_thread(&mut self, _wast_thread: WastThread) -> Result<()> {
+	fn visit_thread(&mut self, _wast_thread: WastThread) -> Result<()> {
 		Ok(())
 	}
 
-	fn on_wait(&mut self, _span: Span, _thread: Id) -> Result<()> {
+	fn visit_wait(&mut self, _span: Span, _thread: Id) -> Result<()> {
 		Ok(())
 	}
 }
 
-fn load_output_path(path: &Path) -> PathBuf {
-	const TEMP_DIRECTORY: &str = env!("CARGO_TARGET_TMPDIR");
+fn compile_into(destination: &Path, source: &str) -> Result<()> {
+	let mut luau = Luau::new();
 
-	let name = path.file_name().expect("should have file name");
+	luau.visit(source)?;
 
-	Path::new(TEMP_DIRECTORY).join(name).with_extension("luau")
-}
+	let mut destination = File::create(destination).map(BufWriter::new)?;
 
-fn poll_until_timeout(child: &mut Child, duration: Duration) -> Result<ExitStatus> {
-	let now = Instant::now();
+	luau.write_into(&mut destination)?;
 
-	while now.elapsed() < duration {
-		std::thread::yield_now();
+	destination.flush()?;
 
-		if let Some(status) = child.try_wait()? {
-			return Ok(status);
-		}
-	}
-
-	child.kill()?;
-
-	Err(std::io::Error::new(
-		std::io::ErrorKind::TimedOut,
-		"the sub-process has timed out",
-	)
-	.into())
-}
-
-fn run_and_verify(path: &Path) -> Result<()> {
-	let luau = std::env::var_os("LUAU_PATH").ok_or("`LUAU_PATH` should be set")?;
-	let mut child = Command::new(luau)
-		.arg(path)
-		.stdout(Stdio::piped())
-		.stderr(Stdio::piped())
-		.spawn()?;
-
-	if poll_until_timeout(&mut child, LUAU_TIMEOUT)?.success() {
-		Ok(())
-	} else {
-		let Child { stdout, stderr, .. } = child;
-
-		let mut result = String::new();
-
-		stdout.unwrap().read_to_string(&mut result)?;
-		result.push('\n');
-		stderr.unwrap().read_to_string(&mut result)?;
-
-		panic!("{result}");
-	}
+	Ok(())
 }
 
 fn luau(path: &Path) -> Result<()> {
-	let output = load_output_path(path);
-	let test = std::fs::read_to_string(path)?;
+	let program = std::env::var_os("LUAU_PATH").ok_or("`LUAU_PATH` should be set")?;
+	let source = std::fs::read_to_string(path)?;
+	let destination = glue::get_path_target("luau".as_ref(), path.file_name().unwrap());
 
 	// SAFETY: I'm not sure, but it's not a problem in practice.
 	unsafe {
 		std::env::set_var("RUST_BACKTRACE", "1");
 	}
 
-	let mut luau = Luau::new();
+	compile_into(&destination, &source)?;
 
-	luau.run(&test)?;
-	luau.write_into(&output)?;
+	glue::run(&program, destination.as_ref())?;
 
-	run_and_verify(&output)
+	Ok(())
 }
 
 datatest_stable::harness! {

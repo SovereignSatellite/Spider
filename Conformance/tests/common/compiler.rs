@@ -64,12 +64,12 @@ impl Optimizer {
 	}
 }
 
-pub struct Loader {
+pub struct Compiler {
 	data_flow_builder: DataFlowBuilder,
 	optimizer: Optimizer,
 }
 
-impl Loader {
+impl Compiler {
 	pub fn new() -> Self {
 		Self {
 			data_flow_builder: DataFlowBuilder::new(),
