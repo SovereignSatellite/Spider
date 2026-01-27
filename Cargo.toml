@@ -1,6 +1,6 @@
 [workspace]
 resolver = "2"
-members = ["Conformance", "Targets/Luau/*"]
+members = ["Conformance", "Targets/Luau/*", "Targets/LuaJIT/*"]
 
 [workspace.dependencies]
 list = { git = "https://github.com/SovereignSatellite/RustListDataStructure.git", rev = "a236bf9" }

@@ -1,0 +1,61 @@
+#![expect(clippy::missing_panics_doc)]
+
+mod expression;
+mod print;
+mod statement;
+
+pub mod library;
+
+use std::{
+	io::{Result, Write},
+	sync::Arc,
+};
+
+use hashbrown::HashMap;
+use luajit_tree::{LuaJITTree, expression::Name};
+
+use self::print::Print;
+
+pub struct LuaJITPrinter {
+	names: HashMap<Name, Arc<str>>,
+	depth: u16,
+}
+
+impl LuaJITPrinter {
+	#[must_use]
+	pub fn new() -> Self {
+		Self {
+			names: HashMap::new(),
+			depth: 0,
+		}
+	}
+
+	pub(crate) fn tab(&self, out: &mut dyn Write) -> Result<()> {
+		(0..self.depth).try_for_each(|_| write!(out, "\t"))
+	}
+
+	pub fn get_name(&self, name: Name) -> Option<&str> {
+		self.names.get(&name).map(Arc::as_ref)
+	}
+
+	pub const fn indent(&mut self) {
+		self.depth = self.depth.wrapping_add(1);
+	}
+
+	pub const fn outdent(&mut self) {
+		self.depth = self.depth.wrapping_sub(1);
+	}
+
+	/// # Errors
+	///
+	/// Returns any IO errors that the `out` produces during the process.
+	pub fn print(&mut self, tree: &LuaJITTree, out: &mut dyn Write) -> Result<()> {
+		tree.print(self, out)
+	}
+}
+
+impl Default for LuaJITPrinter {
+	fn default() -> Self {
+		Self::new()
+	}
+}

@@ -1,0 +1,12 @@
+[package]
+name = "luajit-builder"
+version = "1.0.0"
+edition = "2024"
+
+[dependencies]
+data-flow-graph = { path = "../../../Data Flow/Graph" }
+data-flow-builder = { path = "../../../Data Flow/Builder" }
+luajit-tree = { path = "../Tree" }
+
+hashbrown.workspace = true
+set.workspace = true

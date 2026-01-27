@@ -1,0 +1,19 @@
+[package]
+name = "luajit-printer"
+version = "1.0.0"
+edition = "2024"
+
+[dependencies]
+data-flow-graph = { path = "../../../Data Flow/Graph" }
+data-flow-builder = { path = "../../../Data Flow/Builder" }
+data-flow-visitor = { path = "../../../Data Flow/Visitor" }
+luajit-tree = { path = "../Tree" }
+luajit-builder = { path = "../Builder" }
+
+clap.workspace = true
+hashbrown.workspace = true
+wasmparser = { workspace = true, features = ["validate"] }
+
+[[bin]]
+name = "wasm2luajit"
+path = "src/main.rs"
