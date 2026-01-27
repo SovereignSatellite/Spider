@@ -23,6 +23,7 @@ mod common;
 
 const HARNESS_START_SOURCE: &str = include_str!("harness/luau.start.luau");
 const HARNESS_END_SOURCE: &str = include_str!("harness/luau.end.luau");
+const PROGRAM_NAME: &str = "luau";
 
 struct Luau {
 	library_sections: LibrarySections,
@@ -562,7 +563,7 @@ fn compile_into(destination: &Path, source: &str) -> Result<()> {
 }
 
 fn compile_and_run(path: &Path, optimized: bool, native: bool) -> Result<()> {
-	let program = std::env::var_os("LUAU_PATH").ok_or("`LUAU_PATH` should be set")?;
+	let program = std::env::var_os("LUAU_PATH").unwrap_or_else(|| PROGRAM_NAME.into());
 	let source = std::fs::read_to_string(path)?;
 	let destination = glue::get_path_target("luau".as_ref(), path.file_name().unwrap());
 
@@ -584,29 +585,25 @@ fn compile_and_run(path: &Path, optimized: bool, native: bool) -> Result<()> {
 	Ok(())
 }
 
-mod luau {
-	use std::path::Path;
+fn bytecode_o0(path: &Path) -> datatest_stable::Result<()> {
+	crate::compile_and_run(path, false, false)
+}
 
-	pub fn bytecode_o0(path: &Path) -> datatest_stable::Result<()> {
-		crate::compile_and_run(path, false, false)
-	}
+fn bytecode_o2(path: &Path) -> datatest_stable::Result<()> {
+	crate::compile_and_run(path, true, false)
+}
 
-	pub fn bytecode_o2(path: &Path) -> datatest_stable::Result<()> {
-		crate::compile_and_run(path, true, false)
-	}
+fn native_o0(path: &Path) -> datatest_stable::Result<()> {
+	crate::compile_and_run(path, false, true)
+}
 
-	pub fn native_o0(path: &Path) -> datatest_stable::Result<()> {
-		crate::compile_and_run(path, false, true)
-	}
-
-	pub fn native_o2(path: &Path) -> datatest_stable::Result<()> {
-		crate::compile_and_run(path, true, true)
-	}
+fn native_o2(path: &Path) -> datatest_stable::Result<()> {
+	crate::compile_and_run(path, true, true)
 }
 
 datatest_stable::harness! {
-	{ test = luau::bytecode_o0, root = "Suite", pattern = r"^(?!simd_)\w+\.wast$" },
-	{ test = luau::bytecode_o2, root = "Suite", pattern = r"^(?!simd_)\w+\.wast$" },
-	{ test = luau::native_o0, root = "Suite", pattern = r"^(?!simd_)\w+\.wast$" },
-	{ test = luau::native_o2, root = "Suite", pattern = r"^(?!simd_)\w+\.wast$" },
+	{ test = bytecode_o0, root = "Suite", pattern = r"^(?!simd_)\w+\.wast$" },
+	{ test = bytecode_o2, root = "Suite", pattern = r"^(?!simd_)\w+\.wast$" },
+	{ test = native_o0, root = "Suite", pattern = r"^(?!simd_)\w+\.wast$" },
+	{ test = native_o2, root = "Suite", pattern = r"^(?!simd_)\w+\.wast$" },
 }

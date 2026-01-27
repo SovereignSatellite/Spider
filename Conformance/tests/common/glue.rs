@@ -35,10 +35,10 @@ fn poll_until_timeout(child: &mut Child, duration: Duration) -> Result<ExitStatu
 fn fmt_process_output(child: Child, out: &mut String) -> Result<()> {
 	let Child { stdout, stderr, .. } = child;
 
-	out.push_str("\nLUAU STANDARD ERROR\n");
+	out.push_str("\nTEST STANDARD ERROR\n");
 	stderr.unwrap().read_to_string(out)?;
 
-	out.push_str("\nLUAU STANDARD OUTPUT\n");
+	out.push_str("\nTEST STANDARD OUTPUT\n");
 	stdout.unwrap().read_to_string(out)?;
 
 	Ok(())
