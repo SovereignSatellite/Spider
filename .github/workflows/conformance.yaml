@@ -8,15 +8,21 @@ env:
 
 jobs:
   build_and_test:
-    name: Spider - ${{ matrix.os }}
+    name: Conformance - ${{ matrix.name }}
     runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: false
       matrix:
         include:
-          - os: ubuntu-latest
-          - os: windows-latest
-          - os: macos-latest
+          - name: Linux x64
+            os: ubuntu-latest
+
+          - name: Windows x64
+            os: windows-latest
+
+          - name: macOS ARM64
+            os: macos-latest
+
     steps:
       - uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8
         with:
