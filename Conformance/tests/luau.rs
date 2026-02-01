@@ -121,9 +121,7 @@ impl Luau {
 	}
 
 	fn fmt_argument_i32(&mut self, source: i32) -> Result<()> {
-		let source_1 = u32::from_le_bytes(source.to_le_bytes());
-
-		write!(self.file, "0x{source_1:08X} --[[ {source}_i32 ]]")?;
+		write!(self.file, "0x{source:08X} --[[ {source}_i32 ]]")?;
 
 		Ok(())
 	}
@@ -272,13 +270,11 @@ impl Luau {
 	}
 
 	fn fmt_assert_equal_i32(&mut self, source: i32) -> Result<()> {
-		let source_1 = u32::from_le_bytes(source.to_le_bytes());
-
 		self.references.push("assert_equal_i32");
 
 		write!(
 			self.file,
-			"hn_assert_equal_i32(0x{source_1:08X}) --[[ {source}_i32 ]]"
+			"hn_assert_equal_i32(0x{source:08X}) --[[ {source}_i32 ]]"
 		)?;
 
 		Ok(())

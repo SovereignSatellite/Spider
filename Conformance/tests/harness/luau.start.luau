@@ -168,7 +168,7 @@ function hn_assert_equal_f32(target: number): (unknown) -> ()
 
 	return function(source)
 		if type(source) ~= "vector" then
-			hn_report_failure("`%*` should type `f32`", 2, source)
+			hn_report_failure("`%*` should be type `f32`", 2, source)
 
 			return
 		end
@@ -209,7 +209,7 @@ function hn_assert_equal_f64(target_1: number, target_2: number): (unknown) -> (
 
 	return function(source)
 		if type(source) ~= "number" then
-			hn_report_failure("`%*` should type `f64`", 2, source)
+			hn_report_failure("`%*` should be type `f64`", 2, source)
 
 			return
 		end
