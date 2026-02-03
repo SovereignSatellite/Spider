@@ -49,15 +49,14 @@ end
 -- NEEDS math_round
 -- NEEDS vector_create
 local function rt_nearest_f32(source: vector): vector
-	local positive = is_positive(source.x)
-	local source = math_abs(source.x)
-	local rounded = math_round(source)
+	local absolute = math_abs(source.x)
+	local rounded = math_round(absolute)
 
-	if source == rounded - 0.5 and rounded % 2 == 1 then
+	if absolute == rounded - 0.5 and rounded % 2 == 1 then
 		rounded = rounded - 1
 	end
 
-	return vector_create(if positive then rounded else -rounded, 0, 0)
+	return vector_create(if is_positive(source.x) then rounded else -rounded, 0, 0)
 end
 
 -- SECTION add_f32

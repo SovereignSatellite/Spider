@@ -38,15 +38,14 @@ end
 -- NEEDS math_abs
 -- NEEDS math_round
 local function rt_nearest_f64(source: number): number
-	local positive = is_positive(source)
-	local source = math_abs(source)
-	local rounded = math_round(source)
+	local absolute = math_abs(source)
+	local rounded = math_round(absolute)
 
-	if source == rounded - 0.5 and rounded % 2 == 1 then
+	if absolute == rounded - 0.5 and rounded % 2 == 1 then
 		rounded = rounded - 1
 	end
 
-	return if positive then rounded else -rounded
+	return if is_positive(source) then rounded else -rounded
 end
 
 -- SECTION add_f64
