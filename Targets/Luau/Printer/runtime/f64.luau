@@ -130,25 +130,15 @@ end
 -- NEEDS math_ceil
 -- NEEDS math_floor
 local function rt_saturate_f64_to_s32(source: number): number
-	if source ~= source then
+	if source > 0x7FFF_FFFF then
+		return 0x7FFF_FFFF
+	elseif source < -0x8000_0000 then
+		return 0x8000_0000
+	elseif source ~= source then
 		return 0
-	end
-
-	if source >= 0 then
-		source = math_floor(source)
-
-		if source >= 0x8000_0000 then
-			return 0x7FFF_FFFF
-		end
 	else
-		source = math_ceil(source)
-
-		if source < -0x8000_0000 then
-			return 0x8000_0000
-		end
+		return bit_or(if source >= 0 then math_floor(source) else math_ceil(source), 0)
 	end
-
-	return bit_or(source, 0)
 end
 
 -- SECTION truncate_f64_to_s32
@@ -156,22 +146,12 @@ end
 -- NEEDS math_ceil
 -- NEEDS math_floor
 local function rt_truncate_f64_to_s32(source: number): number
-	if source ~= source then
+	local source = if source >= 0 then math_floor(source) else math_ceil(source)
+
+	if source > 0x7FFF_FFFF or source < -0x8000_0000 then
+		error("integer overflow", 2)
+	elseif source ~= source then
 		error("invalid conversion to integer", 2)
-	end
-
-	if source >= 0 then
-		source = math_floor(source)
-
-		if source >= 0x8000_0000 then
-			error("integer overflow", 2)
-		end
-	else
-		source = math_ceil(source)
-
-		if source < -0x8000_0000 then
-			error("integer overflow", 2)
-		end
 	end
 
 	return bit_or(source, 0)
@@ -182,25 +162,13 @@ end
 -- NEEDS math_ceil
 -- NEEDS math_floor
 local function rt_saturate_f64_to_u32(source: number): number
-	if source ~= source then
+	if source > 0xFFFF_FFFF then
+		return 0xFFFF_FFFF
+	elseif source < 0 or source ~= source then
 		return 0
-	end
-
-	if source >= 0 then
-		source = math_floor(source)
-
-		if source >= 0x1_0000_0000 then
-			return 0xFFFF_FFFF
-		end
 	else
-		source = math_ceil(source)
-
-		if source < 0 then
-			return 0
-		end
+		return bit_or(math_floor(source), 0)
 	end
-
-	return bit_or(source, 0)
 end
 
 -- SECTION truncate_f64_to_u32
@@ -208,22 +176,12 @@ end
 -- NEEDS math_ceil
 -- NEEDS math_floor
 local function rt_truncate_f64_to_u32(source: number): number
-	if source ~= source then
+	local source = if source >= 0 then math_floor(source) else math_ceil(source)
+
+	if source > 0xFFFF_FFFF or source < 0 then
+		error("integer overflow", 2)
+	elseif source ~= source then
 		error("invalid conversion to integer", 2)
-	end
-
-	if source >= 0 then
-		source = math_floor(source)
-
-		if source >= 0x1_0000_0000 then
-			error("integer overflow", 2)
-		end
-	else
-		source = math_ceil(source)
-
-		if source < 0 then
-			error("integer overflow", 2)
-		end
 	end
 
 	return bit_or(source, 0)
@@ -237,28 +195,20 @@ end
 -- NEEDS math_floor
 -- NEEDS truncate_f64_to_u64_unchecked
 local function rt_saturate_f64_to_s64(source: number): number
-	if source ~= source then
+	if source >= 0x8000_0000_0000_0000 then
+		return MAXIMUM_S64
+	elseif source < -0x8000_0000_0000_0000 then
+		return MINIMUM_S64
+	elseif source ~= source then
 		return ZERO_U64
-	end
+	elseif source >= 0 then
+		local result = rt_truncate_f64_to_u64_unchecked(math_floor(source))
 
-	if source >= 0 then
-		local source = math_floor(source)
-
-		if source >= 0x8000_0000_0000_0000 then
-			return MAXIMUM_S64
-		end
-
-		return rt_truncate_f64_to_u64_unchecked(source)
+		return result
 	else
-		local source = math_ceil(source)
+		local result = rt_truncate_f64_to_u64_unchecked(-math_ceil(source))
 
-		if source < -0x8000_0000_0000_0000 then
-			return MINIMUM_S64
-		end
-
-		local source = rt_truncate_f64_to_u64_unchecked(-source)
-
-		return rt_negate_i64(source)
+		return rt_negate_i64(result)
 	end
 end
 
@@ -268,28 +218,22 @@ end
 -- NEEDS negate_i64
 -- NEEDS truncate_f64_to_u64_unchecked
 local function rt_truncate_f64_to_s64(source: number): number
-	if source ~= source then
+	local source = if source >= 0 then math_floor(source) else math_ceil(source)
+
+	if source >= 0x8000_0000_0000_0000 or source < -0x8000_0000_0000_0000 then
+		error("integer overflow", 2)
+	elseif source ~= source then
 		error("invalid conversion to integer", 2)
 	end
 
 	if source >= 0 then
-		local source = math_floor(source)
+		local result = rt_truncate_f64_to_u64_unchecked(source)
 
-		if source >= 0x8000_0000_0000_0000 then
-			error("integer overflow", 2)
-		end
-
-		return rt_truncate_f64_to_u64_unchecked(source)
+		return result
 	else
-		local source = math_ceil(source)
+		local result = rt_truncate_f64_to_u64_unchecked(-math_ceil(source))
 
-		if source < -0x8000_0000_0000_0000 then
-			error("integer overflow", 2)
-		end
-
-		local source = rt_truncate_f64_to_u64_unchecked(-source)
-
-		return rt_negate_i64(source)
+		return rt_negate_i64(result)
 	end
 end
 
@@ -300,25 +244,15 @@ end
 -- NEEDS math_floor
 -- NEEDS truncate_f64_to_u64_unchecked
 local function rt_saturate_f64_to_u64(source: number): number
-	if source ~= source then
+	if source >= 0x1_0000_0000_0000_0000 then
+		return ALL_U64
+	elseif source < 0 or source ~= source then
 		return ZERO_U64
-	end
-
-	if source >= 0 then
-		source = math_floor(source)
-
-		if source >= 0x1_0000_0000_0000_0000 then
-			return ALL_U64
-		end
 	else
-		source = math_ceil(source)
+		local result = rt_truncate_f64_to_u64_unchecked(math_floor(source))
 
-		if source < 0 then
-			return ZERO_U64
-		end
+		return result
 	end
-
-	return rt_truncate_f64_to_u64_unchecked(source)
 end
 
 -- SECTION truncate_f64_to_u64_unchecked
@@ -336,22 +270,12 @@ end
 -- NEEDS math_floor
 -- NEEDS truncate_f64_to_u64_unchecked
 local function rt_truncate_f64_to_u64(source: number): number
-	if source ~= source then
+	local source = if source >= 0 then math_floor(source) else math_ceil(source)
+
+	if source >= 0x1_0000_0000_0000_0000 or source < 0 then
+		error("integer overflow", 2)
+	elseif source ~= source then
 		error("invalid conversion to integer", 2)
-	end
-
-	if source >= 0 then
-		source = math_floor(source)
-
-		if source >= 0x1_0000_0000_0000_0000 then
-			error("integer overflow", 2)
-		end
-	else
-		source = math_ceil(source)
-
-		if source < 0 then
-			error("integer overflow", 2)
-		end
 	end
 
 	return rt_truncate_f64_to_u64_unchecked(source)
