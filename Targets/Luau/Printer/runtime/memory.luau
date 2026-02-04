@@ -132,13 +132,10 @@ local function rt_load_i64(source: Memory, offset: number): number
 end
 
 -- SECTION load_f32
--- NEEDS buffer_read_f32
+-- NEEDS buffer_read_u32
 -- NEEDS memory_type
--- NEEDS vector_create
-local function rt_load_f32(source: Memory, offset: number): vector
-	local source = buffer_read_f32(source[1], offset)
-
-	return vector_create(source, 0, 0)
+local function rt_load_f32(source: Memory, offset: number): number
+	return buffer_read_u32(source[1], offset)
 end
 
 -- SECTION load_f64
@@ -213,8 +210,8 @@ end
 -- SECTION store_f32
 -- NEEDS buffer_write_f32
 -- NEEDS memory_type
-local function rt_store_f32(destination: Memory, offset: number, source: vector)
-	buffer_write_f32(destination[1], offset, source.x)
+local function rt_store_f32(destination: Memory, offset: number, source: number)
+	buffer_write_u32(destination[1], offset, source)
 end
 
 -- SECTION store_f64

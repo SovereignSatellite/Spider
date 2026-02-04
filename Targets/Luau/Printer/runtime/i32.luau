@@ -225,25 +225,31 @@ end
 
 -- SECTION convert_s32_to_f32
 -- NEEDS bit_xor
--- NEEDS vector_create
-local function rt_convert_s32_to_f32(source: number): vector
+-- NEEDS buffer_read_u32
+-- NEEDS buffer_write_f32
+-- NEEDS raw_memory
+local function rt_convert_s32_to_f32(source: number): number
 	local source = bit_xor(source, 0x8000_0000) - 0x8000_0000
 
-	return vector_create(source, 0, 0)
+	buffer_write_f32(RAW_MEMORY, 0, source)
+
+	return buffer_read_u32(RAW_MEMORY, 0)
 end
 
 -- SECTION convert_u32_to_f32
--- NEEDS vector_create
-local function rt_convert_u32_to_f32(source: number): vector
-	return vector_create(source, 0, 0)
+-- NEEDS buffer_read_u32
+-- NEEDS buffer_write_f32
+-- NEEDS raw_memory
+local function rt_convert_u32_to_f32(source: number): number
+	buffer_write_f32(RAW_MEMORY, 0, source)
+
+	return buffer_read_u32(RAW_MEMORY, 0)
 end
 
 -- SECTION convert_s32_to_f64
 -- NEEDS bit_xor
 local function rt_convert_s32_to_f64(source: number): number
-	local source = bit_xor(source, 0x8000_0000) - 0x8000_0000
-
-	return source
+	return bit_xor(source, 0x8000_0000) - 0x8000_0000
 end
 
 -- SECTION convert_u32_to_f64
@@ -252,12 +258,6 @@ local function rt_convert_u32_to_f64(source: number): number
 end
 
 -- SECTION transmute_i32_to_f32
--- NEEDS buffer_read_f32
--- NEEDS buffer_write_u32
--- NEEDS raw_memory
--- NEEDS vector_create
-local function rt_transmute_i32_to_f32(source: number): vector
-	buffer_write_u32(RAW_MEMORY, 0, source)
-
-	return vector_create(buffer_read_f32(RAW_MEMORY, 0), 0, 0)
+local function rt_transmute_i32_to_f32(source: number): number
+	return source
 end
