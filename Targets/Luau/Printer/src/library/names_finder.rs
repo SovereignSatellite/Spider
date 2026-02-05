@@ -37,11 +37,7 @@ impl NeedsName for i64 {
 
 impl NeedsName for f32 {
 	fn needs_name(&self) -> &'static str {
-		if self.is_finite() {
-			"vector_create"
-		} else {
-			"transmute_i32_to_f32"
-		}
+		""
 	}
 }
 

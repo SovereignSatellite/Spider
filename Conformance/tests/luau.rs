@@ -146,12 +146,7 @@ impl Luau {
 		let F32 { bits } = source;
 		let source = f32::from_bits(bits);
 
-		self.references.push("transmute_i32_to_f32");
-
-		write!(
-			self.file,
-			"rt_transmute_i32_to_f32(0x{bits:08X}) --[[ {source}_f32 ]]",
-		)?;
+		write!(self.file, "0x{bits:08X} --[[ {source}_f32 ]]")?;
 
 		Ok(())
 	}

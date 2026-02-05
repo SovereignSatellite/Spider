@@ -61,15 +61,6 @@ local math_fmod = math.fmod
 -- SECTION vector_create
 local vector_create = vector.create
 
--- SECTION vector_abs
-local vector_abs = vector.abs
-
--- SECTION vector_min
-local vector_min = vector.min
-
--- SECTION vector_max
-local vector_max = vector.max
-
 -- SECTION raw_memory
 local RAW_MEMORY = buffer.create(8)
 

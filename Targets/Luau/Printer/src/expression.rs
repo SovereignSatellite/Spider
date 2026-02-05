@@ -316,15 +316,9 @@ impl Print for i64 {
 
 impl Print for f32 {
 	fn print(&self, _printer: &mut LuauPrinter, out: &mut dyn Write) -> Result<()> {
-		let intrinsic = self.needs_name();
+		let inner = self.to_bits();
 
-		if self.is_finite() {
-			write!(out, "{intrinsic}({self:e}, 0, 0)")
-		} else {
-			let bits = self.to_bits();
-
-			write!(out, "rt_{intrinsic}(0x{bits:08X})")
-		}
+		write!(out, "0x{inner:08X}")
 	}
 }
 
@@ -509,10 +503,12 @@ impl Print for IntegerTransmuteToNumber {
 impl Print for NumberUnaryOperation {
 	fn print(&self, printer: &mut LuauPrinter, out: &mut dyn Write) -> Result<()> {
 		let Self {
-			source, operator, ..
+			source,
+			r#type,
+			operator,
 		} = self;
 
-		if *operator == NumberUnaryOperator::Negate {
+		if *r#type == NumberType::F64 && *operator == NumberUnaryOperator::Negate {
 			write!(out, "-(")?;
 
 			source.print(printer, out)?;
@@ -533,7 +529,10 @@ impl Print for NumberUnaryOperation {
 impl Print for NumberBinaryOperation {
 	fn print(&self, printer: &mut LuauPrinter, out: &mut dyn Write) -> Result<()> {
 		let Self {
-			lhs, rhs, operator, ..
+			lhs,
+			rhs,
+			r#type,
+			operator,
 		} = self;
 
 		if let Some(operator) = match operator {
@@ -543,7 +542,8 @@ impl Print for NumberBinaryOperation {
 			NumberBinaryOperator::Divide => Some("/"),
 
 			_ => None,
-		} {
+		} && *r#type == NumberType::F64
+		{
 			return fmt_infix_operator(lhs, rhs, operator, printer, out);
 		}
 

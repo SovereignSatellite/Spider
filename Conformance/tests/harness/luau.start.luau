@@ -8,13 +8,14 @@ local selected = nil
 -- NEEDS create_u32_from_i64
 -- NEEDS environment
 -- NEEDS memory_new
+-- NEEDS narrow_f64
 -- NEEDS table_new
--- NEEDS vector_create
+-- NEEDS widen_f32
 do
 	local spectest = {
 		global_i32 = { 666 },
 		global_i64 = { rt_create_i64_from_u32(666, 0) },
-		global_f32 = { vector_create(666.6, 0, 0) },
+		global_f32 = { rt_widen_f32(666.6) },
 		global_f64 = { 666.6 },
 
 		table = rt_table_new({}, 10, 10),
@@ -34,7 +35,9 @@ do
 	end
 
 	function spectest.print_f32(argument)
-		print(string.format("F32 `%g`", argument.x))
+		local argument = rt_widen_f32(argument)
+
+		print(string.format("F32 `%g`", argument))
 	end
 
 	function spectest.print_f64(argument)
@@ -42,7 +45,9 @@ do
 	end
 
 	function spectest.print_i32_f32(argument_1, argument_2)
-		print(string.format("I32 `0x%08X`, F32 `%g`", argument_1, argument_2.x))
+		local argument_2 = rt_widen_f32(argument_2)
+
+		print(string.format("I32 `0x%08X`, F32 `%g`", argument_1, argument_2))
 	end
 
 	function spectest.print_f64_f64(argument_1, argument_2)
@@ -149,38 +154,38 @@ end
 
 -- SECTION is_f32_nan_canonical
 -- NEEDS is_f64_nan_canonical
+-- NEEDS widen_f32
 function hn_is_f32_nan_canonical(source)
-	return hn_is_f64_nan_canonical(source.x)
+	local source = rt_widen_f32(source)
+
+	return hn_is_f64_nan_canonical(source)
 end
 
 -- SECTION is_f32_nan_arithmetic
 -- NEEDS is_f64_nan_arithmetic
+-- NEEDS widen_f32
 function hn_is_f32_nan_arithmetic(source)
-	return hn_is_f64_nan_arithmetic(source.x)
+	local source = rt_widen_f32(source)
+
+	return hn_is_f64_nan_arithmetic(source)
 end
 
 -- SECTION assert_equal_f32
 -- NEEDS report_failure
--- NEEDS transmute_f32_to_i32
--- NEEDS transmute_i32_to_f32
+-- NEEDS widen_f32
 function hn_assert_equal_f32(target: number): (unknown) -> ()
-	local target = rt_transmute_i32_to_f32(target)
-
 	return function(source)
-		if type(source) ~= "vector" then
+		if type(source) ~= "number" then
 			hn_report_failure("`%*` should be type `f32`", 2, source)
 
 			return
 		end
 
-		local source_1 = rt_transmute_f32_to_i32(source)
-		local target_1 = rt_transmute_f32_to_i32(target)
+		if source ~= target then
+			local source_1 = rt_widen_f32(source)
+			local target_1 = rt_widen_f32(target)
 
-		if source_1 ~= target_1 then
-			local source = source.x
-			local target = target.x
-
-			hn_report_failure("`%08X` (%*) should equal `%08X` (%*)", 2, source_1, source, target_1, target)
+			hn_report_failure("`%08X` (%*) should equal `%08X` (%*)", 2, source, source_1, target, target_1)
 		end
 	end
 end

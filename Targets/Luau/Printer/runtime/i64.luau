@@ -635,26 +635,28 @@ end
 -- SECTION convert_s64_to_f32
 -- NEEDS convert_u64_to_f32
 -- NEEDS is_positive
+-- NEEDS negate_f32
 -- NEEDS negate_i64
--- NEEDS vector_create
-local function rt_convert_s64_to_f32(source: number): vector
-	return if is_positive(source) then rt_convert_u64_to_f32(source) else -rt_convert_u64_to_f32(rt_negate_i64(source))
+local function rt_convert_s64_to_f32(source: number): number
+	return if is_positive(source)
+		then rt_convert_u64_to_f32(source)
+		else rt_negate_f32(rt_convert_u64_to_f32(rt_negate_i64(source)))
 end
 
 -- SECTION convert_u64_to_f32
 -- NEEDS convert_u64_to_f64
--- NEEDS vector_create
-local function rt_convert_u64_to_f32(source: number): vector
+-- NEEDS narrow_f64
+local function rt_convert_u64_to_f32(source: number): number
 	local source = rt_convert_u64_to_f64(source)
 
-	return vector_create(source, 0, 0)
+	return rt_narrow_f64(source)
 end
 
 -- SECTION convert_s64_to_f64
 -- NEEDS convert_u64_to_f64
 -- NEEDS is_positive
 -- NEEDS negate_i64
-local function rt_convert_s64_to_f64(source: number): vector
+local function rt_convert_s64_to_f64(source: number): number
 	return if is_positive(source) then rt_convert_u64_to_f64(source) else -rt_convert_u64_to_f64(rt_negate_i64(source))
 end
 

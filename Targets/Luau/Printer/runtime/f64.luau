@@ -120,9 +120,13 @@ local function rt_greater_than_equal_f64(lhs: number, rhs: number): boolean
 end
 
 -- SECTION narrow_f64
--- NEEDS vector_create
-local function rt_narrow_f64(source: number): vector
-	return vector_create(source, 0, 0)
+-- NEEDS buffer_read_u32
+-- NEEDS buffer_write_f32
+-- NEEDS raw_memory
+local function rt_narrow_f64(source: number): number
+	buffer_write_f32(RAW_MEMORY, 0, source)
+
+	return buffer_read_u32(RAW_MEMORY, 0)
 end
 
 -- SECTION saturate_f64_to_s32
