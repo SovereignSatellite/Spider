@@ -1,12 +1,12 @@
 # Spider
 
-Spider is a compiler backend based on WebAssembly semantics. A single target front end is currently supported, which consumes `.wasm` binary modules and produces `.luau` source files.
+Spider is an experimental compiler based on WebAssembly semantics and the Regionalized Value State Dependence Graph research. It compiles `.wasm` binaries to Luau or LuaJIT source files.
 
 ## Install
 
-You can install the standalone executable through `cargo`, and then run `wasm2luau --help` for usage.
+Prebuilt binaries for Windows, Linux, and macOS are available in the "Releases" tab. Alternatively, build and install from source:
 
 ```sh
-$ cargo install --git "https://github.com/SovereignSatellite/Spider"
+$ cargo install luau-printer --git "https://github.com/SovereignSatellite/Spider"
 $ wasm2luau --help
 ```
