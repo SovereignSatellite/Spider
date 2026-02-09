@@ -310,7 +310,7 @@ impl Print for i64 {
 
 		let intrinsic = self.needs_name();
 
-		write!(out, "rt_{intrinsic}(0x{source_1:08X}, 0x{source_2:08X})")
+		write!(out, "{intrinsic}(0x{source_1:08X}, 0x{source_2:08X})")
 	}
 }
 
@@ -334,7 +334,7 @@ impl Print for f64 {
 
 			let intrinsic = self.needs_name();
 
-			write!(out, "rt_{intrinsic}(0x{source_1:08X}, 0x{source_2:08X})")
+			write!(out, "{intrinsic}(0x{source_1:08X}, 0x{source_2:08X})")
 		}
 	}
 }
