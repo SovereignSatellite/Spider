@@ -143,7 +143,7 @@ local function rt_saturate_f64_to_s32(source: number): number
 	if source >= 0x8000_0000 then
 		source = 0x7FFF_FFFF
 	elseif source <= -0x8000_0000 then
-		source = -0x8000_0000
+		source = 0x8000_0000
 	elseif source ~= source then
 		source = 0
 	else
