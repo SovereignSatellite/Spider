@@ -31,7 +31,7 @@ impl NeedsName for i32 {
 
 impl NeedsName for i64 {
 	fn needs_name(&self) -> &'static str {
-		"create_i64_from_u32"
+		"into_bits_i64"
 	}
 }
 
@@ -46,7 +46,7 @@ impl NeedsName for f64 {
 		if self.is_finite() {
 			""
 		} else {
-			"create_f64_from_u32"
+			"into_bits_i64"
 		}
 	}
 }

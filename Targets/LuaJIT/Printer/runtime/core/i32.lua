@@ -140,16 +140,16 @@ local function rt_divide_s32(lhs, rhs)
 end
 
 -- SECTION divide_u32
--- NEEDS convert_i32_to_u32
 -- NEEDS force_i32
+-- NEEDS force_u32
 -- NEEDS math_floor
 local function rt_divide_u32(lhs, rhs)
 	if rhs == 0 then
 		error("integer divide by zero")
 	end
 
-	lhs = convert_i32_to_u32(lhs)
-	rhs = convert_i32_to_u32(rhs)
+	lhs = force_u32(lhs)
+	rhs = force_u32(rhs)
 
 	local result = lhs / rhs
 
@@ -175,17 +175,19 @@ local function rt_remainder_s32(lhs, rhs)
 end
 
 -- SECTION remainder_u32
--- NEEDS convert_i32_to_u32
 -- NEEDS force_i32
+-- NEEDS force_u32
 local function rt_remainder_u32(lhs, rhs)
 	if rhs == 0 then
 		error("integer divide by zero", 2)
 	end
 
-	lhs = convert_i32_to_u32(lhs)
-	rhs = convert_i32_to_u32(rhs)
+	lhs = force_u32(lhs)
+	rhs = force_u32(rhs)
 
-	local result = force_i32(lhs % rhs)
+	local result = lhs % rhs
+
+	result = force_i32(result)
 
 	return result
 end
@@ -371,10 +373,10 @@ local function rt_convert_s32_to_f32(source)
 end
 
 -- SECTION convert_u32_to_f32
--- NEEDS convert_i32_to_u32
+-- NEEDS force_u32
 -- NEEDS transmute_n32
 local function rt_convert_u32_to_f32(source)
-	source = convert_i32_to_u32(source)
+	source = force_u32(source)
 
 	TRANSMUTE_N32.f32 = source
 
@@ -390,10 +392,10 @@ local function rt_convert_s32_to_f64(source)
 end
 
 -- SECTION convert_u32_to_f64
--- NEEDS convert_i32_to_u32
+-- NEEDS force_u32
 -- NEEDS transmute_n64
 local function rt_convert_u32_to_f64(source)
-	source = convert_i32_to_u32(source)
+	source = force_u32(source)
 
 	TRANSMUTE_N64.f64 = source
 

@@ -38,9 +38,9 @@ local function rt_table_size(source)
 end
 
 -- SECTION table_grow
--- NEEDS convert_i32_to_u32
+-- NEEDS force_u32
 local function rt_table_grow(destination, source, size)
-	local size = convert_i32_to_u32(size)
+	local size = force_u32(size)
 	local old = destination.minimum
 
 	if size == 0 then

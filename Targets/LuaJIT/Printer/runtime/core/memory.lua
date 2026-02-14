@@ -1,29 +1,3 @@
--- SECTION ffi_cast
--- NEEDS ffi
-local ffi_cast = ffi.cast
-
--- SECTION memory_type
--- NEEDS any_type
--- NEEDS ffi
-ffi.cdef([[
-struct Memory {
-    union Any *data;
-    uint32_t minimum;
-    uint32_t maximum;
-};
-]])
-
-local memory_type = ffi.typeof("struct Memory")
-
--- SECTION u8_pointer_type
--- NEEDS ffi
-local u8_pointer_type = ffi.typeof("uint8_t *")
-
--- SECTION any_pointer_type
--- NEEDS any_type
--- NEEDS ffi
-local any_pointer_type = ffi.typeof("union Any *")
-
 -- SECTION memory_new
 -- NEEDS ffi
 -- NEEDS ffi_cast
@@ -390,12 +364,12 @@ end
 
 -- SECTION memory_grow
 -- NEEDS c_realloc
--- NEEDS convert_i32_to_u32
 -- NEEDS ffi
 -- NEEDS ffi_cast
+-- NEEDS force_u32
 -- NEEDS u8_pointer_type
 local function rt_memory_grow(destination, size)
-	local size = convert_i32_to_u32(size)
+	local size = force_u32(size)
 	local old = destination.minimum
 
 	if size == 0 then

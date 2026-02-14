@@ -68,25 +68,36 @@ pub struct Sections {
 }
 
 impl Sections {
-	pub const BASE_SOURCE: &str = include_str!("../../runtime/base.lua");
-	pub const I32_SOURCE: &str = include_str!("../../runtime/i32.lua");
-	pub const I64_SOURCE: &str = include_str!("../../runtime/i64.lua");
-	pub const F32_SOURCE: &str = include_str!("../../runtime/f32.lua");
-	pub const F64_SOURCE: &str = include_str!("../../runtime/f64.lua");
-	pub const TABLE_SOURCE: &str = include_str!("../../runtime/table.lua");
-	pub const MEMORY_SOURCE: &str = include_str!("../../runtime/memory.lua");
+	pub const BIT_SOURCE: &str = include_str!("../../runtime/builtin/bit.lua");
+	pub const FFI_SOURCE: &str = include_str!("../../runtime/builtin/ffi.lua");
+	pub const MATH_SOURCE: &str = include_str!("../../runtime/builtin/math.lua");
+
+	pub const F32_ASSEMBLY_SOURCE: &str = include_str!("../../runtime/assembly/f32.lua");
+
+	pub const I32_SOURCE: &str = include_str!("../../runtime/core/i32.lua");
+	pub const I64_SOURCE: &str = include_str!("../../runtime/core/i64.lua");
+	pub const F32_SOURCE: &str = include_str!("../../runtime/core/f32.lua");
+	pub const F64_SOURCE: &str = include_str!("../../runtime/core/f64.lua");
+	pub const TABLE_SOURCE: &str = include_str!("../../runtime/core/table.lua");
+	pub const MEMORY_SOURCE: &str = include_str!("../../runtime/core/memory.lua");
 
 	#[must_use]
 	pub fn with_built_ins() -> Self {
 		let mut sections = Self { list: Vec::new() };
 
-		sections.parse_from(Self::BASE_SOURCE);
+		sections.parse_from(Self::BIT_SOURCE);
+		sections.parse_from(Self::FFI_SOURCE);
+		sections.parse_from(Self::MATH_SOURCE);
+
+		sections.parse_from(Self::F32_ASSEMBLY_SOURCE);
+
 		sections.parse_from(Self::I32_SOURCE);
 		sections.parse_from(Self::I64_SOURCE);
 		sections.parse_from(Self::F32_SOURCE);
 		sections.parse_from(Self::F64_SOURCE);
 		sections.parse_from(Self::TABLE_SOURCE);
 		sections.parse_from(Self::MEMORY_SOURCE);
+
 		sections.resolve();
 
 		sections

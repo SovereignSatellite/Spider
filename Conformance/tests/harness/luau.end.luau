@@ -1,8 +1,5 @@
-if #hn_failed_test_list == 0 then
+if hn_failed_test_count == 0 then
 	return
 end
 
-local report = table.concat(hn_failed_test_list, "\n")
-
-print(report)
-error("SOME TESTS FAILED", 0)
+error("FAILED " .. hn_failed_test_count .. " TESTS", 0)

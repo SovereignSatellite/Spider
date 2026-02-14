@@ -17,118 +17,126 @@ local function rt_memory_new(initializer: { string }, minimum: number, maximum: 
 end
 
 -- SECTION load_i32_from_s8
--- NEEDS bit_or
+-- NEEDS bit32_or
 -- NEEDS buffer_read_i8
 -- NEEDS memory_type
 local function rt_load_i32_from_s8(source: Memory, offset: number): number
-	return bit_or(buffer_read_i8(source[1], offset), 0)
+	local result = buffer_read_i8(source[1], offset)
+
+	result = bit32_or(result, 0)
+
+	return result
 end
 
 -- SECTION load_i32_from_u8
 -- NEEDS buffer_read_u8
 -- NEEDS memory_type
 local function rt_load_i32_from_u8(source: Memory, offset: number): number
-	return buffer_read_u8(source[1], offset)
+	local result = buffer_read_u8(source[1], offset)
+
+	return result
 end
 
 -- SECTION load_i32_from_s16
--- NEEDS bit_or
+-- NEEDS bit32_or
 -- NEEDS buffer_read_i16
 -- NEEDS memory_type
 local function rt_load_i32_from_s16(source: Memory, offset: number): number
-	return bit_or(buffer_read_i16(source[1], offset), 0)
+	local result = buffer_read_i16(source[1], offset)
+
+	result = bit32_or(result, 0)
+
+	return result
 end
 
 -- SECTION load_i32_from_u16
 -- NEEDS buffer_read_u16
 -- NEEDS memory_type
 local function rt_load_i32_from_u16(source: Memory, offset: number): number
-	return buffer_read_u16(source[1], offset)
+	local result = buffer_read_u16(source[1], offset)
+
+	return result
 end
 
 -- SECTION load_i32
 -- NEEDS buffer_read_u32
 -- NEEDS memory_type
 local function rt_load_i32(source: Memory, offset: number): number
-	return buffer_read_u32(source[1], offset)
+	local result = buffer_read_u32(source[1], offset)
+
+	return result
 end
 
 -- SECTION load_i64_from_s8
 -- NEEDS buffer_read_i8
--- NEEDS create_i64_from_u32
+-- NEEDS into_bits_i64
 -- NEEDS memory_type
 local function rt_load_i64_from_s8(source: Memory, offset: number): number
 	local source = buffer_read_i8(source[1], offset)
 
-	return if source >= 0
-		then rt_create_i64_from_u32(source, 0)
-		else rt_create_i64_from_u32(source + 0x1_0000_0000, 0xFFFF_FFFF)
+	return if source >= 0 then into_bits_i64(source, 0) else into_bits_i64(source + 0x1_0000_0000, 0xFFFF_FFFF)
 end
 
 -- SECTION load_i64_from_u8
 -- NEEDS buffer_read_u8
--- NEEDS create_i64_from_u32
+-- NEEDS into_bits_i64
 -- NEEDS memory_type
 local function rt_load_i64_from_u8(source: Memory, offset: number): number
 	local source = buffer_read_u8(source[1], offset)
 
-	return rt_create_i64_from_u32(source, 0)
+	return into_bits_i64(source, 0)
 end
 
 -- SECTION load_i64_from_s16
 -- NEEDS buffer_read_i16
--- NEEDS create_i64_from_u32
+-- NEEDS into_bits_i64
 -- NEEDS memory_type
 local function rt_load_i64_from_s16(source: Memory, offset: number): number
 	local source = buffer_read_i16(source[1], offset)
 
-	return if source >= 0
-		then rt_create_i64_from_u32(source, 0)
-		else rt_create_i64_from_u32(source + 0x1_0000_0000, 0xFFFF_FFFF)
+	return if source >= 0 then into_bits_i64(source, 0) else into_bits_i64(source + 0x1_0000_0000, 0xFFFF_FFFF)
 end
 
 -- SECTION load_i64_from_u16
 -- NEEDS buffer_read_u16
--- NEEDS create_i64_from_u32
+-- NEEDS into_bits_i64
 -- NEEDS memory_type
 local function rt_load_i64_from_u16(source: Memory, offset: number): number
 	local source = buffer_read_u16(source[1], offset)
 
-	return rt_create_i64_from_u32(source, 0)
+	return into_bits_i64(source, 0)
 end
 
 -- SECTION load_i64_from_s32
 -- NEEDS buffer_read_i32
--- NEEDS create_i64_from_u32
+-- NEEDS into_bits_i64
 -- NEEDS memory_type
 local function rt_load_i64_from_s32(source: Memory, offset: number): number
 	local source = buffer_read_i32(source[1], offset)
 
-	return if source >= 0
-		then rt_create_i64_from_u32(source, 0)
-		else rt_create_i64_from_u32(source + 0x1_0000_0000, 0xFFFF_FFFF)
+	return if source >= 0 then into_bits_i64(source, 0) else into_bits_i64(source + 0x1_0000_0000, 0xFFFF_FFFF)
 end
 
 -- SECTION load_i64_from_u32
 -- NEEDS buffer_read_u32
--- NEEDS create_i64_from_u32
+-- NEEDS into_bits_i64
 -- NEEDS memory_type
 local function rt_load_i64_from_u32(source: Memory, offset: number): number
 	local source = buffer_read_u32(source[1], offset)
 
-	return rt_create_i64_from_u32(source, 0)
+	return into_bits_i64(source, 0)
 end
 
 -- SECTION load_i64
 -- NEEDS buffer_read_u32
--- NEEDS create_i64_from_u32
+-- NEEDS into_bits_i64
 -- NEEDS memory_type
 local function rt_load_i64(source: Memory, offset: number): number
 	local memory = source[1]
 	local source_1 = buffer_read_u32(memory, offset)
 	local source_2 = buffer_read_u32(memory, offset + 4)
 
-	return rt_create_i64_from_u32(source_1, source_2)
+	return into_bits_i64(source_1, source_2)
 end
 
 -- SECTION load_f32
@@ -168,40 +176,40 @@ end
 
 -- SECTION store_i64_into_i8
 -- NEEDS buffer_write_u8
--- NEEDS create_u32_from_i64
+-- NEEDS from_bits_i64
 -- NEEDS memory_type
 local function rt_store_i64_into_i8(destination: Memory, offset: number, source: number)
-	local source_1, _ = rt_create_u32_from_i64(source)
+	local source_1 = from_bits_i64(source)
 
 	buffer_write_u8(destination[1], offset, source_1)
 end
 
 -- SECTION store_i64_into_i16
 -- NEEDS buffer_write_u16
--- NEEDS create_u32_from_i64
+-- NEEDS from_bits_i64
 -- NEEDS memory_type
 local function rt_store_i64_into_i16(destination: Memory, offset: number, source: number)
-	local source_1, _ = rt_create_u32_from_i64(source)
+	local source_1 = from_bits_i64(source)
 
 	buffer_write_u16(destination[1], offset, source_1)
 end
 
 -- SECTION store_i64_into_i32
 -- NEEDS buffer_write_u32
--- NEEDS create_u32_from_i64
+-- NEEDS from_bits_i64
 -- NEEDS memory_type
 local function rt_store_i64_into_i32(destination: Memory, offset: number, source: number)
-	local source_1, _ = rt_create_u32_from_i64(source)
+	local source_1 = from_bits_i64(source)
 
 	buffer_write_u32(destination[1], offset, source_1)
 end
 
 -- SECTION store_i64
 -- NEEDS buffer_write_u32
--- NEEDS create_u32_from_i64
+-- NEEDS from_bits_i64
 -- NEEDS memory_type
 local function rt_store_i64(destination: Memory, offset: number, source: number)
-	local source_1, source_2 = rt_create_u32_from_i64(source)
+	local source_1, source_2 = from_bits_i64(source)
 
 	buffer_write_u32(destination[1], offset + 4, source_2)
 	buffer_write_u32(destination[1], offset, source_1)
