@@ -341,41 +341,31 @@ local function rt_truncate_f32_to_u32(source: number): number
 end
 
 -- SECTION saturate_f32_to_s64
--- NEEDS I64_0000_0000_0000_0000
--- NEEDS I64_7FFF_FFFF_FFFF_FFFF
--- NEEDS I64_8000_0000_0000_0000
--- NEEDS convert_f64_to_u64
 -- NEEDS from_bits_f32
--- NEEDS math_ceil
--- NEEDS math_floor
--- NEEDS negate_i64
-local function rt_saturate_f32_to_s64(source: number): number
+-- NEEDS integer_create
+-- NEEDS math_modf
+local function rt_saturate_f32_to_s64(source: number): integer
 	source = from_bits_f32(source)
 
 	if source >= 0x8000_0000_0000_0000 then
-		source = I64_7FFF_FFFF_FFFF_FFFF
+		source = 0x7FFF_FFFF_FFFF_FFFFi
 	elseif source <= -0x8000_0000_0000_0000 then
-		source = I64_8000_0000_0000_0000
+		source = 0x8000_0000_0000_0000i
 	elseif source ~= source then
-		source = I64_0000_0000_0000_0000
-	elseif source >= 0 then
-		source = math_floor(source)
-		source = convert_f64_to_u64(source)
+		source = 0x0000_0000_0000_0000i
 	else
-		source = math_ceil(source)
-		source = convert_f64_to_u64(-source)
-		source = negate_i64(source)
+		source = math_modf(source)
+		source = integer_create(source)
 	end
 
 	return source
 end
 
 -- SECTION truncate_f32_to_s64
--- NEEDS convert_f64_to_u64
 -- NEEDS from_bits_f32
+-- NEEDS integer_create
 -- NEEDS math_modf
--- NEEDS negate_i64
-local function rt_truncate_f32_to_s64(source: number): number
+local function rt_truncate_f32_to_s64(source: number): integer
 	source = from_bits_f32(source)
 	source = math_modf(source)
 
@@ -385,29 +375,22 @@ local function rt_truncate_f32_to_s64(source: number): number
 		error("invalid conversion to integer")
 	end
 
-	if source >= 0 then
-		source = convert_f64_to_u64(source)
-	else
-		source = convert_f64_to_u64(-source)
-		source = negate_i64(source)
-	end
+	source = integer_create(source)
 
 	return source
 end
 
 -- SECTION saturate_f32_to_u64
--- NEEDS I64_0000_0000_0000_0000
--- NEEDS I64_FFFF_FFFF_FFFF_FFFF
 -- NEEDS convert_f64_to_u64
 -- NEEDS from_bits_f32
 -- NEEDS math_floor
-local function rt_saturate_f32_to_u64(source: number): number
+local function rt_saturate_f32_to_u64(source: number): integer
 	source = from_bits_f32(source)
 
 	if source >= 0x1_0000_0000_0000_0000 then
-		source = I64_FFFF_FFFF_FFFF_FFFF
+		source = 0xFFFF_FFFF_FFFF_FFFFi
 	elseif source <= 0 or source ~= source then
-		source = I64_0000_0000_0000_0000
+		source = 0x0000_0000_0000_0000i
 	else
 		source = math_floor(source)
 		source = convert_f64_to_u64(source)
@@ -420,7 +403,7 @@ end
 -- NEEDS convert_f64_to_u64
 -- NEEDS from_bits_f32
 -- NEEDS math_modf
-local function rt_truncate_f32_to_u64(source: number): number
+local function rt_truncate_f32_to_u64(source: number): integer
 	source = from_bits_f32(source)
 	source = math_modf(source)
 

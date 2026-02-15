@@ -21,15 +21,3 @@ local bit32_lrotate = bit32.lrotate
 
 -- SECTION bit32_rrotate
 local bit32_rrotate = bit32.rrotate
-
--- SECTION bit32_not
-local bit32_not = bit32.bnot
-
--- SECTION bit32_replace
-local bit32_replace = bit32.replace
-
--- SECTION bit32_countlz
-local bit32_countlz = bit32.countlz
-
--- SECTION bit32_countrz
-local bit32_countrz = bit32.countrz

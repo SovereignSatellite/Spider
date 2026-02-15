@@ -295,22 +295,13 @@ impl Print for Import {
 
 impl Print for i32 {
 	fn print(&self, _printer: &mut LuauPrinter, out: &mut dyn Write) -> Result<()> {
-		let inner = u32::from_ne_bytes(self.to_ne_bytes());
-
-		write!(out, "{inner}")
+		write!(out, "0x{self:08X}")
 	}
 }
 
 impl Print for i64 {
 	fn print(&self, _printer: &mut LuauPrinter, out: &mut dyn Write) -> Result<()> {
-		let [b1, b2, b3, b4, b5, b6, b7, b8] = self.to_le_bytes();
-
-		let source_1 = u32::from_le_bytes([b1, b2, b3, b4]);
-		let source_2 = u32::from_le_bytes([b5, b6, b7, b8]);
-
-		let intrinsic = self.needs_name();
-
-		write!(out, "{intrinsic}(0x{source_1:08X}, 0x{source_2:08X})")
+		write!(out, "0x{self:016X}i")
 	}
 }
 
@@ -318,14 +309,14 @@ impl Print for f32 {
 	fn print(&self, _printer: &mut LuauPrinter, out: &mut dyn Write) -> Result<()> {
 		let inner = self.to_bits();
 
-		write!(out, "0x{inner:08X}")
+		write!(out, "0x{inner:08X} --[[ {self}_f32 ]]")
 	}
 }
 
 impl Print for f64 {
 	fn print(&self, _printer: &mut LuauPrinter, out: &mut dyn Write) -> Result<()> {
 		if self.is_finite() {
-			write!(out, "{self:e}")
+			write!(out, "{self:e}")?;
 		} else {
 			let [b1, b2, b3, b4, b5, b6, b7, b8] = self.to_le_bytes();
 
@@ -334,8 +325,10 @@ impl Print for f64 {
 
 			let intrinsic = self.needs_name();
 
-			write!(out, "{intrinsic}(0x{source_1:08X}, 0x{source_2:08X})")
+			write!(out, "{intrinsic}(0x{source_1:08X}, 0x{source_2:08X})")?;
 		}
+
+		write!(out, " --[[ {self}_f64 ]]")
 	}
 }
 

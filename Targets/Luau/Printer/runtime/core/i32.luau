@@ -35,28 +35,20 @@ local function rt_subtract_i32(lhs: number, rhs: number): number
 end
 
 -- SECTION multiply_i32
--- NEEDS bit32_and
--- NEEDS bit32_lshift
--- NEEDS bit32_or
--- NEEDS bit32_rshift
+-- NEEDS integer_and
+-- NEEDS integer_create
+-- NEEDS integer_mul
+-- NEEDS integer_tonumber
 local function rt_multiply_i32(lhs: number, rhs: number): number
-	if (lhs + rhs) < 0x800_0000 then
-		local result = bit32_or(lhs * rhs, 0)
+	lhs = integer_create(lhs)
+	rhs = integer_create(rhs)
 
-		return result
-	else
-		local a16 = bit32_rshift(lhs, 16)
-		local a00 = bit32_and(lhs, 0xFFFF)
-		local b16 = bit32_rshift(rhs, 16)
-		local b00 = bit32_and(rhs, 0xFFFF)
+	local result = integer_mul(lhs, rhs)
 
-		local c00 = a00 * b00
-		local c16 = a16 * b00 + a00 * b16
+	result = integer_and(result, 0xFFFF_FFFFi)
+	result = integer_tonumber(result)
 
-		local result = bit32_or(c00 + bit32_lshift(c16, 16), 0)
-
-		return result
-	end
+	return result
 end
 
 -- SECTION divide_s32
@@ -254,12 +246,7 @@ local function rt_greater_than_equal_u32(lhs: number, rhs: number): boolean
 end
 
 -- SECTION widen_i32
--- NEEDS into_bits_i64
-local function rt_widen_i32(source: number): number
-	source = into_bits_i64(source, 0)
-
-	return source
-end
+local rt_widen_i32 = integer.create
 
 -- SECTION extend_s8_to_i32
 -- NEEDS bit32_and

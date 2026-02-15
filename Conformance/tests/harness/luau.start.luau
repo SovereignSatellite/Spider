@@ -6,15 +6,13 @@ local selected = nil
 -- SECTION spectest
 -- NEEDS environment
 -- NEEDS from_bits_f32
--- NEEDS from_bits_i64
 -- NEEDS into_bits_f32
--- NEEDS into_bits_i64
 -- NEEDS memory_new
 -- NEEDS table_new
 do
 	local spectest = {
 		global_i32 = { 666 },
-		global_i64 = { into_bits_i64(666, 0) },
+		global_i64 = { 666i },
 		global_f32 = { into_bits_f32(666.6) },
 		global_f64 = { 666.6 },
 
@@ -29,9 +27,7 @@ do
 	end
 
 	function spectest.print_i64(argument)
-		local half_1, half_2 = from_bits_i64(argument)
-
-		print(string.format("I64 `0x%08X%08X`", half_2, half_1))
+		print(string.format("I64 `0x%016X`", argument))
 	end
 
 	function spectest.print_f32(argument)
@@ -120,31 +116,13 @@ function hn_assert_equal_i32(target)
 end
 
 -- SECTION assert_equal_i64
--- NEEDS from_bits_i64
 -- NEEDS report_failure
 function hn_assert_equal_i64(target)
-	local target_1, target_2 = from_bits_i64(target)
-
 	return function(source)
-		if type(source) ~= "number" then
+		if type(source) ~= "integer" then
 			hn_report_failure("`%*` should be type `i64`", 2, source)
-
-			return
-		end
-
-		local source_1, source_2 = from_bits_i64(source)
-
-		if source_1 ~= target_1 or source_2 ~= target_2 then
-			hn_report_failure(
-				"`%08X%08X` (%*) should equal `%08X%08X` (%*)",
-				2,
-				source_2,
-				source_1,
-				source,
-				target_2,
-				target_1,
-				target
-			)
+		elseif source ~= target then
+			hn_report_failure("`%016X` (%*) should equal `%016X` (%*)", 2, source, source, target, target)
 		end
 	end
 end
@@ -183,27 +161,27 @@ end
 
 -- SECTION is_f64_nan_canonical
 -- NEEDS bit32_and
--- NEEDS from_bits_i64
+-- NEEDS into_halves_f64
 function hn_is_f64_nan_canonical(source)
-	local source_1, source_2 = from_bits_i64(source)
+	local source_1, source_2 = into_halves_f64(source)
 
 	return bit32_and(source_2, 0x7FFFFFFF) == 0x7FF00000 and source_1 == 0x00000000
 end
 
 -- SECTION is_f64_nan_arithmetic
 -- NEEDS bit32_and
--- NEEDS from_bits_i64
+-- NEEDS into_halves_f64
 function hn_is_f64_nan_arithmetic(source)
-	local _, source_2 = from_bits_i64(source)
+	local _, source_2 = into_halves_f64(source)
 
 	return bit32_and(source_2, 0x7FF00000) == 0x7FF00000
 end
 
 -- SECTION assert_equal_f64
--- NEEDS from_bits_i64
+-- NEEDS into_halves_f64
 -- NEEDS report_failure
 function hn_assert_equal_f64(target)
-	local target_1, target_2 = from_bits_i64(target)
+	local target_1, target_2 = into_halves_f64(target)
 
 	return function(source)
 		if type(source) ~= "number" then
@@ -212,7 +190,7 @@ function hn_assert_equal_f64(target)
 			return
 		end
 
-		local source_1, source_2 = from_bits_i64(source)
+		local source_1, source_2 = into_halves_f64(source)
 
 		if source_1 ~= target_1 or source_2 ~= target_2 then
 			hn_report_failure(

@@ -69,88 +69,101 @@ end
 
 -- SECTION load_i64_from_s8
 -- NEEDS buffer_read_i8
--- NEEDS into_bits_i64
+-- NEEDS integer_create
 -- NEEDS memory_type
-local function rt_load_i64_from_s8(source: Memory, offset: number): number
-	local source = buffer_read_i8(source[1], offset)
+local function rt_load_i64_from_s8(source: Memory, offset: number): integer
+	local result = buffer_read_i8(source[1], offset)
 
-	return if source >= 0 then into_bits_i64(source, 0) else into_bits_i64(source + 0x1_0000_0000, 0xFFFF_FFFF)
+	result = integer_create(result)
+
+	return result
 end
 
 -- SECTION load_i64_from_u8
 -- NEEDS buffer_read_u8
--- NEEDS into_bits_i64
+-- NEEDS integer_create
 -- NEEDS memory_type
-local function rt_load_i64_from_u8(source: Memory, offset: number): number
-	local source = buffer_read_u8(source[1], offset)
+local function rt_load_i64_from_u8(source: Memory, offset: number): integer
+	local result = buffer_read_u8(source[1], offset)
 
-	return into_bits_i64(source, 0)
+	result = integer_create(result)
+
+	return result
 end
 
 -- SECTION load_i64_from_s16
 -- NEEDS buffer_read_i16
--- NEEDS into_bits_i64
+-- NEEDS integer_create
 -- NEEDS memory_type
-local function rt_load_i64_from_s16(source: Memory, offset: number): number
-	local source = buffer_read_i16(source[1], offset)
+local function rt_load_i64_from_s16(source: Memory, offset: number): integer
+	local result = buffer_read_i16(source[1], offset)
 
-	return if source >= 0 then into_bits_i64(source, 0) else into_bits_i64(source + 0x1_0000_0000, 0xFFFF_FFFF)
+	result = integer_create(result)
+
+	return result
 end
 
 -- SECTION load_i64_from_u16
 -- NEEDS buffer_read_u16
--- NEEDS into_bits_i64
+-- NEEDS integer_create
 -- NEEDS memory_type
-local function rt_load_i64_from_u16(source: Memory, offset: number): number
-	local source = buffer_read_u16(source[1], offset)
+local function rt_load_i64_from_u16(source: Memory, offset: number): integer
+	local result = buffer_read_u16(source[1], offset)
 
-	return into_bits_i64(source, 0)
+	result = integer_create(result)
+
+	return result
 end
 
 -- SECTION load_i64_from_s32
 -- NEEDS buffer_read_i32
--- NEEDS into_bits_i64
+-- NEEDS integer_create
 -- NEEDS memory_type
-local function rt_load_i64_from_s32(source: Memory, offset: number): number
-	local source = buffer_read_i32(source[1], offset)
+local function rt_load_i64_from_s32(source: Memory, offset: number): integer
+	local result = buffer_read_i32(source[1], offset)
 
-	return if source >= 0 then into_bits_i64(source, 0) else into_bits_i64(source + 0x1_0000_0000, 0xFFFF_FFFF)
+	result = integer_create(result)
+
+	return result
 end
 
 -- SECTION load_i64_from_u32
 -- NEEDS buffer_read_u32
--- NEEDS into_bits_i64
+-- NEEDS integer_create
 -- NEEDS memory_type
-local function rt_load_i64_from_u32(source: Memory, offset: number): number
-	local source = buffer_read_u32(source[1], offset)
+local function rt_load_i64_from_u32(source: Memory, offset: number): integer
+	local result = buffer_read_u32(source[1], offset)
 
-	return into_bits_i64(source, 0)
+	result = integer_create(result)
+
+	return result
 end
 
 -- SECTION load_i64
--- NEEDS buffer_read_u32
--- NEEDS into_bits_i64
+-- NEEDS buffer_read_integer
 -- NEEDS memory_type
-local function rt_load_i64(source: Memory, offset: number): number
-	local memory = source[1]
-	local source_1 = buffer_read_u32(memory, offset)
-	local source_2 = buffer_read_u32(memory, offset + 4)
+local function rt_load_i64(source: Memory, offset: number): integer
+	local result = buffer_read_integer(source[1], offset)
 
-	return into_bits_i64(source_1, source_2)
+	return result
 end
 
 -- SECTION load_f32
 -- NEEDS buffer_read_u32
 -- NEEDS memory_type
 local function rt_load_f32(source: Memory, offset: number): number
-	return buffer_read_u32(source[1], offset)
+	local result = buffer_read_u32(source[1], offset)
+
+	return result
 end
 
 -- SECTION load_f64
 -- NEEDS buffer_read_f64
 -- NEEDS memory_type
 local function rt_load_f64(source: Memory, offset: number): number
-	return buffer_read_f64(source[1], offset)
+	local result = buffer_read_f64(source[1], offset)
+
+	return result
 end
 
 -- SECTION store_i32_into_i8
@@ -176,43 +189,39 @@ end
 
 -- SECTION store_i64_into_i8
 -- NEEDS buffer_write_u8
--- NEEDS from_bits_i64
+-- NEEDS into_halves_i64
 -- NEEDS memory_type
-local function rt_store_i64_into_i8(destination: Memory, offset: number, source: number)
-	local source_1 = from_bits_i64(source)
+local function rt_store_i64_into_i8(destination: Memory, offset: number, source: integer)
+	source = into_halves_i64(source)
 
-	buffer_write_u8(destination[1], offset, source_1)
+	buffer_write_u8(destination[1], offset, source)
 end
 
 -- SECTION store_i64_into_i16
 -- NEEDS buffer_write_u16
--- NEEDS from_bits_i64
+-- NEEDS into_halves_i64
 -- NEEDS memory_type
-local function rt_store_i64_into_i16(destination: Memory, offset: number, source: number)
-	local source_1 = from_bits_i64(source)
+local function rt_store_i64_into_i16(destination: Memory, offset: number, source: integer)
+	source = into_halves_i64(source)
 
-	buffer_write_u16(destination[1], offset, source_1)
+	buffer_write_u16(destination[1], offset, source)
 end
 
 -- SECTION store_i64_into_i32
 -- NEEDS buffer_write_u32
--- NEEDS from_bits_i64
+-- NEEDS into_halves_i64
 -- NEEDS memory_type
-local function rt_store_i64_into_i32(destination: Memory, offset: number, source: number)
-	local source_1 = from_bits_i64(source)
+local function rt_store_i64_into_i32(destination: Memory, offset: number, source: integer)
+	source = into_halves_i64(source)
 
-	buffer_write_u32(destination[1], offset, source_1)
+	buffer_write_u32(destination[1], offset, source)
 end
 
 -- SECTION store_i64
--- NEEDS buffer_write_u32
--- NEEDS from_bits_i64
+-- NEEDS buffer_write_integer
 -- NEEDS memory_type
-local function rt_store_i64(destination: Memory, offset: number, source: number)
-	local source_1, source_2 = from_bits_i64(source)
-
-	buffer_write_u32(destination[1], offset + 4, source_2)
-	buffer_write_u32(destination[1], offset, source_1)
+local function rt_store_i64(destination: Memory, offset: number, source: integer)
+	buffer_write_integer(destination[1], offset, source)
 end
 
 -- SECTION store_f32
