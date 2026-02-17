@@ -1,7 +1,7 @@
 mod context;
 mod internal;
 
-use data_flow_graph::{DataFlowGraph, Link, Node, base::Identity};
+use data_flow_graph::{DataFlowGraph, Link, Node, simple::Identity};
 
 use self::internal::{
 	constructor_SimplifyGlobal, constructor_SimplifyI32, constructor_SimplifyTable,

@@ -7,7 +7,8 @@ use control_flow_liveness::{
 };
 use data_flow_graph::{
 	DataFlowGraph, Link,
-	control::{FunctionType, ValueType},
+	control::{FunctionType, LambdaIn, LambdaOut, ValueType},
+	simple::Apply,
 };
 use list::resizable::Resizable;
 use wasmparser::{BlockType, FunctionBody, LocalsReader, OperatorsReader, ValType};
@@ -108,7 +109,7 @@ impl FunctionBuilder {
 			r#type.results.len().try_into().unwrap(),
 		);
 
-		let lambda_in = graph.add_lambda_in(r#type.into(), dependencies);
+		let lambda_in = LambdaIn::add_into(graph, r#type.into(), dependencies);
 
 		self.converter.set_function_data(
 			graph,
@@ -122,7 +123,7 @@ impl FunctionBuilder {
 			.converter
 			.run(graph, &self.graph, lambda_in, &self.locals);
 
-		graph.add_lambda_out(lambda_in, results)
+		LambdaOut::add_into(graph, lambda_in, results)
 	}
 
 	pub fn build_function(
@@ -170,7 +171,7 @@ impl FunctionBuilder {
 
 		let function_type = load_type_from_result(result);
 		let function = self.build_data_flow(graph, function_type, global_state);
-		let apply = graph.add_apply(Link(function, 0), Vec::new(), 1, 0);
+		let apply = Apply::add_into(graph, Link(function, 0), Vec::new(), 1, 0);
 
 		Link(apply, 0)
 	}

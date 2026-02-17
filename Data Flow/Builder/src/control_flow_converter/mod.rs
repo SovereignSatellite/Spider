@@ -3,7 +3,7 @@ use control_flow_graph::ControlFlowGraph;
 use control_flow_liveness::{locals::Locals, references::Reference};
 use data_flow_graph::{
 	DataFlowGraph, Link,
-	control::{LambdaIn, ValueType},
+	control::{GammaIn, GammaOut, LambdaIn, RegionIn, RegionOut, ThetaIn, ThetaOut, ValueType},
 };
 
 use self::{basic_block_converter::BasicBlockConverter, region_stack::RegionStack};
@@ -33,7 +33,7 @@ impl ControlFlowConverter {
 	fn handle_repeat_start(&mut self, graph: &mut DataFlowGraph, locals: &[u16]) {
 		let arguments = self.basic_block_converter.get_active_bindings(locals);
 
-		let theta_in = graph.add_theta_in(arguments);
+		let theta_in = ThetaIn::add_into(graph, arguments);
 
 		self.basic_block_converter
 			.set_active_bindings(theta_in, locals);
@@ -45,7 +45,7 @@ impl ControlFlowConverter {
 		let results = self.basic_block_converter.get_active_bindings(locals);
 
 		let theta_in = self.region_stack.pop();
-		let theta_out = graph.add_theta_out(theta_in, results, condition);
+		let theta_out = ThetaOut::add_into(graph, theta_in, results, condition);
 
 		self.basic_block_converter
 			.set_active_bindings(theta_out, locals);
@@ -56,7 +56,7 @@ impl ControlFlowConverter {
 			.basic_block_converter
 			.get_active_bindings(&self.successors);
 
-		let gamma_in = graph.add_gamma_in(arguments, condition);
+		let gamma_in = GammaIn::add_into(graph, arguments, condition);
 
 		self.region_stack.push_gamma();
 		self.region_stack.push(gamma_in);
@@ -66,7 +66,7 @@ impl ControlFlowConverter {
 		let regions = self.region_stack.pop_gamma();
 
 		let gamma_in = self.region_stack.pop();
-		let gamma_out = graph.add_gamma_out(gamma_in, regions);
+		let gamma_out = GammaOut::add_into(graph, gamma_in, regions);
 
 		self.basic_block_converter
 			.set_active_bindings(gamma_out, locals);
@@ -74,7 +74,7 @@ impl ControlFlowConverter {
 
 	fn handle_path_start(&mut self, graph: &mut DataFlowGraph) {
 		let gamma_in = self.region_stack.peek_gamma();
-		let region_in = graph.add_region_in(gamma_in);
+		let region_in = RegionIn::add_into(graph, gamma_in);
 
 		self.region_stack.push(region_in);
 
@@ -86,7 +86,7 @@ impl ControlFlowConverter {
 		let results = self.basic_block_converter.get_active_bindings(locals);
 
 		let region_in = self.region_stack.pop();
-		let region_out = graph.add_region_out(region_in, results);
+		let region_out = RegionOut::add_into(graph, region_in, results);
 
 		self.region_stack.push(region_out);
 	}

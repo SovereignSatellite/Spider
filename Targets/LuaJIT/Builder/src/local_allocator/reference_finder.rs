@@ -1,11 +1,11 @@
 use data_flow_graph::{
 	DataFlowGraph, Link, Node,
-	base::{
+	control::{GammaIn, GammaOut, LambdaIn, OmegaIn, OmegaOut, RegionOut, ThetaIn, ThetaOut},
+	simple::{
 		Apply, GlobalGet, GlobalSet, Identity, MemoryCopy, MemoryDrop, MemoryFill, MemoryGrow,
 		MemoryLoad, MemorySize, MemoryStore, Merge, TableCopy, TableDrop, TableFill, TableGet,
 		TableGrow, TableSet, TableSize,
 	},
-	control::{GammaIn, GammaOut, LambdaIn, OmegaIn, OmegaOut, RegionOut, ThetaIn, ThetaOut},
 };
 use hashbrown::HashMap;
 

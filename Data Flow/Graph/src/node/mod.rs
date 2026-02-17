@@ -1,7 +1,11 @@
 use alloc::boxed::Box;
 
 use self::{
-	base::{
+	control::{
+		GammaIn, GammaOut, Import, LambdaIn, LambdaOut, OmegaIn, OmegaOut, RegionIn, RegionOut,
+		ThetaIn, ThetaOut,
+	},
+	simple::{
 		Apply, GlobalGet, GlobalNew, GlobalSet, Host, Identity, IntegerBinaryOperation,
 		IntegerCompareOperation, IntegerConvertToNumber, IntegerExtend, IntegerNarrow,
 		IntegerTransmuteToNumber, IntegerUnaryOperation, IntegerWiden, MemoryCopy, MemoryDrop,
@@ -10,31 +14,13 @@ use self::{
 		NumberTruncateToInteger, NumberUnaryOperation, NumberWiden, RefIsNull, TableCopy,
 		TableDrop, TableFill, TableGet, TableGrow, TableNew, TableSet, TableSize,
 	},
-	control::{
-		GammaIn, GammaOut, Import, LambdaIn, LambdaOut, OmegaIn, OmegaOut, RegionIn, RegionOut,
-		ThetaIn, ThetaOut,
-	},
 };
 
+mod sinks;
 mod sources;
 
-pub mod base;
 pub mod control;
-
-#[derive(Clone, Copy, Debug, Hash, PartialEq, Eq, PartialOrd, Ord)]
-pub struct Link(pub u32, pub u16);
-
-impl Link {
-	#[must_use]
-	pub const fn into_usize(self) -> usize {
-		let [id_0, id_1, id_2, id_3] = self.0.to_le_bytes();
-		let [port_0, port_1] = self.1.to_le_bytes();
-
-		usize::from_le_bytes([id_0, id_1, port_0, id_2, port_1, id_3, 0, 0])
-	}
-
-	pub const DANGLING: Self = Self(u32::MAX, u16::MAX);
-}
+pub mod simple;
 
 #[derive(Default)]
 pub enum Node {

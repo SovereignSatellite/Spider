@@ -1,7 +1,7 @@
 use alloc::{boxed::Box, sync::Arc, vec::Vec};
 use list::resizable::Resizable;
 
-use super::Link;
+use crate::Link;
 
 #[derive(Clone, Copy)]
 pub enum ValueType {
@@ -24,29 +24,6 @@ pub struct LambdaIn {
 	pub output: u32,
 	pub r#type: Box<FunctionType>,
 	pub dependencies: Vec<Link>,
-}
-
-impl LambdaIn {
-	#[must_use]
-	pub fn dependency_ports(&self) -> core::ops::Range<u16> {
-		0..self.dependencies.len().try_into().unwrap()
-	}
-
-	#[must_use]
-	pub fn argument_ports(&self) -> core::ops::Range<u16> {
-		let dependencies: u16 = self.dependencies.len().try_into().unwrap();
-		let arguments: u16 = self.r#type.arguments.len().try_into().unwrap();
-
-		dependencies..dependencies + arguments
-	}
-
-	#[must_use]
-	pub fn output_ports(&self) -> core::ops::Range<u16> {
-		let dependencies: u16 = self.dependencies.len().try_into().unwrap();
-		let arguments: u16 = self.r#type.arguments.len().try_into().unwrap();
-
-		0..dependencies + arguments
-	}
 }
 
 #[derive(Clone)]
