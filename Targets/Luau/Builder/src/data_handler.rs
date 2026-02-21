@@ -1,6 +1,6 @@
 use alloc::vec::Vec;
-use data_flow_graph::{Link, control, simple};
 use hashbrown::HashMap;
+use ir_graph::{Link, control, simple};
 use luau_tree::{
 	expression::{
 		BooleanToInteger, Call, Expression, Function, GlobalGet, GlobalNew, Import,

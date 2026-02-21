@@ -1,8 +1,8 @@
 use core::ops::Range;
 
 use alloc::vec::Vec;
-use data_flow_graph::{DataFlowGraph, Link};
 use hashbrown::HashMap;
+use ir_graph::{DataFlowGraph, Link};
 use luau_tree::expression::Local;
 
 use self::{

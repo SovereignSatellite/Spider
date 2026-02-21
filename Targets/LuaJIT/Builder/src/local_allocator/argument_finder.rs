@@ -1,9 +1,9 @@
 use alloc::vec::Vec;
-use data_flow_graph::{
+use hashbrown::HashMap;
+use ir_graph::{
 	DataFlowGraph, Link, Node,
 	control::{LambdaIn, LambdaOut, OmegaIn, OmegaOut},
 };
-use hashbrown::HashMap;
 use set::Set;
 
 pub fn get_region_range(graph: &DataFlowGraph, node: &Node) -> Option<(u32, u32)> {

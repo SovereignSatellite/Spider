@@ -4,9 +4,9 @@ version = "1.0.0"
 edition = "2024"
 
 [dev-dependencies]
-data-flow-graph = { path = "../Data Flow/Graph" }
-data-flow-builder = { path = "../Data Flow/Builder" }
-data-flow-visitor = { path = "../Data Flow/Visitor" }
+web-assembly-lifter = { path = "../Sources/WebAssembly/Lifter" }
+ir-graph = { path = "../IR/Graph" }
+ir-visitor = { path = "../IR/Visitor" }
 
 luau-tree = { path = "../Targets/Luau/Tree" }
 luau-builder = { path = "../Targets/Luau/Builder" }

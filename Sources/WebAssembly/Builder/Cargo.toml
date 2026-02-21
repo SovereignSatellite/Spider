@@ -1,0 +1,12 @@
+[package]
+name = "web-assembly-builder"
+version = "1.0.0"
+edition = "2024"
+
+[dependencies]
+web-assembly-graph = { path = "../Graph" }
+web-assembly-structurer = { path = "../Structurer" }
+
+list.workspace = true
+set.workspace = true
+wasmparser.workspace = true

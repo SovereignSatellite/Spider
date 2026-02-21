@@ -1,6 +1,5 @@
-use data_flow_builder::DataFlowBuilder;
-use data_flow_graph::{DataFlowGraph, Link};
-use data_flow_visitor::{
+use ir_graph::{DataFlowGraph, Link};
+use ir_visitor::{
 	control::{
 		dead_port_eliminator::DeadPortEliminator, invariant_port_mover::InvariantPortMover,
 		region_identity,
@@ -8,6 +7,7 @@ use data_flow_visitor::{
 	isle,
 	topological_normalizer::TopologicalNormalizer,
 };
+use web_assembly_lifter::WebAssemblyLifter;
 
 struct Optimizer {
 	invariant_port_mover: InvariantPortMover,
@@ -65,14 +65,14 @@ impl Optimizer {
 }
 
 pub struct Compiler {
-	data_flow_builder: DataFlowBuilder,
+	web_assembly_lifter: WebAssemblyLifter,
 	optimizer: Optimizer,
 }
 
 impl Compiler {
 	pub fn new() -> Self {
 		Self {
-			data_flow_builder: DataFlowBuilder::new(),
+			web_assembly_lifter: WebAssemblyLifter::new(),
 			optimizer: Optimizer::new(),
 		}
 	}
@@ -80,7 +80,7 @@ impl Compiler {
 	pub fn run(&mut self, data: &[u8]) -> DataFlowGraph {
 		let mut graph = DataFlowGraph::new();
 
-		let omega = self.data_flow_builder.run(&mut graph, data);
+		let omega = self.web_assembly_lifter.run(&mut graph, data);
 		let omega = self.optimizer.apply(&mut graph, omega);
 
 		self.optimizer.finalize(&mut graph, omega);

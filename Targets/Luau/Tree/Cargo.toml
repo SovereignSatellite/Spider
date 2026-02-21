@@ -4,4 +4,4 @@ version = "1.0.0"
 edition = "2024"
 
 [dependencies]
-data-flow-graph = { path = "../../../Data Flow/Graph" }
+ir-graph = { path = "../../../IR/Graph" }

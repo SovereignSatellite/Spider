@@ -1,9 +1,0 @@
-[package]
-name = "data-flow-graph"
-version = "1.0.0"
-edition = "2024"
-
-[dependencies]
-control-flow-graph = { path = "../../Control Flow/Graph" }
-
-list.workspace = true

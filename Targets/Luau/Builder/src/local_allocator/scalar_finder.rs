@@ -1,5 +1,5 @@
-use data_flow_graph::{DataFlowGraph, Link, Node};
 use hashbrown::{HashMap, hash_map::Entry};
+use ir_graph::{DataFlowGraph, Link, Node};
 
 pub fn result_count_of(node: &Node) -> u16 {
 	match node {
