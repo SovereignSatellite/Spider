@@ -1,0 +1,9 @@
+[package]
+name = "web-assembly-graph"
+version = "1.0.0"
+edition = "2024"
+
+[dependencies]
+ir-graph = { path = "../../../IR/Graph" }
+
+list.workspace = true

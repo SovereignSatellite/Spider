@@ -1,4 +1,5 @@
-use data_flow_graph::{
+use hashbrown::HashMap;
+use ir_graph::{
 	DataFlowGraph, Link, Node,
 	control::{GammaIn, GammaOut, LambdaIn, OmegaIn, OmegaOut, RegionOut, ThetaIn, ThetaOut},
 	simple::{
@@ -7,7 +8,6 @@ use data_flow_graph::{
 		TableGrow, TableSet, TableSize,
 	},
 };
-use hashbrown::HashMap;
 
 use super::scalar_finder::result_count_of;
 

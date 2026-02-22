@@ -1,7 +1,7 @@
 #![no_std]
 #![expect(clippy::missing_panics_doc)]
 
-use data_flow_graph::{
+use ir_graph::{
 	DataFlowGraph, Link, Node,
 	control::{
 		GammaIn, GammaOut, Import, LambdaIn, LambdaOut, OmegaIn, OmegaOut, RegionIn, ThetaIn,

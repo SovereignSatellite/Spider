@@ -1,0 +1,13 @@
+[package]
+name = "web-assembly-lifter"
+version = "1.0.0"
+edition = "2024"
+
+[dependencies]
+web-assembly-graph = { path = "../Graph" }
+web-assembly-builder = { path = "../Builder" }
+web-assembly-liveness = { path = "../Liveness" }
+ir-graph = { path = "../../../IR/Graph" }
+
+list.workspace = true
+wasmparser.workspace = true

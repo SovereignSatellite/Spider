@@ -1,5 +1,5 @@
-use data_flow_graph::Link;
 use hashbrown::{HashMap, hash_map::Entry};
+use ir_graph::Link;
 use luajit_tree::expression::{Local, Name};
 
 use super::index_provider::IndexProvider;

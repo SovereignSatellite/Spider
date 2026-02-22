@@ -4,8 +4,8 @@ version = "1.0.0"
 edition = "2024"
 
 [dependencies]
-data-flow-graph = { path = "../../../Data Flow/Graph" }
-data-flow-builder = { path = "../../../Data Flow/Builder" }
+web-assembly-lifter = { path = "../../../Sources/WebAssembly/Lifter" }
+ir-graph = { path = "../../../IR/Graph" }
 luau-tree = { path = "../Tree" }
 
 hashbrown.workspace = true

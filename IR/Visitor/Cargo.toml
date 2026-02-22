@@ -1,0 +1,13 @@
+[package]
+name = "ir-visitor"
+version = "1.0.0"
+edition = "2024"
+
+[dependencies]
+ir-graph = { path = "../Graph" }
+
+set.workspace = true
+hashbrown.workspace = true
+
+[build-dependencies]
+cranelift-isle.workspace = true

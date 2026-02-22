@@ -1,9 +1,8 @@
 use std::io::{BufWriter, StdoutLock, Write};
 
 use clap::Parser;
-use data_flow_builder::DataFlowBuilder;
-use data_flow_graph::{DataFlowGraph, Link};
-use data_flow_visitor::{
+use ir_graph::{DataFlowGraph, Link};
+use ir_visitor::{
 	control::{
 		dead_port_eliminator::DeadPortEliminator, invariant_port_mover::InvariantPortMover,
 		region_identity,
@@ -18,6 +17,7 @@ use luajit_printer::{
 };
 use luajit_tree::LuaJITTree;
 use wasmparser::Validator;
+use web_assembly_lifter::WebAssemblyLifter;
 
 #[derive(Parser)]
 #[command(version)]
@@ -81,9 +81,9 @@ fn run_post_process(graph: &mut DataFlowGraph, omega: u32) {
 
 fn build_data_flow_graph(data: &[u8], optimize: bool) -> DataFlowGraph {
 	let mut graph = DataFlowGraph::new();
-	let mut builder = DataFlowBuilder::new();
+	let mut lifter = WebAssemblyLifter::new();
 
-	let omega = builder.run(&mut graph, data);
+	let omega = lifter.run(&mut graph, data);
 	let omega = if optimize {
 		run_all_optimizations(&mut graph, omega)
 	} else {

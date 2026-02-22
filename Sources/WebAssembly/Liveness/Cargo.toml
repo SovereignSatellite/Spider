@@ -1,0 +1,9 @@
+[package]
+name = "web-assembly-liveness"
+version = "1.0.0"
+edition = "2024"
+
+[dependencies]
+web-assembly-graph = { path = "../Graph" }
+
+set.workspace = true

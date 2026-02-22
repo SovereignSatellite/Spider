@@ -1,7 +1,6 @@
 use alloc::vec::Vec;
-use data_flow_graph::{Link, simple};
-
 use hashbrown::HashMap;
+use ir_graph::{Link, simple};
 use luajit_tree::{
 	expression::{Expression, Local},
 	statement::{
