@@ -7,6 +7,6 @@ Spider is an experimental compiler based on WebAssembly semantics and the Region
 Prebuilt binaries for Windows, Linux, and macOS are available in the "Releases" tab. Alternatively, build and install from source:
 
 ```sh
-$ cargo install luau-printer --git "https://github.com/SovereignSatellite/Spider"
-$ wasm2luau --help
+$ cargo install --git "https://github.com/SovereignSatellite/Spider"
+$ spider-cli --help
 ```

@@ -1,0 +1,31 @@
+[package]
+name = "spider-cli"
+version = "1.0.0"
+edition = "2024"
+
+[dependencies]
+web-assembly-lifter = { path = "../Sources/WebAssembly/Lifter" }
+
+ir-graph = { path = "../IR/Graph" }
+ir-visitor = { path = "../IR/Visitor" }
+
+luajit-tree = { path = "../Targets/LuaJIT/Tree" }
+luajit-builder = { path = "../Targets/LuaJIT/Builder" }
+luajit-printer = { path = "../Targets/LuaJIT/Printer" }
+
+luau-tree = { path = "../Targets/Luau/Tree" }
+luau-builder = { path = "../Targets/Luau/Builder" }
+luau-printer = { path = "../Targets/Luau/Printer" }
+
+clap = { version = "4.5.23", default-features = false, features = [
+	"color",
+	"derive",
+	"error-context",
+	"help",
+	"std",
+	"suggestions",
+	"usage",
+] }
+
+hashbrown.workspace = true
+wasmparser = { workspace = true, features = ["validate"] }
