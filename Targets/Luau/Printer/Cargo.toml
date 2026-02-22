@@ -10,10 +10,4 @@ ir-visitor = { path = "../../../IR/Visitor" }
 luau-tree = { path = "../Tree" }
 luau-builder = { path = "../Builder" }
 
-clap.workspace = true
 hashbrown.workspace = true
-wasmparser = { workspace = true, features = ["validate"] }
-
-[[bin]]
-name = "wasm2luau"
-path = "src/main.rs"

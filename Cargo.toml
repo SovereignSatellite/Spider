@@ -1,20 +1,17 @@
 [workspace]
 resolver = "2"
-members = ["Conformance", "Targets/Luau/*", "Targets/LuaJIT/*"]
+members = [
+	"Conformance",
+	"Sources/WebAssembly/*",
+	"IR/*",
+	"Targets/Luau/*",
+	"Targets/LuaJIT/*",
+	"CLI"
+]
 
 [workspace.dependencies]
 list = { git = "https://github.com/SovereignSatellite/RustListDataStructure.git", rev = "a236bf9" }
 set = { git = "https://github.com/SovereignSatellite/RustSetDataStructure.git", rev = "b82ef8c" }
-
-clap = { version = "4.5.23", default-features = false, features = [
-	"color",
-	"derive",
-	"error-context",
-	"help",
-	"std",
-	"suggestions",
-	"usage",
-] }
 
 cranelift-isle = { version = "0.124.1", default-features = false }
 
