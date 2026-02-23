@@ -204,11 +204,13 @@ impl LuaJITBuilder {
 			.do_bulk_assignment(id, sources, &self.data_handler);
 	}
 
-	fn handle_merge(&mut self, node: &Merge) {
+	fn handle_merge(&mut self, id: u32, node: &Merge) {
 		let Merge { sources } = node;
 
 		for &source in sources {
-			let _source = self.data_handler.load(source);
+			let source = self.data_handler.load(source);
+
+			self.do_assignment(id, source);
 		}
 	}
 
@@ -576,7 +578,7 @@ impl LuaJITBuilder {
 			Node::F64(f64) => self.handle_f64_const(id, f64),
 
 			Node::Identity(ref node) => self.handle_identity(id, node),
-			Node::Merge(ref node) => self.handle_merge(node),
+			Node::Merge(ref node) => self.handle_merge(id, node),
 			Node::Apply(ref node) => self.handle_call(id, node),
 			Node::RefIsNull(node) => self.handle_ref_is_null(id, node),
 			Node::IntegerUnaryOperation(node) => self.handle_integer_unary_operation(id, node),
