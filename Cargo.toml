@@ -2,6 +2,7 @@
 resolver = "2"
 members = [
 	"Conformance",
+	"Sources/TuringMachine",
 	"Sources/WebAssembly/*",
 	"IR/*",
 	"Targets/Luau/*",

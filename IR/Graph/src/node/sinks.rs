@@ -656,6 +656,16 @@ impl RegionOut {
 
 		id
 	}
+
+	pub fn add_scoped_into<H>(graph: &mut DataFlowGraph, input: u32, handler: H) -> u32
+	where
+		H: FnOnce(&mut DataFlowGraph, u32) -> Vec<Link>,
+	{
+		let arguments = RegionIn::add_into(graph, input);
+		let results = handler(graph, arguments);
+
+		Self::add_into(graph, arguments, results)
+	}
 }
 
 impl GammaIn {
@@ -700,6 +710,26 @@ impl GammaOut {
 		*graph.get_mut(id) = Node::GammaOut(Self { input, regions });
 
 		id
+	}
+
+	pub fn add_if_into<F, T>(
+		graph: &mut DataFlowGraph,
+		arguments: Vec<Link>,
+		condition: Link,
+		on_false: F,
+		on_true: T,
+	) -> u32
+	where
+		F: FnOnce(&mut DataFlowGraph, u32) -> Vec<Link>,
+		T: FnOnce(&mut DataFlowGraph, u32) -> Vec<Link>,
+	{
+		let arguments = GammaIn::add_into(graph, arguments, condition);
+		let regions = alloc::vec![
+			RegionOut::add_scoped_into(graph, arguments, on_false),
+			RegionOut::add_scoped_into(graph, arguments, on_true)
+		];
+
+		Self::add_into(graph, arguments, regions)
 	}
 }
 

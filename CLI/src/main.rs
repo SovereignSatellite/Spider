@@ -21,6 +21,7 @@ fn lock_standard_output() -> BufWriter<StdoutLock<'static>> {
 
 fn build_graph(data: &[u8], optimize: bool, source: Source) -> DataFlowGraph {
 	let (mut graph, mut omega) = match source {
+		Source::TuringMachine => sources::from_turing_machine(data),
 		Source::WebAssembly => sources::from_web_assembly(data),
 	};
 

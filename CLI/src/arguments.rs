@@ -2,6 +2,7 @@ use clap::{Parser, ValueEnum};
 
 #[derive(Clone, Copy, ValueEnum)]
 pub enum Source {
+	TuringMachine,
 	WebAssembly,
 }
 
