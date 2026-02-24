@@ -22,7 +22,7 @@ fn replace_with_direct(graph: &mut DataFlowGraph, destination: u32, source: u32)
 fn replace_node(graph: &mut DataFlowGraph, destination: u32, sources: &[Link]) {
 	if let &[source] = sources
 		&& source.1 == 0
-		&& source.0 < destination
+		&& source.0 > destination
 	{
 		replace_with_direct(graph, destination, source.0);
 	} else {
