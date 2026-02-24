@@ -10,7 +10,7 @@
 use ir_graph::{
 	Link,
 	list::{self, fixed::Fixed},
-	simple::{IntegerBinaryOperator, IntegerType},
+	simple::{IntegerBinaryOperator, IntegerType, LoadType, StoreType},
 };
 
 include!(concat!(env!("OUT_DIR"), "/isle.rs"));

@@ -1,0 +1,9 @@
+(decl partial SimplifyMemory (Link) Links)
+
+(rule
+	(SimplifyMemory
+		(I32Load memory @ (I32Store _ offset source) offset)
+	)
+
+	(Links.N2 source memory)
+)
