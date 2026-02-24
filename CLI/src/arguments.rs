@@ -8,8 +8,9 @@ pub enum Source {
 
 #[derive(Clone, Copy, ValueEnum)]
 pub enum Target {
-	LuaJIT,
+	Dot,
 	Luau,
+	LuaJIT,
 }
 
 #[derive(Parser)]
