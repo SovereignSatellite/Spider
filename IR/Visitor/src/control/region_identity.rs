@@ -13,14 +13,8 @@ fn replace_with_producer(graph: &DataFlowGraph, from: &mut Link) {
 	*from = sources[usize::from(from.1)];
 }
 
+// We remove all identities, as they are always redundant.
 fn remove_at(graph: &DataFlowGraph, node: &mut Node) {
-	if !matches!(
-		node,
-		Node::RegionOut(_) | Node::ThetaIn(_) | Node::ThetaOut(_)
-	) {
-		return;
-	}
-
 	node.for_each_mut_argument(|argument| replace_with_producer(graph, argument));
 }
 
