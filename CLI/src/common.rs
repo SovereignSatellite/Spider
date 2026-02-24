@@ -16,6 +16,7 @@ fn run_isle_optimizations(graph: &mut DataFlowGraph) -> bool {
 		while isle::simplify_i32(graph, id)
 			|| isle::simplify_global(graph, id)
 			|| isle::simplify_table(graph, id)
+			|| isle::simplify_memory(graph, id)
 		{
 			applied = true;
 		}

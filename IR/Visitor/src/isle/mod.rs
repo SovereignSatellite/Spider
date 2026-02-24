@@ -4,7 +4,8 @@ mod internal;
 use ir_graph::{DataFlowGraph, Link, Node, simple::Identity};
 
 use self::internal::{
-	constructor_SimplifyGlobal, constructor_SimplifyI32, constructor_SimplifyTable,
+	constructor_SimplifyGlobal, constructor_SimplifyI32, constructor_SimplifyMemory,
+	constructor_SimplifyTable,
 };
 
 fn replace_with_identity(graph: &mut DataFlowGraph, destination: u32, sources: &[Link]) {
@@ -48,6 +49,14 @@ pub fn simplify_global(graph: &mut DataFlowGraph, id: u32) -> bool {
 
 pub fn simplify_table(graph: &mut DataFlowGraph, id: u32) -> bool {
 	constructor_SimplifyTable(graph, Link(id, 0)).is_some_and(|sources| {
+		replace_node(graph, id, &sources.as_fixed());
+
+		true
+	})
+}
+
+pub fn simplify_memory(graph: &mut DataFlowGraph, id: u32) -> bool {
+	constructor_SimplifyMemory(graph, Link(id, 0)).is_some_and(|sources| {
 		replace_node(graph, id, &sources.as_fixed());
 
 		true

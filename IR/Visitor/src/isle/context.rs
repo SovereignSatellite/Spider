@@ -2,7 +2,7 @@ use ir_graph::{
 	DataFlowGraph, Link, Node,
 	simple::{
 		GlobalGet, GlobalNew, GlobalSet, IntegerBinaryOperation, IntegerBinaryOperator,
-		IntegerType, Location, TableGet, TableSet,
+		IntegerType, LoadType, Location, MemoryLoad, MemoryStore, StoreType, TableGet, TableSet,
 	},
 };
 
@@ -92,29 +92,6 @@ impl Context for DataFlowGraph {
 		Node::add_f64_into(self, value)
 	}
 
-	fn get_table_get(&mut self, source: Link) -> Option<(Link, Link)> {
-		if let Node::TableGet(TableGet {
-			source: Location { reference, offset },
-		}) = *self.get(source.0)
-		{
-			Some((reference, offset))
-		} else {
-			None
-		}
-	}
-
-	fn get_table_set(&mut self, source: Link) -> Option<(Link, Link, Link)> {
-		if let Node::TableSet(TableSet {
-			destination: Location { reference, offset },
-			source,
-		}) = *self.get(source.0)
-		{
-			Some((reference, offset, source))
-		} else {
-			None
-		}
-	}
-
 	fn get_global_new(&mut self, source: Link) -> Option<Link> {
 		if let Node::GlobalNew(GlobalNew { initializer }) = *self.get(source.0) {
 			Some(initializer)
@@ -138,6 +115,54 @@ impl Context for DataFlowGraph {
 		}) = *self.get(source.0)
 		{
 			Some((destination, source))
+		} else {
+			None
+		}
+	}
+
+	fn get_table_get(&mut self, source: Link) -> Option<(Link, Link)> {
+		if let Node::TableGet(TableGet {
+			source: Location { reference, offset },
+		}) = *self.get(source.0)
+		{
+			Some((reference, offset))
+		} else {
+			None
+		}
+	}
+
+	fn get_table_set(&mut self, source: Link) -> Option<(Link, Link, Link)> {
+		if let Node::TableSet(TableSet {
+			destination: Location { reference, offset },
+			source,
+		}) = *self.get(source.0)
+		{
+			Some((reference, offset, source))
+		} else {
+			None
+		}
+	}
+
+	fn get_memory_load(&mut self, source: Link) -> Option<(Link, Link, LoadType)> {
+		if let Node::MemoryLoad(MemoryLoad {
+			source: Location { reference, offset },
+			r#type,
+		}) = *self.get(source.0)
+		{
+			Some((reference, offset, r#type))
+		} else {
+			None
+		}
+	}
+
+	fn get_memory_store(&mut self, source: Link) -> Option<(Link, Link, Link, StoreType)> {
+		if let Node::MemoryStore(MemoryStore {
+			destination: Location { reference, offset },
+			source,
+			r#type,
+		}) = *self.get(source.0)
+		{
+			Some((reference, offset, source, r#type))
 		} else {
 			None
 		}
