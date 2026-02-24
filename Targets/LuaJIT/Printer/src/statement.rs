@@ -231,9 +231,9 @@ impl Print for Repeat {
 		printer.outdent();
 
 		printer.tab(out)?;
-		write!(out, "until not (")?;
+		write!(out, "until ")?;
 		condition.print(printer, out)?;
-		writeln!(out, ")")
+		writeln!(out, " == 0")
 	}
 }
 

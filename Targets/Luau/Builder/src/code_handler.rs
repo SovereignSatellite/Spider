@@ -77,7 +77,7 @@ impl CodeHandler {
 	}
 
 	pub fn do_repeat(&mut self, condition: Link, data_handler: &mut DataHandler) {
-		let condition = data_handler.load(condition).into_boolean();
+		let condition = data_handler.load(condition);
 		let code = self.pop_scope();
 
 		let statement = Statement::Repeat(Repeat { code, condition }.into());
