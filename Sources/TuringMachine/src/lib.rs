@@ -32,11 +32,9 @@ pub struct TuringMachineLifter {
 	store: Link,
 	offset: Link,
 
+	io: Link,
 	ask: Link,
-	input: Link,
-
 	tell: Link,
-	output: Link,
 
 	blocks: Vec<Block>,
 }
@@ -49,11 +47,9 @@ impl TuringMachineLifter {
 			store: Link::DANGLING,
 			offset: Link::DANGLING,
 
+			io: Link::DANGLING,
 			ask: Link::DANGLING,
-			input: Link::DANGLING,
-
 			tell: Link::DANGLING,
-			output: Link::DANGLING,
 
 			blocks: Vec::new(),
 		}
@@ -70,11 +66,9 @@ impl TuringMachineLifter {
 		let environment = Link(omega_in, OmegaIn::ENVIRONMENT_PORT);
 		let namespace = Arc::<str>::from("turing");
 
+		self.io = Link(omega_in, OmegaIn::STATE_PORT);
 		self.ask = Import::add_into(graph, environment, namespace.clone(), "ask".into());
-		self.input = Import::add_into(graph, environment, namespace.clone(), "input".into());
-
-		self.tell = Import::add_into(graph, environment, namespace.clone(), "tell".into());
-		self.output = Import::add_into(graph, environment, namespace, "output".into());
+		self.tell = Import::add_into(graph, environment, namespace, "tell".into());
 	}
 
 	fn reconcile_store(&mut self, graph: &mut DataFlowGraph) -> Link {
@@ -147,38 +141,36 @@ impl TuringMachineLifter {
 	}
 
 	fn handle_ask(&mut self, graph: &mut DataFlowGraph) {
-		let apply = Apply::add_into(graph, self.ask, alloc::vec![self.input], 2, 1);
+		let apply = Apply::add_into(graph, self.ask, alloc::vec![self.io], 1, 1);
 
-		self.input = Link(apply, 1);
+		self.io = Link(apply, 1);
 
 		self.do_store(graph, Link(apply, 0));
 	}
 
 	fn handle_tell(&mut self, graph: &mut DataFlowGraph) {
 		let source = self.do_load(graph);
-		let apply = Apply::add_into(graph, self.tell, alloc::vec![source, self.output], 1, 1);
+		let apply = Apply::add_into(graph, self.tell, alloc::vec![source, self.io], 0, 1);
 
-		self.output = Link(apply, 0);
+		self.io = Link(apply, 0);
 	}
 
 	fn pull_all_active(&mut self, graph: &mut DataFlowGraph) -> Vec<Link> {
 		alloc::vec![
 			self.reconcile_store(graph),
 			self.offset,
+			self.io,
 			self.ask,
-			self.input,
 			self.tell,
-			self.output
 		]
 	}
 
 	const fn push_all_active(&mut self, source: u32) {
 		self.store = Link(source, 0);
 		self.offset = Link(source, 1);
+		self.io = Link(source, 3);
 		self.ask = Link(source, 2);
-		self.input = Link(source, 3);
 		self.tell = Link(source, 4);
-		self.output = Link(source, 5);
 	}
 
 	fn create_if_entry(&mut self, graph: &mut DataFlowGraph) -> u32 {
@@ -286,7 +278,7 @@ impl TuringMachineLifter {
 		self.create_io(graph, omega_in);
 		self.handle_code(graph, source);
 
-		OmegaOut::add_into(graph, omega_in, self.output, Vec::new())
+		OmegaOut::add_into(graph, omega_in, self.io, Vec::new())
 	}
 }
 
