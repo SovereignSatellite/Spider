@@ -20,12 +20,14 @@ impl BasicBlock {
 		}
 	}
 
-	pub(crate) fn range(&self) -> core::ops::Range<usize> {
-		self.start.try_into().unwrap()..self.end.try_into().unwrap()
+	#[must_use]
+	pub const fn is_source(&self) -> bool {
+		self.predecessors.is_empty()
 	}
 
-	pub(crate) fn is_source(&self) -> bool {
-		self.predecessors.is_empty()
+	#[must_use]
+	pub fn range(&self) -> core::ops::Range<usize> {
+		self.start.try_into().unwrap()..self.end.try_into().unwrap()
 	}
 
 	pub fn replace_ids<M: Fn(u16) -> u16>(&mut self, map: M) {
