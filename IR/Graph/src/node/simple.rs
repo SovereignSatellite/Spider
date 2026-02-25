@@ -7,19 +7,19 @@ pub trait Host {
 	fn identifier(&self) -> &'static str;
 
 	fn for_each_id(&self, handler: &mut dyn FnMut(u32)) {
-		let _handler = handler;
+		let _ = handler;
 	}
 
 	fn for_each_mut_id(&mut self, handler: &mut dyn FnMut(&mut u32)) {
-		let _handler = handler;
+		let _ = handler;
 	}
 
 	fn for_each_argument(&self, handler: &mut dyn FnMut(Link)) {
-		let _handler = handler;
+		let _ = handler;
 	}
 
 	fn for_each_mut_argument(&mut self, handler: &mut dyn FnMut(&mut Link)) {
-		let _handler = handler;
+		let _ = handler;
 	}
 }
 

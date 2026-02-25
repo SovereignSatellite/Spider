@@ -169,8 +169,9 @@ impl LuauBuilder {
 		self.do_assignment(id, import);
 	}
 
+	#[expect(clippy::needless_pass_by_ref_mut)]
 	fn handle_host(&mut self, id: u32, host: &dyn Host) {
-		panic!("unknown host operation {id} `{}`", host.identifier());
+		unimplemented!("`{}` at {id}", host.identifier());
 	}
 
 	fn handle_trap(&mut self, id: u32) {
