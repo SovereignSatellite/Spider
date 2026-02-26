@@ -6,10 +6,10 @@ use self::{
 		ThetaIn, ThetaOut,
 	},
 	simple::{
-		Apply, GlobalGet, GlobalNew, GlobalSet, Host, Identity, IntegerBinaryOperation,
+		Apply, Fence, GlobalGet, GlobalNew, GlobalSet, Host, Identity, IntegerBinaryOperation,
 		IntegerCompareOperation, IntegerConvertToNumber, IntegerExtend, IntegerNarrow,
 		IntegerTransmuteToNumber, IntegerUnaryOperation, IntegerWiden, MemoryCopy, MemoryDrop,
-		MemoryFill, MemoryGrow, MemoryLoad, MemoryNew, MemorySize, MemoryStore, Merge,
+		MemoryFill, MemoryGrow, MemoryLoad, MemoryNew, MemorySize, MemoryStore,
 		NumberBinaryOperation, NumberCompareOperation, NumberNarrow, NumberTransmuteToInteger,
 		NumberTruncateToInteger, NumberUnaryOperation, NumberWiden, RefIsNull, TableCopy,
 		TableDrop, TableFill, TableGet, TableGrow, TableNew, TableSet, TableSize,
@@ -52,7 +52,7 @@ pub enum Node {
 	F64(f64),
 
 	Identity(Identity),
-	Merge(Merge),
+	Fence(Fence),
 
 	Apply(Apply),
 

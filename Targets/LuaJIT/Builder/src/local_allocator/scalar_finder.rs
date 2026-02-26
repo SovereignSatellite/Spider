@@ -11,7 +11,7 @@ pub fn result_count_of(node: &Node) -> u16 {
 		| Node::ThetaIn(_)
 		| Node::ThetaOut(_)
 		| Node::OmegaIn(_)
-		| Node::Merge(_)
+		| Node::Fence(_)
 		| Node::GlobalSet(_)
 		| Node::TableSet(_)
 		| Node::TableFill(_)

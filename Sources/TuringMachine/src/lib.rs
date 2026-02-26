@@ -8,9 +8,9 @@ use ir_graph::{
 	},
 	list::resizable::Resizable,
 	simple::{
-		Apply, IntegerBinaryOperation, IntegerBinaryOperator, IntegerCompareOperation,
+		Apply, Fence, IntegerBinaryOperation, IntegerBinaryOperator, IntegerCompareOperation,
 		IntegerCompareOperator, IntegerType, LoadType, Location, MemoryLoad, MemoryNew,
-		MemoryStore, Merge, StoreType,
+		MemoryStore, StoreType,
 	},
 };
 
@@ -79,7 +79,7 @@ impl TuringMachineLifter {
 		match *sources {
 			[state] => state,
 			[] => self.store,
-			[..] => Merge::add_into(graph, sources),
+			[..] => Fence::add_into(graph, sources),
 		}
 	}
 

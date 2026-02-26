@@ -7,7 +7,7 @@ use ir_graph::{
 	DataFlowGraph, Link, Node,
 	control::{Export, Import, OmegaIn, OmegaOut},
 	simple::{
-		Apply, GlobalGet, GlobalNew, GlobalSet, Location, MemoryCopy, MemoryDrop, MemoryNew, Merge,
+		Apply, Fence, GlobalGet, GlobalNew, GlobalSet, Location, MemoryCopy, MemoryDrop, MemoryNew,
 		TableCopy, TableDrop, TableFill, TableNew, TableSet,
 	},
 };
@@ -561,7 +561,7 @@ impl WebAssemblyLifter {
 		self.global_state.retrieve_all_mutable(&mut states);
 		states.push(start);
 
-		let start = Merge::add_into(graph, list::resizable::Resizable::Heap(states));
+		let start = Fence::add_into(graph, list::resizable::Resizable::Heap(states));
 
 		OmegaOut::add_into(graph, omega_in, start, exports)
 	}

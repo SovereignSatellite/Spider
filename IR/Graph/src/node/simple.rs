@@ -27,7 +27,7 @@ pub struct Identity {
 	pub sources: Resizable<Link, 4>,
 }
 
-pub struct Merge {
+pub struct Fence {
 	pub sources: Resizable<Link, 4>,
 }
 

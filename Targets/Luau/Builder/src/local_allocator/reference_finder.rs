@@ -3,8 +3,8 @@ use ir_graph::{
 	DataFlowGraph, Link, Node,
 	control::{GammaIn, GammaOut, LambdaIn, OmegaIn, OmegaOut, RegionOut, ThetaIn, ThetaOut},
 	simple::{
-		Apply, GlobalGet, GlobalSet, Identity, MemoryCopy, MemoryDrop, MemoryFill, MemoryGrow,
-		MemoryLoad, MemorySize, MemoryStore, Merge, TableCopy, TableDrop, TableFill, TableGet,
+		Apply, Fence, GlobalGet, GlobalSet, Identity, MemoryCopy, MemoryDrop, MemoryFill,
+		MemoryGrow, MemoryLoad, MemorySize, MemoryStore, TableCopy, TableDrop, TableFill, TableGet,
 		TableGrow, TableSet, TableSize,
 	},
 };
@@ -141,11 +141,16 @@ fn handle_identity(assignments: &mut HashMap<Link, Link>, id: u32, node: &Identi
 	}
 }
 
-fn handle_merge(assignments: &mut HashMap<Link, Link>, node: &Merge) {
-	let Merge { sources } = node;
+fn handle_fence(assignments: &mut HashMap<Link, Link>, id: u32, node: &Fence) {
+	let Fence { sources } = node;
 
-	for &source in sources {
-		let _ = assignments.try_insert(source, Link::DANGLING);
+	let len = sources.len();
+	let outputs = (0..).map(|port| Link(id, port));
+
+	assignments.extend(sources.iter().copied().zip(outputs.clone()));
+
+	for output in outputs.take(len) {
+		let _ = assignments.try_insert(output, Link::DANGLING);
 	}
 }
 
@@ -334,7 +339,7 @@ fn handle_node(assignments: &mut HashMap<Link, Link>, graph: &DataFlowGraph, id:
 		Node::Trap => handle_trap(assignments, id),
 
 		Node::Identity(ref node) => handle_identity(assignments, id, node),
-		Node::Merge(ref node) => handle_merge(assignments, node),
+		Node::Fence(ref node) => handle_fence(assignments, id, node),
 		Node::Apply(ref node) => handle_apply(assignments, id, node),
 		Node::GlobalGet(node) => handle_global_get(assignments, id, node),
 		Node::GlobalSet(node) => handle_global_set(assignments, graph, id, node),

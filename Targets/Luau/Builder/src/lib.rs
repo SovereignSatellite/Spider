@@ -8,10 +8,10 @@ use ir_graph::{
 		ThetaOut,
 	},
 	simple::{
-		Apply, GlobalGet, GlobalNew, GlobalSet, Host, Identity, IntegerBinaryOperation,
+		Apply, Fence, GlobalGet, GlobalNew, GlobalSet, Host, Identity, IntegerBinaryOperation,
 		IntegerCompareOperation, IntegerConvertToNumber, IntegerExtend, IntegerNarrow,
 		IntegerTransmuteToNumber, IntegerUnaryOperation, IntegerWiden, MemoryCopy, MemoryDrop,
-		MemoryFill, MemoryGrow, MemoryLoad, MemoryNew, MemorySize, MemoryStore, Merge,
+		MemoryFill, MemoryGrow, MemoryLoad, MemoryNew, MemorySize, MemoryStore,
 		NumberBinaryOperation, NumberCompareOperation, NumberNarrow, NumberTransmuteToInteger,
 		NumberTruncateToInteger, NumberUnaryOperation, NumberWiden, RefIsNull, TableCopy,
 		TableDrop, TableFill, TableGet, TableGrow, TableNew, TableSet, TableSize,
@@ -205,14 +205,11 @@ impl LuauBuilder {
 			.do_bulk_assignment(id, sources, &self.data_handler);
 	}
 
-	fn handle_merge(&mut self, id: u32, node: &Merge) {
-		let Merge { sources } = node;
+	fn handle_fence(&mut self, id: u32, node: &Fence) {
+		let Fence { sources } = node;
 
-		for &source in sources {
-			let source = self.data_handler.load(source);
-
-			self.do_assignment(id, source);
-		}
+		self.code_handler
+			.do_bulk_assignment(id, sources, &self.data_handler);
 	}
 
 	fn handle_call_statement(&mut self, id: u32, node: &Apply) {
@@ -579,7 +576,7 @@ impl LuauBuilder {
 			Node::F64(f64) => self.handle_f64_const(id, f64),
 
 			Node::Identity(ref node) => self.handle_identity(id, node),
-			Node::Merge(ref node) => self.handle_merge(id, node),
+			Node::Fence(ref node) => self.handle_fence(id, node),
 			Node::Apply(ref node) => self.handle_call(id, node),
 			Node::RefIsNull(node) => self.handle_ref_is_null(id, node),
 			Node::IntegerUnaryOperation(node) => self.handle_integer_unary_operation(id, node),

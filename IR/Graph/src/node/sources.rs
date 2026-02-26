@@ -6,14 +6,13 @@ use crate::{
 			RegionOut, ThetaIn, ThetaOut,
 		},
 		simple::{
-			Apply, GlobalGet, GlobalNew, GlobalSet, Identity, IntegerBinaryOperation,
+			Apply, Fence, GlobalGet, GlobalNew, GlobalSet, Identity, IntegerBinaryOperation,
 			IntegerCompareOperation, IntegerConvertToNumber, IntegerExtend, IntegerNarrow,
 			IntegerTransmuteToNumber, IntegerUnaryOperation, IntegerWiden, Location, MemoryCopy,
 			MemoryDrop, MemoryFill, MemoryGrow, MemoryLoad, MemoryNew, MemorySize, MemoryStore,
-			Merge, NumberBinaryOperation, NumberCompareOperation, NumberNarrow,
-			NumberTransmuteToInteger, NumberTruncateToInteger, NumberUnaryOperation, NumberWiden,
-			RefIsNull, TableCopy, TableDrop, TableFill, TableGet, TableGrow, TableNew, TableSet,
-			TableSize,
+			NumberBinaryOperation, NumberCompareOperation, NumberNarrow, NumberTransmuteToInteger,
+			NumberTruncateToInteger, NumberUnaryOperation, NumberWiden, RefIsNull, TableCopy,
+			TableDrop, TableFill, TableGet, TableGrow, TableNew, TableSet, TableSize,
 		},
 	},
 };
@@ -37,7 +36,7 @@ macro_rules! for_each_visit {
 			}
 
 			Self::Identity(node) => node.$visit($handler),
-			Self::Merge(node) => node.$visit($handler),
+			Self::Fence(node) => node.$visit($handler),
 			Self::Apply(node) => node.$visit($handler),
 			Self::RefIsNull(node) => node.$visit($handler),
 			Self::IntegerUnaryOperation(node) => node.$visit($handler),
@@ -285,7 +284,7 @@ impl Identity {
 	handle_sources!((sources, link_list));
 }
 
-impl Merge {
+impl Fence {
 	handle_sources!((sources, link_list));
 }
 

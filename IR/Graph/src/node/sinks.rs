@@ -9,16 +9,16 @@ use crate::{
 			OmegaOut, RegionIn, RegionOut, ThetaIn, ThetaOut,
 		},
 		simple::{
-			Apply, ExtendType, GlobalGet, GlobalNew, GlobalSet, Identity, IntegerBinaryOperation,
-			IntegerBinaryOperator, IntegerCompareOperation, IntegerCompareOperator,
-			IntegerConvertToNumber, IntegerExtend, IntegerNarrow, IntegerTransmuteToNumber,
-			IntegerType, IntegerUnaryOperation, IntegerUnaryOperator, IntegerWiden, LoadType,
-			Location, MemoryCopy, MemoryDrop, MemoryFill, MemoryGrow, MemoryLoad, MemoryNew,
-			MemorySize, MemoryStore, Merge, NumberBinaryOperation, NumberBinaryOperator,
-			NumberCompareOperation, NumberCompareOperator, NumberNarrow, NumberTransmuteToInteger,
-			NumberTruncateToInteger, NumberType, NumberUnaryOperation, NumberUnaryOperator,
-			NumberWiden, RefIsNull, StoreType, TableCopy, TableDrop, TableFill, TableGet,
-			TableGrow, TableNew, TableSet, TableSize,
+			Apply, ExtendType, Fence, GlobalGet, GlobalNew, GlobalSet, Identity,
+			IntegerBinaryOperation, IntegerBinaryOperator, IntegerCompareOperation,
+			IntegerCompareOperator, IntegerConvertToNumber, IntegerExtend, IntegerNarrow,
+			IntegerTransmuteToNumber, IntegerType, IntegerUnaryOperation, IntegerUnaryOperator,
+			IntegerWiden, LoadType, Location, MemoryCopy, MemoryDrop, MemoryFill, MemoryGrow,
+			MemoryLoad, MemoryNew, MemorySize, MemoryStore, NumberBinaryOperation,
+			NumberBinaryOperator, NumberCompareOperation, NumberCompareOperator, NumberNarrow,
+			NumberTransmuteToInteger, NumberTruncateToInteger, NumberType, NumberUnaryOperation,
+			NumberUnaryOperator, NumberWiden, RefIsNull, StoreType, TableCopy, TableDrop,
+			TableFill, TableGet, TableGrow, TableNew, TableSet, TableSize,
 		},
 	},
 };
@@ -31,9 +31,9 @@ impl Identity {
 	}
 }
 
-impl Merge {
+impl Fence {
 	pub fn add_into(graph: &mut DataFlowGraph, sources: Resizable<Link, 4>) -> Link {
-		let node = Node::Merge(Self { sources });
+		let node = Node::Fence(Self { sources });
 
 		Link(graph.add_node(node), 0)
 	}
