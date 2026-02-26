@@ -453,12 +453,20 @@ impl WebAssemblyLifter {
 		}
 	}
 
-	#[expect(clippy::needless_pass_by_ref_mut)]
+	#[expect(
+		clippy::needless_pass_by_ref_mut,
+		clippy::needless_pass_by_value,
+		unused_variables
+	)]
 	fn handle_tag_section(
 		&mut self,
-		_graph: &mut DataFlowGraph,
-		_section: SectionLimited<wasmparser::TagType>,
+		graph: &mut DataFlowGraph,
+		section: SectionLimited<wasmparser::TagType>,
 	) {
+		if section.count() == 0 {
+			return;
+		}
+
 		unimplemented!("`Tag`s are not supported yet")
 	}
 
