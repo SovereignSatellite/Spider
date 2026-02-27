@@ -1,12 +1,38 @@
 use ir_graph::{
 	DataFlowGraph, Link, Node,
+	control::{GammaIn, RegionIn},
 	simple::{
-		GlobalGet, GlobalNew, GlobalSet, IntegerBinaryOperation, IntegerBinaryOperator,
+		GlobalGet, GlobalNew, GlobalSet, Identity, IntegerBinaryOperation, IntegerBinaryOperator,
 		IntegerType, LoadType, Location, MemoryLoad, MemoryStore, StoreType, TableGet, TableSet,
 	},
 };
 
 use super::internal::Context;
+
+fn get_next_producer(node: &Node, port: u16) -> Option<Link> {
+	let index = usize::from(port);
+	let producer = match node {
+		Node::RegionIn(RegionIn { input, .. }) => Link(*input, port),
+		Node::GammaIn(GammaIn { arguments, .. }) => arguments.get(index).copied()?,
+		Node::Identity(Identity { sources }) => sources.get(index).copied()?,
+
+		_ => return None,
+	};
+
+	Some(producer)
+}
+
+fn find_first_producer(graph: &DataFlowGraph, mut source: Link) -> Link {
+	while let Some(next) = {
+		let Link(id, port) = source;
+
+		get_next_producer(graph.get(id), port)
+	} {
+		source = next;
+	}
+
+	source
+}
 
 impl Context for DataFlowGraph {
 	fn get_i32(&mut self, source: Link) -> Option<i32> {
@@ -44,6 +70,9 @@ impl Context for DataFlowGraph {
 			operator,
 		}) = *self.get(source.0)
 		{
+			let lhs = find_first_producer(self, lhs);
+			let rhs = find_first_producer(self, rhs);
+
 			Some((lhs, rhs, r#type, operator))
 		} else {
 			None
@@ -94,6 +123,8 @@ impl Context for DataFlowGraph {
 
 	fn get_global_new(&mut self, source: Link) -> Option<Link> {
 		if let Node::GlobalNew(GlobalNew { initializer }) = *self.get(source.0) {
+			let initializer = find_first_producer(self, initializer);
+
 			Some(initializer)
 		} else {
 			None
@@ -102,6 +133,8 @@ impl Context for DataFlowGraph {
 
 	fn get_global_get(&mut self, source: Link) -> Option<Link> {
 		if let Node::GlobalGet(GlobalGet { source }) = *self.get(source.0) {
+			let source = find_first_producer(self, source);
+
 			Some(source)
 		} else {
 			None
@@ -114,6 +147,9 @@ impl Context for DataFlowGraph {
 			source,
 		}) = *self.get(source.0)
 		{
+			let destination = find_first_producer(self, destination);
+			let source = find_first_producer(self, source);
+
 			Some((destination, source))
 		} else {
 			None
@@ -125,6 +161,9 @@ impl Context for DataFlowGraph {
 			source: Location { reference, offset },
 		}) = *self.get(source.0)
 		{
+			let reference = find_first_producer(self, reference);
+			let offset = find_first_producer(self, offset);
+
 			Some((reference, offset))
 		} else {
 			None
@@ -137,6 +176,10 @@ impl Context for DataFlowGraph {
 			source,
 		}) = *self.get(source.0)
 		{
+			let reference = find_first_producer(self, reference);
+			let offset = find_first_producer(self, offset);
+			let source = find_first_producer(self, source);
+
 			Some((reference, offset, source))
 		} else {
 			None
@@ -149,6 +192,9 @@ impl Context for DataFlowGraph {
 			r#type,
 		}) = *self.get(source.0)
 		{
+			let reference = find_first_producer(self, reference);
+			let offset = find_first_producer(self, offset);
+
 			Some((reference, offset, r#type))
 		} else {
 			None
@@ -162,6 +208,10 @@ impl Context for DataFlowGraph {
 			r#type,
 		}) = *self.get(source.0)
 		{
+			let reference = find_first_producer(self, reference);
+			let offset = find_first_producer(self, offset);
+			let source = find_first_producer(self, source);
+
 			Some((reference, offset, source, r#type))
 		} else {
 			None
