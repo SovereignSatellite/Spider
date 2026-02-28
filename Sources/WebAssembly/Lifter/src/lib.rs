@@ -11,6 +11,7 @@ use ir_graph::{
 		TableCopy, TableDrop, TableFill, TableNew, TableSet,
 	},
 };
+use list::resizable::Resizable;
 use wasmparser::{ConstExpr, ElementItems, FunctionBody, SectionLimited, ValType};
 use web_assembly_builder::Types;
 use web_assembly_graph::instruction::MemorySize;
@@ -532,6 +533,16 @@ impl WebAssemblyLifter {
 			.collect()
 	}
 
+	fn create_fence(&self, graph: &mut DataFlowGraph, state: Link) -> Link {
+		let mut states = alloc::vec![state];
+
+		self.global_state.retrieve_all_mutable(&mut states);
+
+		let fence = Fence::add_into(graph, Resizable::Heap(states));
+
+		Link(fence, 0)
+	}
+
 	fn handle_start_section(
 		&self,
 		graph: &mut DataFlowGraph,
@@ -539,31 +550,15 @@ impl WebAssemblyLifter {
 		start: Option<u32>,
 	) -> Link {
 		let state = Link(omega_in, OmegaIn::STATE_PORT);
+		let state = self.create_fence(graph, state);
 
 		start.map_or(state, |start| {
 			let function = self.global_state.functions[usize::try_from(start).unwrap()];
 			let function = GlobalGet::add_into(graph, function).0;
-			let apply = Apply::add_into(graph, function, alloc::vec![state], 0, 1);
+			let apply = Apply::add_into(graph, function, alloc::vec![state], 1);
 
 			Link(apply, 0)
 		})
-	}
-
-	fn handle_module(
-		&self,
-		graph: &mut DataFlowGraph,
-		omega_in: u32,
-		start: Link,
-		exports: Vec<Export>,
-	) -> u32 {
-		let mut states = Vec::new();
-
-		self.global_state.retrieve_all_mutable(&mut states);
-		states.push(start);
-
-		let start = Fence::add_into(graph, list::resizable::Resizable::Heap(states));
-
-		OmegaOut::add_into(graph, omega_in, start, exports)
 	}
 
 	pub fn run(&mut self, graph: &mut DataFlowGraph, data: &[u8]) -> u32 {
@@ -597,7 +592,7 @@ impl WebAssemblyLifter {
 		let start = self.handle_start_section(graph, omega_in, sections.start);
 		let exports = self.handle_export_section(graph, sections.exports);
 
-		self.handle_module(graph, omega_in, start, exports)
+		OmegaOut::add_into(graph, omega_in, start, exports)
 	}
 }
 

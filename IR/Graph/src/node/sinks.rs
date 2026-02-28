@@ -24,18 +24,18 @@ use crate::{
 };
 
 impl Identity {
-	pub fn add_into(graph: &mut DataFlowGraph, sources: Resizable<Link, 4>) -> Link {
+	pub fn add_into(graph: &mut DataFlowGraph, sources: Resizable<Link, 4>) -> u32 {
 		let node = Node::Identity(Self { sources });
 
-		Link(graph.add_node(node), 0)
+		graph.add_node(node)
 	}
 }
 
 impl Fence {
-	pub fn add_into(graph: &mut DataFlowGraph, sources: Resizable<Link, 4>) -> Link {
+	pub fn add_into(graph: &mut DataFlowGraph, sources: Resizable<Link, 4>) -> u32 {
 		let node = Node::Fence(Self { sources });
 
-		Link(graph.add_node(node), 0)
+		graph.add_node(node)
 	}
 }
 
@@ -45,13 +45,11 @@ impl Apply {
 		function: Link,
 		arguments: Vec<Link>,
 		results: u16,
-		states: u16,
 	) -> u32 {
 		let node = Node::Apply(Self {
 			function,
 			arguments,
 			results,
-			states,
 		});
 
 		graph.add_node(node)

@@ -18,16 +18,6 @@ impl DependencyMap {
 		self.buffer.extend(keys);
 	}
 
-	pub fn fill_values<I>(&mut self, values: I)
-	where
-		I: IntoIterator<Item = Link>,
-	{
-		self.buffer
-			.iter_mut()
-			.zip(values)
-			.for_each(|(item, value)| item.1 = value);
-	}
-
 	fn position(&self, r#type: ReferenceType, id: u16) -> usize {
 		self.buffer
 			.binary_search_by_key(&Reference { r#type, id }, |data| data.0)
@@ -46,7 +36,39 @@ impl DependencyMap {
 		self.buffer[position].1 = value;
 	}
 
-	pub fn extend_into(&self, links: &mut Vec<Link>) {
-		links.extend(self.buffer.iter().map(|item| item.1));
+	pub fn get_all_into(&self, target: &mut Vec<Link>) {
+		let iter = self.buffer.iter().map(|data| data.1);
+
+		target.extend(iter);
+	}
+
+	pub fn get_mutable_into(&self, target: &mut Vec<Link>) {
+		let iter = self
+			.buffer
+			.iter()
+			.filter_map(|(Reference { r#type, .. }, link)| r#type.is_mutable().then_some(link));
+
+		target.extend(iter);
+	}
+
+	pub fn set_all_from<I>(&mut self, values: I)
+	where
+		I: IntoIterator<Item = Link>,
+	{
+		self.buffer
+			.iter_mut()
+			.zip(values)
+			.for_each(|(reference, value)| reference.1 = value);
+	}
+
+	pub fn set_mutable_from<I>(&mut self, values: I)
+	where
+		I: IntoIterator<Item = Link>,
+	{
+		self.buffer
+			.iter_mut()
+			.filter(|(Reference { r#type, .. }, _)| r#type.is_mutable())
+			.zip(values)
+			.for_each(|(reference, value)| reference.1 = value);
 	}
 }

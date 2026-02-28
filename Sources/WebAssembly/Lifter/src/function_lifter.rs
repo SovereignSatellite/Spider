@@ -28,22 +28,15 @@ fn web_type_to_data_type(r#type: ValType) -> ValueType {
 }
 
 fn load_type_from_function(function: u32, types: &Types) -> FunctionType {
-	let r#type = types.get_type(function).unwrap_func();
+	fn load_types(types: &[ValType]) -> Resizable<ValueType, 15> {
+		types.iter().copied().map(web_type_to_data_type).collect()
+	}
+
+	let function = types.get_type(function).unwrap_func();
 
 	FunctionType {
-		arguments: r#type
-			.params()
-			.iter()
-			.copied()
-			.map(web_type_to_data_type)
-			.collect(),
-
-		results: r#type
-			.results()
-			.iter()
-			.copied()
-			.map(web_type_to_data_type)
-			.collect(),
+		arguments: load_types(function.params()),
+		results: load_types(function.results()),
 	}
 }
 
@@ -52,7 +45,7 @@ fn load_type_from_result(result: ValType) -> FunctionType {
 
 	FunctionType {
 		arguments: Resizable::new(),
-		results: core::iter::once(result).collect(),
+		results: list::resizable![result],
 	}
 }
 
@@ -121,6 +114,12 @@ impl FunctionLifter {
 
 		let results = self.lifter.run(graph, &self.graph, lambda_in, &self.locals);
 
+		let LambdaIn { r#type, .. } = graph.get_mut(lambda_in).as_mut_lambda_in().unwrap();
+
+		// We add a "trap state" as part of the function signature
+		r#type.arguments.push(ValueType::Reference);
+		r#type.results.push(ValueType::Reference);
+
 		LambdaOut::add_into(graph, lambda_in, results)
 	}
 
@@ -169,7 +168,7 @@ impl FunctionLifter {
 
 		let function_type = load_type_from_result(result);
 		let function = self.build_data_flow(graph, function_type, global_state);
-		let apply = Apply::add_into(graph, Link(function, 0), Vec::new(), 1, 0);
+		let apply = Apply::add_into(graph, Link(function, 0), Vec::new(), 1);
 
 		Link(apply, 0)
 	}

@@ -289,12 +289,7 @@ impl Fence {
 }
 
 impl Apply {
-	handle_sources!(
-		(function, link),
-		(arguments, link_list),
-		(results, ignore),
-		(states, ignore)
-	);
+	handle_sources!((function, link), (arguments, link_list), (results, ignore));
 }
 
 impl RefIsNull {

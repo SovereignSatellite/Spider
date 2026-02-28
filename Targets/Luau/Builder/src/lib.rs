@@ -65,9 +65,9 @@ impl LuauBuilder {
 	fn handle_lambda_out(&mut self, graph: &DataFlowGraph, lambda_out: &LambdaOut) {
 		let LambdaOut { results, input } = lambda_out;
 		let lambda_in @ LambdaIn {
-			r#type,
 			dependencies,
 			output,
+			..
 		} = graph.get(*input).as_lambda_in().unwrap();
 
 		let dependencies =
@@ -86,7 +86,7 @@ impl LuauBuilder {
 
 		let stack = self.data_handler.get_stack_size(*input);
 		let code = self.code_handler.pop_scope();
-		let returns = self.data_handler.load_returns(results, r#type);
+		let returns = self.data_handler.load_all(results);
 
 		let function =
 			DataHandler::load_scoped(dependencies, arguments, locals, stack, code, returns);
@@ -227,20 +227,6 @@ impl LuauBuilder {
 			self.handle_call_statement(id, node);
 		} else {
 			self.handle_call_expression(id, node);
-		}
-
-		let Apply {
-			ref arguments,
-			results,
-			states,
-			..
-		} = *node;
-
-		for (&source, port) in arguments.iter().rev().zip((0..states).rev()) {
-			let destination = Link(id, results + port);
-
-			self.code_handler
-				.do_rename(destination, source, &self.data_handler);
 		}
 	}
 

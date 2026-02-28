@@ -134,12 +134,11 @@ impl CodeHandler {
 	}
 
 	pub fn do_call(&mut self, node: &simple::Apply, id: u32, data_handler: &mut DataHandler) {
-		let end = node.arguments.len() - usize::from(node.states);
 		let statement = Statement::Call(
 			Call {
 				function: data_handler.load(node.function),
-				arguments: data_handler.load_all(&node.arguments[..end]),
-				results: data_handler.load_local_assignments(id, 0..node.results),
+				arguments: data_handler.load_all(&node.arguments),
+				results: data_handler.load_local_assignments(id, node.results),
 			}
 			.into(),
 		);
