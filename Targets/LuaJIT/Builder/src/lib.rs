@@ -8,10 +8,10 @@ use ir_graph::{
 		ThetaOut,
 	},
 	simple::{
-		Apply, GlobalGet, GlobalNew, GlobalSet, Host, Identity, IntegerBinaryOperation,
+		Apply, Fence, GlobalGet, GlobalNew, GlobalSet, Host, Identity, IntegerBinaryOperation,
 		IntegerCompareOperation, IntegerConvertToNumber, IntegerExtend, IntegerNarrow,
 		IntegerTransmuteToNumber, IntegerUnaryOperation, IntegerWiden, MemoryCopy, MemoryDrop,
-		MemoryFill, MemoryGrow, MemoryLoad, MemoryNew, MemorySize, MemoryStore, Merge,
+		MemoryFill, MemoryGrow, MemoryLoad, MemoryNew, MemorySize, MemoryStore,
 		NumberBinaryOperation, NumberCompareOperation, NumberNarrow, NumberTransmuteToInteger,
 		NumberTruncateToInteger, NumberUnaryOperation, NumberWiden, RefIsNull, TableCopy,
 		TableDrop, TableFill, TableGet, TableGrow, TableNew, TableSet, TableSize,
@@ -65,9 +65,9 @@ impl LuaJITBuilder {
 	fn handle_lambda_out(&mut self, graph: &DataFlowGraph, lambda_out: &LambdaOut) {
 		let LambdaOut { results, input } = lambda_out;
 		let lambda_in @ LambdaIn {
-			r#type,
 			dependencies,
 			output,
+			..
 		} = graph.get(*input).as_lambda_in().unwrap();
 
 		let dependencies =
@@ -86,7 +86,7 @@ impl LuaJITBuilder {
 
 		let stack = self.data_handler.get_stack_size(*input);
 		let code = self.code_handler.pop_scope();
-		let returns = self.data_handler.load_returns(results, r#type);
+		let returns = self.data_handler.load_all(results);
 
 		let function =
 			DataHandler::load_scoped(dependencies, arguments, locals, stack, code, returns);
@@ -205,14 +205,11 @@ impl LuaJITBuilder {
 			.do_bulk_assignment(id, sources, &self.data_handler);
 	}
 
-	fn handle_merge(&mut self, id: u32, node: &Merge) {
-		let Merge { sources } = node;
+	fn handle_fence(&mut self, id: u32, node: &Fence) {
+		let Fence { sources } = node;
 
-		for &source in sources {
-			let source = self.data_handler.load(source);
-
-			self.do_assignment(id, source);
-		}
+		self.code_handler
+			.do_bulk_assignment(id, sources, &self.data_handler);
 	}
 
 	fn handle_call_statement(&mut self, id: u32, node: &Apply) {
@@ -230,20 +227,6 @@ impl LuaJITBuilder {
 			self.handle_call_statement(id, node);
 		} else {
 			self.handle_call_expression(id, node);
-		}
-
-		let Apply {
-			ref arguments,
-			results,
-			states,
-			..
-		} = *node;
-
-		for (&source, port) in arguments.iter().rev().zip((0..states).rev()) {
-			let destination = Link(id, results + port);
-
-			self.code_handler
-				.do_rename(destination, source, &self.data_handler);
 		}
 	}
 
@@ -579,7 +562,7 @@ impl LuaJITBuilder {
 			Node::F64(f64) => self.handle_f64_const(id, f64),
 
 			Node::Identity(ref node) => self.handle_identity(id, node),
-			Node::Merge(ref node) => self.handle_merge(id, node),
+			Node::Fence(ref node) => self.handle_fence(id, node),
 			Node::Apply(ref node) => self.handle_call(id, node),
 			Node::RefIsNull(node) => self.handle_ref_is_null(id, node),
 			Node::IntegerUnaryOperation(node) => self.handle_integer_unary_operation(id, node),

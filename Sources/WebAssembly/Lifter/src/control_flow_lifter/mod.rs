@@ -176,6 +176,7 @@ impl ControlFlowLifter {
 			self.handle_basic_block(data_flow_graph, control_flow_graph, id, locals);
 		}
 
-		self.basic_block_lifter.get_function_outputs(results)
+		self.basic_block_lifter
+			.get_function_outputs(data_flow_graph, results)
 	}
 }

@@ -32,8 +32,9 @@ pub fn remove(graph: &mut DataFlowGraph) {
 
 fn replace_with_identity(graph: &mut DataFlowGraph, from: &mut Link) {
 	let sources = list::resizable![*from];
+	let identity = Identity::add_into(graph, sources);
 
-	*from = Identity::add_into(graph, sources);
+	*from = Link(identity, 0);
 }
 
 // We insert at...

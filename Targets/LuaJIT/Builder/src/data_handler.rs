@@ -76,8 +76,8 @@ impl DataHandler {
 			.collect()
 	}
 
-	pub fn load_local_assignments(&self, id: u32, ports: core::ops::Range<u16>) -> Vec<Local> {
-		let names = ports.map(|port| Link(id, port));
+	pub fn load_local_assignments(&self, id: u32, ports: u16) -> Vec<Local> {
+		let names = (0..ports).map(|port| Link(id, port));
 
 		names.map(|name| self.assignments[&name]).collect()
 	}
@@ -113,17 +113,6 @@ impl DataHandler {
 		let locals = self.declarations[&id].locals.clone();
 
 		locals.map(|id| Name { id }).collect()
-	}
-
-	pub fn load_returns(
-		&mut self,
-		results: &[Link],
-		function_type: &control::FunctionType,
-	) -> Vec<Expression> {
-		let returns = results.iter().map(|&name| self.load(name));
-		let len = function_type.results.len();
-
-		returns.take(len).collect()
 	}
 
 	pub fn load_scoped(
@@ -179,10 +168,9 @@ impl DataHandler {
 	}
 
 	pub fn load_call(&mut self, node: &simple::Apply) -> Expression {
-		let end = node.arguments.len() - usize::from(node.states);
 		let call = Call {
 			function: self.load(node.function),
-			arguments: self.load_all(&node.arguments[..end]),
+			arguments: self.load_all(&node.arguments),
 		};
 
 		Expression::Call(call.into())

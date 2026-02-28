@@ -16,6 +16,16 @@ pub enum ReferenceType {
 	Data,
 }
 
+impl ReferenceType {
+	#[must_use]
+	pub const fn is_mutable(self) -> bool {
+		matches!(
+			self,
+			Self::Global | Self::Table | Self::Elements | Self::Memory | Self::Data
+		)
+	}
+}
+
 #[derive(PartialEq, Eq, PartialOrd, Ord, Clone, Copy)]
 pub struct Reference {
 	pub r#type: ReferenceType,

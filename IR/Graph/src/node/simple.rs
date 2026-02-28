@@ -27,7 +27,7 @@ pub struct Identity {
 	pub sources: Resizable<Link, 4>,
 }
 
-pub struct Merge {
+pub struct Fence {
 	pub sources: Resizable<Link, 4>,
 }
 
@@ -35,7 +35,6 @@ pub struct Apply {
 	pub function: Link,
 	pub arguments: Vec<Link>,
 	pub results: u16,
-	pub states: u16,
 }
 
 #[derive(Clone, Copy)]

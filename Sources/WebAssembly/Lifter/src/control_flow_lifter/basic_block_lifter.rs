@@ -1,5 +1,6 @@
 use alloc::vec::Vec;
 use ir_graph::{DataFlowGraph, Link, Node, control::ValueType, simple};
+use list::resizable::Resizable;
 use web_assembly_graph::instruction::{
 	Call, DataDrop, ElementsDrop, F32Constant, F64Constant, GlobalGet, GlobalSet, I32Constant,
 	I64Constant, Instruction, IntegerBinaryOperation, IntegerCompareOperation,
@@ -39,14 +40,27 @@ impl BasicBlockLifter {
 		self.condition
 	}
 
-	pub fn get_function_outputs(&self, results: usize) -> Vec<Link> {
-		let mut list = self.locals[LOCAL_BASE..LOCAL_BASE + results].to_vec();
+	fn create_fence(&mut self, graph: &mut DataFlowGraph) {
+		let mut sources = alloc::vec![self.trap];
 
-		self.dependencies.extend_into(&mut list);
+		self.dependencies.get_mutable_into(&mut sources);
 
-		list.push(self.trap);
+		let fence = simple::Fence::add_into(graph, Resizable::Heap(sources));
+		let mut fence = (0..u16::MAX).map(|port| Link(fence, port));
 
-		list
+		self.trap = fence.next().unwrap();
+
+		self.dependencies.set_mutable_from(fence);
+	}
+
+	pub fn get_function_outputs(&mut self, graph: &mut DataFlowGraph, results: usize) -> Vec<Link> {
+		let mut results = self.locals[LOCAL_BASE..LOCAL_BASE + results].to_vec();
+
+		self.create_fence(graph);
+
+		results.push(self.trap);
+
+		results
 	}
 
 	pub fn set_function_inputs(
@@ -58,7 +72,7 @@ impl BasicBlockLifter {
 		let mut inputs = (0..u16::MAX).map(|port| Link(lambda_in, port));
 
 		self.dependencies.fill_keys(dependencies);
-		self.dependencies.fill_values(&mut inputs);
+		self.dependencies.set_all_from(&mut inputs);
 
 		let reserved = core::iter::repeat_n(Link::DANGLING, LOCAL_BASE);
 
@@ -90,7 +104,7 @@ impl BasicBlockLifter {
 	pub fn get_active_bindings(&self, locals: &[u16]) -> Vec<Link> {
 		let mut results = Vec::new();
 
-		self.dependencies.extend_into(&mut results);
+		self.dependencies.get_all_into(&mut results);
 
 		results.extend(
 			locals
@@ -107,7 +121,7 @@ impl BasicBlockLifter {
 	pub fn set_active_bindings(&mut self, producer: u32, locals: &[u16]) {
 		let mut producer = (0..u16::MAX).map(|port| Link(producer, port));
 
-		self.dependencies.fill_values(&mut producer);
+		self.dependencies.set_all_from(&mut producer);
 
 		locals
 			.iter()
@@ -189,28 +203,27 @@ impl BasicBlockLifter {
 		self.trap = Node::add_trap_into(graph);
 	}
 
-	fn handle_pre_call(&self, sources: core::ops::Range<usize>) -> (Vec<Link>, usize) {
-		let mut arguments = self.locals[sources.clone()].to_vec();
+	fn handle_pre_call(&mut self, graph: &mut DataFlowGraph, from: u16, to: u16) -> Vec<Link> {
+		let mut arguments = self.locals[usize::from(from)..usize::from(to)].to_vec();
+
+		self.create_fence(graph);
 
 		arguments.push(self.trap);
 
-		self.dependencies.extend_into(&mut arguments);
-
-		let count = arguments.len() - sources.len();
-
-		(arguments, count)
+		arguments
 	}
 
-	fn handle_post_call(&mut self, call: u32, destinations: core::ops::Range<usize>) {
+	fn handle_post_call(&mut self, graph: &mut DataFlowGraph, call: u32, from: u16, to: u16) {
+		let destinations = self.locals[usize::from(from)..usize::from(to)].iter_mut();
 		let mut call = (0..u16::MAX).map(|port| Link(call, port));
 
-		for (destination, result) in self.locals[destinations].iter_mut().zip(&mut call) {
+		for (destination, result) in destinations.zip(&mut call) {
 			*destination = result;
 		}
 
 		self.trap = call.next().unwrap();
 
-		self.dependencies.fill_values(call);
+		self.create_fence(graph);
 	}
 
 	fn handle_call(&mut self, graph: &mut DataFlowGraph, instruction: Call) {
@@ -220,20 +233,16 @@ impl BasicBlockLifter {
 			function,
 		} = instruction;
 
-		let destinations = usize::from(destinations.0)..usize::from(destinations.1);
-		let sources = usize::from(sources.0)..usize::from(sources.1);
+		let arguments = self.handle_pre_call(graph, sources.0, sources.1);
 
-		let (arguments, states) = self.handle_pre_call(sources);
-		let results = destinations.len();
 		let call = simple::Apply::add_into(
 			graph,
 			self.locals[usize::from(function)],
 			arguments,
-			results.try_into().unwrap(),
-			states.try_into().unwrap(),
+			destinations.1 - destinations.0,
 		);
 
-		self.handle_post_call(call, destinations);
+		self.handle_post_call(graph, call, destinations.0, destinations.1);
 	}
 
 	fn handle_integer_unary_operation(

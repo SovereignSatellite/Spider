@@ -9,33 +9,33 @@ use crate::{
 			OmegaOut, RegionIn, RegionOut, ThetaIn, ThetaOut,
 		},
 		simple::{
-			Apply, ExtendType, GlobalGet, GlobalNew, GlobalSet, Identity, IntegerBinaryOperation,
-			IntegerBinaryOperator, IntegerCompareOperation, IntegerCompareOperator,
-			IntegerConvertToNumber, IntegerExtend, IntegerNarrow, IntegerTransmuteToNumber,
-			IntegerType, IntegerUnaryOperation, IntegerUnaryOperator, IntegerWiden, LoadType,
-			Location, MemoryCopy, MemoryDrop, MemoryFill, MemoryGrow, MemoryLoad, MemoryNew,
-			MemorySize, MemoryStore, Merge, NumberBinaryOperation, NumberBinaryOperator,
-			NumberCompareOperation, NumberCompareOperator, NumberNarrow, NumberTransmuteToInteger,
-			NumberTruncateToInteger, NumberType, NumberUnaryOperation, NumberUnaryOperator,
-			NumberWiden, RefIsNull, StoreType, TableCopy, TableDrop, TableFill, TableGet,
-			TableGrow, TableNew, TableSet, TableSize,
+			Apply, ExtendType, Fence, GlobalGet, GlobalNew, GlobalSet, Identity,
+			IntegerBinaryOperation, IntegerBinaryOperator, IntegerCompareOperation,
+			IntegerCompareOperator, IntegerConvertToNumber, IntegerExtend, IntegerNarrow,
+			IntegerTransmuteToNumber, IntegerType, IntegerUnaryOperation, IntegerUnaryOperator,
+			IntegerWiden, LoadType, Location, MemoryCopy, MemoryDrop, MemoryFill, MemoryGrow,
+			MemoryLoad, MemoryNew, MemorySize, MemoryStore, NumberBinaryOperation,
+			NumberBinaryOperator, NumberCompareOperation, NumberCompareOperator, NumberNarrow,
+			NumberTransmuteToInteger, NumberTruncateToInteger, NumberType, NumberUnaryOperation,
+			NumberUnaryOperator, NumberWiden, RefIsNull, StoreType, TableCopy, TableDrop,
+			TableFill, TableGet, TableGrow, TableNew, TableSet, TableSize,
 		},
 	},
 };
 
 impl Identity {
-	pub fn add_into(graph: &mut DataFlowGraph, sources: Resizable<Link, 4>) -> Link {
+	pub fn add_into(graph: &mut DataFlowGraph, sources: Resizable<Link, 4>) -> u32 {
 		let node = Node::Identity(Self { sources });
 
-		Link(graph.add_node(node), 0)
+		graph.add_node(node)
 	}
 }
 
-impl Merge {
-	pub fn add_into(graph: &mut DataFlowGraph, sources: Resizable<Link, 4>) -> Link {
-		let node = Node::Merge(Self { sources });
+impl Fence {
+	pub fn add_into(graph: &mut DataFlowGraph, sources: Resizable<Link, 4>) -> u32 {
+		let node = Node::Fence(Self { sources });
 
-		Link(graph.add_node(node), 0)
+		graph.add_node(node)
 	}
 }
 
@@ -45,13 +45,11 @@ impl Apply {
 		function: Link,
 		arguments: Vec<Link>,
 		results: u16,
-		states: u16,
 	) -> u32 {
 		let node = Node::Apply(Self {
 			function,
 			arguments,
 			results,
-			states,
 		});
 
 		graph.add_node(node)
