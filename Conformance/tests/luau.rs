@@ -3,6 +3,7 @@ use std::{
 	fs::File,
 	io::{BufWriter, Write},
 	path::{Path, PathBuf},
+	sync::Arc,
 };
 
 use datatest_stable::Result;
@@ -23,6 +24,8 @@ mod common;
 
 const HARNESS_START_SOURCE: &str = include_str!("harness/luau.start.luau");
 const HARNESS_END_SOURCE: &str = include_str!("harness/luau.end.luau");
+
+const REPETITION_COUNT: usize = 32;
 
 struct Luau {
 	library_sections: LibrarySections,
@@ -546,7 +549,7 @@ impl Visitor for Luau {
 	}
 }
 
-fn get_path_target(name: &OsStr, optimized: bool, native: bool) -> Result<PathBuf> {
+fn get_path_target(name: &OsStr, optimized: bool, native: bool) -> Result<Arc<Path>> {
 	let mut path = PathBuf::new();
 
 	path.push(env!("CARGO_TARGET_TMPDIR"));
@@ -558,7 +561,7 @@ fn get_path_target(name: &OsStr, optimized: bool, native: bool) -> Result<PathBu
 	path.push(name);
 	path.set_extension("luau");
 
-	Ok(path)
+	Ok(path.into())
 }
 
 fn compile_test(destination: &Path, source: &str, optimized: bool) -> Result<()> {
@@ -575,7 +578,7 @@ fn compile_test(destination: &Path, source: &str, optimized: bool) -> Result<()>
 	Ok(())
 }
 
-fn run_file(destination: &Path, optimized: bool, native: bool) -> Result<Box<str>> {
+fn run_file(destination: &Path, optimized: bool, native: bool) -> std::io::Result<Box<str>> {
 	let mut arguments = vec![OsStr::new(if optimized { "-O2" } else { "-O0" })];
 
 	if native {
@@ -596,9 +599,20 @@ fn run_and_assert(path: &Path, optimized: bool, native: bool) -> Result<()> {
 
 	compile_test(&destination, &source, optimized)?;
 
-	let output = run_file(&destination, optimized, native)?;
+	let mut handles = Vec::with_capacity(REPETITION_COUNT);
 
-	assert!(output.is_empty(), "{output}");
+	for _ in 0..REPETITION_COUNT {
+		let destination = Arc::clone(&destination);
+		let handle = std::thread::spawn(move || run_file(&destination, optimized, native));
+
+		handles.push(handle);
+	}
+
+	for (index, handle) in handles.into_iter().enumerate() {
+		let output = handle.join().unwrap()?;
+
+		assert!(output.is_empty(), "run {index} {output}");
+	}
 
 	Ok(())
 }

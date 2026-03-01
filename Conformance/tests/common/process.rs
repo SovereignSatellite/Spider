@@ -37,7 +37,7 @@ fn push_all_output(child: Child, out: &mut String) -> Result<()> {
 }
 
 pub fn run(path: &OsStr, arguments: &[&OsStr]) -> Result<Box<str>> {
-	const TEST_TIMEOUT: Duration = Duration::from_secs(1);
+	const TEST_TIMEOUT: Duration = Duration::from_secs(4);
 
 	let mut child = Command::new(path)
 		.args(arguments)
