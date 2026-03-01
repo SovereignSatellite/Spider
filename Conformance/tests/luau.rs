@@ -32,12 +32,13 @@ struct Luau {
 	compiler: Compiler,
 	builder: LuauBuilder,
 	printer: LuauPrinter,
+	optimized: bool,
 
 	file: Vec<u8>,
 }
 
 impl Luau {
-	fn new() -> Self {
+	fn new(optimized: bool) -> Self {
 		let mut library_sections = LibrarySections::with_built_ins();
 
 		library_sections.parse_from(HARNESS_START_SOURCE);
@@ -51,6 +52,7 @@ impl Luau {
 			compiler: Compiler::new(),
 			builder: LuauBuilder::new(),
 			printer: LuauPrinter::new(),
+			optimized,
 
 			file: Vec::new(),
 		}
@@ -75,7 +77,7 @@ impl Luau {
 	}
 
 	fn fmt_source(&mut self, data: &[u8]) -> Result<()> {
-		let graph = self.compiler.run(data);
+		let graph = self.compiler.run(data, self.optimized);
 		let tree = self.builder.run(&graph);
 
 		NamesFinder::new(&mut self.references).run(&tree);
@@ -559,8 +561,8 @@ fn get_path_target(name: &OsStr, optimized: bool, native: bool) -> Result<PathBu
 	Ok(path)
 }
 
-fn compile_test(destination: &Path, source: &str) -> Result<()> {
-	let mut luau = Luau::new();
+fn compile_test(destination: &Path, source: &str, optimized: bool) -> Result<()> {
+	let mut luau = Luau::new(optimized);
 
 	luau.visit(source)?;
 
@@ -592,7 +594,7 @@ fn run_and_assert(path: &Path, optimized: bool, native: bool) -> Result<()> {
 	let source = std::fs::read_to_string(path)?;
 	let destination = get_path_target(path.file_name().unwrap(), optimized, native)?;
 
-	compile_test(&destination, &source)?;
+	compile_test(&destination, &source, optimized)?;
 
 	let output = run_file(&destination, optimized, native)?;
 
