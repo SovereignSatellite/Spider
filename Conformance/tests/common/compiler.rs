@@ -78,11 +78,13 @@ impl Compiler {
 		}
 	}
 
-	pub fn run(&mut self, data: &[u8]) -> DataFlowGraph {
+	pub fn run(&mut self, data: &[u8], optimize: bool) -> DataFlowGraph {
 		let mut graph = DataFlowGraph::new();
+		let mut omega = self.web_assembly_lifter.run(&mut graph, data);
 
-		let omega = self.web_assembly_lifter.run(&mut graph, data);
-		let omega = self.optimizer.apply(&mut graph, omega);
+		if optimize {
+			omega = self.optimizer.apply(&mut graph, omega);
+		}
 
 		self.optimizer.finalize(&mut graph, omega);
 

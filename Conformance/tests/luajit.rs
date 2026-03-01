@@ -2,7 +2,8 @@ use std::{
 	ffi::OsStr,
 	fs::File,
 	io::{BufWriter, Write},
-	path::Path,
+	path::{Path, PathBuf},
+	sync::Arc,
 };
 
 use datatest_stable::Result;
@@ -17,13 +18,14 @@ use wast::{
 	token::{F32, F64, Id, Span},
 };
 
-use common::{compiler::Compiler, glue, visitor::Visitor};
+use common::{compiler::Compiler, process, visitor::Visitor};
 
 mod common;
 
 const HARNESS_START_SOURCE: &str = include_str!("harness/luajit.start.lua");
 const HARNESS_END_SOURCE: &str = include_str!("harness/luajit.end.lua");
-const PROGRAM_NAME: &str = "luajit";
+
+const REPETITION_COUNT: usize = 32;
 
 struct LuaJIT {
 	library_sections: LibrarySections,
@@ -33,12 +35,13 @@ struct LuaJIT {
 	compiler: Compiler,
 	builder: LuaJITBuilder,
 	printer: LuaJITPrinter,
+	optimized: bool,
 
 	file: Vec<u8>,
 }
 
 impl LuaJIT {
-	fn new() -> Self {
+	fn new(optimized: bool) -> Self {
 		let mut library_sections = LibrarySections::with_built_ins();
 
 		library_sections.parse_from(HARNESS_START_SOURCE);
@@ -52,6 +55,7 @@ impl LuaJIT {
 			compiler: Compiler::new(),
 			builder: LuaJITBuilder::new(),
 			printer: LuaJITPrinter::new(),
+			optimized,
 
 			file: Vec::new(),
 		}
@@ -76,7 +80,7 @@ impl LuaJIT {
 	}
 
 	fn fmt_source(&mut self, data: &[u8]) -> Result<()> {
-		let graph = self.compiler.run(data);
+		let graph = self.compiler.run(data, self.optimized);
 		let tree = self.builder.run(&graph);
 
 		NamesFinder::new(&mut self.references).run(&tree);
@@ -513,8 +517,23 @@ impl Visitor for LuaJIT {
 	}
 }
 
-fn compile_into(destination: &Path, source: &str) -> Result<()> {
-	let mut luajit = LuaJIT::new();
+fn get_path_target(name: &OsStr, optimized: bool, native: bool) -> Result<Arc<Path>> {
+	let mut path = PathBuf::new();
+
+	path.push(env!("CARGO_TARGET_TMPDIR"));
+	path.push(if native { "native" } else { "interpreter" });
+	path.push(if optimized { "O3" } else { "O0" });
+
+	std::fs::create_dir_all(&path)?;
+
+	path.push(name);
+	path.set_extension("luajit.lua");
+
+	Ok(path.into())
+}
+
+fn compile_test(destination: &Path, source: &str, optimized: bool) -> Result<()> {
+	let mut luajit = LuaJIT::new(optimized);
 
 	luajit.visit(source)?;
 
@@ -527,40 +546,57 @@ fn compile_into(destination: &Path, source: &str) -> Result<()> {
 	Ok(())
 }
 
-fn compile_and_run(path: &Path, optimized: bool, native: bool) -> Result<()> {
-	let program = std::env::var_os("LUAJIT_PATH").unwrap_or_else(|| PROGRAM_NAME.into());
-	let source = std::fs::read_to_string(path)?;
-	let destination = glue::get_path_target("luajit.lua".as_ref(), path.file_name().unwrap());
-
-	glue::enable_back_trace();
-
-	compile_into(&destination, &source)?;
-
-	let arguments = vec![
-		destination.as_ref(),
+fn run_file(destination: &Path, optimized: bool, native: bool) -> std::io::Result<Box<str>> {
+	let arguments = [
 		OsStr::new(if optimized { "-O3" } else { "-O0" }),
 		OsStr::new(if native { "-jon" } else { "-joff" }),
+		destination.as_ref(),
 	];
 
-	glue::run(&program, &arguments)?;
+	let program = std::env::var_os("LUAJIT_PATH").unwrap_or_else(|| "luajit".into());
+	let output = process::run(&program, &arguments)?;
+
+	Ok(output)
+}
+
+fn run_and_assert(path: &Path, optimized: bool, native: bool) -> Result<()> {
+	let source = std::fs::read_to_string(path)?;
+	let destination = get_path_target(path.file_name().unwrap(), optimized, native)?;
+
+	compile_test(&destination, &source, optimized)?;
+
+	let mut handles = Vec::with_capacity(REPETITION_COUNT);
+
+	for _ in 0..REPETITION_COUNT {
+		let destination = Arc::clone(&destination);
+		let handle = std::thread::spawn(move || run_file(&destination, optimized, native));
+
+		handles.push(handle);
+	}
+
+	for (index, handle) in handles.into_iter().enumerate() {
+		let output = handle.join().unwrap()?;
+
+		assert!(output.is_empty(), "run {index} {output}");
+	}
 
 	Ok(())
 }
 
 fn bytecode_o0(path: &Path) -> datatest_stable::Result<()> {
-	crate::compile_and_run(path, false, false)
+	crate::run_and_assert(path, false, false)
 }
 
 fn bytecode_o3(path: &Path) -> datatest_stable::Result<()> {
-	crate::compile_and_run(path, true, false)
+	crate::run_and_assert(path, true, false)
 }
 
 fn native_o0(path: &Path) -> datatest_stable::Result<()> {
-	crate::compile_and_run(path, false, true)
+	crate::run_and_assert(path, false, true)
 }
 
 fn native_o3(path: &Path) -> datatest_stable::Result<()> {
-	crate::compile_and_run(path, true, true)
+	crate::run_and_assert(path, true, true)
 }
 
 datatest_stable::harness! {
