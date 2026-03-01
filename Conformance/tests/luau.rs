@@ -2,7 +2,7 @@ use std::{
 	ffi::OsStr,
 	fs::File,
 	io::{BufWriter, Write},
-	path::Path,
+	path::{Path, PathBuf},
 };
 
 use datatest_stable::Result;
@@ -17,13 +17,12 @@ use wast::{
 	token::{F32, F64, Id, Span},
 };
 
-use common::{compiler::Compiler, glue, visitor::Visitor};
+use common::{compiler::Compiler, process, visitor::Visitor};
 
 mod common;
 
 const HARNESS_START_SOURCE: &str = include_str!("harness/luau.start.luau");
 const HARNESS_END_SOURCE: &str = include_str!("harness/luau.end.luau");
-const PROGRAM_NAME: &str = "luau";
 
 struct Luau {
 	library_sections: LibrarySections,
@@ -545,7 +544,22 @@ impl Visitor for Luau {
 	}
 }
 
-fn compile_into(destination: &Path, source: &str) -> Result<()> {
+fn get_path_target(name: &OsStr, optimized: bool, native: bool) -> Result<PathBuf> {
+	let mut path = PathBuf::new();
+
+	path.push(env!("CARGO_TARGET_TMPDIR"));
+	path.push(if native { "native" } else { "interpreter" });
+	path.push(if optimized { "O2" } else { "O0" });
+
+	std::fs::create_dir_all(&path)?;
+
+	path.push(name);
+	path.set_extension("luau");
+
+	Ok(path)
+}
+
+fn compile_test(destination: &Path, source: &str) -> Result<()> {
 	let mut luau = Luau::new();
 
 	luau.visit(source)?;
@@ -559,43 +573,48 @@ fn compile_into(destination: &Path, source: &str) -> Result<()> {
 	Ok(())
 }
 
-fn compile_and_run(path: &Path, optimized: bool, native: bool) -> Result<()> {
-	let program = std::env::var_os("LUAU_PATH").unwrap_or_else(|| PROGRAM_NAME.into());
-	let source = std::fs::read_to_string(path)?;
-	let destination = glue::get_path_target("luau".as_ref(), path.file_name().unwrap());
-
-	glue::enable_back_trace();
-
-	compile_into(&destination, &source)?;
-
-	let mut arguments = vec![
-		destination.as_ref(),
-		OsStr::new(if optimized { "-O2" } else { "-O0" }),
-	];
+fn run_file(destination: &Path, optimized: bool, native: bool) -> Result<Box<str>> {
+	let mut arguments = vec![OsStr::new(if optimized { "-O2" } else { "-O0" })];
 
 	if native {
 		arguments.push(OsStr::new("--codegen"));
 	}
 
-	glue::run(&program, &arguments)?;
+	arguments.push(destination.as_ref());
+
+	let program = std::env::var_os("LUAU_PATH").unwrap_or_else(|| "luau".into());
+	let output = process::run(&program, &arguments)?;
+
+	Ok(output)
+}
+
+fn run_and_assert(path: &Path, optimized: bool, native: bool) -> Result<()> {
+	let source = std::fs::read_to_string(path)?;
+	let destination = get_path_target(path.file_name().unwrap(), optimized, native)?;
+
+	compile_test(&destination, &source)?;
+
+	let output = run_file(&destination, optimized, native)?;
+
+	assert!(output.is_empty(), "{output}");
 
 	Ok(())
 }
 
-fn bytecode_o0(path: &Path) -> datatest_stable::Result<()> {
-	crate::compile_and_run(path, false, false)
+fn bytecode_o0(path: &Path) -> Result<()> {
+	crate::run_and_assert(path, false, false)
 }
 
-fn bytecode_o2(path: &Path) -> datatest_stable::Result<()> {
-	crate::compile_and_run(path, true, false)
+fn bytecode_o2(path: &Path) -> Result<()> {
+	crate::run_and_assert(path, true, false)
 }
 
-fn native_o0(path: &Path) -> datatest_stable::Result<()> {
-	crate::compile_and_run(path, false, true)
+fn native_o0(path: &Path) -> Result<()> {
+	crate::run_and_assert(path, false, true)
 }
 
-fn native_o2(path: &Path) -> datatest_stable::Result<()> {
-	crate::compile_and_run(path, true, true)
+fn native_o2(path: &Path) -> Result<()> {
+	crate::run_and_assert(path, true, true)
 }
 
 datatest_stable::harness! {

@@ -1,17 +1,9 @@
 use std::{
 	ffi::OsStr,
 	io::{Read, Result},
-	path::{Path, PathBuf},
 	process::{Child, Command, ExitStatus, Stdio},
 	time::{Duration, Instant},
 };
-
-pub fn enable_back_trace() {
-	// SAFETY: I'm not sure, but it's not a problem in practice.
-	unsafe {
-		std::env::set_var("RUST_BACKTRACE", "1");
-	}
-}
 
 fn poll_until_timeout(child: &mut Child, duration: Duration) -> Result<ExitStatus> {
 	let now = Instant::now();
@@ -32,7 +24,7 @@ fn poll_until_timeout(child: &mut Child, duration: Duration) -> Result<ExitStatu
 	))
 }
 
-fn fmt_process_output(child: Child, out: &mut String) -> Result<()> {
+fn push_all_output(child: Child, out: &mut String) -> Result<()> {
 	let Child { stdout, stderr, .. } = child;
 
 	out.push_str("\nTEST STANDARD ERROR\n");
@@ -44,15 +36,7 @@ fn fmt_process_output(child: Child, out: &mut String) -> Result<()> {
 	Ok(())
 }
 
-pub fn get_path_target(extension: &OsStr, name: &OsStr) -> PathBuf {
-	const TEMP_DIRECTORY: &str = env!("CARGO_TARGET_TMPDIR");
-
-	Path::new(TEMP_DIRECTORY)
-		.join(name)
-		.with_extension(extension)
-}
-
-pub fn run(path: &OsStr, arguments: &[&OsStr]) -> Result<()> {
+pub fn run(path: &OsStr, arguments: &[&OsStr]) -> Result<Box<str>> {
 	const TEST_TIMEOUT: Duration = Duration::from_secs(1);
 
 	let mut child = Command::new(path)
@@ -62,16 +46,13 @@ pub fn run(path: &OsStr, arguments: &[&OsStr]) -> Result<()> {
 		.spawn()?;
 
 	let mut output = match poll_until_timeout(&mut child, TEST_TIMEOUT) {
-		Ok(status) if status.success() => return Ok(()),
-		Ok(_) => String::new(),
+		Ok(status) if status.success() => return Ok(Box::default()),
+
+		Ok(status) => status.to_string(),
 		Err(error) => error.to_string(),
 	};
 
-	fmt_process_output(child, &mut output)?;
+	push_all_output(child, &mut output)?;
 
-	if output.is_empty() {
-		Ok(())
-	} else {
-		panic!("{output}");
-	}
+	Ok(output.into_boxed_str())
 }

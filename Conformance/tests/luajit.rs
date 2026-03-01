@@ -2,7 +2,7 @@ use std::{
 	ffi::OsStr,
 	fs::File,
 	io::{BufWriter, Write},
-	path::Path,
+	path::{Path, PathBuf},
 };
 
 use datatest_stable::Result;
@@ -17,13 +17,12 @@ use wast::{
 	token::{F32, F64, Id, Span},
 };
 
-use common::{compiler::Compiler, glue, visitor::Visitor};
+use common::{compiler::Compiler, process, visitor::Visitor};
 
 mod common;
 
 const HARNESS_START_SOURCE: &str = include_str!("harness/luajit.start.lua");
 const HARNESS_END_SOURCE: &str = include_str!("harness/luajit.end.lua");
-const PROGRAM_NAME: &str = "luajit";
 
 struct LuaJIT {
 	library_sections: LibrarySections,
@@ -513,7 +512,22 @@ impl Visitor for LuaJIT {
 	}
 }
 
-fn compile_into(destination: &Path, source: &str) -> Result<()> {
+fn get_path_target(name: &OsStr, optimized: bool, native: bool) -> Result<PathBuf> {
+	let mut path = PathBuf::new();
+
+	path.push(env!("CARGO_TARGET_TMPDIR"));
+	path.push(if native { "native" } else { "interpreter" });
+	path.push(if optimized { "O3" } else { "O0" });
+
+	std::fs::create_dir_all(&path)?;
+
+	path.push(name);
+	path.set_extension("luajit.lua");
+
+	Ok(path)
+}
+
+fn compile_test(destination: &Path, source: &str) -> Result<()> {
 	let mut luajit = LuaJIT::new();
 
 	luajit.visit(source)?;
@@ -527,40 +541,46 @@ fn compile_into(destination: &Path, source: &str) -> Result<()> {
 	Ok(())
 }
 
-fn compile_and_run(path: &Path, optimized: bool, native: bool) -> Result<()> {
-	let program = std::env::var_os("LUAJIT_PATH").unwrap_or_else(|| PROGRAM_NAME.into());
-	let source = std::fs::read_to_string(path)?;
-	let destination = glue::get_path_target("luajit.lua".as_ref(), path.file_name().unwrap());
-
-	glue::enable_back_trace();
-
-	compile_into(&destination, &source)?;
-
-	let arguments = vec![
-		destination.as_ref(),
+fn run_file(destination: &Path, optimized: bool, native: bool) -> Result<Box<str>> {
+	let arguments = [
 		OsStr::new(if optimized { "-O3" } else { "-O0" }),
 		OsStr::new(if native { "-jon" } else { "-joff" }),
+		destination.as_ref(),
 	];
 
-	glue::run(&program, &arguments)?;
+	let program = std::env::var_os("LUAJIT_PATH").unwrap_or_else(|| "luajit".into());
+	let output = process::run(&program, &arguments)?;
+
+	Ok(output)
+}
+
+fn run_and_assert(path: &Path, optimized: bool, native: bool) -> Result<()> {
+	let source = std::fs::read_to_string(path)?;
+	let destination = get_path_target(path.file_name().unwrap(), optimized, native)?;
+
+	compile_test(&destination, &source)?;
+
+	let output = run_file(&destination, optimized, native)?;
+
+	assert!(output.is_empty(), "{output}");
 
 	Ok(())
 }
 
 fn bytecode_o0(path: &Path) -> datatest_stable::Result<()> {
-	crate::compile_and_run(path, false, false)
+	crate::run_and_assert(path, false, false)
 }
 
 fn bytecode_o3(path: &Path) -> datatest_stable::Result<()> {
-	crate::compile_and_run(path, true, false)
+	crate::run_and_assert(path, true, false)
 }
 
 fn native_o0(path: &Path) -> datatest_stable::Result<()> {
-	crate::compile_and_run(path, false, true)
+	crate::run_and_assert(path, false, true)
 }
 
 fn native_o3(path: &Path) -> datatest_stable::Result<()> {
-	crate::compile_and_run(path, true, true)
+	crate::run_and_assert(path, true, true)
 }
 
 datatest_stable::harness! {
