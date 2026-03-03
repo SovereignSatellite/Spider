@@ -1,0 +1,9 @@
+[package]
+name = "json-printer"
+version = "1.0.0"
+edition = "2024"
+
+[dependencies]
+ir-graph = { path = "../../IR/Graph" }
+
+hashbrown.workspace = true

@@ -8,7 +8,7 @@ pub enum Source {
 
 #[derive(Clone, Copy, ValueEnum)]
 pub enum Target {
-	Dot,
+	Json,
 	Luau,
 	LuaJIT,
 }

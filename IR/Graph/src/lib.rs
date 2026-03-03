@@ -3,7 +3,6 @@
 
 extern crate alloc;
 
-mod dot;
 mod link;
 mod node;
 
@@ -12,7 +11,6 @@ use alloc::vec::Vec;
 pub use list;
 
 pub use self::{
-	dot::Dot,
 	link::Link,
 	node::{Node, control, simple},
 };

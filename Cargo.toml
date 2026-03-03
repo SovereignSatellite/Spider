@@ -5,6 +5,7 @@ members = [
 	"Sources/TuringMachine",
 	"Sources/WebAssembly/*",
 	"IR/*",
+	"Targets/Json",
 	"Targets/Luau/*",
 	"Targets/LuaJIT/*",
 	"CLI"
