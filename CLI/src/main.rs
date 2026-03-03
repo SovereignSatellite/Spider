@@ -38,7 +38,7 @@ fn print_graph(graph: &DataFlowGraph, target: Target) {
 	let mut output = lock_standard_output();
 
 	match target {
-		Target::Dot => targets::into_dot(graph, &mut output),
+		Target::Json => targets::into_json(graph, &mut output),
 		Target::Luau => targets::into_luau(graph, &mut output),
 		Target::LuaJIT => targets::into_luajit(graph, &mut output),
 	}
