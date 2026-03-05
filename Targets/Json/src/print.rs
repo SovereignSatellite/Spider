@@ -29,7 +29,7 @@ impl<T: Print> Print for [T] {
 			T::print(first, out)?;
 
 			iter.try_for_each(|item| {
-				write!(out, ", ")?;
+				write!(out, ",")?;
 
 				T::print(item, out)
 			})?;
