@@ -3,6 +3,9 @@ name = "web-assembly-structurer"
 version = "1.0.0"
 edition = "2024"
 
+[lints]
+workspace = true
+
 [dependencies]
 web-assembly-graph = { path = "../Graph" }
 
