@@ -1,4 +1,11 @@
-#![expect(clippy::missing_errors_doc)]
+//! JSON printer for data flow graphs.
+
+extern crate alloc;
+
+mod color;
+mod interner;
+mod label;
+mod print;
 
 use std::io::{Result, Write};
 
@@ -7,12 +14,7 @@ use ir_graph::{
 	control::{GammaOut, LambdaIn, OmegaIn, RegionIn, ThetaIn},
 };
 
-use crate::{color::Color, interner::Interner, print::Print};
-
-mod color;
-mod interner;
-mod label;
-mod print;
+use crate::{color::Color, interner::Interner, print::Print as _};
 
 const fn should_skip_node(node: &Node) -> bool {
 	matches!(
@@ -30,16 +32,68 @@ const fn region_to_subgraph(node: &Node, id: u32) -> Option<(u32, u32, u32)> {
 	let graph = match *node {
 		Node::LambdaIn(LambdaIn { output, .. })
 		| Node::ThetaIn(ThetaIn { output, .. })
-		| Node::OmegaIn(OmegaIn { output, .. }) => (id, id, output),
+		| Node::OmegaIn(OmegaIn { output }) => (id, id, output),
 
 		Node::RegionIn(RegionIn { input, output }) => (input, id, output),
 
-		_ => return None,
+		Node::Apply(_)
+		| Node::F32(_)
+		| Node::F64(_)
+		| Node::Fence(_)
+		| Node::GammaIn(_)
+		| Node::GammaOut(_)
+		| Node::GlobalGet(_)
+		| Node::GlobalNew(_)
+		| Node::GlobalSet(_)
+		| Node::Host(_)
+		| Node::I32(_)
+		| Node::I64(_)
+		| Node::Identity(_)
+		| Node::Import(_)
+		| Node::IntegerBinaryOperation(_)
+		| Node::IntegerCompareOperation(_)
+		| Node::IntegerConvertToNumber(_)
+		| Node::IntegerExtend(_)
+		| Node::IntegerNarrow(_)
+		| Node::IntegerTransmuteToNumber(_)
+		| Node::IntegerUnaryOperation(_)
+		| Node::IntegerWiden(_)
+		| Node::LambdaOut(_)
+		| Node::MemoryCopy(_)
+		| Node::MemoryDrop(_)
+		| Node::MemoryFill(_)
+		| Node::MemoryGrow(_)
+		| Node::MemoryLoad(_)
+		| Node::MemoryNew(_)
+		| Node::MemorySize(_)
+		| Node::MemoryStore(_)
+		| Node::Null
+		| Node::NumberBinaryOperation(_)
+		| Node::NumberCompareOperation(_)
+		| Node::NumberNarrow(_)
+		| Node::NumberTransmuteToInteger(_)
+		| Node::NumberTruncateToInteger(_)
+		| Node::NumberUnaryOperation(_)
+		| Node::NumberWiden(_)
+		| Node::OmegaOut(_)
+		| Node::RefIsNull(_)
+		| Node::RegionOut(_)
+		| Node::TableCopy(_)
+		| Node::TableDrop(_)
+		| Node::TableFill(_)
+		| Node::TableGet(_)
+		| Node::TableGrow(_)
+		| Node::TableNew(_)
+		| Node::TableSet(_)
+		| Node::TableSize(_)
+		| Node::ThetaOut(_)
+		| Node::Trap => return None,
 	};
 
 	Some(graph)
 }
 
+/// A JSON printer for data flow graphs.
 pub struct JsonPrinter {
 	subgraphs: Vec<u32>,
 	nodes: Vec<u32>,
@@ -50,6 +104,7 @@ pub struct JsonPrinter {
 }
 
 impl JsonPrinter {
+	/// Creates a new JSON printer.
 	#[must_use]
 	pub fn new() -> Self {
 		Self {
@@ -67,7 +122,7 @@ impl JsonPrinter {
 			self.scratch.clear();
 
 			label::write(node, &mut self.scratch).unwrap();
-			std::str::from_utf8(&self.scratch).unwrap()
+			core::str::from_utf8(&self.scratch).unwrap()
 		});
 
 		self.interner.resolve(name)
@@ -151,6 +206,11 @@ impl JsonPrinter {
 		write!(out, "}}")
 	}
 
+	/// Prints the graph as JSON to the given writer.
+	///
+	/// # Errors
+	///
+	/// Returns an error if writing to the output fails.
 	pub fn print(&mut self, graph: &DataFlowGraph, out: &mut dyn Write) -> Result<()> {
 		self.find_all_fields(graph);
 		self.print_all_fields(out)

@@ -1,5 +1,6 @@
 use ir_graph::Node;
 
+#[derive(Clone, Copy)]
 pub enum Color {
 	Blue,
 	Green,
@@ -67,7 +68,7 @@ impl Color {
 		}
 	}
 
-	pub const fn as_string(&self) -> &'static str {
+	pub const fn as_string(self) -> &'static str {
 		match self {
 			Self::Blue => "#8BB1F9",
 			Self::Green => "#A1FC8F",
