@@ -9,7 +9,7 @@ use luajit_tree::expression::{
 	NumberUnaryOperation, NumberWiden, RefIsNull, Scoped, TableGet, TableGrow, TableNew, TableSize,
 };
 
-use crate::{LuaJITPrinter, library::NeedsName, print::Print};
+use crate::{LuaJITPrinter, library::NeedsName as _, print::Print};
 
 pub fn fmt_delimited<T, I>(items: I, printer: &mut LuaJITPrinter, out: &mut dyn Write) -> Result<()>
 where
@@ -173,12 +173,12 @@ impl Print for Import {
 
 		environment.print(printer, out)?;
 
-		let namespace = namespace.as_bytes().escape_ascii();
-		let identifier = identifier.as_bytes().escape_ascii();
+		let escaped_namespace = namespace.as_bytes().escape_ascii();
+		let escaped_identifier = identifier.as_bytes().escape_ascii();
 
 		write!(
 			out,
-			"[\"{namespace}\"][\"{identifier}\"], '`{namespace}.{identifier}` should be present')"
+			"[\"{escaped_namespace}\"][\"{escaped_identifier}\"], '`{escaped_namespace}.{escaped_identifier}` should be present')"
 		)
 	}
 }
