@@ -1,3 +1,6 @@
+//! Dead port elimination.
+
+use alloc::vec::Vec;
 use hashbrown::HashMap;
 use ir_graph::{
 	DataFlowGraph, Link, Node,
@@ -5,6 +8,7 @@ use ir_graph::{
 };
 use set::Set;
 
+/// Eliminates dead (unused) ports from control flow regions.
 pub struct DeadPortEliminator {
 	map: HashMap<Link, Link>,
 
@@ -13,6 +17,7 @@ pub struct DeadPortEliminator {
 }
 
 impl DeadPortEliminator {
+	/// Creates a new dead port eliminator.
 	#[must_use]
 	pub fn new() -> Self {
 		Self {
@@ -58,8 +63,8 @@ impl DeadPortEliminator {
 		self.add_region_sides(results, id);
 	}
 
-	fn mark_region_in(&mut self, node: &RegionIn, port: u16) {
-		let RegionIn { input, .. } = *node;
+	fn mark_region_in(&mut self, node: RegionIn, port: u16) {
+		let RegionIn { input, .. } = node;
 
 		self.add_predecessor(Link(input, port));
 	}
@@ -133,14 +138,61 @@ impl DeadPortEliminator {
 			match graph.get(id) {
 				Node::LambdaIn(node) => self.mark_lambda_in(node, id),
 				Node::LambdaOut(node) => self.mark_lambda_out(node, id),
-				Node::RegionIn(node) => self.mark_region_in(node, port),
+				Node::RegionIn(node) => self.mark_region_in(*node, port),
 				Node::RegionOut(node) => self.mark_region_out(node, port),
 				Node::GammaIn(node) => self.mark_gamma_in(graph, node, port),
 				Node::GammaOut(node) => self.mark_gamma_out(graph, node, port),
 				Node::ThetaIn(node) => self.mark_theta_in(node, port),
 				Node::ThetaOut(node) => self.mark_theta_out(node, port),
 
-				node => self.mark_operation(node),
+				node @ (Node::OmegaIn(_)
+				| Node::OmegaOut(_)
+				| Node::Import(_)
+				| Node::Host(_)
+				| Node::Trap
+				| Node::Null
+				| Node::I32(_)
+				| Node::I64(_)
+				| Node::F32(_)
+				| Node::F64(_)
+				| Node::Identity(_)
+				| Node::Fence(_)
+				| Node::Apply(_)
+				| Node::RefIsNull(_)
+				| Node::IntegerUnaryOperation(_)
+				| Node::IntegerBinaryOperation(_)
+				| Node::IntegerCompareOperation(_)
+				| Node::IntegerNarrow(_)
+				| Node::IntegerWiden(_)
+				| Node::IntegerExtend(_)
+				| Node::IntegerConvertToNumber(_)
+				| Node::IntegerTransmuteToNumber(_)
+				| Node::NumberUnaryOperation(_)
+				| Node::NumberBinaryOperation(_)
+				| Node::NumberCompareOperation(_)
+				| Node::NumberNarrow(_)
+				| Node::NumberWiden(_)
+				| Node::NumberTruncateToInteger(_)
+				| Node::NumberTransmuteToInteger(_)
+				| Node::GlobalNew(_)
+				| Node::GlobalGet(_)
+				| Node::GlobalSet(_)
+				| Node::TableNew(_)
+				| Node::TableGet(_)
+				| Node::TableSet(_)
+				| Node::TableSize(_)
+				| Node::TableGrow(_)
+				| Node::TableFill(_)
+				| Node::TableCopy(_)
+				| Node::TableDrop(_)
+				| Node::MemoryNew(_)
+				| Node::MemoryLoad(_)
+				| Node::MemoryStore(_)
+				| Node::MemorySize(_)
+				| Node::MemoryGrow(_)
+				| Node::MemoryFill(_)
+				| Node::MemoryCopy(_)
+				| Node::MemoryDrop(_)) => self.mark_operation(node),
 			}
 		}
 	}
@@ -194,6 +246,7 @@ impl DeadPortEliminator {
 		}
 	}
 
+	/// Runs the dead port elimination pass on the graph.
 	pub fn run(&mut self, graph: &mut DataFlowGraph, result: Link) {
 		self.mark(graph, result);
 		self.sweep(graph);
