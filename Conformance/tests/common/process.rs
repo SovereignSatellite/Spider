@@ -1,8 +1,9 @@
+use core::time::Duration;
 use std::{
 	ffi::OsStr,
-	io::{Read, Result},
+	io::{Read as _, Result},
 	process::{Child, Command, ExitStatus, Stdio},
-	time::{Duration, Instant},
+	time::Instant,
 };
 
 fn poll_until_timeout(child: &mut Child, duration: Duration) -> Result<ExitStatus> {

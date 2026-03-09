@@ -32,8 +32,8 @@ impl SingleExitPatcher {
 		while let Some(id) = self.stack.pop() {
 			let mut sink = true;
 
-			for id in graph.successors(id) {
-				self.add_successor(id);
+			for successor_id in graph.successors(id) {
+				self.add_successor(successor_id);
 
 				sink = false;
 			}

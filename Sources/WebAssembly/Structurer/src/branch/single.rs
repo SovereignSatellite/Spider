@@ -24,40 +24,39 @@ impl Single {
 
 	fn has_assignment_in_branch(&self, graph: &ControlFlowGraph) -> bool {
 		self.points.iter().any(|&id| {
-			graph.predecessors(id).any(|id| {
-				graph.has_assignment(id, Name::A) && self.edges.iter().any(|edge| edge.0 == id)
+			graph.predecessors(id).any(|pred_id| {
+				graph.has_assignment(pred_id, Name::A)
+					&& self.edges.iter().any(|edge| edge.0 == pred_id)
 			})
 		})
 	}
 
 	fn has_assignment_in_tail(&self, graph: &ControlFlowGraph) -> bool {
 		self.points.iter().any(|&id| {
-			graph.predecessors(id).any(|id| {
-				graph.has_assignment(id, Name::A) && self.edges.iter().all(|edge| edge.0 != id)
+			graph.predecessors(id).any(|pred_id| {
+				graph.has_assignment(pred_id, Name::A)
+					&& self.edges.iter().all(|edge| edge.0 != pred_id)
 			})
 		})
 	}
 
 	fn exclude_last_assignments(&mut self, graph: &ControlFlowGraph) {
 		let excluded = self.points.iter().flat_map(|&id| {
-			graph.predecessors(id).filter_map(|id| {
-				if graph.has_assignment(id, Name::A) {
+			graph
+				.predecessors(id)
+				.filter(|&id| graph.has_assignment(id, Name::A))
+				.map(|id| {
 					let mut predecessors = graph.predecessors(id);
 
-					let id = if let Some(id) = predecessors.next()
+					if let Some(pred_id) = predecessors.next()
 						&& predecessors.next().is_none()
-						&& graph.has_assignment(id, Name::C)
+						&& graph.has_assignment(pred_id, Name::C)
 					{
-						id
+						pred_id
 					} else {
 						id
-					};
-
-					Some(id)
-				} else {
-					None
-				}
-			})
+					}
+				})
 		});
 
 		self.continuation_finder.set_excluded(excluded);

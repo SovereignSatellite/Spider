@@ -1,3 +1,7 @@
+mod basic_block_lifter;
+mod dependency_map;
+mod region_stack;
+
 use alloc::vec::Vec;
 use ir_graph::{
 	DataFlowGraph, Link,
@@ -8,13 +12,8 @@ use web_assembly_liveness::{locals::Locals, references::Reference};
 
 use self::{basic_block_lifter::BasicBlockLifter, region_stack::RegionStack};
 
-mod basic_block_lifter;
-mod dependency_map;
-mod region_stack;
-
 pub struct ControlFlowLifter {
 	basic_block_lifter: BasicBlockLifter,
-
 	region_stack: RegionStack,
 	successors: Vec<u16>,
 }
@@ -149,9 +148,9 @@ impl ControlFlowLifter {
 		local_types: &[ValueType],
 		dependencies: &[Reference],
 	) {
-		let LambdaIn { r#type, .. } = graph.get(lambda_in).as_lambda_in().unwrap();
+		let LambdaIn { kind, .. } = graph.get(lambda_in).as_lambda_in().unwrap();
 
-		let arguments = r#type.arguments.len();
+		let arguments = kind.arguments.len();
 
 		self.basic_block_lifter
 			.set_function_inputs(lambda_in, arguments, dependencies);
@@ -168,9 +167,9 @@ impl ControlFlowLifter {
 		lambda_in: u32,
 		locals: &Locals,
 	) -> Vec<Link> {
-		let LambdaIn { r#type, .. } = data_flow_graph.get(lambda_in).as_lambda_in().unwrap();
+		let LambdaIn { kind, .. } = data_flow_graph.get(lambda_in).as_lambda_in().unwrap();
 
-		let results = r#type.results.len();
+		let results = kind.results.len();
 
 		for id in control_flow_graph.block_ids() {
 			self.handle_basic_block(data_flow_graph, control_flow_graph, id, locals);

@@ -4,7 +4,7 @@ use ir_graph::DataFlowGraph;
 use luajit_builder::LuaJITBuilder;
 use luajit_printer::{
 	LuaJITPrinter,
-	library::{LibraryPrinter, LibrarySections, NamesFinder},
+	library::{NamesFinder, Printer as LibraryPrinter, Sections as LibrarySections},
 };
 use luajit_tree::LuaJITTree;
 

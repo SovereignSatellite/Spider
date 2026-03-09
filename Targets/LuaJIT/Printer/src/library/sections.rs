@@ -1,6 +1,10 @@
+/// A parsed runtime library section.
 pub struct Section {
+	/// The section dependency references.
 	pub references: Box<[&'static str]>,
+	/// The section name.
 	pub name: &'static str,
+	/// The section source contents.
 	pub contents: &'static str,
 }
 
@@ -42,6 +46,7 @@ impl Section {
 		(content.trim(), source)
 	}
 
+	/// Tries to parse a section from the given source.
 	pub fn try_parse(source: &'static str) -> Option<(Self, &'static str)> {
 		let (name, source) = Self::try_parse_header(source, Self::SECTION_HEADER)?;
 		let (references, source) = Self::parse_references(source);
@@ -63,24 +68,36 @@ impl Section {
 	}
 }
 
+/// A collection of runtime library sections.
 pub struct Sections {
 	list: Vec<Section>,
 }
 
 impl Sections {
+	/// The bit library source.
 	pub const BIT_SOURCE: &str = include_str!("../../runtime/builtin/bit.lua");
+	/// The FFI library source.
 	pub const FFI_SOURCE: &str = include_str!("../../runtime/builtin/ffi.lua");
+	/// The math library source.
 	pub const MATH_SOURCE: &str = include_str!("../../runtime/builtin/math.lua");
 
+	/// The F32 assembly source.
 	pub const F32_ASSEMBLY_SOURCE: &str = include_str!("../../runtime/assembly/f32.lua");
 
+	/// The I32 core source.
 	pub const I32_SOURCE: &str = include_str!("../../runtime/core/i32.lua");
+	/// The I64 core source.
 	pub const I64_SOURCE: &str = include_str!("../../runtime/core/i64.lua");
+	/// The F32 core source.
 	pub const F32_SOURCE: &str = include_str!("../../runtime/core/f32.lua");
+	/// The F64 core source.
 	pub const F64_SOURCE: &str = include_str!("../../runtime/core/f64.lua");
+	/// The table core source.
 	pub const TABLE_SOURCE: &str = include_str!("../../runtime/core/table.lua");
+	/// The memory core source.
 	pub const MEMORY_SOURCE: &str = include_str!("../../runtime/core/memory.lua");
 
+	/// Creates a new section collection with all built-in sources.
 	#[must_use]
 	pub fn with_built_ins() -> Self {
 		let mut sections = Self { list: Vec::new() };
@@ -103,6 +120,11 @@ impl Sections {
 		sections
 	}
 
+	/// Parses sections from a source string.
+	///
+	/// # Panics
+	///
+	/// Panics if there is trailing unparsed data.
 	pub fn parse_from(&mut self, mut source: &'static str) {
 		while let Some((section, next)) = Section::try_parse(source) {
 			self.list.push(section);
@@ -113,6 +135,11 @@ impl Sections {
 		assert!(source.is_empty(), "trailing data in source\n{source}");
 	}
 
+	/// Sorts and validates sections, checking for duplicates.
+	///
+	/// # Panics
+	///
+	/// Panics if duplicate section names are found.
 	pub fn resolve(&mut self) {
 		self.list.sort_unstable_by_key(|&Section { name, .. }| name);
 
@@ -124,6 +151,11 @@ impl Sections {
 		}
 	}
 
+	/// Finds a section by name.
+	///
+	/// # Panics
+	///
+	/// Panics if the section is not found.
 	#[must_use]
 	pub fn find(&self, name: &'static str) -> &Section {
 		let position = self

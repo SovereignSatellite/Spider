@@ -4,7 +4,7 @@ use ir_graph::DataFlowGraph;
 use luau_builder::LuauBuilder;
 use luau_printer::{
 	LuauPrinter,
-	library::{LibraryPrinter, LibrarySections, NamesFinder},
+	library::{NamesFinder, Printer as LibraryPrinter, Sections as LibrarySections},
 };
 use luau_tree::LuauTree;
 

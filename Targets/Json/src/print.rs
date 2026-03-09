@@ -1,7 +1,6 @@
-use std::{
-	io::{Result, Write},
-	rc::Rc,
-};
+use std::io::{Result, Write};
+
+use alloc::rc::Rc;
 
 pub trait Print {
 	fn print(&self, out: &mut dyn Write) -> Result<()>;

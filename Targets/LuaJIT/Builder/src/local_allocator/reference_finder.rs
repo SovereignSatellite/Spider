@@ -109,14 +109,14 @@ fn handle_theta_out(assignments: &mut HashMap<Link, Link>, graph: &DataFlowGraph
 
 	assignments.extend(inputs.zip(outputs.clone()).take(len));
 
-	for output in outputs.take(len) {
-		let _ = assignments.try_insert(output, Link::DANGLING);
+	for link in outputs.take(len) {
+		let _ = assignments.try_insert(link, Link::DANGLING);
 	}
 }
 
-fn handle_omega_in(assignments: &mut HashMap<Link, Link>, graph: &DataFlowGraph, node: &OmegaIn) {
+fn handle_omega_in(assignments: &mut HashMap<Link, Link>, graph: &DataFlowGraph, node: OmegaIn) {
 	let OmegaIn { output } = node;
-	let OmegaOut { input, state, .. } = graph.get(*output).as_omega_out().unwrap();
+	let OmegaOut { input, state, .. } = graph.get(output).as_omega_out().unwrap();
 
 	let _ = assignments.try_insert(Link(*input, OmegaIn::ENVIRONMENT_PORT), Link::DANGLING);
 	let _ = assignments.try_insert(Link(*input, OmegaIn::STATE_PORT), Link::DANGLING);
@@ -315,7 +315,7 @@ fn handle_node(assignments: &mut HashMap<Link, Link>, graph: &DataFlowGraph, id:
 		Node::RegionOut(ref node) => handle_region_out(assignments, node),
 		Node::GammaOut(ref node) => handle_gamma_out(assignments, graph, node),
 		Node::ThetaOut(ref node) => handle_theta_out(assignments, graph, node),
-		Node::OmegaIn(ref node) => handle_omega_in(assignments, graph, node),
+		Node::OmegaIn(node) => handle_omega_in(assignments, graph, node),
 
 		Node::Trap => handle_trap(assignments, id),
 
@@ -341,7 +341,7 @@ fn handle_node(assignments: &mut HashMap<Link, Link>, graph: &DataFlowGraph, id:
 }
 
 pub fn run(assignments: &mut HashMap<Link, Link>, graph: &DataFlowGraph) {
-	for (node, id) in graph.nodes().zip(0..) {
+	for (node, id) in graph.nodes().zip(0_u32..) {
 		handle_node(assignments, graph, id, node);
 	}
 }

@@ -170,7 +170,7 @@ impl ScalarFinder {
 		}
 
 		// Then, effects are handled from the missing assignments.
-		for (node, id) in graph.nodes().zip(0..) {
+		for (node, id) in graph.nodes().zip(0_u32..) {
 			self.handle_effects(assignments, graph, id, node);
 		}
 	}

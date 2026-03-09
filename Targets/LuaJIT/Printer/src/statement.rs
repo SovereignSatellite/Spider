@@ -1,26 +1,9 @@
-use std::io::{Result, Write};
-
-use luajit_tree::{
-	LuaJITTree,
-	statement::{
-		Assign, Call, Export, GlobalSet, Match, MemoryCopy, MemoryDrop, MemoryFill, MemoryStore,
-		Repeat, Sequence, Statement, SwapAll, TableCopy, TableDrop, TableFill, TableSet,
-	},
-};
-
-use crate::{
-	LuaJITPrinter,
-	expression::{fmt_delimited, fmt_locals, fmt_stack_enter, fmt_stack_leave},
-	library::NeedsName,
-	print::Print,
-};
-
 mod conditional {
 	use std::io::{Result, Write};
 
 	use luajit_tree::{expression::Expression, statement::Sequence};
 
-	use crate::{LuaJITPrinter, print::Print};
+	use crate::{LuaJITPrinter, print::Print as _};
 
 	fn print_recursive(
 		branches: &[Sequence],
@@ -203,6 +186,23 @@ mod conditional {
 		}
 	}
 }
+
+use std::io::{Result, Write};
+
+use luajit_tree::{
+	LuaJITTree,
+	statement::{
+		Assign, Call, Export, GlobalSet, Match, MemoryCopy, MemoryDrop, MemoryFill, MemoryStore,
+		Repeat, Sequence, Statement, SwapAll, TableCopy, TableDrop, TableFill, TableSet,
+	},
+};
+
+use crate::{
+	LuaJITPrinter,
+	expression::{fmt_delimited, fmt_locals, fmt_stack_enter, fmt_stack_leave},
+	library::NeedsName as _,
+	print::Print,
+};
 
 impl Print for Match {
 	fn print(&self, printer: &mut LuaJITPrinter, out: &mut dyn Write) -> Result<()> {
@@ -513,7 +513,7 @@ impl Print for MemoryDrop {
 impl Print for Statement {
 	fn print(&self, printer: &mut LuaJITPrinter, out: &mut dyn Write) -> Result<()> {
 		match self {
-			Self::Match(r#match) => r#match.print(printer, out),
+			Self::Match(inner) => inner.print(printer, out),
 			Self::Repeat(repeat) => repeat.print(printer, out),
 			Self::Assign(assign) => assign.print(printer, out),
 			Self::SwapAll(swap_all) => swap_all.print(printer, out),

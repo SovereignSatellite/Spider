@@ -1,3 +1,5 @@
+//! Expression builder that converts WebAssembly operators into IR instructions.
+
 use wasmparser::{BlockType, BrTable, FuncType, Ieee32, Ieee64, MemArg, Operator, OperatorsReader};
 use web_assembly_graph::{
 	ControlFlowGraph,
@@ -98,7 +100,7 @@ impl ExpressionBuilder {
 		self.stack_builder.jump_to_depth(id, 1, relative_depth);
 	}
 
-	fn handle_br_table(&mut self, table: &BrTable) {
+	fn handle_br_table(&mut self, table: &BrTable<'_>) {
 		let len = table.len().try_into().unwrap();
 		let id = self.add_local_branch(len + 1);
 
@@ -115,21 +117,21 @@ impl ExpressionBuilder {
 		self.stack_builder.jump_to_level(id, 0, 0);
 	}
 
-	fn handle_call(&mut self, function: u32, r#type: &FuncType) {
+	fn handle_call(&mut self, function: u32, kind: &FuncType) {
 		let function = function.try_into().unwrap();
-		let (destinations, sources) = self.stack_builder.load_function_type(r#type);
+		let (destinations, sources) = self.stack_builder.load_function_type(kind);
 
 		self.code_builder.add_ref_function(SHARED_LOCAL, function);
 		self.code_builder
 			.add_call(destinations, sources, SHARED_LOCAL);
 	}
 
-	fn handle_call_indirect(&mut self, table: u32, r#type: &FuncType) {
+	fn handle_call_indirect(&mut self, table: u32, kind: &FuncType) {
 		let function = Location {
 			reference: table.try_into().unwrap(),
 			offset: self.stack_builder.pull_local(),
 		};
-		let (destinations, sources) = self.stack_builder.load_function_type(r#type);
+		let (destinations, sources) = self.stack_builder.load_function_type(kind);
 
 		self.code_builder.add_table_get(SHARED_LOCAL, function);
 		self.code_builder
@@ -191,7 +193,7 @@ impl ExpressionBuilder {
 		self.code_builder.add_global_set(destination, source);
 	}
 
-	fn handle_load(&mut self, info: MemArg, r#type: LoadType) {
+	fn handle_load(&mut self, info: MemArg, kind: LoadType) {
 		let source = Location {
 			reference: info.memory.try_into().unwrap(),
 			offset: self.stack_builder.pull_local(),
@@ -202,11 +204,10 @@ impl ExpressionBuilder {
 
 		let destination = self.stack_builder.push_local();
 
-		self.code_builder
-			.add_memory_load(destination, source, r#type);
+		self.code_builder.add_memory_load(destination, source, kind);
 	}
 
-	fn handle_store(&mut self, info: MemArg, r#type: StoreType) {
+	fn handle_store(&mut self, info: MemArg, kind: StoreType) {
 		let source = self.stack_builder.pull_local();
 		let destination = Location {
 			reference: info.memory.try_into().unwrap(),
@@ -217,7 +218,7 @@ impl ExpressionBuilder {
 			.apply_memory_offset(destination.offset, info.offset);
 
 		self.code_builder
-			.add_memory_store(destination, source, r#type);
+			.add_memory_store(destination, source, kind);
 	}
 
 	fn handle_memory_size(&mut self, memory: u32) {
@@ -288,14 +289,14 @@ impl ExpressionBuilder {
 
 	fn handle_integer_unary_operation(
 		&mut self,
-		r#type: IntegerType,
+		kind: IntegerType,
 		operator: IntegerUnaryOperator,
 	) {
 		let source = self.stack_builder.pull_local();
 		let destination = self.stack_builder.push_local();
 
 		self.code_builder
-			.add_integer_unary_operation(destination, source, r#type, operator);
+			.add_integer_unary_operation(destination, source, kind, operator);
 	}
 
 	fn handle_i32_unary(&mut self, operator: IntegerUnaryOperator) {
@@ -308,7 +309,7 @@ impl ExpressionBuilder {
 
 	fn handle_integer_compare_operation(
 		&mut self,
-		r#type: IntegerType,
+		kind: IntegerType,
 		operator: IntegerCompareOperator,
 	) {
 		let rhs = self.stack_builder.pull_local();
@@ -316,7 +317,7 @@ impl ExpressionBuilder {
 		let destination = self.stack_builder.push_local();
 
 		self.code_builder
-			.add_integer_compare_operation(destination, lhs, rhs, r#type, operator);
+			.add_integer_compare_operation(destination, lhs, rhs, kind, operator);
 	}
 
 	fn handle_i32_compare(&mut self, operator: IntegerCompareOperator) {
@@ -329,7 +330,7 @@ impl ExpressionBuilder {
 
 	fn handle_number_compare_operation(
 		&mut self,
-		r#type: NumberType,
+		kind: NumberType,
 		operator: NumberCompareOperator,
 	) {
 		let rhs = self.stack_builder.pull_local();
@@ -337,7 +338,7 @@ impl ExpressionBuilder {
 		let destination = self.stack_builder.push_local();
 
 		self.code_builder
-			.add_number_compare_operation(destination, lhs, rhs, r#type, operator);
+			.add_number_compare_operation(destination, lhs, rhs, kind, operator);
 	}
 
 	fn handle_f32_compare(&mut self, operator: NumberCompareOperator) {
@@ -350,7 +351,7 @@ impl ExpressionBuilder {
 
 	fn handle_integer_binary_operation(
 		&mut self,
-		r#type: IntegerType,
+		kind: IntegerType,
 		operator: IntegerBinaryOperator,
 	) {
 		let rhs = self.stack_builder.pull_local();
@@ -358,7 +359,7 @@ impl ExpressionBuilder {
 		let destination = self.stack_builder.push_local();
 
 		self.code_builder
-			.add_integer_binary_operation(destination, lhs, rhs, r#type, operator);
+			.add_integer_binary_operation(destination, lhs, rhs, kind, operator);
 	}
 
 	fn handle_i32_binary(&mut self, operator: IntegerBinaryOperator) {
@@ -369,12 +370,12 @@ impl ExpressionBuilder {
 		self.handle_integer_binary_operation(IntegerType::I64, operator);
 	}
 
-	fn handle_number_unary_operation(&mut self, r#type: NumberType, operator: NumberUnaryOperator) {
+	fn handle_number_unary_operation(&mut self, kind: NumberType, operator: NumberUnaryOperator) {
 		let source = self.stack_builder.pull_local();
 		let destination = self.stack_builder.push_local();
 
 		self.code_builder
-			.add_number_unary_operation(destination, source, r#type, operator);
+			.add_number_unary_operation(destination, source, kind, operator);
 	}
 
 	fn handle_f32_unary(&mut self, operator: NumberUnaryOperator) {
@@ -385,17 +386,13 @@ impl ExpressionBuilder {
 		self.handle_number_unary_operation(NumberType::F64, operator);
 	}
 
-	fn handle_number_binary_operation(
-		&mut self,
-		r#type: NumberType,
-		operator: NumberBinaryOperator,
-	) {
+	fn handle_number_binary_operation(&mut self, kind: NumberType, operator: NumberBinaryOperator) {
 		let rhs = self.stack_builder.pull_local();
 		let lhs = self.stack_builder.pull_local();
 		let destination = self.stack_builder.push_local();
 
 		self.code_builder
-			.add_number_binary_operation(destination, lhs, rhs, r#type, operator);
+			.add_number_binary_operation(destination, lhs, rhs, kind, operator);
 	}
 
 	fn handle_f32_binary(&mut self, operator: NumberBinaryOperator) {
@@ -504,12 +501,12 @@ impl ExpressionBuilder {
 			.add_integer_transmute_to_number(destination, source, from);
 	}
 
-	fn handle_integer_extend(&mut self, r#type: ExtendType) {
+	fn handle_integer_extend(&mut self, kind: ExtendType) {
 		let source = self.stack_builder.pull_local();
 		let destination = self.stack_builder.push_local();
 
 		self.code_builder
-			.add_integer_extend(destination, source, r#type);
+			.add_integer_extend(destination, source, kind);
 	}
 
 	fn handle_f32_saturate(&mut self, signed: bool, to: IntegerType) {
@@ -540,18 +537,19 @@ impl ExpressionBuilder {
 		self.code_builder.add_data_drop(data);
 	}
 
-	fn handle_memory_copy(&mut self, destination: u32, source: u32) {
+	fn handle_memory_copy(&mut self, dest_mem: u32, src_mem: u32) {
 		let size = self.stack_builder.pull_local();
-		let source: Location = Location {
-			reference: source.try_into().unwrap(),
+		let source_location: Location = Location {
+			reference: src_mem.try_into().unwrap(),
 			offset: self.stack_builder.pull_local(),
 		};
-		let destination = Location {
-			reference: destination.try_into().unwrap(),
+		let dest_location = Location {
+			reference: dest_mem.try_into().unwrap(),
 			offset: self.stack_builder.pull_local(),
 		};
 
-		self.code_builder.add_memory_copy(destination, source, size);
+		self.code_builder
+			.add_memory_copy(dest_location, source_location, size);
 	}
 
 	fn handle_memory_fill(&mut self, memory: u32) {
@@ -585,18 +583,19 @@ impl ExpressionBuilder {
 		self.code_builder.add_elements_drop(elements);
 	}
 
-	fn handle_table_copy(&mut self, destination: u32, source: u32) {
+	fn handle_table_copy(&mut self, dest_table: u32, src_table: u32) {
 		let size = self.stack_builder.pull_local();
-		let source: Location = Location {
-			reference: source.try_into().unwrap(),
+		let source_location: Location = Location {
+			reference: src_table.try_into().unwrap(),
 			offset: self.stack_builder.pull_local(),
 		};
-		let destination = Location {
-			reference: destination.try_into().unwrap(),
+		let dest_location = Location {
+			reference: dest_table.try_into().unwrap(),
 			offset: self.stack_builder.pull_local(),
 		};
 
-		self.code_builder.add_table_copy(destination, source, size);
+		self.code_builder
+			.add_table_copy(dest_location, source_location, size);
 	}
 
 	fn handle_ref_null(&mut self) {
@@ -667,9 +666,12 @@ impl ExpressionBuilder {
 		self.code_builder.add_table_size(destination, table);
 	}
 
-	#[expect(clippy::too_many_lines)]
-	fn handle_operator(&mut self, types: &Types, operator: Operator) {
-		match operator {
+	#[expect(
+		clippy::too_many_lines,
+		reason = "large match needed for all WebAssembly operators"
+	)]
+	fn handle_operator(&mut self, types: &Types, operator: &Operator<'_>) {
+		match *operator {
 			Operator::Unreachable => self.handle_unreachable(),
 			Operator::Nop => {}
 			Operator::Block { blockty } => self.handle_block(types, blockty),
@@ -935,7 +937,171 @@ impl ExpressionBuilder {
 			Operator::TableGrow { table } => self.handle_table_grow(table),
 			Operator::TableSize { table } => self.handle_table_size(table),
 
-			operator => unimplemented!("{operator:?}"),
+			Operator::RefEq
+			| Operator::StructNew { .. }
+			| Operator::StructNewDefault { .. }
+			| Operator::StructGet { .. }
+			| Operator::StructGetS { .. }
+			| Operator::StructGetU { .. }
+			| Operator::StructSet { .. }
+			| Operator::ArrayNew { .. }
+			| Operator::ArrayNewDefault { .. }
+			| Operator::ArrayNewFixed { .. }
+			| Operator::ArrayNewData { .. }
+			| Operator::ArrayNewElem { .. }
+			| Operator::ArrayGet { .. }
+			| Operator::ArrayGetS { .. }
+			| Operator::ArrayGetU { .. }
+			| Operator::ArraySet { .. }
+			| Operator::ArrayLen
+			| Operator::ArrayFill { .. }
+			| Operator::ArrayCopy { .. }
+			| Operator::ArrayInitData { .. }
+			| Operator::ArrayInitElem { .. }
+			| Operator::RefTestNonNull { .. }
+			| Operator::RefTestNullable { .. }
+			| Operator::RefCastNonNull { .. }
+			| Operator::RefCastNullable { .. }
+			| Operator::BrOnCast { .. }
+			| Operator::BrOnCastFail { .. }
+			| Operator::AnyConvertExtern
+			| Operator::ExternConvertAny
+			| Operator::RefI31
+			| Operator::I31GetS
+			| Operator::I31GetU
+			| Operator::TypedSelectMulti { .. }
+			| Operator::ReturnCall { .. }
+			| Operator::ReturnCallIndirect { .. }
+			| Operator::MemoryDiscard { .. }
+			| Operator::MemoryAtomicNotify { .. }
+			| Operator::MemoryAtomicWait32 { .. }
+			| Operator::MemoryAtomicWait64 { .. }
+			| Operator::AtomicFence
+			| Operator::I32AtomicLoad { .. }
+			| Operator::I64AtomicLoad { .. }
+			| Operator::I32AtomicLoad8U { .. }
+			| Operator::I32AtomicLoad16U { .. }
+			| Operator::I64AtomicLoad8U { .. }
+			| Operator::I64AtomicLoad16U { .. }
+			| Operator::I64AtomicLoad32U { .. }
+			| Operator::I32AtomicStore { .. }
+			| Operator::I64AtomicStore { .. }
+			| Operator::I32AtomicStore8 { .. }
+			| Operator::I32AtomicStore16 { .. }
+			| Operator::I64AtomicStore8 { .. }
+			| Operator::I64AtomicStore16 { .. }
+			| Operator::I64AtomicStore32 { .. }
+			| Operator::I32AtomicRmwAdd { .. }
+			| Operator::I64AtomicRmwAdd { .. }
+			| Operator::I32AtomicRmw8AddU { .. }
+			| Operator::I32AtomicRmw16AddU { .. }
+			| Operator::I64AtomicRmw8AddU { .. }
+			| Operator::I64AtomicRmw16AddU { .. }
+			| Operator::I64AtomicRmw32AddU { .. }
+			| Operator::I32AtomicRmwSub { .. }
+			| Operator::I64AtomicRmwSub { .. }
+			| Operator::I32AtomicRmw8SubU { .. }
+			| Operator::I32AtomicRmw16SubU { .. }
+			| Operator::I64AtomicRmw8SubU { .. }
+			| Operator::I64AtomicRmw16SubU { .. }
+			| Operator::I64AtomicRmw32SubU { .. }
+			| Operator::I32AtomicRmwAnd { .. }
+			| Operator::I64AtomicRmwAnd { .. }
+			| Operator::I32AtomicRmw8AndU { .. }
+			| Operator::I32AtomicRmw16AndU { .. }
+			| Operator::I64AtomicRmw8AndU { .. }
+			| Operator::I64AtomicRmw16AndU { .. }
+			| Operator::I64AtomicRmw32AndU { .. }
+			| Operator::I32AtomicRmwOr { .. }
+			| Operator::I64AtomicRmwOr { .. }
+			| Operator::I32AtomicRmw8OrU { .. }
+			| Operator::I32AtomicRmw16OrU { .. }
+			| Operator::I64AtomicRmw8OrU { .. }
+			| Operator::I64AtomicRmw16OrU { .. }
+			| Operator::I64AtomicRmw32OrU { .. }
+			| Operator::I32AtomicRmwXor { .. }
+			| Operator::I64AtomicRmwXor { .. }
+			| Operator::I32AtomicRmw8XorU { .. }
+			| Operator::I32AtomicRmw16XorU { .. }
+			| Operator::I64AtomicRmw8XorU { .. }
+			| Operator::I64AtomicRmw16XorU { .. }
+			| Operator::I64AtomicRmw32XorU { .. }
+			| Operator::I32AtomicRmwXchg { .. }
+			| Operator::I64AtomicRmwXchg { .. }
+			| Operator::I32AtomicRmw8XchgU { .. }
+			| Operator::I32AtomicRmw16XchgU { .. }
+			| Operator::I64AtomicRmw8XchgU { .. }
+			| Operator::I64AtomicRmw16XchgU { .. }
+			| Operator::I64AtomicRmw32XchgU { .. }
+			| Operator::I32AtomicRmwCmpxchg { .. }
+			| Operator::I64AtomicRmwCmpxchg { .. }
+			| Operator::I32AtomicRmw8CmpxchgU { .. }
+			| Operator::I32AtomicRmw16CmpxchgU { .. }
+			| Operator::I64AtomicRmw8CmpxchgU { .. }
+			| Operator::I64AtomicRmw16CmpxchgU { .. }
+			| Operator::I64AtomicRmw32CmpxchgU { .. }
+			| Operator::TryTable { .. }
+			| Operator::Throw { .. }
+			| Operator::ThrowRef
+			| Operator::Try { .. }
+			| Operator::Catch { .. }
+			| Operator::Rethrow { .. }
+			| Operator::Delegate { .. }
+			| Operator::CatchAll
+			| Operator::GlobalAtomicGet { .. }
+			| Operator::GlobalAtomicSet { .. }
+			| Operator::GlobalAtomicRmwAdd { .. }
+			| Operator::GlobalAtomicRmwSub { .. }
+			| Operator::GlobalAtomicRmwAnd { .. }
+			| Operator::GlobalAtomicRmwOr { .. }
+			| Operator::GlobalAtomicRmwXor { .. }
+			| Operator::GlobalAtomicRmwXchg { .. }
+			| Operator::GlobalAtomicRmwCmpxchg { .. }
+			| Operator::TableAtomicGet { .. }
+			| Operator::TableAtomicSet { .. }
+			| Operator::TableAtomicRmwXchg { .. }
+			| Operator::TableAtomicRmwCmpxchg { .. }
+			| Operator::StructAtomicGet { .. }
+			| Operator::StructAtomicGetS { .. }
+			| Operator::StructAtomicGetU { .. }
+			| Operator::StructAtomicSet { .. }
+			| Operator::StructAtomicRmwAdd { .. }
+			| Operator::StructAtomicRmwSub { .. }
+			| Operator::StructAtomicRmwAnd { .. }
+			| Operator::StructAtomicRmwOr { .. }
+			| Operator::StructAtomicRmwXor { .. }
+			| Operator::StructAtomicRmwXchg { .. }
+			| Operator::StructAtomicRmwCmpxchg { .. }
+			| Operator::ArrayAtomicGet { .. }
+			| Operator::ArrayAtomicGetS { .. }
+			| Operator::ArrayAtomicGetU { .. }
+			| Operator::ArrayAtomicSet { .. }
+			| Operator::ArrayAtomicRmwAdd { .. }
+			| Operator::ArrayAtomicRmwSub { .. }
+			| Operator::ArrayAtomicRmwAnd { .. }
+			| Operator::ArrayAtomicRmwOr { .. }
+			| Operator::ArrayAtomicRmwXor { .. }
+			| Operator::ArrayAtomicRmwXchg { .. }
+			| Operator::ArrayAtomicRmwCmpxchg { .. }
+			| Operator::RefI31Shared
+			| Operator::CallRef { .. }
+			| Operator::ReturnCallRef { .. }
+			| Operator::RefAsNonNull
+			| Operator::BrOnNull { .. }
+			| Operator::BrOnNonNull { .. }
+			| Operator::ContNew { .. }
+			| Operator::ContBind { .. }
+			| Operator::Suspend { .. }
+			| Operator::Resume { .. }
+			| Operator::ResumeThrow { .. }
+			| Operator::Switch { .. }
+			| Operator::I64Add128
+			| Operator::I64Sub128
+			| Operator::I64MulWideS
+			| Operator::I64MulWideU
+			| _ => {
+				panic!("unsupported WebAssembly operator should not appear in validated input")
+			}
 		}
 	}
 
@@ -945,7 +1111,7 @@ impl ExpressionBuilder {
 		types: &Types,
 		function_type: BlockType,
 		locals: u16,
-		operators: OperatorsReader,
+		operators: OperatorsReader<'_>,
 	) {
 		self.stack_builder
 			.set_function_data(types, function_type, locals);
@@ -954,7 +1120,7 @@ impl ExpressionBuilder {
 		self.code_builder.add_basic_block(1);
 
 		for operator in operators.into_iter().map(Result::unwrap) {
-			self.handle_operator(types, operator);
+			self.handle_operator(types, &operator);
 		}
 
 		self.code_builder.add_basic_block(0);

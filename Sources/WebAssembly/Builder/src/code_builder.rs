@@ -1,3 +1,5 @@
+//! Low-level code builder for emitting WebAssembly IR instructions and basic blocks.
+
 use alloc::vec::Vec;
 use list::resizable::Resizable;
 use web_assembly_graph::{
@@ -76,7 +78,6 @@ impl CodeBuilder {
 		self.basic_blocks.push(BasicBlock {
 			predecessors: Resizable::new(),
 			successors: core::iter::repeat_n(basic_blocks + 1, successors).collect(),
-
 			start: self.position,
 			end: instructions,
 		});
@@ -223,13 +224,13 @@ impl CodeBuilder {
 		&mut self,
 		destination: u16,
 		source: u16,
-		r#type: IntegerType,
+		kind: IntegerType,
 		operator: IntegerUnaryOperator,
 	) {
 		let instruction = Instruction::IntegerUnaryOperation(IntegerUnaryOperation {
 			destination,
 			source,
-			r#type,
+			kind,
 			operator,
 		});
 
@@ -241,14 +242,14 @@ impl CodeBuilder {
 		destination: u16,
 		lhs: u16,
 		rhs: u16,
-		r#type: IntegerType,
+		kind: IntegerType,
 		operator: IntegerBinaryOperator,
 	) {
 		let instruction = Instruction::IntegerBinaryOperation(IntegerBinaryOperation {
 			destination,
 			lhs,
 			rhs,
-			r#type,
+			kind,
 			operator,
 		});
 
@@ -260,14 +261,14 @@ impl CodeBuilder {
 		destination: u16,
 		lhs: u16,
 		rhs: u16,
-		r#type: IntegerType,
+		kind: IntegerType,
 		operator: IntegerCompareOperator,
 	) {
 		let instruction = Instruction::IntegerCompareOperation(IntegerCompareOperation {
 			destination,
 			lhs,
 			rhs,
-			r#type,
+			kind,
 			operator,
 		});
 
@@ -309,11 +310,11 @@ impl CodeBuilder {
 		self.instructions.push(instruction);
 	}
 
-	pub fn add_integer_extend(&mut self, destination: u16, source: u16, r#type: ExtendType) {
+	pub fn add_integer_extend(&mut self, destination: u16, source: u16, kind: ExtendType) {
 		let instruction = Instruction::IntegerExtend(IntegerExtend {
 			destination,
 			source,
-			r#type,
+			kind,
 		});
 
 		self.instructions.push(instruction);
@@ -357,13 +358,13 @@ impl CodeBuilder {
 		&mut self,
 		destination: u16,
 		source: u16,
-		r#type: NumberType,
+		kind: NumberType,
 		operator: NumberUnaryOperator,
 	) {
 		let instruction = Instruction::NumberUnaryOperation(NumberUnaryOperation {
 			destination,
 			source,
-			r#type,
+			kind,
 			operator,
 		});
 
@@ -375,14 +376,14 @@ impl CodeBuilder {
 		destination: u16,
 		lhs: u16,
 		rhs: u16,
-		r#type: NumberType,
+		kind: NumberType,
 		operator: NumberBinaryOperator,
 	) {
 		let instruction = Instruction::NumberBinaryOperation(NumberBinaryOperation {
 			destination,
 			lhs,
 			rhs,
-			r#type,
+			kind,
 			operator,
 		});
 
@@ -394,14 +395,14 @@ impl CodeBuilder {
 		destination: u16,
 		lhs: u16,
 		rhs: u16,
-		r#type: NumberType,
+		kind: NumberType,
 		operator: NumberCompareOperator,
 	) {
 		let instruction = Instruction::NumberCompareOperation(NumberCompareOperation {
 			destination,
 			lhs,
 			rhs,
-			r#type,
+			kind,
 			operator,
 		});
 
@@ -556,10 +557,10 @@ impl CodeBuilder {
 			return;
 		}
 
-		let offset = u32::try_from(offset).unwrap();
-		let offset = i32::from_ne_bytes(offset.to_ne_bytes());
+		let raw_offset = u32::try_from(offset).unwrap();
+		let signed_offset = i32::from_ne_bytes(raw_offset.to_ne_bytes());
 
-		self.add_i32_constant(SHARED_LOCAL, offset);
+		self.add_i32_constant(SHARED_LOCAL, signed_offset);
 		self.add_integer_binary_operation(
 			destination,
 			destination,
@@ -569,21 +570,21 @@ impl CodeBuilder {
 		);
 	}
 
-	pub fn add_memory_load(&mut self, destination: u16, source: Location, r#type: LoadType) {
+	pub fn add_memory_load(&mut self, destination: u16, source: Location, kind: LoadType) {
 		let instruction = Instruction::MemoryLoad(MemoryLoad {
 			destination,
 			source,
-			r#type,
+			kind,
 		});
 
 		self.instructions.push(instruction);
 	}
 
-	pub fn add_memory_store(&mut self, destination: Location, source: u16, r#type: StoreType) {
+	pub fn add_memory_store(&mut self, destination: Location, source: u16, kind: StoreType) {
 		let instruction = Instruction::MemoryStore(MemoryStore {
 			destination,
 			source,
-			r#type,
+			kind,
 		});
 
 		self.instructions.push(instruction);
@@ -710,10 +711,10 @@ impl CodeBuilder {
 	}
 
 	pub fn set_jump_destination(&mut self, source: u16, branch: u16, destination: u16) {
-		let source = usize::from(source);
-		let branch = usize::from(branch);
+		let source_index = usize::from(source);
+		let branch_index = usize::from(branch);
 
-		self.basic_blocks[source].successors[branch] = destination;
+		self.basic_blocks[source_index].successors[branch_index] = destination;
 	}
 
 	fn set_jump_destinations(&mut self, destination: u16, jumps: &[Jump]) {
@@ -733,11 +734,11 @@ impl CodeBuilder {
 				continue;
 			}
 
-			let destination = self.add_basic_block(1);
+			let new_destination = self.add_basic_block(1);
 
-			self.set_jump_destination(*source, *branch, destination);
+			self.set_jump_destination(*source, *branch, new_destination);
 
-			*source = destination;
+			*source = new_destination;
 			*branch = 0;
 		}
 	}
@@ -758,20 +759,20 @@ impl CodeBuilder {
 		// Levels with destinations need to point to it, while levels
 		// without it simply defer to the next basic block after all
 		// adjustments have been completed.
-		if let Some(destination) = destination {
+		if let Some(dest) = destination {
 			self.add_jump_adjustments(base, parameters, &mut jumps);
-			self.set_jump_destinations(destination, &jumps);
+			self.set_jump_destinations(dest, &jumps);
 		} else {
 			self.add_jump_adjustments(base, results, &mut jumps);
 
-			let destination = self.basic_blocks.len().try_into().unwrap();
+			let next_destination = self.basic_blocks.len().try_into().unwrap();
 
-			self.set_jump_destinations(destination, &jumps);
+			self.set_jump_destinations(next_destination, &jumps);
 		}
 
 		// The base case always falls through to the next basic block.
-		let destination = self.basic_blocks.len().try_into().unwrap();
+		let fall_through = self.basic_blocks.len().try_into().unwrap();
 
-		self.set_jump_destination(exit, 0, destination);
+		self.set_jump_destination(exit, 0, fall_through);
 	}
 }

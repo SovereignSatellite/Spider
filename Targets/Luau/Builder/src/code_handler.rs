@@ -144,11 +144,15 @@ impl CodeHandler {
 	}
 
 	pub fn do_call(&mut self, node: &simple::Apply, id: u32, data_handler: &mut DataHandler) {
+		let function = data_handler.load(node.function);
+		let arguments = data_handler.load_all(&node.arguments);
+		let results = data_handler.load_local_assignments(id, node.results);
+
 		let statement = Statement::Call(
 			Call {
-				function: data_handler.load(node.function),
-				arguments: data_handler.load_all(&node.arguments),
-				results: data_handler.load_local_assignments(id, node.results),
+				function,
+				results,
+				arguments,
 			}
 			.into(),
 		);
@@ -157,10 +161,13 @@ impl CodeHandler {
 	}
 
 	pub fn do_global_set(&mut self, node: simple::GlobalSet, data_handler: &mut DataHandler) {
+		let destination = data_handler.load(node.destination);
+		let source = data_handler.load(node.source);
+
 		let statement = Statement::GlobalSet(
 			GlobalSet {
-				destination: data_handler.load(node.destination),
-				source: data_handler.load(node.source),
+				destination,
+				source,
 			}
 			.into(),
 		);
@@ -169,10 +176,13 @@ impl CodeHandler {
 	}
 
 	pub fn do_table_set(&mut self, node: simple::TableSet, data_handler: &mut DataHandler) {
+		let destination = data_handler.load_location(node.destination);
+		let source = data_handler.load(node.source);
+
 		let statement = Statement::TableSet(
 			TableSet {
-				destination: data_handler.load_location(node.destination),
-				source: data_handler.load(node.source),
+				destination,
+				source,
 			}
 			.into(),
 		);
@@ -181,11 +191,15 @@ impl CodeHandler {
 	}
 
 	pub fn do_table_fill(&mut self, node: simple::TableFill, data_handler: &mut DataHandler) {
+		let destination = data_handler.load_location(node.destination);
+		let source = data_handler.load(node.source);
+		let size = data_handler.load(node.size);
+
 		let statement = Statement::TableFill(
 			TableFill {
-				destination: data_handler.load_location(node.destination),
-				source: data_handler.load(node.source),
-				size: data_handler.load(node.size),
+				destination,
+				source,
+				size,
 			}
 			.into(),
 		);
@@ -194,11 +208,15 @@ impl CodeHandler {
 	}
 
 	pub fn do_table_copy(&mut self, node: simple::TableCopy, data_handler: &mut DataHandler) {
+		let destination = data_handler.load_location(node.destination);
+		let source = data_handler.load_location(node.source);
+		let size = data_handler.load(node.size);
+
 		let statement = Statement::TableCopy(
 			TableCopy {
-				destination: data_handler.load_location(node.destination),
-				source: data_handler.load_location(node.source),
-				size: data_handler.load(node.size),
+				destination,
+				source,
+				size,
 			}
 			.into(),
 		);
@@ -218,11 +236,14 @@ impl CodeHandler {
 	}
 
 	pub fn do_memory_store(&mut self, node: simple::MemoryStore, data_handler: &mut DataHandler) {
+		let destination = data_handler.load_location(node.destination);
+		let source = data_handler.load(node.source);
+
 		let statement = Statement::MemoryStore(
 			MemoryStore {
-				destination: data_handler.load_location(node.destination),
-				source: data_handler.load(node.source),
-				r#type: node.r#type,
+				destination,
+				source,
+				kind: node.kind,
 			}
 			.into(),
 		);
@@ -231,11 +252,15 @@ impl CodeHandler {
 	}
 
 	pub fn do_memory_fill(&mut self, node: simple::MemoryFill, data_handler: &mut DataHandler) {
+		let destination = data_handler.load_location(node.destination);
+		let byte = data_handler.load(node.byte);
+		let size = data_handler.load(node.size);
+
 		let statement = Statement::MemoryFill(
 			MemoryFill {
-				destination: data_handler.load_location(node.destination),
-				byte: data_handler.load(node.byte),
-				size: data_handler.load(node.size),
+				destination,
+				byte,
+				size,
 			}
 			.into(),
 		);
@@ -244,11 +269,15 @@ impl CodeHandler {
 	}
 
 	pub fn do_memory_copy(&mut self, node: simple::MemoryCopy, data_handler: &mut DataHandler) {
+		let destination = data_handler.load_location(node.destination);
+		let source = data_handler.load_location(node.source);
+		let size = data_handler.load(node.size);
+
 		let statement = Statement::MemoryCopy(
 			MemoryCopy {
-				destination: data_handler.load_location(node.destination),
-				source: data_handler.load_location(node.source),
-				size: data_handler.load(node.size),
+				destination,
+				source,
+				size,
 			}
 			.into(),
 		);

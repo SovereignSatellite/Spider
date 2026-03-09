@@ -23,8 +23,8 @@ impl DepthFirstSearcher {
 		self.seen.clear();
 		self.seen.extend(graph.predecessors(entry).map(usize::from));
 
-		for id in graph.successors(entry) {
-			self.seen.remove(id.into());
+		for successor_id in graph.successors(entry) {
+			self.seen.remove(successor_id.into());
 		}
 
 		self.seen.grow_insert(exit.into());
@@ -53,8 +53,8 @@ impl DepthFirstSearcher {
 			} else {
 				self.stack.push((id, true));
 
-				for id in successors(id) {
-					self.add_successor(id);
+				for successor_id in successors(id) {
+					self.add_successor(successor_id);
 				}
 			}
 		}

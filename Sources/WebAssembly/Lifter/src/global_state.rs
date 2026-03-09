@@ -47,7 +47,7 @@ impl GlobalState {
 	}
 
 	fn get_dependency(&self, reference: Reference) -> Link {
-		let list = match reference.r#type {
+		let list = match reference.kind {
 			ReferenceType::Function => &self.functions,
 			ReferenceType::Global => &self.globals,
 			ReferenceType::Table => &self.tables,

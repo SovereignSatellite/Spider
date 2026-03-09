@@ -39,7 +39,7 @@ impl Vertex {
 }
 
 impl Display for Vertex {
-	fn fmt(&self, f: &mut Formatter) -> Result {
+	fn fmt(&self, f: &mut Formatter<'_>) -> Result {
 		writeln!(
 			f,
 			"\tnode [fillcolor = \"{}\", group = {}];",
@@ -49,7 +49,7 @@ impl Display for Vertex {
 	}
 }
 
-fn fmt_instruction(instruction: Instruction, f: &mut Formatter) -> Result {
+fn fmt_instruction(instruction: Instruction, f: &mut Formatter<'_>) -> Result {
 	use core::fmt::Debug;
 
 	match instruction {
@@ -100,17 +100,19 @@ fn fmt_instruction(instruction: Instruction, f: &mut Formatter) -> Result {
 	}
 }
 
+/// A DOT graph formatter for control flow graphs.
 pub struct Dot<'inner> {
 	inner: &'inner ControlFlowGraph,
 }
 
 impl<'inner> Dot<'inner> {
+	/// Creates a new DOT formatter for the given control flow graph.
 	#[must_use]
 	pub const fn new(inner: &'inner ControlFlowGraph) -> Self {
 		Self { inner }
 	}
 
-	fn fmt_nodes(&self, f: &mut Formatter) -> Result {
+	fn fmt_nodes(&self, f: &mut Formatter<'_>) -> Result {
 		writeln!(f, "\tnode [shape = box, style = filled, ordering = out];")?;
 
 		let mut last_vertex = Vertex::Instructions;
@@ -139,7 +141,7 @@ impl<'inner> Dot<'inner> {
 		})
 	}
 
-	fn fmt_edges(&self, f: &mut Formatter) -> Result {
+	fn fmt_edges(&self, f: &mut Formatter<'_>) -> Result {
 		writeln!(f, "\tedge [color = \"#444477\"];")?;
 
 		self.inner.block_ids().try_for_each(|id| {
@@ -157,7 +159,7 @@ impl<'inner> Dot<'inner> {
 }
 
 impl Display for Dot<'_> {
-	fn fmt(&self, f: &mut Formatter) -> Result {
+	fn fmt(&self, f: &mut Formatter<'_>) -> Result {
 		writeln!(f, "digraph {{")?;
 
 		self.fmt_nodes(f)?;

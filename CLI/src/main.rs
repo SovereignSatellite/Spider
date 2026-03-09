@@ -1,6 +1,6 @@
-use std::io::{BufWriter, StdoutLock, Write};
+use std::io::{BufWriter, StdoutLock, Write as _};
 
-use clap::Parser;
+use clap::Parser as _;
 use ir_graph::DataFlowGraph;
 
 use crate::{

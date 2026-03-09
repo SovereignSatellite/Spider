@@ -1,4 +1,4 @@
-use alloc::vec::Vec;
+use alloc::{sync::Arc, vec::Vec};
 use hashbrown::HashMap;
 use ir_graph::{Link, control, simple};
 use luau_tree::{
@@ -112,7 +112,7 @@ impl DataHandler {
 	pub fn load_declarations(&self, id: u32) -> Vec<Name> {
 		let locals = self.declarations[&id].locals.clone();
 
-		locals.map(|id| Name { id }).collect()
+		locals.map(|name_id| Name { id: name_id }).collect()
 	}
 
 	pub fn load_scoped(
@@ -159,19 +159,23 @@ impl DataHandler {
 	}
 
 	pub fn load_import(&mut self, node: &control::Import) -> Expression {
+		let environment = self.load(node.environment);
+
 		let expression = Import {
-			environment: self.load(node.environment),
-			namespace: node.namespace.clone(),
-			identifier: node.identifier.clone(),
+			environment,
+			namespace: Arc::clone(&node.namespace),
+			identifier: Arc::clone(&node.identifier),
 		};
 
 		Expression::Import(expression.into())
 	}
 
 	fn load_export(&mut self, node: &control::Export) -> Export {
+		let source = self.load(node.reference);
+
 		Export {
-			identifier: node.identifier.clone(),
-			source: self.load(node.reference),
+			identifier: Arc::clone(&node.identifier),
+			source,
 		}
 	}
 
@@ -183,9 +187,12 @@ impl DataHandler {
 	}
 
 	pub fn load_call(&mut self, node: &simple::Apply) -> Expression {
+		let function = self.load(node.function);
+		let arguments = self.load_all(&node.arguments);
+
 		let call = Call {
-			function: self.load(node.function),
-			arguments: self.load_all(&node.arguments),
+			function,
+			arguments,
 		};
 
 		Expression::Call(call.into())
@@ -209,7 +216,7 @@ impl DataHandler {
 	) -> Expression {
 		let expression = IntegerUnaryOperation {
 			source: self.load(node.source),
-			r#type: node.r#type,
+			kind: node.kind,
 			operator: node.operator,
 		};
 
@@ -223,7 +230,7 @@ impl DataHandler {
 		let expression = IntegerBinaryOperation {
 			lhs: self.load(node.lhs),
 			rhs: self.load(node.rhs),
-			r#type: node.r#type,
+			kind: node.kind,
 			operator: node.operator,
 		};
 
@@ -237,7 +244,7 @@ impl DataHandler {
 		let expression = IntegerCompareOperation {
 			lhs: self.load(node.lhs),
 			rhs: self.load(node.rhs),
-			r#type: node.r#type,
+			kind: node.kind,
 			operator: node.operator,
 		};
 
@@ -267,7 +274,7 @@ impl DataHandler {
 	pub fn load_integer_extend(&mut self, node: simple::IntegerExtend) -> Expression {
 		let expression = IntegerExtend {
 			source: self.load(node.source),
-			r#type: node.r#type,
+			kind: node.kind,
 		};
 
 		Expression::IntegerExtend(expression.into())
@@ -305,7 +312,7 @@ impl DataHandler {
 	) -> Expression {
 		let expression = NumberUnaryOperation {
 			source: self.load(node.source),
-			r#type: node.r#type,
+			kind: node.kind,
 			operator: node.operator,
 		};
 
@@ -319,7 +326,7 @@ impl DataHandler {
 		let expression = NumberBinaryOperation {
 			lhs: self.load(node.lhs),
 			rhs: self.load(node.rhs),
-			r#type: node.r#type,
+			kind: node.kind,
 			operator: node.operator,
 		};
 
@@ -333,7 +340,7 @@ impl DataHandler {
 		let expression = NumberCompareOperation {
 			lhs: self.load(node.lhs),
 			rhs: self.load(node.rhs),
-			r#type: node.r#type,
+			kind: node.kind,
 			operator: node.operator,
 		};
 
@@ -404,10 +411,10 @@ impl DataHandler {
 	}
 
 	pub fn load_location(&mut self, location: simple::Location) -> Location {
-		Location {
-			reference: self.load(location.reference),
-			offset: self.load(location.offset),
-		}
+		let reference = self.load(location.reference);
+		let offset = self.load(location.offset);
+
+		Location { reference, offset }
 	}
 
 	pub fn load_table_new(&mut self, node: &simple::TableNew) -> Expression {
@@ -455,7 +462,7 @@ impl DataHandler {
 	pub fn load_memory_load(&mut self, node: simple::MemoryLoad) -> Expression {
 		let expression = MemoryLoad {
 			source: self.load_location(node.source),
-			r#type: node.r#type,
+			kind: node.kind,
 		};
 
 		Expression::MemoryLoad(expression.into())

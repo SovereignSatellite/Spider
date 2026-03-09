@@ -1,3 +1,5 @@
+//! Local variable liveness tracking.
+
 use alloc::vec::Vec;
 use set::{Set, Slice};
 use web_assembly_graph::{
@@ -14,12 +16,14 @@ use web_assembly_graph::{
 	},
 };
 
+/// Live local variables per basic block.
 pub struct Locals {
 	locals: Vec<u16>,
 	ranges: Vec<(u32, u32)>,
 }
 
 impl Locals {
+	/// Creates a new empty locals collection.
 	#[must_use]
 	pub const fn new() -> Self {
 		Self {
@@ -29,12 +33,18 @@ impl Locals {
 	}
 
 	#[must_use]
+	/// Returns the live locals for the given basic block.
+	///
+	/// # Panics
+	///
+	/// Panics if the range bounds overflow a `usize`; if this happens, it is a bug.
 	pub fn get(&self, id: u16) -> &[u16] {
 		let (start, end) = self.ranges[usize::from(id)];
 
 		&self.locals[start.try_into().unwrap()..end.try_into().unwrap()]
 	}
 
+	/// Computes the union of live locals across multiple basic blocks.
 	pub fn get_union<I: IntoIterator<Item = u16>>(&self, ids: I, successors: &mut Vec<u16>) {
 		successors.clear();
 
@@ -52,7 +62,7 @@ impl Locals {
 		self.ranges.resize(len, (0, 0));
 	}
 
-	fn insert(&mut self, id: u16, set: Slice) {
+	fn insert(&mut self, id: u16, set: Slice<'_>) {
 		let start = self.locals.len().try_into().unwrap();
 		let iter = set.ascending().map(|index| u16::try_from(index).unwrap());
 
@@ -67,12 +77,14 @@ impl Default for Locals {
 	}
 }
 
+/// Tracks live local variables across a control flow graph.
 pub struct LocalTracker {
 	reads: Set,
 	count: u16,
 }
 
 impl LocalTracker {
+	/// Creates a new local tracker.
 	#[must_use]
 	pub const fn new() -> Self {
 		Self {
@@ -634,6 +646,7 @@ impl LocalTracker {
 		}
 	}
 
+	/// Runs liveness analysis and returns the number of locals used.
 	pub fn run(&mut self, locals: &mut Locals, graph: &ControlFlowGraph, results: u16) -> u16 {
 		locals.set_len(graph.basic_blocks.len());
 

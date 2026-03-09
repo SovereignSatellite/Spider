@@ -1,16 +1,22 @@
+//! Conformance tests for the Luau target.
+
+extern crate alloc;
+
+mod common;
+
 use std::{
 	ffi::OsStr,
 	fs::File,
 	io::{BufWriter, Write},
 	path::{Path, PathBuf},
-	sync::Arc,
 };
 
+use alloc::sync::Arc;
 use datatest_stable::Result;
 use luau_builder::LuauBuilder;
 use luau_printer::{
 	LuauPrinter,
-	library::{LibraryPrinter, LibrarySections, NamesFinder},
+	library::{NamesFinder, Printer as LibraryPrinter, Sections as LibrarySections},
 };
 use wast::{
 	QuoteWat, WastArg, WastExecute, WastInvoke, WastRet, WastThread, Wat,
@@ -20,7 +26,8 @@ use wast::{
 
 use common::{compiler::Compiler, process, visitor::Visitor};
 
-mod common;
+use luajit_builder as _;
+use luajit_printer as _;
 
 const HARNESS_START_SOURCE: &str = include_str!("harness/luau.start.luau");
 const HARNESS_END_SOURCE: &str = include_str!("harness/luau.end.luau");
@@ -92,7 +99,7 @@ impl Luau {
 		Ok(())
 	}
 
-	fn fmt_name(&mut self, id: Id) -> Result<()> {
+	fn fmt_name(&mut self, id: Id<'_>) -> Result<()> {
 		let identifier = id.name().as_bytes().escape_ascii();
 
 		write!(self.file, "named[\"{identifier}\"]")?;
@@ -100,7 +107,7 @@ impl Luau {
 		Ok(())
 	}
 
-	fn fmt_optional_name(&mut self, id: Option<Id>) -> Result<()> {
+	fn fmt_optional_name(&mut self, id: Option<Id<'_>>) -> Result<()> {
 		if let Some(id) = id {
 			self.fmt_name(id)?;
 		} else {
@@ -110,7 +117,7 @@ impl Luau {
 		Ok(())
 	}
 
-	fn fmt_named_source(&mut self, id: Option<Id>, data: &[u8]) -> Result<()> {
+	fn fmt_named_source(&mut self, id: Option<Id<'_>>, data: &[u8]) -> Result<()> {
 		self.fmt_source(data)?;
 
 		writeln!(self.file, "\tselected = module(environment)")?;
@@ -124,16 +131,16 @@ impl Luau {
 		Ok(())
 	}
 
-	fn fmt_argument_i32(&mut self, source: i32) -> Result<()> {
-		let source = u32::from_ne_bytes(source.to_ne_bytes());
+	fn fmt_argument_i32(&mut self, value: i32) -> Result<()> {
+		let value = u32::from_ne_bytes(value.to_ne_bytes());
 
-		write!(self.file, "{source} --[[ 0x{source:08X} ]]")?;
+		write!(self.file, "{value} --[[ 0x{value:08X} ]]")?;
 
 		Ok(())
 	}
 
-	fn fmt_argument_i64(&mut self, source: i64) -> Result<()> {
-		let [b1, b2, b3, b4, b5, b6, b7, b8] = source.to_le_bytes();
+	fn fmt_argument_i64(&mut self, value: i64) -> Result<()> {
+		let [b1, b2, b3, b4, b5, b6, b7, b8] = value.to_le_bytes();
 
 		let source_1 = u32::from_le_bytes([b1, b2, b3, b4]);
 		let source_2 = u32::from_le_bytes([b5, b6, b7, b8]);
@@ -142,24 +149,24 @@ impl Luau {
 
 		write!(
 			self.file,
-			"into_bits_i64({source_1}, {source_2}) --[[ 0x{source:016X} ]]"
+			"into_bits_i64({source_1}, {source_2}) --[[ 0x{value:016X} ]]"
 		)?;
 
 		Ok(())
 	}
 
-	fn fmt_argument_f32(&mut self, source: F32) -> Result<()> {
-		let F32 { bits } = source;
-		let source = f32::from_bits(bits);
+	fn fmt_argument_f32(&mut self, value: F32) -> Result<()> {
+		let F32 { bits } = value;
+		let float = f32::from_bits(bits);
 
-		write!(self.file, "{bits} --[[ {source}_f32 ]]")?;
+		write!(self.file, "{bits} --[[ {float}_f32 ]]")?;
 
 		Ok(())
 	}
 
-	fn fmt_argument_f64(&mut self, source: F64) -> Result<()> {
-		let F64 { bits } = source;
-		let source = f64::from_bits(bits);
+	fn fmt_argument_f64(&mut self, value: F64) -> Result<()> {
+		let F64 { bits } = value;
+		let float = f64::from_bits(bits);
 
 		let [b1, b2, b3, b4, b5, b6, b7, b8] = bits.to_le_bytes();
 
@@ -170,13 +177,13 @@ impl Luau {
 
 		write!(
 			self.file,
-			"into_bits_i64({source_1}, {source_2}) --[[ {source}_f64 ]]"
+			"into_bits_i64({source_1}, {source_2}) --[[ {float}_f64 ]]"
 		)?;
 
 		Ok(())
 	}
 
-	fn fmt_argument(&mut self, argument: WastArg) -> Result<()> {
+	fn fmt_argument(&mut self, argument: WastArg<'_>) -> Result<()> {
 		let WastArg::Core(argument) = argument else {
 			unimplemented!()
 		};
@@ -211,7 +218,7 @@ impl Luau {
 		Ok(())
 	}
 
-	fn fmt_argument_list(&mut self, arguments: Vec<WastArg>) -> Result<()> {
+	fn fmt_argument_list(&mut self, arguments: Vec<WastArg<'_>>) -> Result<()> {
 		arguments
 			.into_iter()
 			.enumerate()
@@ -224,7 +231,7 @@ impl Luau {
 			})
 	}
 
-	fn fmt_export(&mut self, module: Option<Id>, identifier: &str) -> Result<()> {
+	fn fmt_export(&mut self, module: Option<Id<'_>>, identifier: &str) -> Result<()> {
 		let identifier = identifier.as_bytes().escape_ascii();
 
 		self.fmt_optional_name(module)?;
@@ -234,7 +241,7 @@ impl Luau {
 		Ok(())
 	}
 
-	fn fmt_invoke(&mut self, invoke: WastInvoke) -> Result<()> {
+	fn fmt_invoke(&mut self, invoke: WastInvoke<'_>) -> Result<()> {
 		self.fmt_export(invoke.module, invoke.name)?;
 
 		write!(self.file, "(")?;
@@ -246,7 +253,7 @@ impl Luau {
 		Ok(())
 	}
 
-	fn fmt_wat(&mut self, mut wat: Wat) -> Result<()> {
+	fn fmt_wat(&mut self, mut wat: Wat<'_>) -> Result<()> {
 		self.fmt_source(&wat.encode()?)?;
 
 		writeln!(self.file, "module(environment)")?;
@@ -254,7 +261,7 @@ impl Luau {
 		Ok(())
 	}
 
-	fn fmt_get(&mut self, module: Option<Id>, global: &str) -> Result<()> {
+	fn fmt_get(&mut self, module: Option<Id<'_>>, global: &str) -> Result<()> {
 		self.fmt_export(module, global)?;
 
 		write!(self.file, "[1]")?;
@@ -262,7 +269,7 @@ impl Luau {
 		Ok(())
 	}
 
-	fn fmt_execute(&mut self, exec: WastExecute) -> Result<()> {
+	fn fmt_execute(&mut self, exec: WastExecute<'_>) -> Result<()> {
 		match exec {
 			WastExecute::Invoke(wast_invoke) => self.fmt_invoke(wast_invoke),
 			WastExecute::Wat(wat) => self.fmt_wat(wat),
@@ -270,21 +277,21 @@ impl Luau {
 		}
 	}
 
-	fn fmt_assert_equal_i32(&mut self, source: i32) -> Result<()> {
-		let source = u32::from_ne_bytes(source.to_ne_bytes());
+	fn fmt_assert_equal_i32(&mut self, value: i32) -> Result<()> {
+		let value = u32::from_ne_bytes(value.to_ne_bytes());
 
 		self.references.push("assert_equal_i32");
 
 		write!(
 			self.file,
-			"hn_assert_equal_i32({source}) --[[ 0x{source:08X} ]]"
+			"hn_assert_equal_i32({value}) --[[ 0x{value:08X} ]]"
 		)?;
 
 		Ok(())
 	}
 
-	fn fmt_assert_equal_i64(&mut self, source: i64) -> Result<()> {
-		let [b1, b2, b3, b4, b5, b6, b7, b8] = source.to_le_bytes();
+	fn fmt_assert_equal_i64(&mut self, value: i64) -> Result<()> {
+		let [b1, b2, b3, b4, b5, b6, b7, b8] = value.to_le_bytes();
 
 		let source_1 = u32::from_le_bytes([b1, b2, b3, b4]);
 		let source_2 = u32::from_le_bytes([b5, b6, b7, b8]);
@@ -294,29 +301,26 @@ impl Luau {
 
 		write!(
 			self.file,
-			"hn_assert_equal_i64(into_bits_i64({source_1}, {source_2})) --[[ 0x{source:016X} ]]"
+			"hn_assert_equal_i64(into_bits_i64({source_1}, {source_2})) --[[ 0x{value:016X} ]]"
 		)?;
 
 		Ok(())
 	}
 
-	fn fmt_assert_equal_f32(&mut self, source: F32) -> Result<()> {
-		let F32 { bits } = source;
-		let source = f32::from_bits(bits);
+	fn fmt_assert_equal_f32(&mut self, value: F32) -> Result<()> {
+		let F32 { bits } = value;
+		let float = f32::from_bits(bits);
 
 		self.references.push("assert_equal_f32");
 
-		write!(
-			self.file,
-			"hn_assert_equal_f32({bits}) --[[ {source}_f32 ]]"
-		)?;
+		write!(self.file, "hn_assert_equal_f32({bits}) --[[ {float}_f32 ]]")?;
 
 		Ok(())
 	}
 
-	fn fmt_assert_equal_f64(&mut self, source: F64) -> Result<()> {
-		let F64 { bits } = source;
-		let source = f64::from_bits(bits);
+	fn fmt_assert_equal_f64(&mut self, value: F64) -> Result<()> {
+		let F64 { bits } = value;
+		let float = f64::from_bits(bits);
 
 		let [b1, b2, b3, b4, b5, b6, b7, b8] = bits.to_le_bytes();
 
@@ -328,13 +332,13 @@ impl Luau {
 
 		write!(
 			self.file,
-			"hn_assert_equal_f64(into_bits_i64({source_1}, {source_2})) --[[ {source}_f64 ]]"
+			"hn_assert_equal_f64(into_bits_i64({source_1}, {source_2})) --[[ {float}_f64 ]]"
 		)?;
 
 		Ok(())
 	}
 
-	fn fmt_assert_pattern(&mut self, result: WastRet) -> Result<()> {
+	fn fmt_assert_pattern(&mut self, result: WastRet<'_>) -> Result<()> {
 		let WastRet::Core(result) = result else {
 			unimplemented!()
 		};
@@ -411,7 +415,7 @@ impl Luau {
 }
 
 impl Visitor for Luau {
-	fn visit_module(&mut self, mut quote_wat: QuoteWat) -> Result<()> {
+	fn visit_module(&mut self, mut quote_wat: QuoteWat<'_>) -> Result<()> {
 		let data = quote_wat.encode()?;
 
 		writeln!(self.file, "do")?;
@@ -423,15 +427,15 @@ impl Visitor for Luau {
 		Ok(())
 	}
 
-	fn visit_module_definition(&mut self, _quote_wat: QuoteWat) -> Result<()> {
+	fn visit_module_definition(&mut self, _quote_wat: QuoteWat<'_>) -> Result<()> {
 		unimplemented!()
 	}
 
 	fn visit_module_instance(
 		&mut self,
 		_span: Span,
-		_instance: Option<Id>,
-		_module: Option<Id>,
+		_instance: Option<Id<'_>>,
+		_module: Option<Id<'_>>,
 	) -> Result<()> {
 		unimplemented!()
 	}
@@ -439,7 +443,7 @@ impl Visitor for Luau {
 	fn visit_assert_malformed(
 		&mut self,
 		_span: Span,
-		_module: QuoteWat,
+		_module: QuoteWat<'_>,
 		_message: &str,
 	) -> Result<()> {
 		Ok(())
@@ -448,13 +452,13 @@ impl Visitor for Luau {
 	fn visit_assert_invalid(
 		&mut self,
 		_span: Span,
-		_module: QuoteWat,
+		_module: QuoteWat<'_>,
 		_message: &str,
 	) -> Result<()> {
 		Ok(())
 	}
 
-	fn visit_register(&mut self, _span: Span, name: &str, module: Option<Id>) -> Result<()> {
+	fn visit_register(&mut self, _span: Span, name: &str, module: Option<Id<'_>>) -> Result<()> {
 		let name = name.as_bytes().escape_ascii();
 
 		write!(self.file, "environment[\"{name}\"] = ")?;
@@ -466,7 +470,7 @@ impl Visitor for Luau {
 		Ok(())
 	}
 
-	fn visit_invoke(&mut self, wast_invoke: WastInvoke) -> Result<()> {
+	fn visit_invoke(&mut self, wast_invoke: WastInvoke<'_>) -> Result<()> {
 		self.fmt_invoke(wast_invoke)?;
 
 		writeln!(self.file)?;
@@ -474,7 +478,12 @@ impl Visitor for Luau {
 		Ok(())
 	}
 
-	fn visit_assert_trap(&mut self, _span: Span, exec: WastExecute, message: &str) -> Result<()> {
+	fn visit_assert_trap(
+		&mut self,
+		_span: Span,
+		exec: WastExecute<'_>,
+		message: &str,
+	) -> Result<()> {
 		let message = message.as_bytes().escape_ascii();
 
 		self.references.push("assert_trap");
@@ -491,8 +500,8 @@ impl Visitor for Luau {
 	fn visit_assert_return(
 		&mut self,
 		_span: Span,
-		exec: WastExecute,
-		results: Vec<WastRet>,
+		exec: WastExecute<'_>,
+		results: Vec<WastRet<'_>>,
 	) -> Result<()> {
 		writeln!(self.file, "do")?;
 		write!(self.file, "\tlocal sources = {{ ")?;
@@ -501,7 +510,7 @@ impl Visitor for Luau {
 
 		writeln!(self.file, " }}")?;
 
-		for (result, index) in results.into_iter().zip(1..) {
+		for (result, index) in results.into_iter().zip(1_i32..) {
 			write!(self.file, "\t")?;
 
 			self.fmt_assert_pattern(result)?;
@@ -517,44 +526,51 @@ impl Visitor for Luau {
 	fn visit_assert_exhaustion(
 		&mut self,
 		_span: Span,
-		_call: WastInvoke,
+		_call: WastInvoke<'_>,
 		_message: &str,
 	) -> Result<()> {
 		Ok(())
 	}
 
-	fn visit_assert_unlinkable(&mut self, _span: Span, _module: Wat, _message: &str) -> Result<()> {
+	fn visit_assert_unlinkable(
+		&mut self,
+		_span: Span,
+		_module: Wat<'_>,
+		_message: &str,
+	) -> Result<()> {
 		Ok(())
 	}
 
-	fn visit_assert_exception(&mut self, _span: Span, _exec: WastExecute) -> Result<()> {
+	fn visit_assert_exception(&mut self, _span: Span, _exec: WastExecute<'_>) -> Result<()> {
 		Ok(())
 	}
 
 	fn visit_assert_suspension(
 		&mut self,
 		_span: Span,
-		_exec: WastExecute,
+		_exec: WastExecute<'_>,
 		_message: &str,
 	) -> Result<()> {
 		Ok(())
 	}
 
-	fn visit_thread(&mut self, _wast_thread: WastThread) -> Result<()> {
+	fn visit_thread(&mut self, _wast_thread: WastThread<'_>) -> Result<()> {
 		Ok(())
 	}
 
-	fn visit_wait(&mut self, _span: Span, _thread: Id) -> Result<()> {
+	fn visit_wait(&mut self, _span: Span, _thread: Id<'_>) -> Result<()> {
 		Ok(())
 	}
 }
 
 fn get_path_target(name: &OsStr, optimized: bool, native: bool) -> Result<Arc<Path>> {
-	let mut path = PathBuf::new();
-
-	path.push(env!("CARGO_TARGET_TMPDIR"));
-	path.push(if native { "native" } else { "interpreter" });
-	path.push(if optimized { "O2" } else { "O0" });
+	let mut path = [
+		env!("CARGO_TARGET_TMPDIR"),
+		if native { "native" } else { "interpreter" },
+		if optimized { "O2" } else { "O0" },
+	]
+	.iter()
+	.collect::<PathBuf>();
 
 	std::fs::create_dir_all(&path)?;
 
@@ -564,10 +580,10 @@ fn get_path_target(name: &OsStr, optimized: bool, native: bool) -> Result<Arc<Pa
 	Ok(path.into())
 }
 
-fn compile_test(destination: &Path, source: &str, optimized: bool) -> Result<()> {
+fn compile_test(destination: &Path, tested: &str, optimized: bool) -> Result<()> {
 	let mut luau = Luau::new(optimized);
 
-	luau.visit(source)?;
+	luau.visit(tested)?;
 
 	let mut destination = File::create(destination).map(BufWriter::new)?;
 
@@ -594,10 +610,10 @@ fn run_file(destination: &Path, optimized: bool, native: bool) -> std::io::Resul
 }
 
 fn run_and_assert(path: &Path, optimized: bool, native: bool) -> Result<()> {
-	let source = std::fs::read_to_string(path)?;
+	let tested = std::fs::read_to_string(path)?;
 	let destination = get_path_target(path.file_name().unwrap(), optimized, native)?;
 
-	compile_test(&destination, &source, optimized)?;
+	compile_test(&destination, &tested, optimized)?;
 
 	let mut handles = Vec::with_capacity(REPETITION_COUNT);
 
@@ -618,19 +634,19 @@ fn run_and_assert(path: &Path, optimized: bool, native: bool) -> Result<()> {
 }
 
 fn bytecode_o0(path: &Path) -> Result<()> {
-	crate::run_and_assert(path, false, false)
+	run_and_assert(path, false, false)
 }
 
 fn bytecode_o2(path: &Path) -> Result<()> {
-	crate::run_and_assert(path, true, false)
+	run_and_assert(path, true, false)
 }
 
 fn native_o0(path: &Path) -> Result<()> {
-	crate::run_and_assert(path, false, true)
+	run_and_assert(path, false, true)
 }
 
 fn native_o2(path: &Path) -> Result<()> {
-	crate::run_and_assert(path, true, true)
+	run_and_assert(path, true, true)
 }
 
 datatest_stable::harness! {

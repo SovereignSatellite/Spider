@@ -1,3 +1,5 @@
+//! ISLE-based peephole optimizations.
+
 mod context;
 mod internal;
 
@@ -31,6 +33,7 @@ fn replace_node(graph: &mut DataFlowGraph, destination: u32, sources: &[Link]) {
 	}
 }
 
+/// Simplifies an I32 operation at the given node ID.
 pub fn simplify_i32(graph: &mut DataFlowGraph, id: u32) -> bool {
 	constructor_SimplifyI32(graph, Link(id, 0)).is_some_and(|source| {
 		replace_node(graph, id, &[source]);
@@ -39,6 +42,7 @@ pub fn simplify_i32(graph: &mut DataFlowGraph, id: u32) -> bool {
 	})
 }
 
+/// Simplifies a global operation at the given node ID.
 pub fn simplify_global(graph: &mut DataFlowGraph, id: u32) -> bool {
 	constructor_SimplifyGlobal(graph, Link(id, 0)).is_some_and(|sources| {
 		replace_node(graph, id, &sources.as_fixed());
@@ -47,6 +51,7 @@ pub fn simplify_global(graph: &mut DataFlowGraph, id: u32) -> bool {
 	})
 }
 
+/// Simplifies a table operation at the given node ID.
 pub fn simplify_table(graph: &mut DataFlowGraph, id: u32) -> bool {
 	constructor_SimplifyTable(graph, Link(id, 0)).is_some_and(|sources| {
 		replace_node(graph, id, &sources.as_fixed());
@@ -55,6 +60,7 @@ pub fn simplify_table(graph: &mut DataFlowGraph, id: u32) -> bool {
 	})
 }
 
+/// Simplifies a memory operation at the given node ID.
 pub fn simplify_memory(graph: &mut DataFlowGraph, id: u32) -> bool {
 	constructor_SimplifyMemory(graph, Link(id, 0)).is_some_and(|sources| {
 		replace_node(graph, id, &sources.as_fixed());

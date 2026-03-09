@@ -4,12 +4,14 @@ use hashbrown::HashSet;
 
 use super::sections::{Section, Sections};
 
+/// Prints resolved runtime library sections in dependency order.
 pub struct Printer {
 	references: Vec<&'static str>,
 	expanded: HashSet<&'static str>,
 }
 
 impl Printer {
+	/// Creates a new `Printer`.
 	#[must_use]
 	pub fn new() -> Self {
 		Self {
@@ -23,13 +25,14 @@ impl Printer {
 			return;
 		}
 
-		for name in &sections.find(name).references {
-			self.recursively_expand(name, sections);
+		for dependency in &sections.find(name).references {
+			self.recursively_expand(dependency, sections);
 		}
 
 		self.references.push(name);
 	}
 
+	/// Resolves the given section names and their transitive dependencies.
 	pub fn resolve(&mut self, names: &[&'static str], sections: &Sections) {
 		self.references.clear();
 		self.expanded.clear();
@@ -39,6 +42,8 @@ impl Printer {
 		}
 	}
 
+	/// Writes all resolved sections to the writer.
+	///
 	/// # Errors
 	///
 	/// Returns any IO errors that the `out` produces during the process.

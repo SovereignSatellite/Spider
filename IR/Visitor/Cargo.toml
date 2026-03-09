@@ -3,6 +3,9 @@ name = "ir-visitor"
 version = "1.0.0"
 edition = "2024"
 
+[lints]
+workspace = true
+
 [dependencies]
 ir-graph = { path = "../Graph" }
 

@@ -1,4 +1,8 @@
+//! Turing machine lifter that compiles source code into a data flow graph.
+
 #![no_std]
+
+extern crate alloc;
 
 use alloc::{sync::Arc, vec::Vec};
 use ir_graph::{
@@ -14,10 +18,8 @@ use ir_graph::{
 	},
 };
 
-extern crate alloc;
-
-#[expect(clippy::cast_possible_truncation)]
-const CELL_SIZE: u32 = size_of::<u32>() as u32;
+const CELL_SIZE: u32 = 4;
+const _: () = assert!(size_of::<u32>() == 4);
 
 const MEMORY_SIZE: u32 = 1_024 * 4 * CELL_SIZE;
 
@@ -27,6 +29,7 @@ struct Block {
 	theta: u32,
 }
 
+/// A lifter that compiles source code into a data flow graph.
 pub struct TuringMachineLifter {
 	loads: Vec<Link>,
 	store: Link,
@@ -40,6 +43,7 @@ pub struct TuringMachineLifter {
 }
 
 impl TuringMachineLifter {
+	/// Creates a new Turing machine lifter.
 	#[must_use]
 	pub const fn new() -> Self {
 		Self {
@@ -67,7 +71,7 @@ impl TuringMachineLifter {
 		let namespace = Arc::<str>::from("turing");
 
 		self.io = Link(omega_in, OmegaIn::STATE_PORT);
-		self.ask = Import::add_into(graph, environment, namespace.clone(), "ask".into());
+		self.ask = Import::add_into(graph, environment, Arc::clone(&namespace), "ask".into());
 		self.tell = Import::add_into(graph, environment, namespace, "tell".into());
 	}
 
@@ -271,6 +275,7 @@ impl TuringMachineLifter {
 		}
 	}
 
+	/// Compiles the given source code into the data flow graph.
 	pub fn run(&mut self, graph: &mut DataFlowGraph, source: &str) -> u32 {
 		let omega_in = OmegaIn::add_into(graph);
 

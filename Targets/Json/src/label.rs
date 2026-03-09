@@ -11,6 +11,7 @@ use ir_graph::{
 	},
 };
 
+#[must_use]
 pub fn get_static(node: &Node) -> Option<&'static str> {
 	let name = match node {
 		Node::LambdaIn(_) => "Lambda In",
@@ -59,7 +60,18 @@ pub fn get_static(node: &Node) -> Option<&'static str> {
 		Node::MemoryCopy(_) => "Memory Copy",
 		Node::MemoryDrop(_) => "Memory Drop",
 
-		_ => return None,
+		Node::Import(_)
+		| Node::I32(_)
+		| Node::I64(_)
+		| Node::F32(_)
+		| Node::F64(_)
+		| Node::IntegerUnaryOperation(_)
+		| Node::IntegerBinaryOperation(_)
+		| Node::IntegerCompareOperation(_)
+		| Node::IntegerExtend(_)
+		| Node::NumberUnaryOperation(_)
+		| Node::NumberBinaryOperation(_)
+		| Node::NumberCompareOperation(_) => return None,
 	};
 
 	Some(name)
@@ -72,8 +84,8 @@ fn write_import(node: &Import, out: &mut dyn Write) -> Result<()> {
 	write!(out, "Import \"{namespace}\" \"{identifier}\"")
 }
 
-const fn extend_type_name(r#type: ExtendType) -> &'static str {
-	match r#type {
+const fn extend_type_name(kind: ExtendType) -> &'static str {
+	match kind {
 		ExtendType::I32_S8 => "S8 to I32",
 		ExtendType::I32_S16 => "S16 to I32",
 		ExtendType::I64_S8 => "S8 to I64",
@@ -83,11 +95,11 @@ const fn extend_type_name(r#type: ExtendType) -> &'static str {
 }
 
 fn write_integer_extend(node: IntegerExtend, out: &mut dyn Write) -> Result<()> {
-	write!(out, "Extend {}", extend_type_name(node.r#type))
+	write!(out, "Extend {}", extend_type_name(node.kind))
 }
 
-const fn integer_type_name(r#type: IntegerType) -> &'static str {
-	match r#type {
+const fn integer_type_name(kind: IntegerType) -> &'static str {
+	match kind {
 		IntegerType::I32 => "I32",
 		IntegerType::I64 => "I64",
 	}
@@ -105,7 +117,7 @@ fn write_integer_unary_operation(node: IntegerUnaryOperation, out: &mut dyn Writ
 	write!(
 		out,
 		"{} {}",
-		integer_type_name(node.r#type),
+		integer_type_name(node.kind),
 		integer_unary_operator_name(node.operator)
 	)
 }
@@ -134,7 +146,7 @@ fn write_integer_binary_operation(node: IntegerBinaryOperation, out: &mut dyn Wr
 	write!(
 		out,
 		"{} {}",
-		integer_type_name(node.r#type),
+		integer_type_name(node.kind),
 		integer_binary_operator_name(node.operator)
 	)
 }
@@ -161,13 +173,13 @@ fn write_integer_compare_operation(
 	write!(
 		out,
 		"{} {}",
-		integer_type_name(node.r#type),
+		integer_type_name(node.kind),
 		integer_compare_operator_name(node.operator)
 	)
 }
 
-const fn number_type_name(r#type: NumberType) -> &'static str {
-	match r#type {
+const fn number_type_name(kind: NumberType) -> &'static str {
+	match kind {
 		NumberType::F32 => "F32",
 		NumberType::F64 => "F64",
 	}
@@ -189,7 +201,7 @@ fn write_number_unary_operation(node: NumberUnaryOperation, out: &mut dyn Write)
 	write!(
 		out,
 		"{} {}",
-		number_type_name(node.r#type),
+		number_type_name(node.kind),
 		number_unary_operator_name(node.operator)
 	)
 }
@@ -210,7 +222,7 @@ fn write_number_binary_operation(node: NumberBinaryOperation, out: &mut dyn Writ
 	write!(
 		out,
 		"{} {}",
-		number_type_name(node.r#type),
+		number_type_name(node.kind),
 		number_binary_operator_name(node.operator)
 	)
 }
@@ -230,7 +242,7 @@ fn write_number_compare_operation(node: NumberCompareOperation, out: &mut dyn Wr
 	write!(
 		out,
 		"{} {}",
-		number_type_name(node.r#type),
+		number_type_name(node.kind),
 		number_compare_operator_name(node.operator)
 	)
 }
@@ -250,6 +262,49 @@ pub fn write(node: &Node, out: &mut dyn Write) -> Result<()> {
 		Node::NumberBinaryOperation(node) => write_number_binary_operation(node, out),
 		Node::NumberCompareOperation(node) => write_number_compare_operation(node, out),
 
-		_ => Err(Error::other("node does not have a dynamic name")),
+		Node::LambdaIn(_)
+		| Node::LambdaOut(_)
+		| Node::RegionIn(_)
+		| Node::RegionOut(_)
+		| Node::GammaIn(_)
+		| Node::GammaOut(_)
+		| Node::ThetaIn(_)
+		| Node::ThetaOut(_)
+		| Node::OmegaIn(_)
+		| Node::OmegaOut(_)
+		| Node::Host(_)
+		| Node::Trap
+		| Node::Null
+		| Node::Identity(_)
+		| Node::Fence(_)
+		| Node::Apply(_)
+		| Node::RefIsNull(_)
+		| Node::IntegerNarrow(_)
+		| Node::IntegerWiden(_)
+		| Node::IntegerConvertToNumber(_)
+		| Node::IntegerTransmuteToNumber(_)
+		| Node::NumberNarrow(_)
+		| Node::NumberWiden(_)
+		| Node::NumberTruncateToInteger(_)
+		| Node::NumberTransmuteToInteger(_)
+		| Node::GlobalNew(_)
+		| Node::GlobalGet(_)
+		| Node::GlobalSet(_)
+		| Node::TableNew(_)
+		| Node::TableGet(_)
+		| Node::TableSet(_)
+		| Node::TableSize(_)
+		| Node::TableGrow(_)
+		| Node::TableFill(_)
+		| Node::TableCopy(_)
+		| Node::TableDrop(_)
+		| Node::MemoryNew(_)
+		| Node::MemoryLoad(_)
+		| Node::MemoryStore(_)
+		| Node::MemorySize(_)
+		| Node::MemoryGrow(_)
+		| Node::MemoryFill(_)
+		| Node::MemoryCopy(_)
+		| Node::MemoryDrop(_) => Err(Error::other("node does not have a dynamic name")),
 	}
 }

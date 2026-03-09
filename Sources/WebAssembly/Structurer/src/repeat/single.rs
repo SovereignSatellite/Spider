@@ -5,7 +5,6 @@ use web_assembly_graph::{ControlFlowGraph, instruction::Name};
 pub struct Single {
 	entries: Vec<u16>,
 	exits: Vec<u16>,
-
 	region: Set,
 	temporary: Vec<u16>,
 }
@@ -15,17 +14,16 @@ impl Single {
 		Self {
 			entries: Vec::new(),
 			exits: Vec::new(),
-
 			region: Set::new(),
 			temporary: Vec::new(),
 		}
 	}
 
 	fn set_region_contents(&mut self, region: &[u16]) {
-		let region = region.iter().copied().map(usize::from);
+		let region_iter = region.iter().copied().map(usize::from);
 
 		self.region.clear();
-		self.region.extend(region);
+		self.region.extend(region_iter);
 	}
 
 	fn find_entries_and_exits(&mut self, graph: &ControlFlowGraph) {
@@ -33,19 +31,19 @@ impl Single {
 		self.exits.clear();
 
 		for id in self.region.ascending() {
-			let id = id.try_into().unwrap();
+			let node_id: u16 = id.try_into().unwrap();
 
 			if graph
-				.predecessors(id)
-				.any(|id| !self.region.contains(id.into()))
+				.predecessors(node_id)
+				.any(|pred_id| !self.region.contains(pred_id.into()))
 			{
-				self.entries.push(id);
+				self.entries.push(node_id);
 			}
 
 			self.exits.extend(
 				graph
-					.successors(id)
-					.filter(|&id| !self.region.contains(id.into())),
+					.successors(node_id)
+					.filter(|&succ_id| !self.region.contains(succ_id.into())),
 			);
 		}
 
@@ -113,15 +111,19 @@ impl Single {
 		}
 	}
 
-	// Either the `target` is in the `region`, or one of its predecessors which was added during this pass is.
-	fn in_region(graph: &ControlFlowGraph, region: Slice, target: u16) -> bool {
+	fn in_region(graph: &ControlFlowGraph, region: Slice<'_>, target: u16) -> bool {
 		region.contains(target.into())
 			|| graph
 				.predecessors(target)
 				.any(|id| region.contains(id.into()))
 	}
 
-	fn in_region_acyclic(graph: &ControlFlowGraph, region: Slice, target: u16, exit: u16) -> bool {
+	fn in_region_acyclic(
+		graph: &ControlFlowGraph,
+		region: Slice<'_>,
+		target: u16,
+		exit: u16,
+	) -> bool {
 		target != exit && Self::in_region(graph, region, target)
 	}
 

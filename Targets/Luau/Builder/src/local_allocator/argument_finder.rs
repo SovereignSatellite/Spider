@@ -6,6 +6,10 @@ use ir_graph::{
 };
 use set::Set;
 
+#[expect(
+	clippy::wildcard_enum_match_arm,
+	reason = "catch-all for non-region nodes"
+)]
 pub fn get_region_range(graph: &DataFlowGraph, node: &Node) -> Option<(u32, u32)> {
 	let range = match *node {
 		Node::OmegaOut(OmegaOut { input, .. }) => {

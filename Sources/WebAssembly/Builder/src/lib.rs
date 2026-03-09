@@ -1,5 +1,6 @@
+//! WebAssembly control flow builder for converting operators into structured IR.
+
 #![no_std]
-#![expect(clippy::missing_panics_doc)]
 
 extern crate alloc;
 
@@ -17,6 +18,7 @@ use self::{expression_builder::ExpressionBuilder, post_order_sorter::PostOrderSo
 
 pub use self::types::Types;
 
+/// Builds a structured control flow graph from WebAssembly operators.
 pub struct ControlFlowBuilder {
 	expression_builder: ExpressionBuilder,
 	post_order_sorter: PostOrderSorter,
@@ -25,6 +27,7 @@ pub struct ControlFlowBuilder {
 
 impl ControlFlowBuilder {
 	#[must_use]
+	/// Creates a new control flow builder.
 	pub const fn new() -> Self {
 		Self {
 			expression_builder: ExpressionBuilder::new(),
@@ -33,13 +36,14 @@ impl ControlFlowBuilder {
 		}
 	}
 
+	/// Builds and restructures the control flow graph from WebAssembly operators.
 	pub fn run(
 		&mut self,
 		graph: &mut ControlFlowGraph,
 		types: &Types,
 		function_type: BlockType,
 		locals: u16,
-		operators: OperatorsReader,
+		operators: OperatorsReader<'_>,
 	) {
 		self.expression_builder
 			.run(graph, types, function_type, locals, operators);

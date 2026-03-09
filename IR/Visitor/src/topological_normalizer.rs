@@ -1,3 +1,6 @@
+//! Topological normalization.
+
+use alloc::vec::Vec;
 use ir_graph::{DataFlowGraph, Node};
 use set::Set;
 
@@ -53,6 +56,7 @@ impl DepthFirstSearcher {
 	}
 }
 
+/// Normalizes graph node ordering to topological order.
 pub struct TopologicalNormalizer {
 	nodes: Vec<Node>,
 	id_to_post: Vec<u32>,
@@ -61,6 +65,7 @@ pub struct TopologicalNormalizer {
 }
 
 impl TopologicalNormalizer {
+	/// Creates a new topological normalizer.
 	#[must_use]
 	pub const fn new() -> Self {
 		Self {
@@ -79,7 +84,7 @@ impl TopologicalNormalizer {
 		self.id_to_post.resize(graph.len(), u32::MAX);
 
 		self.depth_first_searcher.run(graph, result, |graph, id| {
-			let node = std::mem::take(graph.get_mut(id));
+			let node = core::mem::take(graph.get_mut(id));
 
 			self.nodes.push(node);
 			self.id_to_post[usize::try_from(id).unwrap()] = post;
@@ -87,7 +92,7 @@ impl TopologicalNormalizer {
 			post += 1;
 		});
 
-		std::mem::swap(graph.inner_mut(), &mut self.nodes);
+		core::mem::swap(graph.inner_mut(), &mut self.nodes);
 	}
 
 	fn handle_edges(&self, graph: &mut DataFlowGraph, result: u32) -> u32 {
@@ -102,6 +107,7 @@ impl TopologicalNormalizer {
 		self.id_to_post[usize::try_from(result).unwrap()]
 	}
 
+	/// Normalizes the graph into topological order starting from the result node.
 	pub fn run(&mut self, graph: &mut DataFlowGraph, result: u32) -> u32 {
 		self.handle_nodes(graph, result);
 		self.handle_edges(graph, result)

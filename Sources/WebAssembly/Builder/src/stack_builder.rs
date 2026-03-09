@@ -1,3 +1,5 @@
+//! Stack-based builder for managing WebAssembly operand stack and control flow levels.
+
 use alloc::vec::Vec;
 use list::resizable::Resizable;
 use wasmparser::{BlockType, FuncType};
@@ -25,7 +27,6 @@ pub struct Level {
 
 pub struct StackBuilder {
 	levels: Vec<Level>,
-
 	top: u16,
 }
 
@@ -33,7 +34,6 @@ impl StackBuilder {
 	pub const fn new() -> Self {
 		Self {
 			levels: Vec::new(),
-
 			top: 0,
 		}
 	}
@@ -106,9 +106,9 @@ impl StackBuilder {
 		self.pull_locals(1).0
 	}
 
-	pub fn load_function_type(&mut self, r#type: &FuncType) -> ((u16, u16), (u16, u16)) {
-		let sources = self.pull_locals(r#type.params().len().try_into().unwrap());
-		let destinations = self.push_locals(r#type.results().len().try_into().unwrap());
+	pub fn load_function_type(&mut self, kind: &FuncType) -> ((u16, u16), (u16, u16)) {
+		let sources = self.pull_locals(kind.params().len().try_into().unwrap());
+		let destinations = self.push_locals(kind.results().len().try_into().unwrap());
 
 		(destinations, sources)
 	}

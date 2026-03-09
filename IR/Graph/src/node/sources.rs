@@ -1,3 +1,9 @@
+#![expect(
+	unused_variables,
+	unused_mut,
+	reason = "macro-generated visitors may not use all fields"
+)]
+
 use crate::{
 	Link, Node,
 	node::{
@@ -182,7 +188,6 @@ macro_rules! handle_mut_argument_source {
 
 macro_rules! handle_visitor {
 	($name:ident, $type:ty, $visitor:ident, ( $( ($field:ident, $variant:ident) ),* )) => {
-		#[allow(unused_variables, unused_mut)]
         fn $name<H: FnMut($type)>(&self, mut handler: H) {
         	let Self { $($field),* } = self;
 
@@ -195,7 +200,6 @@ macro_rules! handle_visitor {
 
 macro_rules! handle_mut_visitor {
 	($name:ident, $type:ty, $visitor:ident, ( $( ($field:ident, $variant:ident) ),* )) => {
-		#[allow(unused_variables, unused_mut)]
 		fn $name<H: FnMut(&mut $type)>(&mut self, mut handler: H) {
         	let Self { $($field),* } = self;
 
@@ -223,7 +227,7 @@ macro_rules! handle_requirements {
 }
 
 impl LambdaIn {
-	handle_sources!((output, id), (r#type, ignore), (dependencies, link_list));
+	handle_sources!((output, id), (kind, ignore), (dependencies, link_list));
 }
 
 impl LambdaOut {
@@ -297,25 +301,15 @@ impl RefIsNull {
 }
 
 impl IntegerUnaryOperation {
-	handle_sources!((source, link), (r#type, ignore), (operator, ignore));
+	handle_sources!((source, link), (kind, ignore), (operator, ignore));
 }
 
 impl IntegerBinaryOperation {
-	handle_sources!(
-		(lhs, link),
-		(rhs, link),
-		(r#type, ignore),
-		(operator, ignore)
-	);
+	handle_sources!((lhs, link), (rhs, link), (kind, ignore), (operator, ignore));
 }
 
 impl IntegerCompareOperation {
-	handle_sources!(
-		(lhs, link),
-		(rhs, link),
-		(r#type, ignore),
-		(operator, ignore)
-	);
+	handle_sources!((lhs, link), (rhs, link), (kind, ignore), (operator, ignore));
 }
 
 impl IntegerNarrow {
@@ -327,7 +321,7 @@ impl IntegerWiden {
 }
 
 impl IntegerExtend {
-	handle_sources!((source, link), (r#type, ignore));
+	handle_sources!((source, link), (kind, ignore));
 }
 
 impl IntegerConvertToNumber {
@@ -344,25 +338,15 @@ impl IntegerTransmuteToNumber {
 }
 
 impl NumberUnaryOperation {
-	handle_sources!((source, link), (r#type, ignore), (operator, ignore));
+	handle_sources!((source, link), (kind, ignore), (operator, ignore));
 }
 
 impl NumberBinaryOperation {
-	handle_sources!(
-		(lhs, link),
-		(rhs, link),
-		(r#type, ignore),
-		(operator, ignore)
-	);
+	handle_sources!((lhs, link), (rhs, link), (kind, ignore), (operator, ignore));
 }
 
 impl NumberCompareOperation {
-	handle_sources!(
-		(lhs, link),
-		(rhs, link),
-		(r#type, ignore),
-		(operator, ignore)
-	);
+	handle_sources!((lhs, link), (rhs, link), (kind, ignore), (operator, ignore));
 }
 
 impl NumberTruncateToInteger {
@@ -405,11 +389,7 @@ impl GlobalSet {
 
 impl TableNew {
 	fn for_each_id<H: FnMut(u32)>(&self, mut handler: H) {
-		let Self {
-			initializer,
-			minimum: _,
-			maximum: _,
-		} = self;
+		let Self { initializer, .. } = self;
 
 		for item in initializer {
 			handler(item.0.0);
@@ -417,11 +397,7 @@ impl TableNew {
 	}
 
 	fn for_each_mut_id<H: FnMut(&mut u32)>(&mut self, mut handler: H) {
-		let Self {
-			initializer,
-			minimum: _,
-			maximum: _,
-		} = self;
+		let Self { initializer, .. } = self;
 
 		for item in initializer {
 			handler(&mut item.0.0);
@@ -429,11 +405,7 @@ impl TableNew {
 	}
 
 	fn for_each_argument<H: FnMut(Link)>(&self, mut handler: H) {
-		let Self {
-			initializer,
-			minimum: _,
-			maximum: _,
-		} = self;
+		let Self { initializer, .. } = self;
 
 		for item in initializer {
 			handler(item.0);
@@ -441,11 +413,7 @@ impl TableNew {
 	}
 
 	fn for_each_mut_argument<H: FnMut(&mut Link)>(&mut self, mut handler: H) {
-		let Self {
-			initializer,
-			minimum: _,
-			maximum: _,
-		} = self;
+		let Self { initializer, .. } = self;
 
 		for item in initializer {
 			handler(&mut item.0);
@@ -486,11 +454,11 @@ impl MemoryNew {
 }
 
 impl MemoryLoad {
-	handle_sources!((source, method), (r#type, ignore));
+	handle_sources!((source, method), (kind, ignore));
 }
 
 impl MemoryStore {
-	handle_sources!((destination, method), (source, link), (r#type, ignore));
+	handle_sources!((destination, method), (source, link), (kind, ignore));
 }
 
 impl MemorySize {
@@ -514,6 +482,7 @@ impl MemoryDrop {
 }
 
 impl Node {
+	/// Calls `handler` for each structural requirement in this node.
 	pub fn for_each_requirement<H: FnMut(u32)>(&self, handler: H) {
 		match self {
 			Self::LambdaOut(node) => node.for_each_requirement(handler),
@@ -523,22 +492,75 @@ impl Node {
 			Self::ThetaOut(node) => node.for_each_requirement(handler),
 			Self::OmegaOut(node) => node.for_each_requirement(handler),
 
-			_ => {}
+			Self::Apply(_)
+			| Self::F32(_)
+			| Self::F64(_)
+			| Self::Fence(_)
+			| Self::GammaIn(_)
+			| Self::GlobalGet(_)
+			| Self::GlobalNew(_)
+			| Self::GlobalSet(_)
+			| Self::Host(_)
+			| Self::I32(_)
+			| Self::I64(_)
+			| Self::Identity(_)
+			| Self::Import(_)
+			| Self::IntegerBinaryOperation(_)
+			| Self::IntegerCompareOperation(_)
+			| Self::IntegerConvertToNumber(_)
+			| Self::IntegerExtend(_)
+			| Self::IntegerNarrow(_)
+			| Self::IntegerTransmuteToNumber(_)
+			| Self::IntegerUnaryOperation(_)
+			| Self::IntegerWiden(_)
+			| Self::LambdaIn(_)
+			| Self::MemoryCopy(_)
+			| Self::MemoryDrop(_)
+			| Self::MemoryFill(_)
+			| Self::MemoryGrow(_)
+			| Self::MemoryLoad(_)
+			| Self::MemoryNew(_)
+			| Self::MemorySize(_)
+			| Self::MemoryStore(_)
+			| Self::Null
+			| Self::NumberBinaryOperation(_)
+			| Self::NumberCompareOperation(_)
+			| Self::NumberNarrow(_)
+			| Self::NumberTransmuteToInteger(_)
+			| Self::NumberTruncateToInteger(_)
+			| Self::NumberUnaryOperation(_)
+			| Self::NumberWiden(_)
+			| Self::OmegaIn(_)
+			| Self::RefIsNull(_)
+			| Self::TableCopy(_)
+			| Self::TableDrop(_)
+			| Self::TableFill(_)
+			| Self::TableGet(_)
+			| Self::TableGrow(_)
+			| Self::TableNew(_)
+			| Self::TableSet(_)
+			| Self::TableSize(_)
+			| Self::ThetaIn(_)
+			| Self::Trap => {}
 		}
 	}
 
+	/// Calls `handler` for each identifier in this node.
 	pub fn for_each_id<H: FnMut(u32)>(&self, mut handler: H) {
 		for_each_visit!(self, for_each_id, handler);
 	}
 
+	/// Calls `handler` for each mutable identifier in this node.
 	pub fn for_each_mut_id<H: FnMut(&mut u32)>(&mut self, mut handler: H) {
 		for_each_visit!(self, for_each_mut_id, handler);
 	}
 
+	/// Calls `handler` for each argument link in this node.
 	pub fn for_each_argument<H: FnMut(Link)>(&self, mut handler: H) {
 		for_each_visit!(self, for_each_argument, handler);
 	}
 
+	/// Calls `handler` for each mutable argument link in this node.
 	pub fn for_each_mut_argument<H: FnMut(&mut Link)>(&mut self, mut handler: H) {
 		for_each_visit!(self, for_each_mut_argument, handler);
 	}
