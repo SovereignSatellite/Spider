@@ -1,4 +1,4 @@
-use std::ops::ControlFlow;
+use core::ops::ControlFlow;
 
 use luau_tree::{
 	LuauTree,
@@ -19,7 +19,9 @@ use luau_tree::{
 	visitor::Visitor,
 };
 
+/// A trait for items that may need a runtime library function name.
 pub trait NeedsName {
+	/// Returns the runtime library function name needed, or empty if none.
 	fn needs_name(&self) -> &'static str;
 }
 
@@ -53,11 +55,9 @@ impl NeedsName for f64 {
 
 impl NeedsName for IntegerUnaryOperation {
 	fn needs_name(&self) -> &'static str {
-		let Self {
-			r#type, operator, ..
-		} = *self;
+		let Self { kind, operator, .. } = *self;
 
-		match (r#type, operator) {
+		match (kind, operator) {
 			(IntegerType::I32, IntegerUnaryOperator::CountOnes) => "count_ones_i32",
 			(IntegerType::I32, IntegerUnaryOperator::LeadingZeroes) => "leading_zeroes_i32",
 			(IntegerType::I32, IntegerUnaryOperator::TrailingZeroes) => "trailing_zeroes_i32",
@@ -70,11 +70,9 @@ impl NeedsName for IntegerUnaryOperation {
 
 impl NeedsName for IntegerBinaryOperation {
 	fn needs_name(&self) -> &'static str {
-		let Self {
-			r#type, operator, ..
-		} = *self;
+		let Self { kind, operator, .. } = *self;
 
-		match (r#type, operator) {
+		match (kind, operator) {
 			(IntegerType::I32, IntegerBinaryOperator::Add) => "add_i32",
 			(IntegerType::I32, IntegerBinaryOperator::Subtract) => "subtract_i32",
 			(IntegerType::I32, IntegerBinaryOperator::Multiply) => "multiply_i32",
@@ -127,11 +125,9 @@ impl NeedsName for IntegerBinaryOperation {
 
 impl NeedsName for IntegerCompareOperation {
 	fn needs_name(&self) -> &'static str {
-		let Self {
-			r#type, operator, ..
-		} = *self;
+		let Self { kind, operator, .. } = *self;
 
-		match (r#type, operator) {
+		match (kind, operator) {
 			(IntegerType::I32, IntegerCompareOperator::Equal) => "equal_i32",
 			(IntegerType::I32, IntegerCompareOperator::NotEqual) => "not_equal_i32",
 			(IntegerType::I32, IntegerCompareOperator::LessThan { signed: true }) => {
@@ -202,9 +198,9 @@ impl NeedsName for IntegerWiden {
 
 impl NeedsName for IntegerExtend {
 	fn needs_name(&self) -> &'static str {
-		let Self { r#type, .. } = *self;
+		let Self { kind, .. } = *self;
 
-		match r#type {
+		match kind {
 			ExtendType::I32_S8 => "extend_s8_to_i32",
 			ExtendType::I32_S16 => "extend_s16_to_i32",
 			ExtendType::I64_S8 => "extend_s8_to_i64",
@@ -246,11 +242,9 @@ impl NeedsName for IntegerTransmuteToNumber {
 
 impl NeedsName for NumberUnaryOperation {
 	fn needs_name(&self) -> &'static str {
-		let Self {
-			r#type, operator, ..
-		} = *self;
+		let Self { kind, operator, .. } = *self;
 
-		match (r#type, operator) {
+		match (kind, operator) {
 			(NumberType::F32, NumberUnaryOperator::Absolute) => "absolute_f32",
 			(NumberType::F32, NumberUnaryOperator::Negate) => "negate_f32",
 			(NumberType::F32, NumberUnaryOperator::SquareRoot) => "square_root_f32",
@@ -271,11 +265,9 @@ impl NeedsName for NumberUnaryOperation {
 
 impl NeedsName for NumberBinaryOperation {
 	fn needs_name(&self) -> &'static str {
-		let Self {
-			r#type, operator, ..
-		} = *self;
+		let Self { kind, operator, .. } = *self;
 
-		match (r#type, operator) {
+		match (kind, operator) {
 			(NumberType::F32, NumberBinaryOperator::Add) => "add_f32",
 			(NumberType::F32, NumberBinaryOperator::Subtract) => "subtract_f32",
 			(NumberType::F32, NumberBinaryOperator::Multiply) => "multiply_f32",
@@ -296,11 +288,9 @@ impl NeedsName for NumberBinaryOperation {
 
 impl NeedsName for NumberCompareOperation {
 	fn needs_name(&self) -> &'static str {
-		let Self {
-			r#type, operator, ..
-		} = *self;
+		let Self { kind, operator, .. } = *self;
 
-		match (r#type, operator) {
+		match (kind, operator) {
 			(NumberType::F32, NumberCompareOperator::Equal) => "equal_f32",
 			(NumberType::F32, NumberCompareOperator::NotEqual) => "not_equal_f32",
 			(NumberType::F32, NumberCompareOperator::LessThan) => "less_than_f32",
@@ -415,9 +405,9 @@ impl NeedsName for MemoryNew {
 
 impl NeedsName for MemoryLoad {
 	fn needs_name(&self) -> &'static str {
-		let Self { r#type, .. } = *self;
+		let Self { kind, .. } = *self;
 
-		match r#type {
+		match kind {
 			LoadType::I32_S8 => "load_i32_from_s8",
 			LoadType::I32_U8 => "load_i32_from_u8",
 			LoadType::I32_S16 => "load_i32_from_s16",
@@ -548,9 +538,9 @@ impl NeedsName for TableDrop {
 
 impl NeedsName for MemoryStore {
 	fn needs_name(&self) -> &'static str {
-		let Self { r#type, .. } = *self;
+		let Self { kind, .. } = *self;
 
-		match r#type {
+		match kind {
 			StoreType::I32_I8 => "store_i32_into_i8",
 			StoreType::I32_I16 => "store_i32_into_i16",
 			StoreType::I32 => "store_i32",
@@ -604,15 +594,22 @@ impl NeedsName for Statement {
 	}
 }
 
+/// Collects all runtime library function names needed by a tree.
 pub struct NamesFinder<'names> {
 	names: &'names mut Vec<&'static str>,
 }
 
 impl<'names> NamesFinder<'names> {
+	/// Creates a new names finder writing to the given list.
 	pub const fn new(names: &'names mut Vec<&'static str>) -> Self {
 		Self { names }
 	}
 
+	/// Collects all needed names from the tree.
+	///
+	/// # Panics
+	///
+	/// Panics if the visitor traversal fails; if this happens, it is a bug.
 	pub fn run(&mut self, tree: &LuauTree) {
 		tree.accept(self)
 			.continue_value()

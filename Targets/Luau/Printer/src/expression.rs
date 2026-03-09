@@ -1,3 +1,79 @@
+mod conditional {
+	use std::io::{Result, Write};
+
+	use luau_tree::expression::Expression;
+
+	use crate::{LuauPrinter, print::Print as _};
+
+	fn print_recursive(
+		branches: &[Expression],
+		condition: &Expression,
+		start: usize,
+		end: usize,
+		printer: &mut LuauPrinter,
+		out: &mut dyn Write,
+	) -> Result<()> {
+		let center = start + (end - start) / 2;
+
+		if start != center {
+			write!(out, "if (")?;
+
+			condition.print(printer, out)?;
+
+			write!(out, ") < {center} then ")?;
+
+			print_recursive(branches, condition, start, center, printer, out)?;
+
+			write!(out, " else")?;
+
+			if end != center + 1 {
+				write!(out, "if (")?;
+
+				condition.print(printer, out)?;
+
+				write!(out, ") > {center} then ")?;
+
+				print_recursive(branches, condition, center + 1, end, printer, out)?;
+
+				write!(out, " else")?;
+			}
+
+			write!(out, " ")?;
+		}
+
+		branches[center].print(printer, out)
+	}
+
+	pub fn print_match(
+		branches: &[Expression],
+		condition: &Expression,
+		printer: &mut LuauPrinter,
+		out: &mut dyn Write,
+	) -> Result<()> {
+		print_recursive(branches, condition, 0, branches.len(), printer, out)
+	}
+
+	pub fn print_if(
+		on_false: &Expression,
+		on_true: &Expression,
+		condition: &Expression,
+		printer: &mut LuauPrinter,
+		out: &mut dyn Write,
+	) -> Result<()> {
+		write!(out, "if ")?;
+
+		condition.print(printer, out)?;
+
+		write!(out, " then ")?;
+
+		on_true.print(printer, out)?;
+
+		write!(out, " else ")?;
+
+		on_false.print(printer, out)
+	}
+}
+
 use std::io::{Result, Write};
 
 use luau_tree::expression::{
@@ -10,7 +86,7 @@ use luau_tree::expression::{
 	NumberUnaryOperator, NumberWiden, RefIsNull, Scoped, TableGet, TableGrow, TableNew, TableSize,
 };
 
-use crate::{LuauPrinter, library::NeedsName, print::Print};
+use crate::{LuauPrinter, library::NeedsName as _, print::Print};
 
 pub fn fmt_delimited<T, I>(items: I, printer: &mut LuauPrinter, out: &mut dyn Write) -> Result<()>
 where
@@ -180,82 +256,6 @@ impl Print for Scoped {
 	}
 }
 
-mod conditional {
-	use std::io::{Result, Write};
-
-	use luau_tree::expression::Expression;
-
-	use crate::{LuauPrinter, print::Print};
-
-	fn print_recursive(
-		branches: &[Expression],
-		condition: &Expression,
-		start: usize,
-		end: usize,
-		printer: &mut LuauPrinter,
-		out: &mut dyn Write,
-	) -> Result<()> {
-		let center = start + (end - start) / 2;
-
-		if start != center {
-			write!(out, "if (")?;
-
-			condition.print(printer, out)?;
-
-			write!(out, ") < {center} then ")?;
-
-			print_recursive(branches, condition, start, center, printer, out)?;
-
-			write!(out, " else")?;
-
-			if end != center + 1 {
-				write!(out, "if (")?;
-
-				condition.print(printer, out)?;
-
-				write!(out, ") > {center} then ")?;
-
-				print_recursive(branches, condition, center + 1, end, printer, out)?;
-
-				write!(out, " else")?;
-			}
-
-			write!(out, " ")?;
-		}
-
-		branches[center].print(printer, out)
-	}
-
-	pub fn print_match(
-		branches: &[Expression],
-		condition: &Expression,
-		printer: &mut LuauPrinter,
-		out: &mut dyn Write,
-	) -> Result<()> {
-		print_recursive(branches, condition, 0, branches.len(), printer, out)
-	}
-
-	pub fn print_if(
-		on_false: &Expression,
-		on_true: &Expression,
-		condition: &Expression,
-		printer: &mut LuauPrinter,
-		out: &mut dyn Write,
-	) -> Result<()> {
-		write!(out, "if ")?;
-
-		condition.print(printer, out)?;
-
-		write!(out, " then ")?;
-
-		on_true.print(printer, out)?;
-
-		write!(out, " else ")?;
-
-		on_false.print(printer, out)
-	}
-}
-
 impl Print for Match {
 	fn print(&self, printer: &mut LuauPrinter, out: &mut dyn Write) -> Result<()> {
 		let Self {
@@ -283,12 +283,12 @@ impl Print for Import {
 
 		environment.print(printer, out)?;
 
-		let namespace = namespace.as_bytes().escape_ascii();
-		let identifier = identifier.as_bytes().escape_ascii();
+		let escaped_namespace = namespace.as_bytes().escape_ascii();
+		let escaped_identifier = identifier.as_bytes().escape_ascii();
 
 		write!(
 			out,
-			"[\"{namespace}\"][\"{identifier}\"], '`{namespace}.{identifier}` should be present')"
+			"[\"{escaped_namespace}\"][\"{escaped_identifier}\"], '`{escaped_namespace}.{escaped_identifier}` should be present')"
 		)
 	}
 }
@@ -504,11 +504,11 @@ impl Print for NumberUnaryOperation {
 	fn print(&self, printer: &mut LuauPrinter, out: &mut dyn Write) -> Result<()> {
 		let Self {
 			source,
-			r#type,
+			kind,
 			operator,
 		} = self;
 
-		if *r#type == NumberType::F64 && *operator == NumberUnaryOperator::Negate {
+		if *kind == NumberType::F64 && *operator == NumberUnaryOperator::Negate {
 			write!(out, "-(")?;
 
 			source.print(printer, out)?;
@@ -531,7 +531,7 @@ impl Print for NumberBinaryOperation {
 		let Self {
 			lhs,
 			rhs,
-			r#type,
+			kind,
 			operator,
 		} = self;
 
@@ -541,8 +541,10 @@ impl Print for NumberBinaryOperation {
 			NumberBinaryOperator::Multiply => Some("*"),
 			NumberBinaryOperator::Divide => Some("/"),
 
-			_ => None,
-		} && *r#type == NumberType::F64
+			NumberBinaryOperator::CopySign
+			| NumberBinaryOperator::Maximum
+			| NumberBinaryOperator::Minimum => None,
+		} && *kind == NumberType::F64
 		{
 			return fmt_infix_operator(lhs, rhs, operator, printer, out);
 		}
@@ -566,11 +568,11 @@ impl Print for NumberCompareOperation {
 		let Self {
 			lhs,
 			rhs,
-			r#type,
+			kind,
 			operator,
 		} = self;
 
-		if *r#type == NumberType::F64 {
+		if *kind == NumberType::F64 {
 			let operator = match operator {
 				NumberCompareOperator::Equal => "==",
 				NumberCompareOperator::NotEqual => "~=",
@@ -832,7 +834,7 @@ impl Print for Expression {
 		match self {
 			Self::Function(function) => function.print(printer, out),
 			Self::Scoped(scoped) => scoped.print(printer, out),
-			Self::Match(r#match) => r#match.print(printer, out),
+			Self::Match(inner) => inner.print(printer, out),
 			Self::Import(import) => import.print(printer, out),
 			Self::Trap => write!(out, "error('unreachable code')"),
 			Self::Null => write!(out, "nil"),
