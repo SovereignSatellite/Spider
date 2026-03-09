@@ -15,8 +15,8 @@ impl Bulk {
 	pub const fn new() -> Self {
 		Self {
 			single: Single::new(),
-			infos: Vec::new(),
 
+			infos: Vec::new(),
 			strongly_connected_finder: StronglyConnectedFinder::new(),
 		}
 	}
@@ -43,11 +43,11 @@ impl Bulk {
 		self.handle_region(graph, entry, exit);
 
 		while index < self.infos.len() {
-			let (entry, latch) = self.infos[index];
+			let (region_entry, latch) = self.infos[index];
 
 			index += 1;
 
-			self.handle_region(graph, entry, latch);
+			self.handle_region(graph, region_entry, latch);
 		}
 	}
 }

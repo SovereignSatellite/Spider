@@ -35,8 +35,8 @@ impl Bulk {
 	}
 
 	fn add_branch(&mut self, graph: &ControlFlowGraph, entry: u16, exit: u16) {
-		if let Some(entry) = Self::find_next_branch(graph, entry, exit) {
-			self.infos.push((entry, exit));
+		if let Some(branch_entry) = Self::find_next_branch(graph, entry, exit) {
+			self.infos.push((branch_entry, exit));
 		}
 	}
 
@@ -53,8 +53,8 @@ impl Bulk {
 	pub fn run(&mut self, graph: &mut ControlFlowGraph, entry: u16, exit: u16) {
 		self.add_branch(graph, entry, exit);
 
-		while let Some((entry, exit)) = self.infos.pop() {
-			self.handle_region(graph, entry, exit);
+		while let Some((region_entry, region_exit)) = self.infos.pop() {
+			self.handle_region(graph, region_entry, region_exit);
 		}
 	}
 }
