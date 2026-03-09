@@ -1,3 +1,5 @@
+//! External reference tracking.
+
 use alloc::vec::Vec;
 use web_assembly_graph::instruction::{
 	DataDrop, ElementsDrop, GlobalGet, GlobalSet, Instruction, MemoryCopy, MemoryFill, MemoryGrow,
@@ -6,18 +8,26 @@ use web_assembly_graph::instruction::{
 };
 
 #[derive(PartialEq, Eq, PartialOrd, Ord, Hash, Clone, Copy)]
+/// The type of an external reference.
 pub enum ReferenceType {
+	/// A function reference.
 	Function,
 
+	/// A global variable reference.
 	Global,
+	/// A table reference.
 	Table,
+	/// An element segment reference.
 	Elements,
+	/// A linear memory reference.
 	Memory,
+	/// A data segment reference.
 	Data,
 }
 
 impl ReferenceType {
 	#[must_use]
+	/// Returns whether this reference type is mutable.
 	pub const fn is_mutable(self) -> bool {
 		matches!(
 			self,
@@ -27,21 +37,24 @@ impl ReferenceType {
 }
 
 #[derive(PartialEq, Eq, PartialOrd, Ord, Clone, Copy)]
+/// An external reference used by an instruction.
 pub struct Reference {
-	pub r#type: ReferenceType,
+	/// The reference type.
+	pub kind: ReferenceType,
+	/// The reference index.
 	pub id: u16,
 }
 
 fn read_function(references: &mut Vec<Reference>, function: u16) {
 	references.push(Reference {
-		r#type: ReferenceType::Function,
+		kind: ReferenceType::Function,
 		id: function,
 	});
 }
 
 fn read_global(references: &mut Vec<Reference>, global: u16) {
 	references.push(Reference {
-		r#type: ReferenceType::Global,
+		kind: ReferenceType::Global,
 		id: global,
 	});
 }
@@ -52,7 +65,7 @@ fn write_global(references: &mut Vec<Reference>, global: u16) {
 
 fn read_table(references: &mut Vec<Reference>, table: u16) {
 	references.push(Reference {
-		r#type: ReferenceType::Table,
+		kind: ReferenceType::Table,
 		id: table,
 	});
 }
@@ -63,7 +76,7 @@ fn write_table(references: &mut Vec<Reference>, table: u16) {
 
 fn read_elements(references: &mut Vec<Reference>, elements: u16) {
 	references.push(Reference {
-		r#type: ReferenceType::Elements,
+		kind: ReferenceType::Elements,
 		id: elements,
 	});
 }
@@ -74,7 +87,7 @@ fn write_elements(references: &mut Vec<Reference>, elements: u16) {
 
 fn read_memory(references: &mut Vec<Reference>, memory: u16) {
 	references.push(Reference {
-		r#type: ReferenceType::Memory,
+		kind: ReferenceType::Memory,
 		id: memory,
 	});
 }
@@ -85,7 +98,7 @@ fn write_memory(references: &mut Vec<Reference>, memory: u16) {
 
 fn read_data(references: &mut Vec<Reference>, data: u16) {
 	references.push(Reference {
-		r#type: ReferenceType::Data,
+		kind: ReferenceType::Data,
 		id: data,
 	});
 }
@@ -278,6 +291,7 @@ fn handle_instruction(references: &mut Vec<Reference>, instruction: Instruction)
 	}
 }
 
+/// Collects all external references used by the given instructions.
 pub fn track(references: &mut Vec<Reference>, instructions: &[Instruction]) {
 	references.clear();
 
