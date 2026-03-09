@@ -24,6 +24,7 @@ use crate::{
 };
 
 impl Identity {
+	/// Adds an identity node to the graph.
 	pub fn add_into(graph: &mut DataFlowGraph, sources: Resizable<Link, 4>) -> u32 {
 		let node = Node::Identity(Self { sources });
 
@@ -32,6 +33,7 @@ impl Identity {
 }
 
 impl Fence {
+	/// Adds a fence node to the graph.
 	pub fn add_into(graph: &mut DataFlowGraph, sources: Resizable<Link, 4>) -> u32 {
 		let node = Node::Fence(Self { sources });
 
@@ -40,6 +42,7 @@ impl Fence {
 }
 
 impl Apply {
+	/// Adds a function application node to the graph.
 	pub fn add_into(
 		graph: &mut DataFlowGraph,
 		function: Link,
@@ -57,6 +60,7 @@ impl Apply {
 }
 
 impl RefIsNull {
+	/// Adds a reference null check node to the graph.
 	pub fn add_into(graph: &mut DataFlowGraph, source: Link) -> Link {
 		let node = Node::RefIsNull(Self { source });
 
@@ -65,15 +69,16 @@ impl RefIsNull {
 }
 
 impl IntegerUnaryOperation {
+	/// Adds an integer unary operation node to the graph.
 	pub fn add_into(
 		graph: &mut DataFlowGraph,
 		source: Link,
-		r#type: IntegerType,
+		kind: IntegerType,
 		operator: IntegerUnaryOperator,
 	) -> Link {
 		let node = Node::IntegerUnaryOperation(Self {
 			source,
-			r#type,
+			kind,
 			operator,
 		});
 
@@ -82,17 +87,18 @@ impl IntegerUnaryOperation {
 }
 
 impl IntegerBinaryOperation {
+	/// Adds an integer binary operation node to the graph.
 	pub fn add_into(
 		graph: &mut DataFlowGraph,
 		lhs: Link,
 		rhs: Link,
-		r#type: IntegerType,
+		kind: IntegerType,
 		operator: IntegerBinaryOperator,
 	) -> Link {
 		let node = Node::IntegerBinaryOperation(Self {
 			lhs,
 			rhs,
-			r#type,
+			kind,
 			operator,
 		});
 
@@ -101,17 +107,18 @@ impl IntegerBinaryOperation {
 }
 
 impl IntegerCompareOperation {
+	/// Adds an integer comparison node to the graph.
 	pub fn add_into(
 		graph: &mut DataFlowGraph,
 		lhs: Link,
 		rhs: Link,
-		r#type: IntegerType,
+		kind: IntegerType,
 		operator: IntegerCompareOperator,
 	) -> Link {
 		let node = Node::IntegerCompareOperation(Self {
 			lhs,
 			rhs,
-			r#type,
+			kind,
 			operator,
 		});
 
@@ -120,6 +127,7 @@ impl IntegerCompareOperation {
 }
 
 impl IntegerNarrow {
+	/// Adds an integer narrowing node to the graph.
 	pub fn add_into(graph: &mut DataFlowGraph, source: Link) -> Link {
 		let node = Node::IntegerNarrow(Self { source });
 
@@ -128,6 +136,7 @@ impl IntegerNarrow {
 }
 
 impl IntegerWiden {
+	/// Adds an integer widening node to the graph.
 	pub fn add_into(graph: &mut DataFlowGraph, source: Link) -> Link {
 		let node = Node::IntegerWiden(Self { source });
 
@@ -136,14 +145,16 @@ impl IntegerWiden {
 }
 
 impl IntegerExtend {
-	pub fn add_into(graph: &mut DataFlowGraph, source: Link, r#type: ExtendType) -> Link {
-		let node = Node::IntegerExtend(Self { source, r#type });
+	/// Adds an integer sign-extension node to the graph.
+	pub fn add_into(graph: &mut DataFlowGraph, source: Link, kind: ExtendType) -> Link {
+		let node = Node::IntegerExtend(Self { source, kind });
 
 		Link(graph.add_node(node), 0)
 	}
 }
 
 impl IntegerConvertToNumber {
+	/// Adds an integer-to-floating-point conversion node to the graph.
 	pub fn add_into(
 		graph: &mut DataFlowGraph,
 		source: Link,
@@ -163,6 +174,7 @@ impl IntegerConvertToNumber {
 }
 
 impl IntegerTransmuteToNumber {
+	/// Adds an integer-to-floating-point reinterpretation node to the graph.
 	pub fn add_into(graph: &mut DataFlowGraph, source: Link, from: IntegerType) -> Link {
 		let node = Node::IntegerTransmuteToNumber(Self { source, from });
 
@@ -171,15 +183,16 @@ impl IntegerTransmuteToNumber {
 }
 
 impl NumberUnaryOperation {
+	/// Adds a floating-point unary operation node to the graph.
 	pub fn add_into(
 		graph: &mut DataFlowGraph,
 		source: Link,
-		r#type: NumberType,
+		kind: NumberType,
 		operator: NumberUnaryOperator,
 	) -> Link {
 		let node = Node::NumberUnaryOperation(Self {
 			source,
-			r#type,
+			kind,
 			operator,
 		});
 
@@ -188,17 +201,18 @@ impl NumberUnaryOperation {
 }
 
 impl NumberBinaryOperation {
+	/// Adds a floating-point binary operation node to the graph.
 	pub fn add_into(
 		graph: &mut DataFlowGraph,
 		lhs: Link,
 		rhs: Link,
-		r#type: NumberType,
+		kind: NumberType,
 		operator: NumberBinaryOperator,
 	) -> Link {
 		let node = Node::NumberBinaryOperation(Self {
 			lhs,
 			rhs,
-			r#type,
+			kind,
 			operator,
 		});
 
@@ -207,17 +221,18 @@ impl NumberBinaryOperation {
 }
 
 impl NumberCompareOperation {
+	/// Adds a floating-point comparison node to the graph.
 	pub fn add_into(
 		graph: &mut DataFlowGraph,
 		lhs: Link,
 		rhs: Link,
-		r#type: NumberType,
+		kind: NumberType,
 		operator: NumberCompareOperator,
 	) -> Link {
 		let node = Node::NumberCompareOperation(Self {
 			lhs,
 			rhs,
-			r#type,
+			kind,
 			operator,
 		});
 
@@ -226,6 +241,7 @@ impl NumberCompareOperation {
 }
 
 impl NumberTruncateToInteger {
+	/// Adds a floating-point-to-integer truncation node to the graph.
 	pub fn add_into(
 		graph: &mut DataFlowGraph,
 		source: Link,
@@ -247,6 +263,7 @@ impl NumberTruncateToInteger {
 }
 
 impl NumberTransmuteToInteger {
+	/// Adds a floating-point-to-integer reinterpretation node to the graph.
 	pub fn add_into(graph: &mut DataFlowGraph, source: Link, from: NumberType) -> Link {
 		let node = Node::NumberTransmuteToInteger(Self { source, from });
 
@@ -255,6 +272,7 @@ impl NumberTransmuteToInteger {
 }
 
 impl NumberNarrow {
+	/// Adds a floating-point narrowing node to the graph.
 	pub fn add_into(graph: &mut DataFlowGraph, source: Link) -> Link {
 		let node = Node::NumberNarrow(Self { source });
 
@@ -263,6 +281,7 @@ impl NumberNarrow {
 }
 
 impl NumberWiden {
+	/// Adds a floating-point widening node to the graph.
 	pub fn add_into(graph: &mut DataFlowGraph, source: Link) -> Link {
 		let node = Node::NumberWiden(Self { source });
 
@@ -271,6 +290,7 @@ impl NumberWiden {
 }
 
 impl GlobalNew {
+	/// Adds a global creation node to the graph.
 	pub fn add_into(graph: &mut DataFlowGraph, initializer: Link) -> Link {
 		let node = Node::GlobalNew(Self { initializer });
 
@@ -279,9 +299,12 @@ impl GlobalNew {
 }
 
 impl GlobalGet {
+	/// The port index for the result value.
 	pub const RESULT_PORT: u16 = 0;
+	/// The port index for the state token.
 	pub const STATE_PORT: u16 = 1;
 
+	/// Adds a global read node to the graph.
 	pub fn add_into(graph: &mut DataFlowGraph, source: Link) -> (Link, Link) {
 		let node = Node::GlobalGet(Self { source });
 		let id = graph.add_node(node);
@@ -291,8 +314,10 @@ impl GlobalGet {
 }
 
 impl GlobalSet {
+	/// The port index for the state token.
 	pub const STATE_PORT: u16 = 0;
 
+	/// Adds a global write node to the graph.
 	pub fn add_into(graph: &mut DataFlowGraph, destination: Link, source: Link) -> Link {
 		let node = Node::GlobalSet(Self {
 			destination,
@@ -304,6 +329,7 @@ impl GlobalSet {
 }
 
 impl TableNew {
+	/// Adds a table creation node to the graph.
 	pub fn add_into(
 		graph: &mut DataFlowGraph,
 		initializer: Vec<(Link, u32)>,
@@ -321,9 +347,12 @@ impl TableNew {
 }
 
 impl TableGet {
+	/// The port index for the result value.
 	pub const RESULT_PORT: u16 = 0;
+	/// The port index for the state token.
 	pub const STATE_PORT: u16 = 1;
 
+	/// Adds a table read node to the graph.
 	pub fn add_into(graph: &mut DataFlowGraph, source: Location) -> (Link, Link) {
 		let node = Node::TableGet(Self { source });
 		let id = graph.add_node(node);
@@ -333,8 +362,10 @@ impl TableGet {
 }
 
 impl TableSet {
+	/// The port index for the state token.
 	pub const STATE_PORT: u16 = 0;
 
+	/// Adds a table write node to the graph.
 	pub fn add_into(graph: &mut DataFlowGraph, destination: Location, source: Link) -> Link {
 		let node = Node::TableSet(Self {
 			destination,
@@ -346,9 +377,12 @@ impl TableSet {
 }
 
 impl TableSize {
+	/// The port index for the result value.
 	pub const RESULT_PORT: u16 = 0;
+	/// The port index for the state token.
 	pub const STATE_PORT: u16 = 1;
 
+	/// Adds a table size query node to the graph.
 	pub fn add_into(graph: &mut DataFlowGraph, source: Link) -> (Link, Link) {
 		let node = Node::TableSize(Self { source });
 		let id = graph.add_node(node);
@@ -358,9 +392,12 @@ impl TableSize {
 }
 
 impl TableGrow {
+	/// The port index for the result value.
 	pub const RESULT_PORT: u16 = 0;
+	/// The port index for the state token.
 	pub const STATE_PORT: u16 = 1;
 
+	/// Adds a table grow node to the graph.
 	pub fn add_into(
 		graph: &mut DataFlowGraph,
 		destination: Link,
@@ -379,8 +416,10 @@ impl TableGrow {
 }
 
 impl TableFill {
+	/// The port index for the state token.
 	pub const STATE_PORT: u16 = 0;
 
+	/// Adds a table fill node to the graph.
 	pub fn add_into(
 		graph: &mut DataFlowGraph,
 		destination: Location,
@@ -398,9 +437,12 @@ impl TableFill {
 }
 
 impl TableCopy {
+	/// The port index for the destination state token.
 	pub const DESTINATION_STATE_PORT: u16 = 0;
+	/// The port index for the source state token.
 	pub const SOURCE_STATE_PORT: u16 = 1;
 
+	/// Adds a table copy node to the graph.
 	pub fn add_into(
 		graph: &mut DataFlowGraph,
 		destination: Location,
@@ -422,8 +464,10 @@ impl TableCopy {
 }
 
 impl TableDrop {
+	/// The port index for the state token.
 	pub const STATE_PORT: u16 = 0;
 
+	/// Adds a table drop node to the graph.
 	pub fn add_into(graph: &mut DataFlowGraph, source: Link) -> Link {
 		let node = Node::TableDrop(Self { source });
 
@@ -432,6 +476,7 @@ impl TableDrop {
 }
 
 impl MemoryNew {
+	/// Adds a memory creation node to the graph.
 	pub fn add_into(
 		graph: &mut DataFlowGraph,
 		initializer: Vec<(Arc<[u8]>, u32)>,
@@ -449,11 +494,14 @@ impl MemoryNew {
 }
 
 impl MemoryLoad {
+	/// The port index for the result value.
 	pub const RESULT_PORT: u16 = 0;
+	/// The port index for the state token.
 	pub const STATE_PORT: u16 = 1;
 
-	pub fn add_into(graph: &mut DataFlowGraph, source: Location, r#type: LoadType) -> (Link, Link) {
-		let node = Node::MemoryLoad(Self { source, r#type });
+	/// Adds a memory load node to the graph.
+	pub fn add_into(graph: &mut DataFlowGraph, source: Location, kind: LoadType) -> (Link, Link) {
+		let node = Node::MemoryLoad(Self { source, kind });
 		let id = graph.add_node(node);
 
 		(Link(id, Self::RESULT_PORT), Link(id, Self::STATE_PORT))
@@ -461,18 +509,20 @@ impl MemoryLoad {
 }
 
 impl MemoryStore {
+	/// The port index for the state token.
 	pub const STATE_PORT: u16 = 0;
 
+	/// Adds a memory store node to the graph.
 	pub fn add_into(
 		graph: &mut DataFlowGraph,
 		destination: Location,
 		source: Link,
-		r#type: StoreType,
+		kind: StoreType,
 	) -> Link {
 		let node = Node::MemoryStore(Self {
 			destination,
 			source,
-			r#type,
+			kind,
 		});
 
 		Link(graph.add_node(node), Self::STATE_PORT)
@@ -480,9 +530,12 @@ impl MemoryStore {
 }
 
 impl MemorySize {
+	/// The port index for the result value.
 	pub const RESULT_PORT: u16 = 0;
+	/// The port index for the state token.
 	pub const STATE_PORT: u16 = 1;
 
+	/// Adds a memory size query node to the graph.
 	pub fn add_into(graph: &mut DataFlowGraph, source: Link) -> (Link, Link) {
 		let node = Node::MemorySize(Self { source });
 		let id = graph.add_node(node);
@@ -492,9 +545,12 @@ impl MemorySize {
 }
 
 impl MemoryGrow {
+	/// The port index for the result value.
 	pub const RESULT_PORT: u16 = 0;
+	/// The port index for the state token.
 	pub const STATE_PORT: u16 = 1;
 
+	/// Adds a memory grow node to the graph.
 	pub fn add_into(graph: &mut DataFlowGraph, destination: Link, size: Link) -> (Link, Link) {
 		let node = Node::MemoryGrow(Self { destination, size });
 		let id = graph.add_node(node);
@@ -504,8 +560,10 @@ impl MemoryGrow {
 }
 
 impl MemoryFill {
+	/// The port index for the state token.
 	pub const STATE_PORT: u16 = 0;
 
+	/// Adds a memory fill node to the graph.
 	pub fn add_into(
 		graph: &mut DataFlowGraph,
 		destination: Location,
@@ -523,9 +581,12 @@ impl MemoryFill {
 }
 
 impl MemoryCopy {
+	/// The port index for the destination state token.
 	pub const DESTINATION_STATE_PORT: u16 = 0;
+	/// The port index for the source state token.
 	pub const SOURCE_STATE_PORT: u16 = 1;
 
+	/// Adds a memory copy node to the graph.
 	pub fn add_into(
 		graph: &mut DataFlowGraph,
 		destination: Location,
@@ -547,8 +608,10 @@ impl MemoryCopy {
 }
 
 impl MemoryDrop {
+	/// The port index for the state token.
 	pub const STATE_PORT: u16 = 0;
 
+	/// Adds a memory drop node to the graph.
 	pub fn add_into(graph: &mut DataFlowGraph, source: Link) -> Link {
 		let node = Node::MemoryDrop(Self { source });
 
@@ -557,23 +620,38 @@ impl MemoryDrop {
 }
 
 impl LambdaIn {
+	/// Returns the port range for the closure dependencies.
+	///
+	/// # Panics
+	///
+	/// Panics if the port count exceeds `u16::MAX`; if this happens, it is a bug.
 	#[must_use]
 	pub fn dependency_ports(&self) -> core::ops::Range<u16> {
 		0..self.dependencies.len().try_into().unwrap()
 	}
 
+	/// Returns the port range for the function arguments.
+	///
+	/// # Panics
+	///
+	/// Panics if the port count exceeds `u16::MAX`; if this happens, it is a bug.
 	#[must_use]
 	pub fn argument_ports(&self) -> core::ops::Range<u16> {
 		let dependencies: u16 = self.dependencies.len().try_into().unwrap();
-		let arguments: u16 = self.r#type.arguments.len().try_into().unwrap();
+		let arguments: u16 = self.kind.arguments.len().try_into().unwrap();
 
 		dependencies..dependencies + arguments
 	}
 
+	/// Returns the port range for all output ports.
+	///
+	/// # Panics
+	///
+	/// Panics if the port count exceeds `u16::MAX`; if this happens, it is a bug.
 	#[must_use]
 	pub fn output_ports(&self) -> core::ops::Range<u16> {
 		let dependencies: u16 = self.dependencies.len().try_into().unwrap();
-		let arguments: u16 = self.r#type.arguments.len().try_into().unwrap();
+		let arguments: u16 = self.kind.arguments.len().try_into().unwrap();
 
 		0..dependencies + arguments
 	}
@@ -584,14 +662,15 @@ impl LambdaIn {
 		*output = to;
 	}
 
+	/// Adds a lambda input node to the graph.
 	pub fn add_into(
 		graph: &mut DataFlowGraph,
-		r#type: Box<FunctionType>,
+		kind: Box<FunctionType>,
 		dependencies: Vec<Link>,
 	) -> u32 {
 		let node = Node::LambdaIn(Self {
 			output: u32::MAX,
-			r#type,
+			kind,
 			dependencies,
 		});
 
@@ -600,6 +679,7 @@ impl LambdaIn {
 }
 
 impl LambdaOut {
+	/// Adds a lambda output node to the graph.
 	pub fn add_into(graph: &mut DataFlowGraph, input: u32, results: Vec<Link>) -> u32 {
 		let node = Node::LambdaOut(Self { input, results });
 		let id = graph.add_node(node);
@@ -611,7 +691,7 @@ impl LambdaOut {
 }
 
 impl RegionIn {
-	fn ports_output(&self, graph: &DataFlowGraph) -> usize {
+	fn ports_output(self, graph: &DataFlowGraph) -> usize {
 		graph.get(self.input).as_gamma_in().unwrap().ports_output()
 	}
 
@@ -621,10 +701,11 @@ impl RegionIn {
 		*output = to;
 	}
 
+	/// Adds a region input node to the graph.
 	pub fn add_into(graph: &mut DataFlowGraph, input: u32) -> u32 {
 		let node = Node::RegionIn(Self {
-			output: u32::MAX,
 			input,
+			output: u32::MAX,
 		});
 
 		graph.add_node(node)
@@ -642,10 +723,11 @@ impl RegionOut {
 		*output = to;
 	}
 
+	/// Adds a region output node to the graph.
 	pub fn add_into(graph: &mut DataFlowGraph, input: u32, results: Vec<Link>) -> u32 {
 		let node = Node::RegionOut(Self {
-			output: u32::MAX,
 			input,
+			output: u32::MAX,
 			results,
 		});
 		let id = graph.add_node(node);
@@ -655,6 +737,7 @@ impl RegionOut {
 		id
 	}
 
+	/// Adds a scoped region with input and output nodes to the graph.
 	pub fn add_scoped_into<H>(graph: &mut DataFlowGraph, input: u32, handler: H) -> u32
 	where
 		H: FnOnce(&mut DataFlowGraph, u32) -> Vec<Link>,
@@ -677,6 +760,7 @@ impl GammaIn {
 		*output = to;
 	}
 
+	/// Adds a gamma input node to the graph.
 	pub fn add_into(graph: &mut DataFlowGraph, arguments: Vec<Link>, condition: Link) -> u32 {
 		let node = Node::GammaIn(Self {
 			output: u32::MAX,
@@ -689,6 +773,11 @@ impl GammaIn {
 }
 
 impl GammaOut {
+	/// Returns the number of output ports.
+	///
+	/// # Panics
+	///
+	/// Panics if the graph structure is inconsistent; if this happens, it is a bug.
 	#[must_use]
 	pub fn ports_output(&self, graph: &DataFlowGraph) -> usize {
 		let first = *self.regions.first().unwrap();
@@ -696,6 +785,7 @@ impl GammaOut {
 		graph.get(first).as_region_out().unwrap().ports_output()
 	}
 
+	/// Adds a gamma output node to the graph.
 	pub fn add_into(graph: &mut DataFlowGraph, input: u32, regions: Vec<u32>) -> u32 {
 		let id = graph.add_node(Node::Trap);
 
@@ -710,6 +800,7 @@ impl GammaOut {
 		id
 	}
 
+	/// Adds an if-else structure to the graph.
 	pub fn add_if_into<F, T>(
 		graph: &mut DataFlowGraph,
 		arguments: Vec<Link>,
@@ -742,6 +833,7 @@ impl ThetaIn {
 		*output = to;
 	}
 
+	/// Adds a theta input node to the graph.
 	pub fn add_into(graph: &mut DataFlowGraph, arguments: Vec<Link>) -> u32 {
 		let node = Node::ThetaIn(Self {
 			output: u32::MAX,
@@ -757,6 +849,7 @@ impl ThetaOut {
 		self.results.len()
 	}
 
+	/// Adds a theta output node to the graph.
 	pub fn add_into(
 		graph: &mut DataFlowGraph,
 		input: u32,
@@ -777,6 +870,7 @@ impl ThetaOut {
 }
 
 impl Import {
+	/// Adds an import node to the graph.
 	pub fn add_into(
 		graph: &mut DataFlowGraph,
 		environment: Link,
@@ -797,7 +891,9 @@ impl Import {
 }
 
 impl OmegaIn {
+	/// The port index for the environment.
 	pub const ENVIRONMENT_PORT: u16 = 0;
+	/// The port index for the state token.
 	pub const STATE_PORT: u16 = 1;
 
 	fn set_output_indirectly(graph: &mut DataFlowGraph, id: u32, to: u32) {
@@ -806,6 +902,7 @@ impl OmegaIn {
 		*output = to;
 	}
 
+	/// Adds an omega input node to the graph.
 	pub fn add_into(graph: &mut DataFlowGraph) -> u32 {
 		let node = Node::OmegaIn(Self { output: u32::MAX });
 
@@ -814,6 +911,7 @@ impl OmegaIn {
 }
 
 impl OmegaOut {
+	/// Adds an omega output node to the graph.
 	pub fn add_into(
 		graph: &mut DataFlowGraph,
 		input: u32,
@@ -834,20 +932,73 @@ impl OmegaOut {
 }
 
 impl Node {
+	/// Returns the number of output ports, if applicable.
 	#[must_use]
 	pub fn ports_output(&self, graph: &DataFlowGraph) -> Option<usize> {
 		let result = match self {
-			Self::RegionIn(node) => node.ports_output(graph),
+			Self::RegionIn(node) => (*node).ports_output(graph),
 			Self::GammaOut(node) => node.ports_output(graph),
 			Self::ThetaIn(node) => node.ports_output(),
 			Self::ThetaOut(node) => node.ports_output(),
 
-			_ => return None,
+			Self::LambdaIn(_)
+			| Self::LambdaOut(_)
+			| Self::RegionOut(_)
+			| Self::GammaIn(_)
+			| Self::OmegaIn(_)
+			| Self::OmegaOut(_)
+			| Self::Import(_)
+			| Self::Host(_)
+			| Self::Trap
+			| Self::Null
+			| Self::I32(_)
+			| Self::I64(_)
+			| Self::F32(_)
+			| Self::F64(_)
+			| Self::Identity(_)
+			| Self::Fence(_)
+			| Self::Apply(_)
+			| Self::RefIsNull(_)
+			| Self::IntegerUnaryOperation(_)
+			| Self::IntegerBinaryOperation(_)
+			| Self::IntegerCompareOperation(_)
+			| Self::IntegerNarrow(_)
+			| Self::IntegerWiden(_)
+			| Self::IntegerExtend(_)
+			| Self::IntegerConvertToNumber(_)
+			| Self::IntegerTransmuteToNumber(_)
+			| Self::NumberUnaryOperation(_)
+			| Self::NumberBinaryOperation(_)
+			| Self::NumberCompareOperation(_)
+			| Self::NumberNarrow(_)
+			| Self::NumberWiden(_)
+			| Self::NumberTruncateToInteger(_)
+			| Self::NumberTransmuteToInteger(_)
+			| Self::GlobalNew(_)
+			| Self::GlobalGet(_)
+			| Self::GlobalSet(_)
+			| Self::TableNew(_)
+			| Self::TableGet(_)
+			| Self::TableSet(_)
+			| Self::TableSize(_)
+			| Self::TableGrow(_)
+			| Self::TableFill(_)
+			| Self::TableCopy(_)
+			| Self::TableDrop(_)
+			| Self::MemoryNew(_)
+			| Self::MemoryLoad(_)
+			| Self::MemoryStore(_)
+			| Self::MemorySize(_)
+			| Self::MemoryGrow(_)
+			| Self::MemoryFill(_)
+			| Self::MemoryCopy(_)
+			| Self::MemoryDrop(_) => return None,
 		};
 
 		Some(result)
 	}
 
+	/// Returns a reference to this node's port list, if it has one.
 	#[must_use]
 	pub const fn as_ports(&self) -> Option<&Vec<Link>> {
 		let ports = match self {
@@ -858,12 +1009,62 @@ impl Node {
 			Self::ThetaIn(node) => &node.arguments,
 			Self::ThetaOut(node) => &node.results,
 
-			_ => return None,
+			Self::RegionIn(_)
+			| Self::GammaOut(_)
+			| Self::OmegaIn(_)
+			| Self::OmegaOut(_)
+			| Self::Import(_)
+			| Self::Host(_)
+			| Self::Trap
+			| Self::Null
+			| Self::I32(_)
+			| Self::I64(_)
+			| Self::F32(_)
+			| Self::F64(_)
+			| Self::Identity(_)
+			| Self::Fence(_)
+			| Self::Apply(_)
+			| Self::RefIsNull(_)
+			| Self::IntegerUnaryOperation(_)
+			| Self::IntegerBinaryOperation(_)
+			| Self::IntegerCompareOperation(_)
+			| Self::IntegerNarrow(_)
+			| Self::IntegerWiden(_)
+			| Self::IntegerExtend(_)
+			| Self::IntegerConvertToNumber(_)
+			| Self::IntegerTransmuteToNumber(_)
+			| Self::NumberUnaryOperation(_)
+			| Self::NumberBinaryOperation(_)
+			| Self::NumberCompareOperation(_)
+			| Self::NumberNarrow(_)
+			| Self::NumberWiden(_)
+			| Self::NumberTruncateToInteger(_)
+			| Self::NumberTransmuteToInteger(_)
+			| Self::GlobalNew(_)
+			| Self::GlobalGet(_)
+			| Self::GlobalSet(_)
+			| Self::TableNew(_)
+			| Self::TableGet(_)
+			| Self::TableSet(_)
+			| Self::TableSize(_)
+			| Self::TableGrow(_)
+			| Self::TableFill(_)
+			| Self::TableCopy(_)
+			| Self::TableDrop(_)
+			| Self::MemoryNew(_)
+			| Self::MemoryLoad(_)
+			| Self::MemoryStore(_)
+			| Self::MemorySize(_)
+			| Self::MemoryGrow(_)
+			| Self::MemoryFill(_)
+			| Self::MemoryCopy(_)
+			| Self::MemoryDrop(_) => return None,
 		};
 
 		Some(ports)
 	}
 
+	/// Returns mutable access to this node's port list, if it has one.
 	#[must_use]
 	pub const fn as_mut_ports(&mut self) -> Option<&mut Vec<Link>> {
 		let ports = match self {
@@ -874,38 +1075,93 @@ impl Node {
 			Self::ThetaIn(node) => &mut node.arguments,
 			Self::ThetaOut(node) => &mut node.results,
 
-			_ => return None,
+			Self::RegionIn(_)
+			| Self::GammaOut(_)
+			| Self::OmegaIn(_)
+			| Self::OmegaOut(_)
+			| Self::Import(_)
+			| Self::Host(_)
+			| Self::Trap
+			| Self::Null
+			| Self::I32(_)
+			| Self::I64(_)
+			| Self::F32(_)
+			| Self::F64(_)
+			| Self::Identity(_)
+			| Self::Fence(_)
+			| Self::Apply(_)
+			| Self::RefIsNull(_)
+			| Self::IntegerUnaryOperation(_)
+			| Self::IntegerBinaryOperation(_)
+			| Self::IntegerCompareOperation(_)
+			| Self::IntegerNarrow(_)
+			| Self::IntegerWiden(_)
+			| Self::IntegerExtend(_)
+			| Self::IntegerConvertToNumber(_)
+			| Self::IntegerTransmuteToNumber(_)
+			| Self::NumberUnaryOperation(_)
+			| Self::NumberBinaryOperation(_)
+			| Self::NumberCompareOperation(_)
+			| Self::NumberNarrow(_)
+			| Self::NumberWiden(_)
+			| Self::NumberTruncateToInteger(_)
+			| Self::NumberTransmuteToInteger(_)
+			| Self::GlobalNew(_)
+			| Self::GlobalGet(_)
+			| Self::GlobalSet(_)
+			| Self::TableNew(_)
+			| Self::TableGet(_)
+			| Self::TableSet(_)
+			| Self::TableSize(_)
+			| Self::TableGrow(_)
+			| Self::TableFill(_)
+			| Self::TableCopy(_)
+			| Self::TableDrop(_)
+			| Self::MemoryNew(_)
+			| Self::MemoryLoad(_)
+			| Self::MemoryStore(_)
+			| Self::MemorySize(_)
+			| Self::MemoryGrow(_)
+			| Self::MemoryFill(_)
+			| Self::MemoryCopy(_)
+			| Self::MemoryDrop(_) => return None,
 		};
 
 		Some(ports)
 	}
 
+	/// Adds a trap node to the graph.
 	pub fn add_trap_into(graph: &mut DataFlowGraph) -> Link {
 		Link(graph.add_node(Self::Trap), 0)
 	}
 
+	/// Adds a null reference constant node to the graph.
 	pub fn add_null_into(graph: &mut DataFlowGraph) -> Link {
 		Link(graph.add_node(Self::Null), 0)
 	}
 
+	/// Adds a 32-bit integer constant node to the graph.
 	pub fn add_i32_into(graph: &mut DataFlowGraph, source: i32) -> Link {
 		let node = Self::I32(source);
 
 		Link(graph.add_node(node), 0)
 	}
 
+	/// Adds a 64-bit integer constant node to the graph.
 	pub fn add_i64_into(graph: &mut DataFlowGraph, source: i64) -> Link {
 		let node = Self::I64(source);
 
 		Link(graph.add_node(node), 0)
 	}
 
+	/// Adds a 32-bit float constant node to the graph.
 	pub fn add_f32_into(graph: &mut DataFlowGraph, source: f32) -> Link {
 		let node = Self::F32(source);
 
 		Link(graph.add_node(node), 0)
 	}
 
+	/// Adds a 64-bit float constant node to the graph.
 	pub fn add_f64_into(graph: &mut DataFlowGraph, source: f64) -> Link {
 		let node = Self::F64(source);
 
