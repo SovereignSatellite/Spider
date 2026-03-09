@@ -1,3 +1,9 @@
+mod argument_finder;
+mod index_provider;
+mod local_provider;
+mod reference_finder;
+mod scalar_finder;
+
 use core::ops::Range;
 
 use alloc::vec::Vec;
@@ -10,12 +16,6 @@ use self::{
 	local_provider::LocalProvider,
 	scalar_finder::ScalarFinder,
 };
-
-mod argument_finder;
-mod index_provider;
-mod local_provider;
-mod reference_finder;
-mod scalar_finder;
 
 pub struct Declarations {
 	pub locals: Range<u32>,
