@@ -15,8 +15,8 @@ use web_assembly_liveness::{
 
 use crate::{control_flow_lifter::ControlFlowLifter, global_state::GlobalState};
 
-fn web_type_to_data_type(r#type: ValType) -> ValueType {
-	match r#type {
+fn web_type_to_data_type(kind: ValType) -> ValueType {
+	match kind {
 		ValType::I32 => ValueType::I32,
 		ValType::I64 => ValueType::I64,
 		ValType::F32 => ValueType::F32,
@@ -49,14 +49,14 @@ fn load_type_from_result(result: ValType) -> FunctionType {
 	}
 }
 
-fn read_local_types_into(local_types: &mut Vec<ValueType>, reader: LocalsReader) {
+fn read_local_types_into(local_types: &mut Vec<ValueType>, reader: LocalsReader<'_>) {
 	local_types.clear();
 
-	for (count, r#type) in reader.into_iter().map(Result::unwrap) {
-		let r#type = web_type_to_data_type(r#type);
+	for (count, val_type) in reader.into_iter().map(Result::unwrap) {
+		let val_type = web_type_to_data_type(val_type);
 		let count = count.try_into().unwrap();
 
-		local_types.extend(core::iter::repeat_n(r#type, count));
+		local_types.extend(core::iter::repeat_n(val_type, count));
 	}
 }
 
@@ -90,7 +90,7 @@ impl FunctionLifter {
 	pub fn build_data_flow(
 		&mut self,
 		graph: &mut DataFlowGraph,
-		r#type: FunctionType,
+		kind: FunctionType,
 		global_state: &GlobalState,
 	) -> u32 {
 		references::track(&mut self.dependencies, &self.graph.instructions);
@@ -99,10 +99,10 @@ impl FunctionLifter {
 		let stack_size = self.local_tracker.run(
 			&mut self.locals,
 			&self.graph,
-			r#type.results.len().try_into().unwrap(),
+			kind.results.len().try_into().unwrap(),
 		);
 
-		let lambda_in = LambdaIn::add_into(graph, r#type.into(), dependencies);
+		let lambda_in = LambdaIn::add_into(graph, kind.into(), dependencies);
 
 		self.lifter.set_function_data(
 			graph,
@@ -114,11 +114,13 @@ impl FunctionLifter {
 
 		let results = self.lifter.run(graph, &self.graph, lambda_in, &self.locals);
 
-		let LambdaIn { r#type, .. } = graph.get_mut(lambda_in).as_mut_lambda_in().unwrap();
+		let LambdaIn {
+			kind: lambda_type, ..
+		} = graph.get_mut(lambda_in).as_mut_lambda_in().unwrap();
 
 		// We add a "trap state" as part of the function signature
-		r#type.arguments.push(ValueType::Reference);
-		r#type.results.push(ValueType::Reference);
+		lambda_type.arguments.push(ValueType::Reference);
+		lambda_type.results.push(ValueType::Reference);
 
 		LambdaOut::add_into(graph, lambda_in, results)
 	}
@@ -126,7 +128,7 @@ impl FunctionLifter {
 	pub fn build_function(
 		&mut self,
 		graph: &mut DataFlowGraph,
-		body: &FunctionBody,
+		body: &FunctionBody<'_>,
 		function: u32,
 		types: &Types,
 		global_state: &GlobalState,
@@ -151,7 +153,7 @@ impl FunctionLifter {
 	pub fn build_expression(
 		&mut self,
 		graph: &mut DataFlowGraph,
-		operators: OperatorsReader,
+		operators: OperatorsReader<'_>,
 		result: ValType,
 		types: &Types,
 		global_state: &GlobalState,

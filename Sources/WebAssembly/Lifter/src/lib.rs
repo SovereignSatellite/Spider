@@ -1,6 +1,13 @@
+//! Lifts WebAssembly binaries into the IR data flow graph.
+
 #![no_std]
 
 extern crate alloc;
+
+mod control_flow_lifter;
+mod function_lifter;
+mod global_state;
+mod sections;
 
 use alloc::{sync::Arc, vec::Vec};
 use ir_graph::{
@@ -18,12 +25,7 @@ use web_assembly_graph::instruction::MemorySize;
 
 use self::{function_lifter::FunctionLifter, global_state::GlobalState, sections::Sections};
 
-mod control_flow_lifter;
-mod function_lifter;
-mod global_state;
-mod sections;
-
-fn get_element_count(items: &ElementItems) -> u32 {
+fn get_element_count(items: &ElementItems<'_>) -> u32 {
 	match items {
 		ElementItems::Functions(section) => section.count(),
 		ElementItems::Expressions(_, section) => section.count(),
@@ -41,7 +43,7 @@ fn add_table_from_type(graph: &mut DataFlowGraph, table_type: wasmparser::TableT
 	TableNew::add_into(graph, Vec::new(), minimum, maximum)
 }
 
-fn add_table_from_items(graph: &mut DataFlowGraph, items: ElementItems) -> Link {
+fn add_table_from_items(graph: &mut DataFlowGraph, items: ElementItems<'_>) -> Link {
 	let count = match items {
 		ElementItems::Functions(section) => section.count(),
 		ElementItems::Expressions(_, section) => section.count(),
@@ -78,6 +80,7 @@ fn add_global_from_null(graph: &mut DataFlowGraph) -> Link {
 	GlobalNew::add_into(graph, null)
 }
 
+/// Lifts WebAssembly binary data into an IR data flow graph.
 pub struct WebAssemblyLifter {
 	function_lifter: FunctionLifter,
 	global_state: GlobalState,
@@ -85,6 +88,7 @@ pub struct WebAssemblyLifter {
 }
 
 impl WebAssemblyLifter {
+	/// Creates a new WebAssembly lifter.
 	#[must_use]
 	pub const fn new() -> Self {
 		Self {
@@ -98,7 +102,7 @@ impl WebAssemblyLifter {
 		&mut self,
 		graph: &mut DataFlowGraph,
 		omega_in: u32,
-		section: SectionLimited<wasmparser::Import>,
+		section: SectionLimited<'_, wasmparser::Import<'_>>,
 	) {
 		let environment = Link(omega_in, OmegaIn::ENVIRONMENT_PORT);
 
@@ -115,7 +119,11 @@ impl WebAssemblyLifter {
 		}
 	}
 
-	fn handle_function_section(&mut self, graph: &mut DataFlowGraph, section: SectionLimited<u32>) {
+	fn handle_function_section(
+		&mut self,
+		graph: &mut DataFlowGraph,
+		section: SectionLimited<'_, u32>,
+	) {
 		let len = section.count().try_into().unwrap();
 
 		self.types.add_functions(section);
@@ -128,7 +136,7 @@ impl WebAssemblyLifter {
 	fn build_expression(
 		&mut self,
 		graph: &mut DataFlowGraph,
-		code: &ConstExpr,
+		code: &ConstExpr<'_>,
 		result: ValType,
 	) -> Link {
 		let code = code.get_operators_reader();
@@ -140,7 +148,7 @@ impl WebAssemblyLifter {
 	fn handle_table_declarations(
 		&mut self,
 		graph: &mut DataFlowGraph,
-		section: SectionLimited<wasmparser::Table>,
+		section: SectionLimited<'_, wasmparser::Table<'_>>,
 	) {
 		self.global_state.tables.extend(
 			section
@@ -154,7 +162,7 @@ impl WebAssemblyLifter {
 		&mut self,
 		graph: &mut DataFlowGraph,
 		reference: Link,
-		code: &ConstExpr,
+		code: &ConstExpr<'_>,
 		ty: wasmparser::TableType,
 	) -> Link {
 		let destination = Location {
@@ -172,7 +180,7 @@ impl WebAssemblyLifter {
 		&mut self,
 		graph: &mut DataFlowGraph,
 		index: usize,
-		table: &wasmparser::Table,
+		table: &wasmparser::Table<'_>,
 	) {
 		let wasmparser::TableInit::Expr(code) = &table.init else {
 			return;
@@ -186,7 +194,7 @@ impl WebAssemblyLifter {
 	fn handle_table_initializations(
 		&mut self,
 		graph: &mut DataFlowGraph,
-		section: SectionLimited<wasmparser::Table>,
+		section: SectionLimited<'_, wasmparser::Table<'_>>,
 	) {
 		let start = self.global_state.tables.len() - usize::try_from(section.count()).unwrap();
 
@@ -198,7 +206,7 @@ impl WebAssemblyLifter {
 	fn handle_element_declarations(
 		&mut self,
 		graph: &mut DataFlowGraph,
-		section: SectionLimited<wasmparser::Element>,
+		section: SectionLimited<'_, wasmparser::Element<'_>>,
 	) {
 		self.global_state.elements.extend(
 			section
@@ -211,12 +219,12 @@ impl WebAssemblyLifter {
 	fn set_table_functions(
 		&self,
 		graph: &mut DataFlowGraph,
-		section: SectionLimited<u32>,
+		section: SectionLimited<'_, u32>,
 		mut element: Link,
 	) -> Link {
 		let functions = &self.global_state.functions;
 
-		for (function, offset) in section.into_iter().map(Result::unwrap).zip(0..) {
+		for (function, offset) in section.into_iter().map(Result::unwrap).zip(0_i32..) {
 			let function = functions[usize::try_from(function).unwrap()];
 			let source = GlobalGet::add_into(graph, function).0;
 			let destination = Location {
@@ -233,12 +241,12 @@ impl WebAssemblyLifter {
 	fn set_table_expressions(
 		&mut self,
 		graph: &mut DataFlowGraph,
-		section: SectionLimited<ConstExpr>,
-		r#type: wasmparser::RefType,
+		section: SectionLimited<'_, ConstExpr<'_>>,
+		kind: wasmparser::RefType,
 		mut element: Link,
 	) -> Link {
-		for (code, offset) in section.into_iter().map(Result::unwrap).zip(0..) {
-			let source = self.build_expression(graph, &code, ValType::Ref(r#type));
+		for (code, offset) in section.into_iter().map(Result::unwrap).zip(0_i32..) {
+			let source = self.build_expression(graph, &code, ValType::Ref(kind));
 			let destination = Location {
 				reference: element,
 				offset: Node::add_i32_into(graph, offset),
@@ -253,13 +261,13 @@ impl WebAssemblyLifter {
 	fn initialize_element(
 		&mut self,
 		graph: &mut DataFlowGraph,
-		items: ElementItems,
+		items: ElementItems<'_>,
 		element: Link,
 	) -> Link {
 		match items {
 			ElementItems::Functions(section) => self.set_table_functions(graph, section, element),
-			ElementItems::Expressions(r#type, section) => {
-				self.set_table_expressions(graph, section, r#type, element)
+			ElementItems::Expressions(kind, section) => {
+				self.set_table_expressions(graph, section, kind, element)
 			}
 		}
 	}
@@ -268,7 +276,7 @@ impl WebAssemblyLifter {
 		&mut self,
 		graph: &mut DataFlowGraph,
 		reference: Link,
-		offset: &ConstExpr,
+		offset: &ConstExpr<'_>,
 		elements: Link,
 		size: i32,
 	) -> Link {
@@ -292,7 +300,7 @@ impl WebAssemblyLifter {
 		graph: &mut DataFlowGraph,
 		elements: Link,
 		size: i32,
-		element_kind: &wasmparser::ElementKind,
+		element_kind: &wasmparser::ElementKind<'_>,
 	) -> Link {
 		match element_kind {
 			wasmparser::ElementKind::Active {
@@ -315,7 +323,7 @@ impl WebAssemblyLifter {
 	fn handle_element_initializations(
 		&mut self,
 		graph: &mut DataFlowGraph,
-		section: SectionLimited<wasmparser::Element>,
+		section: SectionLimited<'_, wasmparser::Element<'_>>,
 	) {
 		for (index, element) in section.into_iter().map(Result::unwrap).enumerate() {
 			let size = get_element_count(&element.items);
@@ -332,7 +340,7 @@ impl WebAssemblyLifter {
 	fn handle_memory_section(
 		&mut self,
 		graph: &mut DataFlowGraph,
-		section: SectionLimited<wasmparser::MemoryType>,
+		section: SectionLimited<'_, wasmparser::MemoryType>,
 	) {
 		self.global_state.memories.extend(
 			section
@@ -346,7 +354,7 @@ impl WebAssemblyLifter {
 		&mut self,
 		graph: &mut DataFlowGraph,
 		reference: Link,
-		offset: &ConstExpr,
+		offset: &ConstExpr<'_>,
 		data: Link,
 		size: i32,
 	) -> Link {
@@ -368,7 +376,7 @@ impl WebAssemblyLifter {
 	fn handle_data_declarations(
 		&mut self,
 		graph: &mut DataFlowGraph,
-		section: SectionLimited<wasmparser::Data>,
+		section: SectionLimited<'_, wasmparser::Data<'_>>,
 	) {
 		self.global_state.datas.extend(
 			section
@@ -383,7 +391,7 @@ impl WebAssemblyLifter {
 		graph: &mut DataFlowGraph,
 		data: Link,
 		size: i32,
-		data_kind: &wasmparser::DataKind,
+		data_kind: &wasmparser::DataKind<'_>,
 	) -> Link {
 		match data_kind {
 			wasmparser::DataKind::Passive => data,
@@ -405,7 +413,7 @@ impl WebAssemblyLifter {
 	fn handle_data_initializations(
 		&mut self,
 		graph: &mut DataFlowGraph,
-		section: SectionLimited<wasmparser::Data>,
+		section: SectionLimited<'_, wasmparser::Data<'_>>,
 	) {
 		for (index, data) in section.into_iter().map(Result::unwrap).enumerate() {
 			let size = u32::try_from(data.data.len()).unwrap();
@@ -421,7 +429,7 @@ impl WebAssemblyLifter {
 	fn handle_global_declarations(
 		&mut self,
 		graph: &mut DataFlowGraph,
-		section: &SectionLimited<wasmparser::Global>,
+		section: &SectionLimited<'_, wasmparser::Global<'_>>,
 	) {
 		let len = section.count().try_into().unwrap();
 
@@ -434,7 +442,7 @@ impl WebAssemblyLifter {
 		&mut self,
 		graph: &mut DataFlowGraph,
 		index: usize,
-		global: &wasmparser::Global,
+		global: &wasmparser::Global<'_>,
 	) {
 		let source = self.build_expression(graph, &global.init_expr, global.ty.content_type);
 
@@ -445,7 +453,7 @@ impl WebAssemblyLifter {
 	fn handle_global_initializations(
 		&mut self,
 		graph: &mut DataFlowGraph,
-		section: SectionLimited<wasmparser::Global>,
+		section: SectionLimited<'_, wasmparser::Global<'_>>,
 	) {
 		let start = self.global_state.globals.len() - usize::try_from(section.count()).unwrap();
 
@@ -457,12 +465,13 @@ impl WebAssemblyLifter {
 	#[expect(
 		clippy::needless_pass_by_ref_mut,
 		clippy::needless_pass_by_value,
-		unused_variables
+		unused_variables,
+		reason = "tag section handler signature matches other section handlers"
 	)]
 	fn handle_tag_section(
 		&mut self,
 		graph: &mut DataFlowGraph,
-		section: SectionLimited<wasmparser::TagType>,
+		section: SectionLimited<'_, wasmparser::TagType>,
 	) {
 		if section.count() == 0 {
 			return;
@@ -474,7 +483,7 @@ impl WebAssemblyLifter {
 	fn build_function(
 		&mut self,
 		graph: &mut DataFlowGraph,
-		body: &FunctionBody,
+		body: &FunctionBody<'_>,
 		index: usize,
 	) -> u32 {
 		self.function_lifter.build_function(
@@ -489,7 +498,7 @@ impl WebAssemblyLifter {
 	fn handle_code_section(
 		&mut self,
 		graph: &mut DataFlowGraph,
-		section: &[FunctionBody],
+		section: &[FunctionBody<'_>],
 		mut imports: usize,
 	) {
 		for body in section {
@@ -506,7 +515,7 @@ impl WebAssemblyLifter {
 	fn load_export_information(
 		&self,
 		graph: &mut DataFlowGraph,
-		export: wasmparser::Export,
+		export: wasmparser::Export<'_>,
 	) -> Export {
 		let index = usize::try_from(export.index).unwrap();
 		let mut reference = self.global_state.get_external_kind(export.kind)[index];
@@ -524,7 +533,7 @@ impl WebAssemblyLifter {
 	fn handle_export_section(
 		&self,
 		graph: &mut DataFlowGraph,
-		section: SectionLimited<wasmparser::Export>,
+		section: SectionLimited<'_, wasmparser::Export<'_>>,
 	) -> Vec<Export> {
 		section
 			.into_iter()
@@ -561,6 +570,7 @@ impl WebAssemblyLifter {
 		})
 	}
 
+	/// Lifts the given WebAssembly binary data into the data flow graph.
 	pub fn run(&mut self, graph: &mut DataFlowGraph, data: &[u8]) -> u32 {
 		let sections = Sections::load(data);
 

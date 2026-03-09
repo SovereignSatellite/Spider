@@ -253,14 +253,14 @@ impl BasicBlockLifter {
 		let IntegerUnaryOperation {
 			destination,
 			source,
-			r#type,
+			kind,
 			operator,
 		} = instruction;
 
 		self.locals[usize::from(destination)] = simple::IntegerUnaryOperation::add_into(
 			graph,
 			self.locals[usize::from(source)],
-			r#type,
+			kind,
 			operator,
 		);
 	}
@@ -274,7 +274,7 @@ impl BasicBlockLifter {
 			destination,
 			lhs,
 			rhs,
-			r#type,
+			kind,
 			operator,
 		} = instruction;
 
@@ -282,7 +282,7 @@ impl BasicBlockLifter {
 			graph,
 			self.locals[usize::from(lhs)],
 			self.locals[usize::from(rhs)],
-			r#type,
+			kind,
 			operator,
 		);
 	}
@@ -296,7 +296,7 @@ impl BasicBlockLifter {
 			destination,
 			lhs,
 			rhs,
-			r#type,
+			kind,
 			operator,
 		} = instruction;
 
@@ -304,7 +304,7 @@ impl BasicBlockLifter {
 			graph,
 			self.locals[usize::from(lhs)],
 			self.locals[usize::from(rhs)],
-			r#type,
+			kind,
 			operator,
 		);
 	}
@@ -333,11 +333,11 @@ impl BasicBlockLifter {
 		let IntegerExtend {
 			destination,
 			source,
-			r#type,
+			kind,
 		} = instruction;
 
 		self.locals[usize::from(destination)] =
-			simple::IntegerExtend::add_into(graph, self.locals[usize::from(source)], r#type);
+			simple::IntegerExtend::add_into(graph, self.locals[usize::from(source)], kind);
 	}
 
 	fn handle_integer_convert_to_number(
@@ -388,14 +388,14 @@ impl BasicBlockLifter {
 		let NumberUnaryOperation {
 			destination,
 			source,
-			r#type,
+			kind,
 			operator,
 		} = instruction;
 
 		self.locals[usize::from(destination)] = simple::NumberUnaryOperation::add_into(
 			graph,
 			self.locals[usize::from(source)],
-			r#type,
+			kind,
 			operator,
 		);
 	}
@@ -409,7 +409,7 @@ impl BasicBlockLifter {
 			destination,
 			lhs,
 			rhs,
-			r#type,
+			kind,
 			operator,
 		} = instruction;
 
@@ -417,7 +417,7 @@ impl BasicBlockLifter {
 			graph,
 			self.locals[usize::from(lhs)],
 			self.locals[usize::from(rhs)],
-			r#type,
+			kind,
 			operator,
 		);
 	}
@@ -431,7 +431,7 @@ impl BasicBlockLifter {
 			destination,
 			lhs,
 			rhs,
-			r#type,
+			kind,
 			operator,
 		} = instruction;
 
@@ -439,7 +439,7 @@ impl BasicBlockLifter {
 			graph,
 			self.locals[usize::from(lhs)],
 			self.locals[usize::from(rhs)],
-			r#type,
+			kind,
 			operator,
 		);
 	}
@@ -536,11 +536,11 @@ impl BasicBlockLifter {
 			.set(ReferenceType::Global, destination, state);
 	}
 
-	fn load_location(&self, r#type: ReferenceType, location: Location) -> simple::Location {
+	fn load_location(&self, kind: ReferenceType, location: Location) -> simple::Location {
 		let Location { reference, offset } = location;
 
 		simple::Location {
-			reference: self.dependencies.get(r#type, reference),
+			reference: self.dependencies.get(kind, reference),
 			offset: self.locals[usize::from(offset)],
 		}
 	}
@@ -689,11 +689,11 @@ impl BasicBlockLifter {
 		let MemoryLoad {
 			destination,
 			source,
-			r#type,
+			kind,
 		} = instruction;
 
 		let state = self.load_location(ReferenceType::Memory, source);
-		let (result, state) = simple::MemoryLoad::add_into(graph, state, r#type);
+		let (result, state) = simple::MemoryLoad::add_into(graph, state, kind);
 
 		self.locals[usize::from(destination)] = result;
 
@@ -705,14 +705,14 @@ impl BasicBlockLifter {
 		let MemoryStore {
 			destination,
 			source,
-			r#type,
+			kind,
 		} = instruction;
 
 		let state = simple::MemoryStore::add_into(
 			graph,
 			self.load_location(ReferenceType::Memory, destination),
 			self.locals[usize::from(source)],
-			r#type,
+			kind,
 		);
 
 		self.dependencies

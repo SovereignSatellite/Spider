@@ -18,20 +18,20 @@ impl DependencyMap {
 		self.buffer.extend(keys);
 	}
 
-	fn position(&self, r#type: ReferenceType, id: u16) -> usize {
+	fn position(&self, kind: ReferenceType, id: u16) -> usize {
 		self.buffer
-			.binary_search_by_key(&Reference { r#type, id }, |data| data.0)
+			.binary_search_by_key(&Reference { kind, id }, |data| data.0)
 			.unwrap()
 	}
 
-	pub fn get(&self, r#type: ReferenceType, id: u16) -> Link {
-		let position = self.position(r#type, id);
+	pub fn get(&self, kind: ReferenceType, id: u16) -> Link {
+		let position = self.position(kind, id);
 
 		self.buffer[position].1
 	}
 
-	pub fn set(&mut self, r#type: ReferenceType, id: u16, value: Link) {
-		let position = self.position(r#type, id);
+	pub fn set(&mut self, kind: ReferenceType, id: u16, value: Link) {
+		let position = self.position(kind, id);
 
 		self.buffer[position].1 = value;
 	}
@@ -46,7 +46,7 @@ impl DependencyMap {
 		let iter = self
 			.buffer
 			.iter()
-			.filter_map(|(Reference { r#type, .. }, link)| r#type.is_mutable().then_some(link));
+			.filter_map(|(Reference { kind, .. }, link)| kind.is_mutable().then_some(link));
 
 		target.extend(iter);
 	}
@@ -67,7 +67,7 @@ impl DependencyMap {
 	{
 		self.buffer
 			.iter_mut()
-			.filter(|(Reference { r#type, .. }, _)| r#type.is_mutable())
+			.filter(|(Reference { kind, .. }, _)| kind.is_mutable())
 			.zip(values)
 			.for_each(|(reference, value)| reference.1 = value);
 	}

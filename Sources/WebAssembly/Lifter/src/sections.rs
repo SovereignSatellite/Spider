@@ -29,6 +29,10 @@ impl<'data> Sections<'data> {
 		SectionLimited::new(reader).unwrap()
 	}
 
+	#[expect(
+		clippy::wildcard_enum_match_arm,
+		reason = "catch-all for unsupported payloads"
+	)]
 	pub fn load(data: &'data [u8]) -> Self {
 		let mut types = Self::reader_with_empty();
 		let mut imports = Self::reader_with_empty();
