@@ -3,9 +3,6 @@ name = "spider-cli"
 version = "1.0.0"
 edition = "2024"
 
-[lints]
-workspace = true
-
 [dependencies]
 turing-machine-lifter = { path = "../Sources/TuringMachine" }
 web-assembly-lifter = { path = "../Sources/WebAssembly/Lifter" }
@@ -33,5 +30,4 @@ clap = { version = "4.5.23", default-features = false, features = [
 	"usage",
 ] }
 
-hashbrown.workspace = true
 wasmparser = { workspace = true, features = ["validate"] }
