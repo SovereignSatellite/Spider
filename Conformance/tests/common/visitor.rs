@@ -7,58 +7,69 @@ use wast::{
 };
 
 pub trait Visitor {
-	fn visit_module(&mut self, quote_wat: QuoteWat) -> Result<()>;
+	fn visit_module(&mut self, quote_wat: QuoteWat<'_>) -> Result<()>;
 
-	fn visit_module_definition(&mut self, quote_wat: QuoteWat) -> Result<()>;
+	fn visit_module_definition(&mut self, quote_wat: QuoteWat<'_>) -> Result<()>;
 
 	fn visit_module_instance(
 		&mut self,
 		span: Span,
-		instance: Option<Id>,
-		module: Option<Id>,
+		instance: Option<Id<'_>>,
+		module: Option<Id<'_>>,
 	) -> Result<()>;
 
-	fn visit_assert_malformed(&mut self, span: Span, module: QuoteWat, message: &str)
+	fn visit_assert_malformed(
+		&mut self,
+		span: Span,
+		module: QuoteWat<'_>,
+		message: &str,
+	) -> Result<()>;
+
+	fn visit_assert_invalid(
+		&mut self,
+		span: Span,
+		module: QuoteWat<'_>,
+		message: &str,
+	) -> Result<()>;
+
+	fn visit_register(&mut self, span: Span, name: &str, module: Option<Id<'_>>) -> Result<()>;
+
+	fn visit_invoke(&mut self, wast_invoke: WastInvoke<'_>) -> Result<()>;
+
+	fn visit_assert_trap(&mut self, span: Span, exec: WastExecute<'_>, message: &str)
 	-> Result<()>;
-
-	fn visit_assert_invalid(&mut self, span: Span, module: QuoteWat, message: &str) -> Result<()>;
-
-	fn visit_register(&mut self, span: Span, name: &str, module: Option<Id>) -> Result<()>;
-
-	fn visit_invoke(&mut self, wast_invoke: WastInvoke) -> Result<()>;
-
-	fn visit_assert_trap(&mut self, span: Span, exec: WastExecute, message: &str) -> Result<()>;
 
 	fn visit_assert_return(
 		&mut self,
 		span: Span,
-		exec: WastExecute,
-		results: Vec<WastRet>,
+		exec: WastExecute<'_>,
+		results: Vec<WastRet<'_>>,
 	) -> Result<()>;
 
 	fn visit_assert_exhaustion(
 		&mut self,
 		span: Span,
-		call: WastInvoke,
+		call: WastInvoke<'_>,
 		message: &str,
 	) -> Result<()>;
 
-	fn visit_assert_unlinkable(&mut self, span: Span, module: Wat, message: &str) -> Result<()>;
+	fn visit_assert_unlinkable(&mut self, span: Span, module: Wat<'_>, message: &str)
+	-> Result<()>;
 
-	fn visit_assert_exception(&mut self, span: Span, exec: WastExecute) -> Result<()>;
+	fn visit_assert_exception(&mut self, span: Span, exec: WastExecute<'_>) -> Result<()>;
 
 	fn visit_assert_suspension(
 		&mut self,
 		span: Span,
-		exec: WastExecute,
+		exec: WastExecute<'_>,
 		message: &str,
 	) -> Result<()>;
 
-	fn visit_thread(&mut self, wast_thread: WastThread) -> Result<()>;
+	fn visit_thread(&mut self, wast_thread: WastThread<'_>) -> Result<()>;
 
-	fn visit_wait(&mut self, span: Span, thread: Id) -> Result<()>;
+	fn visit_wait(&mut self, span: Span, thread: Id<'_>) -> Result<()>;
 
-	fn visit_directive(&mut self, directive: WastDirective) -> Result<()> {
+	fn visit_directive(&mut self, directive: WastDirective<'_>) -> Result<()> {
 		match directive {
 			WastDirective::Module(quote_wat) => self.visit_module(quote_wat),
 			WastDirective::ModuleDefinition(quote_wat) => self.visit_module_definition(quote_wat),
@@ -120,7 +131,7 @@ pub trait Visitor {
 		lexer.allow_confusing_unicode(true);
 
 		let buffer = ParseBuffer::new_with_lexer(lexer)?;
-		let wast = wast::parser::parse::<Wast>(&buffer)?;
+		let wast = wast::parser::parse::<Wast<'_>>(&buffer)?;
 
 		wast.directives
 			.into_iter()
