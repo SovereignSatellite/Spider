@@ -1,5 +1,10 @@
+//! `LuaJIT` tree representation for compiled WebAssembly modules.
+
 #![no_std]
-#![expect(clippy::missing_panics_doc)]
+#![expect(
+	clippy::multiple_inherent_impl,
+	reason = "visitor accept methods are in a separate file from the type definitions"
+)]
 
 extern crate alloc;
 
@@ -14,11 +19,17 @@ use self::{
 	statement::{Export, Sequence},
 };
 
+/// The root tree node for a `LuaJIT` module.
 pub struct LuaJITTree {
+	/// The environment variable name.
 	pub environment: Name,
+	/// The local variable names.
 	pub locals: Vec<Name>,
+	/// The stack size.
 	pub stack: u16,
 
+	/// The main code sequence.
 	pub code: Sequence,
+	/// The export declarations.
 	pub exports: Vec<Export>,
 }
