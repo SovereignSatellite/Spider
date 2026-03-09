@@ -1,5 +1,13 @@
+//! Builds `LuaJIT` trees from IR data flow graphs.
+
 #![no_std]
-#![expect(clippy::missing_panics_doc)]
+
+extern crate alloc;
+
+mod assignment_simplifier;
+mod code_handler;
+mod data_handler;
+mod local_allocator;
 
 use ir_graph::{
 	DataFlowGraph, Link, Node,
@@ -21,13 +29,7 @@ use luajit_tree::{LuaJITTree, expression::Expression};
 
 use self::{code_handler::CodeHandler, data_handler::DataHandler, local_allocator::LocalAllocator};
 
-extern crate alloc;
-
-mod assignment_simplifier;
-mod code_handler;
-mod data_handler;
-mod local_allocator;
-
+/// Builds a `LuaJIT` tree from an IR data flow graph.
 pub struct LuaJITBuilder {
 	local_allocator: LocalAllocator,
 
@@ -38,6 +40,7 @@ pub struct LuaJITBuilder {
 }
 
 impl LuaJITBuilder {
+	/// Creates a new `LuaJIT` builder.
 	#[must_use]
 	pub fn new() -> Self {
 		Self {
@@ -94,9 +97,9 @@ impl LuaJITBuilder {
 		self.do_assignment(*output, function);
 	}
 
-	fn handle_region_in(&mut self, graph: &DataFlowGraph, id: u32, region_in: &RegionIn) {
+	fn handle_region_in(&mut self, graph: &DataFlowGraph, id: u32, region_in: RegionIn) {
 		let RegionIn { input, .. } = region_in;
-		let GammaIn { arguments, .. } = graph.get(*input).as_gamma_in().unwrap();
+		let GammaIn { arguments, .. } = graph.get(input).as_gamma_in().unwrap();
 
 		self.code_handler.push_scope();
 		self.code_handler
@@ -169,7 +172,10 @@ impl LuaJITBuilder {
 		self.do_assignment(id, import);
 	}
 
-	#[expect(clippy::needless_pass_by_ref_mut)]
+	#[expect(
+		clippy::needless_pass_by_ref_mut,
+		reason = "signature matches other handlers"
+	)]
 	fn handle_host(&mut self, id: u32, host: &dyn Host) {
 		unimplemented!("`{}` at {id}", host.identifier());
 	}
@@ -544,7 +550,7 @@ impl LuaJITBuilder {
 
 			Node::LambdaIn(_) => self.handle_lambda_in(),
 			Node::LambdaOut(ref node) => self.handle_lambda_out(graph, node),
-			Node::RegionIn(ref node) => self.handle_region_in(graph, id, node),
+			Node::RegionIn(node) => self.handle_region_in(graph, id, node),
 			Node::RegionOut(_) => self.handle_region_out(id),
 			Node::GammaOut(ref node) => self.handle_gamma_out(graph, node),
 			Node::ThetaIn(ref node) => self.handle_theta_in(id, node),
@@ -608,12 +614,18 @@ impl LuaJITBuilder {
 		}
 	}
 
+	/// Builds a `LuaJIT` tree from the given data flow graph.
+	///
+	/// # Panics
+	///
+	/// Panics if the graph does not contain a valid omega output;
+	/// if this happens, it is a bug.
 	pub fn run(&mut self, graph: &DataFlowGraph) -> LuaJITTree {
 		let (declarations, assignments) = self.data_handler.locals_mut();
 
 		self.local_allocator.run(declarations, assignments, graph);
 
-		for (node, id) in graph.nodes().zip(0..) {
+		for (node, id) in graph.nodes().zip(0_u32..) {
 			self.handle_node(graph, id, node);
 		}
 
