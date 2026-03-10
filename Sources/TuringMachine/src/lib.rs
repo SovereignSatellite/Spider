@@ -154,7 +154,7 @@ impl TuringMachineLifter {
 
 	fn handle_tell(&mut self, graph: &mut DataFlowGraph) {
 		let source = self.do_load(graph);
-		let apply = Apply::add_into(graph, self.tell, alloc::vec![source, self.io], 1);
+		let apply = Apply::add_into(graph, self.tell, alloc::vec![self.io, source], 1);
 
 		self.io = Link(apply, 0);
 	}
