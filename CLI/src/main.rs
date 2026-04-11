@@ -1,11 +1,16 @@
-use std::io::{BufWriter, StdoutLock, Write as _};
+use std::{
+	io::{BufWriter, StdoutLock, Write as _},
+	sync::Arc,
+};
 
 use clap::Parser as _;
-use ir_graph::DataFlowGraph;
+use parking_lot::Mutex;
 
-use crate::{
+use ir_graph::control::Module;
+
+use self::{
 	arguments::{Arguments, Source, Target},
-	common::{run_all_optimizations, run_post_process},
+	common::process_module,
 };
 
 mod arguments;
@@ -19,28 +24,24 @@ fn lock_standard_output() -> BufWriter<StdoutLock<'static>> {
 	BufWriter::with_capacity(DEFAULT_BUF_SIZE, std::io::stdout().lock())
 }
 
-fn build_graph(data: &[u8], optimize: bool, source: Source) -> DataFlowGraph {
-	let (mut graph, mut omega) = match source {
+fn build_module(data: &[u8], optimize: bool, source: Source) -> Arc<Mutex<Module>> {
+	let module = match source {
 		Source::TuringMachine => sources::from_turing_machine(data),
 		Source::WebAssembly => sources::from_web_assembly(data),
 	};
 
-	if optimize {
-		omega = run_all_optimizations(&mut graph, omega);
-	}
+	process_module(&module, optimize);
 
-	run_post_process(&mut graph, omega);
-
-	graph
+	module
 }
 
-fn print_graph(graph: &DataFlowGraph, target: Target) {
+fn print_module(module: &Arc<Mutex<Module>>, target: Target) {
 	let mut output = lock_standard_output();
 
 	match target {
-		Target::Json => targets::into_json(graph, &mut output),
-		Target::Luau => targets::into_luau(graph, &mut output),
-		Target::LuaJIT => targets::into_luajit(graph, &mut output),
+		Target::Json => targets::into_json(module, &mut output),
+		Target::Luau => targets::into_luau(module, &mut output),
+		Target::LuaJIT => targets::into_luajit(module, &mut output),
 	}
 
 	output.flush().expect("output should print");
@@ -55,7 +56,7 @@ fn main() {
 	} = Arguments::parse();
 
 	let data = std::fs::read(file).expect("failed to read file");
-	let graph = build_graph(&data, optimize, source);
+	let module = build_module(&data, optimize, source);
 
-	print_graph(&graph, target);
+	print_module(&module, target);
 }

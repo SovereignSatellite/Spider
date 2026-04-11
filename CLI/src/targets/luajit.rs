@@ -1,6 +1,8 @@
-use std::io::Write;
+use std::{io::Write, sync::Arc};
 
-use ir_graph::DataFlowGraph;
+use parking_lot::Mutex;
+
+use ir_graph::control::Module;
 use luajit_builder::LuaJITBuilder;
 use luajit_printer::{
 	LuaJITPrinter,
@@ -8,10 +10,10 @@ use luajit_printer::{
 };
 use luajit_tree::LuaJITTree;
 
-fn build_tree(graph: &DataFlowGraph) -> LuaJITTree {
+fn build_tree(module: &Arc<Mutex<Module>>) -> LuaJITTree {
 	let mut builder = LuaJITBuilder::new();
 
-	builder.run(graph)
+	builder.run(module)
 }
 
 fn print_library(tree: &LuaJITTree, out: &mut dyn Write) -> std::io::Result<()> {
@@ -34,8 +36,8 @@ fn print_tree(tree: &LuaJITTree, out: &mut dyn Write) -> std::io::Result<()> {
 	out.flush()
 }
 
-pub fn print(graph: &DataFlowGraph, out: &mut dyn Write) {
-	let tree = build_tree(graph);
+pub fn print(module: &Arc<Mutex<Module>>, out: &mut dyn Write) {
+	let tree = build_tree(module);
 
 	print_library(&tree, out).expect("library should print");
 	print_tree(&tree, out).expect("source should print");

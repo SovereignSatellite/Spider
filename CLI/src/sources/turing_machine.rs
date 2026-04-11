@@ -1,4 +1,8 @@
-use ir_graph::DataFlowGraph;
+use std::sync::Arc;
+
+use parking_lot::Mutex;
+
+use ir_graph::control::Module;
 use turing_machine_lifter::TuringMachineLifter;
 
 fn has_balanced_brackets(source: &str) -> bool {
@@ -18,7 +22,7 @@ fn has_balanced_brackets(source: &str) -> bool {
 	open == 0
 }
 
-pub fn lift(data: &[u8]) -> (DataFlowGraph, u32) {
+pub fn lift(data: &[u8]) -> Arc<Mutex<Module>> {
 	let source = str::from_utf8(data).expect("`file` should be a valid UTF-8 string");
 
 	assert!(
@@ -26,12 +30,7 @@ pub fn lift(data: &[u8]) -> (DataFlowGraph, u32) {
 		"`file` should have balanced brackets"
 	);
 
-	let mut graph = DataFlowGraph::new();
-	let omega = {
-		let mut lifter = TuringMachineLifter::new();
+	let mut lifter = TuringMachineLifter::new();
 
-		lifter.run(&mut graph, source)
-	};
-
-	(graph, omega)
+	lifter.run(source)
 }
