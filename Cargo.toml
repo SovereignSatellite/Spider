@@ -23,6 +23,10 @@ hashbrown = { version = "0.16.0", default-features = false, features = [
 	"inline-more",
 ] }
 
+parking_lot = { version = "0.12.5", default-features = false, features = [
+	"arc_lock",
+] }
+
 wasmparser = { version = "0.235.0", default-features = false }
 
 [workspace.lints.rust]
@@ -428,7 +432,7 @@ precedence_bits = "forbid"
 print_literal = "forbid"
 print_with_newline = "forbid"
 println_empty_string = "forbid"
-ptr_arg = "forbid"
+ptr_arg = "deny"
 ptr_as_ptr = "forbid"
 ptr_cast_constness = "forbid"
 ptr_eq = "forbid"
@@ -526,7 +530,7 @@ to_string_in_format_args = "forbid"
 to_string_trait_impl = "forbid"
 todo = "forbid"
 too_long_first_doc_paragraph = "forbid"
-too_many_arguments = "forbid"
+too_many_arguments = "deny"
 too_many_lines = "deny"
 toplevel_ref_arg = "forbid"
 trait_duplication_in_bounds = "forbid"
@@ -574,7 +578,6 @@ unneeded_field_pattern = "forbid"
 unneeded_struct_pattern = "forbid"
 unneeded_wildcard_pattern = "forbid"
 unnested_or_patterns = "forbid"
-unreachable = "forbid"
 unreadable_literal = "forbid"
 unseparated_literal_suffix = "deny"
 unused_async = "forbid"
