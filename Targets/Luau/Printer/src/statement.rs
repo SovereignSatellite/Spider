@@ -1,3 +1,20 @@
+use std::io::{Result, Write};
+
+use luau_tree::{
+	LuauTree,
+	statement::{
+		Assign, Call, Export, GlobalSet, Match, MemoryCopy, MemoryDrop, MemoryFill, MemoryStore,
+		Repeat, Sequence, Statement, SwapAll, TableCopy, TableDrop, TableFill, TableSet,
+	},
+};
+
+use super::{
+	LuauPrinter,
+	expression::{fmt_delimited, fmt_stack_enter, fmt_stack_leave},
+	library::NeedsName as _,
+	print::Print,
+};
+
 mod conditional {
 	use std::io::{Result, Write};
 
@@ -162,23 +179,6 @@ mod conditional {
 	}
 }
 
-use std::io::{Result, Write};
-
-use luau_tree::{
-	LuauTree,
-	statement::{
-		Assign, Call, Export, GlobalSet, Match, MemoryCopy, MemoryDrop, MemoryFill, MemoryStore,
-		Repeat, Sequence, Statement, SwapAll, TableCopy, TableDrop, TableFill, TableSet,
-	},
-};
-
-use crate::{
-	LuauPrinter,
-	expression::{fmt_delimited, fmt_locals, fmt_stack_enter, fmt_stack_leave},
-	library::NeedsName as _,
-	print::Print,
-};
-
 impl Print for Match {
 	fn print(&self, printer: &mut LuauPrinter, out: &mut dyn Write) -> Result<()> {
 		let Self {
@@ -206,9 +206,9 @@ impl Print for Repeat {
 		printer.outdent();
 
 		printer.tab(out)?;
-		write!(out, "until ")?;
+		write!(out, "until (")?;
 		condition.print(printer, out)?;
-		writeln!(out, " == 0")
+		writeln!(out, ") == 0")
 	}
 }
 
@@ -551,7 +551,6 @@ impl Print for LuauTree {
 	fn print(&self, printer: &mut LuauPrinter, out: &mut dyn Write) -> Result<()> {
 		let Self {
 			environment,
-			locals,
 			stack,
 			code,
 			exports,
@@ -570,7 +569,6 @@ impl Print for LuauTree {
 		writeln!(out, "local excess_stack = {{ top = 0 }}")?;
 
 		fmt_stack_enter(*stack, printer, out)?;
-		fmt_locals(locals, printer, out)?;
 
 		code.print(printer, out)?;
 

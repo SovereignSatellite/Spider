@@ -1,6 +1,8 @@
-//! Expression types for the `LuaJIT` tree representation.
+//! Expression types for the `LuaJIT` tree.
 
 use alloc::{boxed::Box, sync::Arc, vec::Vec};
+
+use super::statement::Sequence;
 
 pub use ir_graph::simple::{
 	ExtendType, IntegerBinaryOperator, IntegerCompareOperator, IntegerType, IntegerUnaryOperator,
@@ -8,11 +10,9 @@ pub use ir_graph::simple::{
 	NumberUnaryOperator,
 };
 
-use crate::statement::Sequence;
-
-/// A function definition expression.
+/// A function definition.
 pub struct Function {
-	/// The argument expressions.
+	/// The argument names.
 	pub arguments: Vec<Name>,
 	/// The local variable names.
 	pub locals: Vec<Name>,
@@ -24,15 +24,15 @@ pub struct Function {
 	pub returns: Vec<Expression>,
 }
 
-/// A scoped function expression with captured dependencies.
+/// A scoped function with captured dependencies.
 pub struct Scoped {
 	/// The captured dependencies.
 	pub dependencies: Vec<(Name, Expression)>,
-	/// The function expression.
+	/// The function definition.
 	pub function: Function,
 }
 
-/// An external import expression.
+/// An external import.
 pub struct Import {
 	/// The environment expression.
 	pub environment: Expression,
@@ -75,12 +75,12 @@ impl Local {
 		if let Self::Fast { name } = self {
 			name
 		} else {
-			panic!("`Local::Fast expected`, but we got `Local::Slow`")
+			unreachable!()
 		}
 	}
 }
 
-/// A function call expression.
+/// A function call.
 pub struct Call {
 	/// The function expression.
 	pub function: Expression,
@@ -88,19 +88,19 @@ pub struct Call {
 	pub arguments: Vec<Expression>,
 }
 
-/// A boolean-to-integer conversion expression.
+/// A boolean-to-integer conversion.
 pub struct BooleanToInteger {
 	/// The source expression.
 	pub source: Expression,
 }
 
-/// A reference null check expression.
+/// A reference null check.
 pub struct RefIsNull {
 	/// The source expression.
 	pub source: Expression,
 }
 
-/// An integer unary operation expression.
+/// An integer unary operation.
 pub struct IntegerUnaryOperation {
 	/// The source expression.
 	pub source: Expression,
@@ -116,7 +116,7 @@ impl IntegerUnaryOperation {
 	}
 }
 
-/// An integer binary operation expression.
+/// An integer binary operation.
 pub struct IntegerBinaryOperation {
 	/// The left-hand operand.
 	pub lhs: Expression,
@@ -134,7 +134,7 @@ impl IntegerBinaryOperation {
 	}
 }
 
-/// An integer comparison expression.
+/// An integer comparison.
 pub struct IntegerCompareOperation {
 	/// The left-hand operand.
 	pub lhs: Expression,
@@ -142,23 +142,23 @@ pub struct IntegerCompareOperation {
 	pub rhs: Expression,
 	/// The integer type.
 	pub kind: IntegerType,
-	/// The operator.
+	/// The comparison operator.
 	pub operator: IntegerCompareOperator,
 }
 
-/// An integer narrowing expression.
+/// An integer narrowing.
 pub struct IntegerNarrow {
 	/// The source expression.
 	pub source: Expression,
 }
 
-/// An integer widening expression.
+/// An integer widening.
 pub struct IntegerWiden {
 	/// The source expression.
 	pub source: Expression,
 }
 
-/// An integer sign-extension expression.
+/// An integer sign extension.
 pub struct IntegerExtend {
 	/// The source expression.
 	pub source: Expression,
@@ -172,27 +172,27 @@ impl IntegerExtend {
 	}
 }
 
-/// An integer-to-floating-point conversion expression.
+/// An integer-to-floating-point conversion.
 pub struct IntegerConvertToNumber {
 	/// The source expression.
 	pub source: Expression,
-	/// Whether the value is signed.
+	/// Whether the source integer is signed.
 	pub signed: bool,
-	/// The target type.
+	/// The target floating-point type.
 	pub to: NumberType,
-	/// The source type.
+	/// The source integer type.
 	pub from: IntegerType,
 }
 
-/// An integer-to-floating-point reinterpretation expression.
+/// An integer-to-floating-point reinterpretation.
 pub struct IntegerTransmuteToNumber {
 	/// The source expression.
 	pub source: Expression,
-	/// The source type.
+	/// The source integer type.
 	pub from: IntegerType,
 }
 
-/// A floating-point unary operation expression.
+/// A floating-point unary operation.
 pub struct NumberUnaryOperation {
 	/// The source expression.
 	pub source: Expression,
@@ -202,7 +202,7 @@ pub struct NumberUnaryOperation {
 	pub operator: NumberUnaryOperator,
 }
 
-/// A floating-point binary operation expression.
+/// A floating-point binary operation.
 pub struct NumberBinaryOperation {
 	/// The left-hand operand.
 	pub lhs: Expression,
@@ -214,7 +214,7 @@ pub struct NumberBinaryOperation {
 	pub operator: NumberBinaryOperator,
 }
 
-/// A floating-point comparison expression.
+/// A floating-point comparison.
 pub struct NumberCompareOperation {
 	/// The left-hand operand.
 	pub lhs: Expression,
@@ -222,33 +222,33 @@ pub struct NumberCompareOperation {
 	pub rhs: Expression,
 	/// The floating-point type.
 	pub kind: NumberType,
-	/// The operator.
+	/// The comparison operator.
 	pub operator: NumberCompareOperator,
 }
 
-/// A floating-point narrowing expression.
+/// A floating-point narrowing.
 pub struct NumberNarrow {
 	/// The source expression.
 	pub source: Expression,
 }
 
-/// A floating-point widening expression.
+/// A floating-point widening.
 pub struct NumberWiden {
 	/// The source expression.
 	pub source: Expression,
 }
 
-/// A floating-point-to-integer truncation expression.
+/// A floating-point-to-integer truncation.
 pub struct NumberTruncateToInteger {
 	/// The source expression.
 	pub source: Expression,
-	/// Whether the value is signed.
+	/// Whether the target integer is signed.
 	pub signed: bool,
 	/// Whether to use saturating semantics.
 	pub saturate: bool,
-	/// The target type.
+	/// The target integer type.
 	pub to: IntegerType,
-	/// The source type.
+	/// The source floating-point type.
 	pub from: NumberType,
 }
 
@@ -258,11 +258,11 @@ impl NumberTruncateToInteger {
 	}
 }
 
-/// A floating-point-to-integer reinterpretation expression.
+/// A floating-point-to-integer reinterpretation.
 pub struct NumberTransmuteToInteger {
 	/// The source expression.
 	pub source: Expression,
-	/// The source type.
+	/// The source floating-point type.
 	pub from: NumberType,
 }
 
@@ -280,21 +280,21 @@ pub struct Location {
 	pub offset: Expression,
 }
 
-/// A global variable creation expression.
+/// A global variable creation.
 pub struct GlobalNew {
 	/// The initial value expression.
 	pub initializer: Expression,
 }
 
-/// A global variable read expression.
+/// A global variable read.
 pub struct GlobalGet {
 	/// The source expression.
 	pub source: Expression,
 }
 
-/// A table creation expression.
+/// A table creation.
 pub struct TableNew {
-	/// The initial value expression.
+	/// The initial elements and their offsets.
 	pub initializer: Vec<(Expression, u32)>,
 	/// The minimum element count.
 	pub minimum: u32,
@@ -302,19 +302,19 @@ pub struct TableNew {
 	pub maximum: u32,
 }
 
-/// A table element read expression.
+/// A table element read.
 pub struct TableGet {
-	/// The source expression.
+	/// The source location.
 	pub source: Location,
 }
 
-/// A table size query expression.
+/// A table size query.
 pub struct TableSize {
 	/// The source expression.
 	pub source: Expression,
 }
 
-/// A table grow expression.
+/// A table grow.
 pub struct TableGrow {
 	/// The destination expression.
 	pub destination: Expression,
@@ -324,9 +324,9 @@ pub struct TableGrow {
 	pub size: Expression,
 }
 
-/// A memory load expression.
+/// A memory load.
 pub struct MemoryLoad {
-	/// The source expression.
+	/// The source location.
 	pub source: Location,
 	/// The load type.
 	pub kind: LoadType,
@@ -345,13 +345,13 @@ impl MemoryLoad {
 	}
 }
 
-/// A memory size query expression.
+/// A memory size query.
 pub struct MemorySize {
 	/// The source expression.
 	pub source: Expression,
 }
 
-/// A memory grow expression.
+/// A memory grow.
 pub struct MemoryGrow {
 	/// The destination expression.
 	pub destination: Expression,
@@ -359,13 +359,13 @@ pub struct MemoryGrow {
 	pub size: Expression,
 }
 
-/// An expression in the tree.
+/// An expression node.
 pub enum Expression {
-	/// A function definition expression.
+	/// A function definition.
 	Function(Box<Function>),
-	/// A scoped function expression with captured dependencies.
+	/// A scoped function with captured dependencies.
 	Scoped(Box<Scoped>),
-	/// An external import expression.
+	/// An external import.
 	Import(Box<Import>),
 
 	/// An unreachable trap.
@@ -385,67 +385,67 @@ pub enum Expression {
 	/// A 64-bit float constant.
 	F64(f64),
 
-	/// A function call expression.
+	/// A function call.
 	Call(Box<Call>),
 
-	/// A boolean-to-integer conversion expression.
+	/// A boolean-to-integer conversion.
 	BooleanToInteger(Box<BooleanToInteger>),
-	/// A reference null check expression.
+	/// A reference null check.
 	RefIsNull(Box<RefIsNull>),
 
-	/// An integer unary operation expression.
+	/// An integer unary operation.
 	IntegerUnaryOperation(Box<IntegerUnaryOperation>),
-	/// An integer binary operation expression.
+	/// An integer binary operation.
 	IntegerBinaryOperation(Box<IntegerBinaryOperation>),
-	/// An integer comparison expression.
+	/// An integer comparison.
 	IntegerCompareOperation(Box<IntegerCompareOperation>),
-	/// An integer narrowing expression.
+	/// An integer narrowing.
 	IntegerNarrow(Box<IntegerNarrow>),
-	/// An integer widening expression.
+	/// An integer widening.
 	IntegerWiden(Box<IntegerWiden>),
-	/// An integer sign-extension expression.
+	/// An integer sign extension.
 	IntegerExtend(Box<IntegerExtend>),
-	/// An integer-to-floating-point conversion expression.
+	/// An integer-to-floating-point conversion.
 	IntegerConvertToNumber(Box<IntegerConvertToNumber>),
-	/// An integer-to-floating-point reinterpretation expression.
+	/// An integer-to-floating-point reinterpretation.
 	IntegerTransmuteToNumber(Box<IntegerTransmuteToNumber>),
 
-	/// A floating-point unary operation expression.
+	/// A floating-point unary operation.
 	NumberUnaryOperation(Box<NumberUnaryOperation>),
-	/// A floating-point binary operation expression.
+	/// A floating-point binary operation.
 	NumberBinaryOperation(Box<NumberBinaryOperation>),
-	/// A floating-point comparison expression.
+	/// A floating-point comparison.
 	NumberCompareOperation(Box<NumberCompareOperation>),
-	/// A floating-point narrowing expression.
+	/// A floating-point narrowing.
 	NumberNarrow(Box<NumberNarrow>),
-	/// A floating-point widening expression.
+	/// A floating-point widening.
 	NumberWiden(Box<NumberWiden>),
-	/// A floating-point-to-integer truncation expression.
+	/// A floating-point-to-integer truncation.
 	NumberTruncateToInteger(Box<NumberTruncateToInteger>),
-	/// A floating-point-to-integer reinterpretation expression.
+	/// A floating-point-to-integer reinterpretation.
 	NumberTransmuteToInteger(Box<NumberTransmuteToInteger>),
 
-	/// A global variable creation expression.
+	/// A global variable creation.
 	GlobalNew(Box<GlobalNew>),
-	/// A global variable read expression.
+	/// A global variable read.
 	GlobalGet(Box<GlobalGet>),
 
-	/// A table creation expression.
+	/// A table creation.
 	TableNew(Box<TableNew>),
-	/// A table element read expression.
+	/// A table element read.
 	TableGet(Box<TableGet>),
-	/// A table size query expression.
+	/// A table size query.
 	TableSize(Box<TableSize>),
-	/// A table grow expression.
+	/// A table grow.
 	TableGrow(Box<TableGrow>),
 
-	/// A memory creation expression.
+	/// A memory creation.
 	MemoryNew(MemoryNew),
-	/// A memory load expression.
+	/// A memory load.
 	MemoryLoad(Box<MemoryLoad>),
-	/// A memory size query expression.
+	/// A memory size query.
 	MemorySize(Box<MemorySize>),
-	/// A memory grow expression.
+	/// A memory grow.
 	MemoryGrow(Box<MemoryGrow>),
 }
 
@@ -460,7 +460,7 @@ impl Expression {
 		if let Self::Local(local) = *self {
 			local
 		} else {
-			panic!("`Expression::Local` expected, we got something else")
+			unreachable!()
 		}
 	}
 
@@ -475,7 +475,7 @@ impl Expression {
 		Self::IntegerCompareOperation(operation.into())
 	}
 
-	/// Converts this expression into a boolean expression.
+	/// Converts this expression into a boolean.
 	///
 	/// # Panics
 	///
@@ -484,6 +484,11 @@ impl Expression {
 	#[must_use]
 	pub fn into_boolean(self) -> Self {
 		match self {
+			Self::Trap
+			| Self::RefIsNull(_)
+			| Self::IntegerCompareOperation(_)
+			| Self::NumberCompareOperation(_) => self,
+
 			Self::Local(_)
 			| Self::I32(_)
 			| Self::Call(_)
@@ -493,11 +498,6 @@ impl Expression {
 			| Self::TableGrow(_)
 			| Self::MemorySize(_)
 			| Self::MemoryGrow(_) => self.into_boolean_unchecked(),
-
-			Self::Trap
-			| Self::RefIsNull(_)
-			| Self::IntegerCompareOperation(_)
-			| Self::NumberCompareOperation(_) => self,
 
 			Self::BooleanToInteger(boolean_to_integer) => boolean_to_integer.source,
 			Self::IntegerUnaryOperation(ref integer_unary_operation)
@@ -551,7 +551,7 @@ impl Expression {
 			| Self::TableGet(_)
 			| Self::MemoryNew(_)
 			| Self::MemoryLoad(_) => {
-				panic!("`Expression` integer expected, we got something else")
+				unreachable!("integer `Expression` expected")
 			}
 		}
 	}

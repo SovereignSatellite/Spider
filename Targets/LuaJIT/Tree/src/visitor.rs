@@ -2,7 +2,7 @@
 
 use core::ops::ControlFlow;
 
-use crate::{
+use super::{
 	LuaJITTree,
 	expression::{
 		BooleanToInteger, Call as ExpressionCall, Expression, Function, GlobalGet, GlobalNew,

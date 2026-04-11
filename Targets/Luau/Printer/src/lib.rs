@@ -2,20 +2,21 @@
 
 extern crate alloc;
 
+use alloc::sync::Arc;
+use std::io::{Result, Write};
+
+use hashbrown::HashMap;
+
+use luau_tree::{LuauTree, expression::Name};
+
+use self::print::Print as _;
+
 mod expression;
 mod print;
 mod statement;
 
 /// Runtime library section management.
 pub mod library;
-
-use alloc::sync::Arc;
-use std::io::{Result, Write};
-
-use hashbrown::HashMap;
-use luau_tree::{LuauTree, expression::Name};
-
-use self::print::Print as _;
 
 /// Prints a `Luau` tree into a writer.
 pub struct LuauPrinter {

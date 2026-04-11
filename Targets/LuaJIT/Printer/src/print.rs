@@ -1,6 +1,6 @@
 use std::io::{Result, Write};
 
-use crate::LuaJITPrinter;
+use super::LuaJITPrinter;
 
 pub trait Print {
 	fn print(&self, printer: &mut LuaJITPrinter, out: &mut dyn Write) -> Result<()>;

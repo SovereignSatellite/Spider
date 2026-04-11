@@ -156,10 +156,12 @@ impl Sections {
 	/// Panics if the section is not found.
 	#[must_use]
 	pub fn find(&self, name: &'static str) -> &Section {
-		let position = self
+		let Ok(position) = self
 			.list
 			.binary_search_by_key(&name, |&Section { name, .. }| name)
-			.unwrap_or_else(|_| panic!("`{name}` is not a section"));
+		else {
+			unreachable!("`{name}` is not a section")
+		};
 
 		&self.list[position]
 	}

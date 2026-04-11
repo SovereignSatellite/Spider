@@ -8,10 +8,6 @@
 
 extern crate alloc;
 
-pub mod expression;
-pub mod statement;
-pub mod visitor;
-
 use alloc::vec::Vec;
 
 use self::{
@@ -19,12 +15,14 @@ use self::{
 	statement::{Export, Sequence},
 };
 
+pub mod expression;
+pub mod statement;
+pub mod visitor;
+
 /// The root tree node for a Luau module.
 pub struct LuauTree {
 	/// The environment variable name.
 	pub environment: Name,
-	/// The local variable names.
-	pub locals: Vec<Name>,
 	/// The stack size.
 	pub stack: u16,
 

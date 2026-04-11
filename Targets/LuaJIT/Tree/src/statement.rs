@@ -1,8 +1,8 @@
-//! Statement types for the `LuaJIT` tree representation.
+//! Statement types for the `LuaJIT` tree.
 
 use alloc::{boxed::Box, sync::Arc, vec::Vec};
 
-use crate::expression::{Expression, Local, Location};
+use super::expression::{Expression, Local, Location};
 
 pub use ir_graph::simple::StoreType;
 
@@ -10,27 +10,6 @@ pub use ir_graph::simple::StoreType;
 pub struct Sequence {
 	/// The statement list.
 	pub list: Vec<Statement>,
-}
-
-impl Sequence {
-	/// Extracts the source expression from the single assignment in this sequence.
-	///
-	/// # Panics
-	///
-	/// Panics if this sequence does not contain exactly one assignment statement;
-	/// if this happens, it is a bug.
-	#[must_use]
-	pub fn into_assign_source(mut self) -> Expression {
-		let source = if let Some(Statement::Assign(assign)) = self.list.pop() {
-			assign.source
-		} else {
-			panic!("should be an assignment")
-		};
-
-		assert!(self.list.is_empty(), "should be only statement");
-
-		source
-	}
 }
 
 /// A conditional match statement.

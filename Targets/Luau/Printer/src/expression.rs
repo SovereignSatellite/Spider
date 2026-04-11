@@ -1,3 +1,17 @@
+use std::io::{Result, Write};
+
+use luau_tree::expression::{
+	BooleanToInteger, Call, Expression, Function, GlobalGet, GlobalNew, Import,
+	IntegerBinaryOperation, IntegerCompareOperation, IntegerConvertToNumber, IntegerExtend,
+	IntegerNarrow, IntegerTransmuteToNumber, IntegerUnaryOperation, IntegerWiden, Local, Location,
+	Match, MemoryGrow, MemoryLoad, MemoryNew, MemorySize, Name, NumberBinaryOperation,
+	NumberBinaryOperator, NumberCompareOperation, NumberCompareOperator, NumberNarrow,
+	NumberTransmuteToInteger, NumberTruncateToInteger, NumberType, NumberUnaryOperation,
+	NumberUnaryOperator, NumberWiden, RefIsNull, Scoped, TableGet, TableGrow, TableNew, TableSize,
+};
+
+use super::{LuauPrinter, library::NeedsName as _, print::Print};
+
 mod conditional {
 	use std::io::{Result, Write};
 
@@ -73,20 +87,6 @@ mod conditional {
 		on_false.print(printer, out)
 	}
 }
-
-use std::io::{Result, Write};
-
-use luau_tree::expression::{
-	BooleanToInteger, Call, Expression, Function, GlobalGet, GlobalNew, Import,
-	IntegerBinaryOperation, IntegerCompareOperation, IntegerConvertToNumber, IntegerExtend,
-	IntegerNarrow, IntegerTransmuteToNumber, IntegerUnaryOperation, IntegerWiden, Local, Location,
-	Match, MemoryGrow, MemoryLoad, MemoryNew, MemorySize, Name, NumberBinaryOperation,
-	NumberBinaryOperator, NumberCompareOperation, NumberCompareOperator, NumberNarrow,
-	NumberTransmuteToInteger, NumberTruncateToInteger, NumberType, NumberUnaryOperation,
-	NumberUnaryOperator, NumberWiden, RefIsNull, Scoped, TableGet, TableGrow, TableNew, TableSize,
-};
-
-use crate::{LuauPrinter, library::NeedsName as _, print::Print};
 
 pub fn fmt_delimited<T, I>(items: I, printer: &mut LuauPrinter, out: &mut dyn Write) -> Result<()>
 where
@@ -541,9 +541,9 @@ impl Print for NumberBinaryOperation {
 			NumberBinaryOperator::Multiply => Some("*"),
 			NumberBinaryOperator::Divide => Some("/"),
 
-			NumberBinaryOperator::CopySign
+			NumberBinaryOperator::Minimum
 			| NumberBinaryOperator::Maximum
-			| NumberBinaryOperator::Minimum => None,
+			| NumberBinaryOperator::CopySign => None,
 		} && *kind == NumberType::F64
 		{
 			return fmt_infix_operator(lhs, rhs, operator, printer, out);

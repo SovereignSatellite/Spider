@@ -2,7 +2,7 @@
 
 use alloc::{boxed::Box, sync::Arc, vec::Vec};
 
-use crate::expression::{Expression, Local, Location};
+use super::expression::{Expression, Local, Location};
 
 pub use ir_graph::simple::StoreType;
 
@@ -40,15 +40,16 @@ impl Sequence {
 	/// if this happens, it is a bug.
 	#[must_use]
 	pub fn into_assign_source(mut self) -> Expression {
-		let source = if let Some(Statement::Assign(assign)) = self.list.pop() {
+		if let Some(Statement::Assign(assign)) = self.list.pop() {
+			assert!(
+				self.list.is_empty(),
+				"sequence should have only one statement"
+			);
+
 			assign.source
 		} else {
-			panic!("should be an assignment")
-		};
-
-		assert!(self.list.is_empty(), "should be only statement");
-
-		source
+			unreachable!("sequence should end with an assignment statement")
+		}
 	}
 }
 

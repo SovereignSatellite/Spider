@@ -9,7 +9,7 @@ use luajit_tree::expression::{
 	NumberUnaryOperation, NumberWiden, RefIsNull, Scoped, TableGet, TableGrow, TableNew, TableSize,
 };
 
-use crate::{LuaJITPrinter, library::NeedsName as _, print::Print};
+use super::{LuaJITPrinter, library::NeedsName as _, print::Print};
 
 pub fn fmt_delimited<T, I>(items: I, printer: &mut LuaJITPrinter, out: &mut dyn Write) -> Result<()>
 where

@@ -1,5 +1,7 @@
-use alloc::{sync::Arc, vec::Vec};
+use alloc::sync::Arc;
+
 use hashbrown::HashMap;
+
 use ir_graph::{Link, control, simple};
 use luajit_tree::{
 	expression::{
@@ -14,52 +16,77 @@ use luajit_tree::{
 	statement::{Export, Sequence},
 };
 
-use crate::local_allocator::Declarations;
+type ScopedLink = (Link, usize);
+type ScopedId = (u32, usize);
 
 pub struct DataHandler {
-	declarations: HashMap<u32, Declarations>,
-	assignments: HashMap<Link, Local>,
+	stack_sizes: HashMap<usize, u16>,
+	assignments: HashMap<ScopedLink, Local>,
+	expressions: HashMap<ScopedId, Expression>,
 
-	expressions: HashMap<u32, Expression>,
+	current_scope: usize,
 }
 
 impl DataHandler {
 	pub fn new() -> Self {
 		Self {
-			declarations: HashMap::new(),
+			stack_sizes: HashMap::new(),
 			assignments: HashMap::new(),
-
 			expressions: HashMap::new(),
+
+			current_scope: 0,
 		}
+	}
+
+	pub const fn scope(&self) -> usize {
+		self.current_scope
+	}
+
+	pub const fn set_scope(&mut self, scope: usize) {
+		self.current_scope = scope;
+	}
+
+	pub fn clear(&mut self) {
+		self.stack_sizes.clear();
+		self.assignments.clear();
+		self.expressions.clear();
 	}
 
 	pub const fn locals_mut(
 		&mut self,
-	) -> (&mut HashMap<u32, Declarations>, &mut HashMap<Link, Local>) {
-		(&mut self.declarations, &mut self.assignments)
+	) -> (&mut HashMap<usize, u16>, &mut HashMap<ScopedLink, Local>) {
+		(&mut self.stack_sizes, &mut self.assignments)
 	}
 
 	pub fn store_expression(&mut self, id: u32, source: Expression) {
-		self.expressions
-			.try_insert(id, source)
-			.unwrap_or_else(|_| panic!("expression should set only once"));
+		if self
+			.expressions
+			.try_insert((id, self.current_scope), source)
+			.is_err()
+		{
+			unreachable!("expression already stored for id {id}")
+		}
 	}
 
-	pub fn get_stack_size(&self, id: u32) -> u16 {
-		self.declarations[&id].stack
+	pub fn take_expression(&mut self, id: u32, scope: usize) -> Option<Expression> {
+		self.expressions.remove(&(id, scope))
+	}
+
+	pub fn get_stack_size(&self, scope: usize) -> u16 {
+		self.stack_sizes[&scope]
 	}
 
 	pub fn get_local(&self, link: Link) -> Option<Local> {
-		self.assignments.get(&link).copied()
+		self.get_scoped_local(link, self.current_scope)
+	}
+
+	pub fn get_scoped_local(&self, link: Link, scope: usize) -> Option<Local> {
+		self.assignments.get(&(link, scope)).copied()
 	}
 
 	pub fn load(&mut self, link: Link) -> Expression {
 		self.get_local(link).map_or_else(
-			|| {
-				assert_eq!(link.1, 0, "expression should load from first port");
-
-				self.expressions.remove(&link.0).unwrap()
-			},
+			|| self.take_expression(link.0, self.current_scope).unwrap(),
 			Expression::Local,
 		)
 	}
@@ -68,51 +95,26 @@ impl DataHandler {
 		sources.iter().map(|&link| self.load(link)).collect()
 	}
 
-	pub fn load_name_assignments(&self, id: u32, ports: core::ops::Range<u16>) -> Vec<Name> {
-		let names = ports.map(|port| Link(id, port));
-
-		names
-			.map(|name| self.assignments[&name].into_name())
-			.collect()
-	}
-
 	pub fn load_local_assignments(&self, id: u32, ports: u16) -> Vec<Local> {
-		let names = (0..ports).map(|port| Link(id, port));
+		let names = (0..ports).map(|port| (Link(id, port), self.current_scope));
 
 		names.map(|name| self.assignments[&name]).collect()
 	}
 
-	pub fn load_assign_all(&self, id: u32, sources: &[Link]) -> Vec<(Local, Local)> {
-		let destinations = (0..)
-			.map(|port| Link(id, port))
-			.map(|link| self.assignments[&link]);
-
-		let sources = sources.iter().map(|&link| self.assignments[&link]);
+	pub fn load_assign_all(
+		&self,
+		id: u32,
+		sources: &[Link],
+		source_scope: usize,
+	) -> Vec<(Local, Local)> {
+		let destination_scope = self.current_scope;
+		let destinations =
+			(0..).map(move |port| self.assignments[&(Link(id, port), destination_scope)]);
+		let sources = sources
+			.iter()
+			.map(|&link| self.assignments[&(link, source_scope)]);
 
 		destinations.zip(sources).collect()
-	}
-
-	pub fn load_dependencies(
-		&mut self,
-		id: u32,
-		ports: core::ops::Range<u16>,
-		dependencies: &[Link],
-	) -> Vec<(Name, Expression)> {
-		let names = ports.map(|port| Link(id, port));
-		let iter = names.zip(dependencies).map(|(name, &dependency)| {
-			let name = self.assignments[&name].into_name();
-			let dependency = self.load(dependency);
-
-			(name, dependency)
-		});
-
-		iter.collect()
-	}
-
-	pub fn load_declarations(&self, id: u32) -> Vec<Name> {
-		let locals = self.declarations[&id].locals.clone();
-
-		locals.map(|name_id| Name { id: name_id }).collect()
 	}
 
 	pub fn load_scoped(

@@ -1,6 +1,6 @@
 use std::io::{Result, Write};
 
-use crate::LuauPrinter;
+use super::LuauPrinter;
 
 pub trait Print {
 	fn print(&self, printer: &mut LuauPrinter, out: &mut dyn Write) -> Result<()>;

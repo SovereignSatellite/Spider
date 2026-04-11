@@ -1,20 +1,14 @@
 //! Builds `LuaJIT` trees from IR data flow graphs.
 
-#![no_std]
-
 extern crate alloc;
 
-mod assignment_simplifier;
-mod code_handler;
-mod data_handler;
-mod local_allocator;
+use alloc::sync::Arc;
+
+use parking_lot::Mutex;
 
 use ir_graph::{
-	DataFlowGraph, Link, Node,
-	control::{
-		GammaIn, GammaOut, Import, LambdaIn, LambdaOut, OmegaIn, OmegaOut, RegionIn, ThetaIn,
-		ThetaOut,
-	},
+	Link, Node,
+	control::{Import, Module, ModuleArguments, RepeatResults},
 	simple::{
 		Apply, Fence, GlobalGet, GlobalNew, GlobalSet, Host, Identity, IntegerBinaryOperation,
 		IntegerCompareOperation, IntegerConvertToNumber, IntegerExtend, IntegerNarrow,
@@ -25,9 +19,17 @@ use ir_graph::{
 		TableDrop, TableFill, TableGet, TableGrow, TableNew, TableSet, TableSize,
 	},
 };
-use luajit_tree::{LuaJITTree, expression::Expression};
+use luajit_tree::{
+	LuaJITTree,
+	expression::{Expression, Local, Name},
+};
 
 use self::{code_handler::CodeHandler, data_handler::DataHandler, local_allocator::LocalAllocator};
+
+mod assignment_simplifier;
+mod code_handler;
+mod data_handler;
+mod local_allocator;
 
 /// Builds a `LuaJIT` tree from an IR data flow graph.
 pub struct LuaJITBuilder {
@@ -54,112 +56,215 @@ impl LuaJITBuilder {
 	}
 
 	fn do_assignment(&mut self, destination: u32, source: Expression) {
-		if let Some(destination) = self.data_handler.get_local(Link(destination, 0)) {
-			self.code_handler.do_assign(destination, source);
+		if let Some(local) = self.data_handler.get_local(Link(destination, 0)) {
+			self.code_handler.do_assign(local, source);
 		} else {
 			self.data_handler.store_expression(destination, source);
 		}
 	}
 
-	fn handle_lambda_in(&mut self) {
-		self.code_handler.push_scope();
+	fn bridge_boundary_names(&mut self, boundary: u32, names: &[Name]) {
+		for (port, &name) in names.iter().enumerate() {
+			let port = port.try_into().unwrap();
+
+			let Some(destination) = self.data_handler.get_local(Link(boundary, port)) else {
+				continue;
+			};
+
+			self.code_handler
+				.do_assign(destination, Expression::Local(Local::Fast { name }));
+		}
 	}
 
-	fn handle_lambda_out(&mut self, graph: &DataFlowGraph, lambda_out: &LambdaOut) {
-		let LambdaOut { results, input } = lambda_out;
-		let lambda_in @ LambdaIn {
+	fn load_function_returns(&mut self, results: &[Link], scope: usize) -> Vec<Expression> {
+		results
+			.iter()
+			.map(|&link| {
+				if let Some(local) = self.data_handler.get_scoped_local(link, scope) {
+					Expression::Local(local)
+				} else {
+					self.data_handler
+						.take_expression(link.0, scope)
+						.unwrap_or(Expression::Null)
+				}
+			})
+			.collect()
+	}
+
+	fn handle_function(&mut self, id: u32, arc: &Arc<Mutex<ir_graph::control::Function>>) {
+		let function = arc.lock();
+		let function_scope = Arc::as_ptr(arc) as usize;
+		let parent_scope = self.data_handler.scope();
+
+		let capture_count = u32::from(function.capture_count());
+		let argument_count = u32::from(function.argument_count());
+
+		let capture_names: Vec<Name> = (0..capture_count)
+			.map(|offset| Name { id: offset })
+			.collect();
+		let argument_names: Vec<Name> = (0..argument_count)
+			.map(|offset| Name {
+				id: capture_count + offset,
+			})
+			.collect();
+
+		self.data_handler.set_scope(function_scope);
+		self.code_handler.push_scope();
+
+		self.bridge_boundary_names(0, &capture_names);
+		self.bridge_boundary_names(1, &argument_names);
+
+		self.handle_nodes(&function.nodes, function_scope);
+
+		self.data_handler.set_scope(parent_scope);
+		let capture_values: Vec<_> = function
+			.captures
+			.iter()
+			.map(|&link| self.data_handler.load(link))
+			.collect();
+		self.data_handler.set_scope(function_scope);
+
+		let dependencies = capture_names.into_iter().zip(capture_values).collect();
+		let stack = self.data_handler.get_stack_size(function_scope);
+		let code = self.code_handler.pop_scope();
+		let returns = self.load_function_returns(&function.results().sources, function_scope);
+
+		drop(function);
+
+		let expression = DataHandler::load_scoped(
 			dependencies,
-			output,
-			..
-		} = graph.get(*input).as_lambda_in().unwrap();
+			argument_names,
+			Vec::new(),
+			stack,
+			code,
+			returns,
+		);
 
-		let dependencies =
-			self.data_handler
-				.load_dependencies(*input, lambda_in.dependency_ports(), dependencies);
+		self.data_handler.set_scope(parent_scope);
+		self.do_assignment(id, expression);
+	}
 
-		let arguments = self
-			.data_handler
-			.load_name_assignments(*input, lambda_in.argument_ports());
+	fn load_match_result_locals(&self, id: u32, scope: usize, result_count: u16) -> Vec<Local> {
+		(0..result_count)
+			.filter_map(|port| self.data_handler.get_scoped_local(Link(id, port), scope))
+			.collect()
+	}
 
-		let mut locals = self.data_handler.load_declarations(*input);
+	fn handle_branch(
+		&mut self,
+		branch_arc: &Arc<Mutex<ir_graph::control::Branch>>,
+		matcher: &ir_graph::control::Match,
+		parent_scope: usize,
+		result_locals: &[Local],
+	) -> usize {
+		let branch = branch_arc.lock();
+		let branch_scope = Arc::as_ptr(branch_arc) as usize;
 
-		locals.retain(|&name| {
-			!arguments.contains(&name) && !dependencies.iter().any(|item| item.0 == name)
-		});
+		self.data_handler.set_scope(branch_scope);
+		self.code_handler.push_scope();
 
-		let stack = self.data_handler.get_stack_size(*input);
+		self.code_handler.do_bulk_assignment(
+			0,
+			&matcher.arguments,
+			parent_scope,
+			&self.data_handler,
+		);
+
+		self.handle_nodes(&branch.nodes, branch_scope);
+
+		for (&result, &canonical) in branch.results().sources.iter().zip(result_locals) {
+			let Some(actual) = self.data_handler.get_scoped_local(result, branch_scope) else {
+				continue;
+			};
+
+			if actual != canonical {
+				self.code_handler
+					.do_assign(canonical, Expression::Local(actual));
+			}
+		}
+
+		drop(branch);
+
+		self.code_handler.pop_branch(branch_scope);
+
+		branch_scope
+	}
+
+	fn handle_match(&mut self, id: u32, arc: &Arc<Mutex<ir_graph::control::Match>>) {
+		let matcher = arc.lock();
+		let parent_scope = self.data_handler.scope();
+
+		let result_count = matcher.result_count();
+		let result_locals = self.load_match_result_locals(id, parent_scope, result_count);
+
+		let branch_keys: Vec<_> = matcher
+			.branches
+			.iter()
+			.map(|branch_arc| {
+				self.handle_branch(branch_arc, &matcher, parent_scope, &result_locals)
+			})
+			.collect();
+
+		self.data_handler.set_scope(parent_scope);
+
+		self.code_handler
+			.do_match(&branch_keys, matcher.condition, &mut self.data_handler);
+	}
+
+	fn handle_repeat(&mut self, _id: u32, arc: &Arc<Mutex<ir_graph::control::Repeat>>) {
+		let repeat = arc.lock();
+		let repeat_scope = Arc::as_ptr(arc) as usize;
+		let parent_scope = self.data_handler.scope();
+
+		self.data_handler.set_scope(repeat_scope);
+		self.code_handler.do_bulk_assignment(
+			0,
+			&repeat.arguments,
+			parent_scope,
+			&self.data_handler,
+		);
+
+		self.code_handler.push_scope();
+
+		self.handle_nodes(&repeat.nodes, repeat_scope);
+
+		drop(repeat);
+
+		self.data_handler.set_scope(parent_scope);
+	}
+
+	fn handle_repeat_results(&mut self, node: &RepeatResults) {
+		let scope = self.data_handler.scope();
+
+		self.code_handler
+			.do_bulk_assignment(0, &node.sources, scope, &self.data_handler);
+
+		self.code_handler
+			.do_repeat(node.condition, &mut self.data_handler);
+	}
+
+	fn handle_module(&mut self, module: &Module, scope: usize) {
+		self.data_handler.set_scope(scope);
+		self.code_handler.push_scope();
+
+		let environment = Name { id: 0 };
+		let environment_port = Link(0, ModuleArguments::ENVIRONMENT_PORT);
+
+		if let Some(destination) = self.data_handler.get_local(environment_port) {
+			self.code_handler.do_assign(
+				destination,
+				Expression::Local(Local::Fast { name: environment }),
+			);
+		}
+
+		self.handle_nodes(&module.nodes, scope);
+
+		let stack = self.data_handler.get_stack_size(scope);
 		let code = self.code_handler.pop_scope();
-		let returns = self.data_handler.load_all(results);
-
-		let function =
-			DataHandler::load_scoped(dependencies, arguments, locals, stack, code, returns);
-
-		self.do_assignment(*output, function);
-	}
-
-	fn handle_region_in(&mut self, graph: &DataFlowGraph, id: u32, region_in: RegionIn) {
-		let RegionIn { input, .. } = region_in;
-		let GammaIn { arguments, .. } = graph.get(input).as_gamma_in().unwrap();
-
-		self.code_handler.push_scope();
-		self.code_handler
-			.do_bulk_assignment(id, arguments, &self.data_handler);
-	}
-
-	fn handle_region_out(&mut self, id: u32) {
-		self.code_handler.pop_branch(id);
-	}
-
-	fn handle_gamma_out(&mut self, graph: &DataFlowGraph, gamma_out: &GammaOut) {
-		let GammaOut { input, regions } = gamma_out;
-		let GammaIn { condition, .. } = graph.get(*input).as_gamma_in().unwrap();
-
-		self.code_handler
-			.do_match(regions, *condition, &mut self.data_handler);
-	}
-
-	fn handle_theta_in(&mut self, id: u32, theta_in: &ThetaIn) {
-		let ThetaIn { arguments, .. } = theta_in;
-
-		self.code_handler.push_scope();
-		self.code_handler
-			.do_bulk_assignment(id, arguments, &self.data_handler);
-	}
-
-	fn handle_theta_out(&mut self, theta_out: &ThetaOut) {
-		let ThetaOut { condition, .. } = theta_out;
-
-		self.code_handler
-			.do_repeat(*condition, &mut self.data_handler);
-	}
-
-	fn handle_omega_in(&mut self) {
-		self.code_handler.push_scope();
-	}
-
-	fn handle_omega_out(&mut self, omega_out: &OmegaOut) {
-		let OmegaOut { input, exports, .. } = omega_out;
-
-		let environment = Link(*input, OmegaIn::ENVIRONMENT_PORT);
-		let environment = self
-			.data_handler
-			.get_local(environment)
-			.unwrap()
-			.into_name();
-
-		let mut locals = self.data_handler.load_declarations(*input);
-
-		let position = locals.iter().position(|&name| name == environment).unwrap();
-
-		locals.remove(position);
-
-		let stack = self.data_handler.get_stack_size(*input);
-		let code = self.code_handler.pop_scope();
-		let exports = self.data_handler.load_exports(exports);
+		let exports = self.data_handler.load_exports(&module.results().exports);
 
 		self.luajit_tree = Some(LuaJITTree {
 			environment,
-			locals,
 			stack,
 			code,
 			exports,
@@ -207,15 +312,23 @@ impl LuaJITBuilder {
 	fn handle_identity(&mut self, id: u32, node: &Identity) {
 		let Identity { sources } = node;
 
-		self.code_handler
-			.do_bulk_assignment(id, sources, &self.data_handler);
+		self.code_handler.do_bulk_assignment(
+			id,
+			sources,
+			self.data_handler.scope(),
+			&self.data_handler,
+		);
 	}
 
 	fn handle_fence(&mut self, id: u32, node: &Fence) {
 		let Fence { sources } = node;
 
-		self.code_handler
-			.do_bulk_assignment(id, sources, &self.data_handler);
+		self.code_handler.do_bulk_assignment(
+			id,
+			sources,
+			self.data_handler.scope(),
+			&self.data_handler,
+		);
 	}
 
 	fn handle_call_statement(&mut self, id: u32, node: &Apply) {
@@ -544,28 +657,31 @@ impl LuaJITBuilder {
 		);
 	}
 
-	fn handle_node(&mut self, graph: &DataFlowGraph, id: u32, node: &Node) {
+	fn handle_node(&mut self, id: u32, node: &Node) {
 		match *node {
-			Node::GammaIn(_) => {}
+			Node::Function(ref arc) => self.handle_function(id, arc),
+			Node::Match(ref arc) => self.handle_match(id, arc),
+			Node::Repeat(ref arc) => self.handle_repeat(id, arc),
 
-			Node::LambdaIn(_) => self.handle_lambda_in(),
-			Node::LambdaOut(ref node) => self.handle_lambda_out(graph, node),
-			Node::RegionIn(node) => self.handle_region_in(graph, id, node),
-			Node::RegionOut(_) => self.handle_region_out(id),
-			Node::GammaOut(ref node) => self.handle_gamma_out(graph, node),
-			Node::ThetaIn(ref node) => self.handle_theta_in(id, node),
-			Node::ThetaOut(ref node) => self.handle_theta_out(node),
-			Node::OmegaIn(_) => self.handle_omega_in(),
-			Node::OmegaOut(ref node) => self.handle_omega_out(node),
+			Node::ModuleArguments(_)
+			| Node::ModuleResults(_)
+			| Node::FunctionCaptures(_)
+			| Node::FunctionArguments(_)
+			| Node::FunctionResults(_)
+			| Node::BranchArguments(_)
+			| Node::BranchResults(_)
+			| Node::RepeatArguments(_) => {}
+
+			Node::RepeatResults(ref node) => self.handle_repeat_results(node),
 
 			Node::Import(ref node) => self.handle_import(id, node),
 			Node::Host(ref node) => self.handle_host(id, node.as_ref()),
 			Node::Trap => self.handle_trap(id),
 			Node::Null => self.handle_null(id),
-			Node::I32(i32) => self.handle_i32_const(id, i32),
-			Node::I64(i64) => self.handle_i64_const(id, i64),
-			Node::F32(f32) => self.handle_f32_const(id, f32),
-			Node::F64(f64) => self.handle_f64_const(id, f64),
+			Node::I32(value) => self.handle_i32_const(id, value),
+			Node::I64(value) => self.handle_i64_const(id, value),
+			Node::F32(value) => self.handle_f32_const(id, value),
+			Node::F64(value) => self.handle_f64_const(id, value),
 
 			Node::Identity(ref node) => self.handle_identity(id, node),
 			Node::Fence(ref node) => self.handle_fence(id, node),
@@ -614,20 +730,41 @@ impl LuaJITBuilder {
 		}
 	}
 
-	/// Builds a `LuaJIT` tree from the given data flow graph.
+	fn handle_nodes(&mut self, nodes: &[Node], scope: usize) {
+		self.data_handler.set_scope(scope);
+
+		for (id, node) in nodes.iter().enumerate() {
+			let id = id.try_into().unwrap();
+
+			self.handle_node(id, node);
+		}
+	}
+
+	/// Builds a `LuaJIT` tree from the given module.
 	///
 	/// # Panics
 	///
-	/// Panics if the graph does not contain a valid omega output;
+	/// Panics if the module does not contain valid structure;
 	/// if this happens, it is a bug.
-	pub fn run(&mut self, graph: &DataFlowGraph) -> LuaJITTree {
+	pub fn run(&mut self, module: &Arc<Mutex<Module>>) -> LuaJITTree {
+		let guard = module.lock();
+		let scope = Arc::as_ptr(module) as usize;
+
+		self.data_handler.clear();
+
 		let (declarations, assignments) = self.data_handler.locals_mut();
 
-		self.local_allocator.run(declarations, assignments, graph);
+		self.local_allocator.run(
+			declarations,
+			assignments,
+			&guard.nodes,
+			scope,
+			guard.results().state,
+		);
 
-		for (node, id) in graph.nodes().zip(0_u32..) {
-			self.handle_node(graph, id, node);
-		}
+		self.handle_module(&guard, scope);
+
+		drop(guard);
 
 		self.luajit_tree.take().unwrap()
 	}

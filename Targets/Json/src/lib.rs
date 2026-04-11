@@ -2,95 +2,76 @@
 
 extern crate alloc;
 
+use alloc::sync::Arc;
+use std::io::{Result, Write};
+
+use parking_lot::Mutex;
+
+use ir_graph::{
+	Node,
+	control::{Function, Match, Module, Repeat},
+};
+
+use self::{color::Color, interner::Interner, print::Print as _};
+
 mod color;
 mod interner;
 mod label;
 mod print;
 
-use std::io::{Result, Write};
-
-use ir_graph::{
-	DataFlowGraph, Node,
-	control::{GammaOut, LambdaIn, OmegaIn, RegionIn, ThetaIn},
-};
-
-use crate::{color::Color, interner::Interner, print::Print as _};
-
-const fn should_skip_node(node: &Node) -> bool {
-	matches!(
-		node,
-		Node::OmegaOut(_)
-			| Node::LambdaOut(_)
-			| Node::RegionIn(_)
-			| Node::RegionOut(_)
-			| Node::GammaOut(_)
-			| Node::ThetaOut(_)
-	)
+struct Names {
+	mapping: Vec<u32>,
+	scopes: Vec<usize>,
+	next_id: u32,
 }
 
-const fn region_to_subgraph(node: &Node, id: u32) -> Option<(u32, u32, u32)> {
-	let graph = match *node {
-		Node::LambdaIn(LambdaIn { output, .. })
-		| Node::ThetaIn(ThetaIn { output, .. })
-		| Node::OmegaIn(OmegaIn { output }) => (id, id, output),
+impl Names {
+	const fn new() -> Self {
+		Self {
+			mapping: Vec::new(),
+			scopes: Vec::new(),
+			next_id: 0,
+		}
+	}
 
-		Node::RegionIn(RegionIn { input, output }) => (input, id, output),
+	fn clear(&mut self) {
+		self.mapping.clear();
+		self.scopes.clear();
+		self.next_id = 0;
+	}
 
-		Node::Apply(_)
-		| Node::F32(_)
-		| Node::F64(_)
-		| Node::Fence(_)
-		| Node::GammaIn(_)
-		| Node::GammaOut(_)
-		| Node::GlobalGet(_)
-		| Node::GlobalNew(_)
-		| Node::GlobalSet(_)
-		| Node::Host(_)
-		| Node::I32(_)
-		| Node::I64(_)
-		| Node::Identity(_)
-		| Node::Import(_)
-		| Node::IntegerBinaryOperation(_)
-		| Node::IntegerCompareOperation(_)
-		| Node::IntegerConvertToNumber(_)
-		| Node::IntegerExtend(_)
-		| Node::IntegerNarrow(_)
-		| Node::IntegerTransmuteToNumber(_)
-		| Node::IntegerUnaryOperation(_)
-		| Node::IntegerWiden(_)
-		| Node::LambdaOut(_)
-		| Node::MemoryCopy(_)
-		| Node::MemoryDrop(_)
-		| Node::MemoryFill(_)
-		| Node::MemoryGrow(_)
-		| Node::MemoryLoad(_)
-		| Node::MemoryNew(_)
-		| Node::MemorySize(_)
-		| Node::MemoryStore(_)
-		| Node::Null
-		| Node::NumberBinaryOperation(_)
-		| Node::NumberCompareOperation(_)
-		| Node::NumberNarrow(_)
-		| Node::NumberTransmuteToInteger(_)
-		| Node::NumberTruncateToInteger(_)
-		| Node::NumberUnaryOperation(_)
-		| Node::NumberWiden(_)
-		| Node::OmegaOut(_)
-		| Node::RefIsNull(_)
-		| Node::RegionOut(_)
-		| Node::TableCopy(_)
-		| Node::TableDrop(_)
-		| Node::TableFill(_)
-		| Node::TableGet(_)
-		| Node::TableGrow(_)
-		| Node::TableNew(_)
-		| Node::TableSet(_)
-		| Node::TableSize(_)
-		| Node::ThetaOut(_)
-		| Node::Trap => return None,
-	};
+	fn enter_scope(&mut self) {
+		self.scopes.push(self.mapping.len());
+	}
 
-	Some(graph)
+	fn leave_scope(&mut self) {
+		let base = self.scopes.pop().unwrap();
+
+		self.mapping.truncate(base);
+	}
+
+	fn assign(&mut self) -> u32 {
+		let global = self.next_id;
+
+		self.next_id += 1;
+		self.mapping.push(global);
+
+		global
+	}
+
+	fn entry(&self) -> u32 {
+		self.mapping[*self.scopes.last().unwrap()]
+	}
+
+	fn exit(&self) -> u32 {
+		*self.mapping.last().unwrap()
+	}
+
+	fn resolve(&self, local: usize) -> u32 {
+		let base = *self.scopes.last().unwrap();
+
+		self.mapping[base + local]
+	}
 }
 
 /// A JSON printer for data flow graphs.
@@ -101,6 +82,8 @@ pub struct JsonPrinter {
 
 	scratch: Vec<u8>,
 	interner: Interner,
+
+	names: Names,
 }
 
 impl JsonPrinter {
@@ -114,7 +97,17 @@ impl JsonPrinter {
 
 			scratch: Vec::new(),
 			interner: Interner::new(),
+
+			names: Names::new(),
 		}
+	}
+
+	fn clear(&mut self) {
+		self.subgraphs.clear();
+		self.nodes.clear();
+		self.edges.clear();
+		self.interner.clear();
+		self.names.clear();
 	}
 
 	fn get_node_label(&mut self, node: &Node) -> u32 {
@@ -128,65 +121,178 @@ impl JsonPrinter {
 		self.interner.resolve(name)
 	}
 
-	fn find_subgraphs(&mut self, graph: &DataFlowGraph) {
-		self.subgraphs.clear();
+	fn record_module(&mut self, id: u32) {
+		let name = self.interner.resolve("Module");
+		let color = self.interner.resolve(Color::Brown.as_string());
 
-		for (node, id) in graph.nodes().zip(0..) {
-			if let Some((node, input, output)) = region_to_subgraph(node, id) {
-				self.subgraphs.push(node);
-				self.subgraphs.push(input);
-				self.subgraphs.push(output);
+		self.nodes.push(id);
+		self.nodes.push(name);
+		self.nodes.push(color);
+	}
+
+	fn record_node(&mut self, node: &Node, id: u32) {
+		let name = self.get_node_label(node);
+		let color = self
+			.interner
+			.resolve(Color::from_reference(node).as_string());
+
+		self.nodes.push(id);
+		self.nodes.push(name);
+		self.nodes.push(color);
+	}
+
+	fn record_subgraph(&mut self, parent: u32, entry: u32, exit: u32) {
+		self.subgraphs.push(parent);
+		self.subgraphs.push(entry);
+		self.subgraphs.push(exit);
+	}
+
+	fn handle_module(&mut self, module: &Arc<Mutex<Module>>, parent: u32) {
+		let guard = module.lock();
+		let (entry, exit) = self.handle_nodes(&guard.nodes);
+
+		drop(guard);
+
+		self.record_subgraph(parent, entry, exit);
+	}
+
+	fn handle_function(&mut self, region: &Arc<Mutex<Function>>, parent: u32) {
+		let guard = region.lock();
+		let (entry, exit) = self.handle_nodes(&guard.nodes);
+
+		drop(guard);
+
+		self.record_subgraph(parent, entry, exit);
+	}
+
+	fn handle_match(&mut self, region: &Arc<Mutex<Match>>, parent: u32) {
+		let guard = region.lock();
+
+		for branch in &guard.branches {
+			let branch = branch.lock();
+			let (entry, exit) = self.handle_nodes(&branch.nodes);
+
+			drop(branch);
+
+			self.record_subgraph(parent, entry, exit);
+		}
+	}
+
+	fn handle_repeat(&mut self, region: &Arc<Mutex<Repeat>>, parent: u32) {
+		let guard = region.lock();
+		let (entry, exit) = self.handle_nodes(&guard.nodes);
+
+		drop(guard);
+
+		self.record_subgraph(parent, entry, exit);
+	}
+
+	fn assign_ids(&mut self, nodes: &[Node]) {
+		for node in nodes {
+			let global = self.names.assign();
+
+			match node {
+				Node::Function(region) => self.handle_function(region, global),
+				Node::Match(region) => self.handle_match(region, global),
+				Node::Repeat(region) => self.handle_repeat(region, global),
+
+				Node::ModuleArguments(_)
+				| Node::ModuleResults(_)
+				| Node::FunctionCaptures(_)
+				| Node::FunctionArguments(_)
+				| Node::FunctionResults(_)
+				| Node::BranchArguments(_)
+				| Node::BranchResults(_)
+				| Node::RepeatArguments(_)
+				| Node::RepeatResults(_)
+				| Node::Import(_)
+				| Node::Host(_)
+				| Node::Trap
+				| Node::Null
+				| Node::I32(_)
+				| Node::I64(_)
+				| Node::F32(_)
+				| Node::F64(_)
+				| Node::Identity(_)
+				| Node::Fence(_)
+				| Node::Apply(_)
+				| Node::RefIsNull(_)
+				| Node::IntegerUnaryOperation(_)
+				| Node::IntegerBinaryOperation(_)
+				| Node::IntegerCompareOperation(_)
+				| Node::IntegerNarrow(_)
+				| Node::IntegerWiden(_)
+				| Node::IntegerExtend(_)
+				| Node::IntegerConvertToNumber(_)
+				| Node::IntegerTransmuteToNumber(_)
+				| Node::NumberUnaryOperation(_)
+				| Node::NumberBinaryOperation(_)
+				| Node::NumberCompareOperation(_)
+				| Node::NumberNarrow(_)
+				| Node::NumberWiden(_)
+				| Node::NumberTruncateToInteger(_)
+				| Node::NumberTransmuteToInteger(_)
+				| Node::GlobalNew(_)
+				| Node::GlobalGet(_)
+				| Node::GlobalSet(_)
+				| Node::TableNew(_)
+				| Node::TableGet(_)
+				| Node::TableSet(_)
+				| Node::TableSize(_)
+				| Node::TableGrow(_)
+				| Node::TableFill(_)
+				| Node::TableCopy(_)
+				| Node::TableDrop(_)
+				| Node::MemoryNew(_)
+				| Node::MemoryLoad(_)
+				| Node::MemoryStore(_)
+				| Node::MemorySize(_)
+				| Node::MemoryGrow(_)
+				| Node::MemoryFill(_)
+				| Node::MemoryCopy(_)
+				| Node::MemoryDrop(_) => {}
 			}
 		}
 	}
 
-	fn find_nodes(&mut self, graph: &DataFlowGraph) {
-		self.nodes.clear();
+	fn find_nodes(&mut self, nodes: &[Node]) {
+		for (local, node) in nodes.iter().enumerate() {
+			let global = self.names.resolve(local);
 
-		for (node, id) in graph.nodes().zip(0..) {
-			if should_skip_node(node) {
-				continue;
-			}
-
-			let color = Color::from_reference(node).as_string();
-			let color = self.interner.resolve(color);
-			let name = self.get_node_label(node);
-
-			self.nodes.push(id);
-			self.nodes.push(name);
-			self.nodes.push(color);
+			self.record_node(node, global);
 		}
 	}
 
-	fn find_edges(&mut self, graph: &DataFlowGraph) {
-		self.edges.clear();
+	fn find_edges(&mut self, nodes: &[Node]) {
+		for (local, node) in nodes.iter().enumerate() {
+			let global = self.names.resolve(local);
+			let mut port = 0_u32;
 
-		for (node, id) in graph.nodes().zip(0..) {
-			let mut port = 0;
+			node.for_each_outer(|link| {
+				let source = self.names.resolve(link.0.try_into().unwrap());
 
-			node.for_each_argument(|link| {
-				self.edges.push(link.0);
+				self.edges.push(source);
 				self.edges.push(link.1.into());
-				self.edges.push(id);
+				self.edges.push(global);
 				self.edges.push(port);
 
 				port += 1;
 			});
 		}
-
-		for edge in self.edges.chunks_exact_mut(4) {
-			if let Node::GammaOut(GammaOut { input, .. }) = *graph.get(edge[0]) {
-				edge[0] = input;
-			}
-		}
 	}
 
-	fn find_all_fields(&mut self, graph: &DataFlowGraph) {
-		self.interner.clear();
+	fn handle_nodes(&mut self, nodes: &[Node]) -> (u32, u32) {
+		self.names.enter_scope();
+		self.assign_ids(nodes);
 
-		self.find_subgraphs(graph);
-		self.find_nodes(graph);
-		self.find_edges(graph);
+		let entry = self.names.entry();
+		let exit = self.names.exit();
+
+		self.find_nodes(nodes);
+		self.find_edges(nodes);
+		self.names.leave_scope();
+
+		(entry, exit)
 	}
 
 	fn print_all_fields(&self, out: &mut dyn Write) -> Result<()> {
@@ -206,13 +312,18 @@ impl JsonPrinter {
 		write!(out, "}}")
 	}
 
-	/// Prints the graph as JSON to the given writer.
+	/// Prints the module as JSON to the given writer.
 	///
 	/// # Errors
 	///
 	/// Returns an error if writing to the output fails.
-	pub fn print(&mut self, graph: &DataFlowGraph, out: &mut dyn Write) -> Result<()> {
-		self.find_all_fields(graph);
+	pub fn print(&mut self, module: &Arc<Mutex<Module>>, out: &mut dyn Write) -> Result<()> {
+		self.clear();
+
+		let parent = self.names.assign();
+
+		self.record_module(parent);
+		self.handle_module(module, parent);
 		self.print_all_fields(out)
 	}
 }
