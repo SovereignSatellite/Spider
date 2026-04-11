@@ -4,19 +4,20 @@
 
 extern crate alloc;
 
-mod code_builder;
-mod expression_builder;
-mod post_order_sorter;
-mod stack_builder;
-mod types;
-
 use wasmparser::{BlockType, OperatorsReader};
+
 use web_assembly_graph::ControlFlowGraph;
 use web_assembly_structurer::ControlFlowStructurer;
 
 use self::{expression_builder::ExpressionBuilder, post_order_sorter::PostOrderSorter};
 
 pub use self::types::Types;
+
+mod code_builder;
+mod expression_builder;
+mod post_order_sorter;
+mod stack_builder;
+mod types;
 
 /// Builds a structured control flow graph from WebAssembly operators.
 pub struct ControlFlowBuilder {

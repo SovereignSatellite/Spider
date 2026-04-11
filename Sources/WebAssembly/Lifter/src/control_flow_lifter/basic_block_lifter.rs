@@ -1,6 +1,6 @@
-use alloc::vec::Vec;
-use ir_graph::{DataFlowGraph, Link, Node, control::ValueType, simple};
 use list::resizable::Resizable;
+
+use ir_graph::{Link, Node, control::ValueType, simple};
 use web_assembly_graph::instruction::{
 	Call, DataDrop, ElementsDrop, F32Constant, F64Constant, GlobalGet, GlobalSet, I32Constant,
 	I64Constant, Instruction, IntegerBinaryOperation, IntegerCompareOperation,
@@ -40,12 +40,12 @@ impl BasicBlockLifter {
 		self.condition
 	}
 
-	fn create_fence(&mut self, graph: &mut DataFlowGraph) {
-		let mut sources = alloc::vec![self.trap];
+	fn create_fence(&mut self, nodes: &mut Vec<Node>) {
+		let mut sources = vec![self.trap];
 
 		self.dependencies.get_mutable_into(&mut sources);
 
-		let fence = simple::Fence::add_into(graph, Resizable::Heap(sources));
+		let fence = simple::Fence::add_into(nodes, Resizable::Heap(sources));
 		let mut fence = (0..u16::MAX).map(|port| Link(fence, port));
 
 		self.trap = fence.next().unwrap();
@@ -53,10 +53,10 @@ impl BasicBlockLifter {
 		self.dependencies.set_mutable_from(fence);
 	}
 
-	pub fn get_function_outputs(&mut self, graph: &mut DataFlowGraph, results: usize) -> Vec<Link> {
+	pub fn get_function_outputs(&mut self, nodes: &mut Vec<Node>, results: usize) -> Vec<Link> {
 		let mut results = self.locals[LOCAL_BASE..LOCAL_BASE + results].to_vec();
 
-		self.create_fence(graph);
+		self.create_fence(nodes);
 
 		results.push(self.trap);
 
@@ -65,36 +65,38 @@ impl BasicBlockLifter {
 
 	pub fn set_function_inputs(
 		&mut self,
-		lambda_in: u32,
-		arguments: usize,
+		captures: u32,
+		arguments: u32,
+		argument_count: usize,
 		dependencies: &[Reference],
 	) {
-		let mut inputs = (0..u16::MAX).map(|port| Link(lambda_in, port));
+		let mut captures = (0..u16::MAX).map(|port| Link(captures, port));
 
 		self.dependencies.fill_keys(dependencies);
-		self.dependencies.set_all_from(&mut inputs);
+		self.dependencies.set_all_from(&mut captures);
 
 		let reserved = core::iter::repeat_n(Link::DANGLING, LOCAL_BASE);
+		let mut arguments = (0..u16::MAX).map(|port| Link(arguments, port));
 
 		self.locals.clear();
 		self.locals.extend(reserved);
-		self.locals.extend(inputs.by_ref().take(arguments));
+		self.locals.extend(arguments.by_ref().take(argument_count));
 
-		self.trap = inputs.next().unwrap();
+		self.trap = arguments.next().unwrap();
 	}
 
-	pub fn set_local_types(&mut self, graph: &mut DataFlowGraph, types: &[ValueType]) {
+	pub fn set_local_types(&mut self, nodes: &mut Vec<Node>, types: &[ValueType]) {
 		self.locals.extend(types.iter().map(|&local| match local {
-			ValueType::I32 => Node::add_i32_into(graph, 0),
-			ValueType::I64 => Node::add_i64_into(graph, 0),
-			ValueType::F32 => Node::add_f32_into(graph, 0.0),
-			ValueType::F64 => Node::add_f64_into(graph, 0.0),
-			ValueType::Reference => Node::add_null_into(graph),
+			ValueType::I32 => Node::add_i32_into(nodes, 0),
+			ValueType::I64 => Node::add_i64_into(nodes, 0),
+			ValueType::F32 => Node::add_f32_into(nodes, 0.0),
+			ValueType::F64 => Node::add_f64_into(nodes, 0.0),
+			ValueType::Reference => Node::add_null_into(nodes),
 		}));
 	}
 
-	pub fn set_stack_size(&mut self, graph: &mut DataFlowGraph, size: u16) {
-		let null = Node::add_null_into(graph);
+	pub fn set_stack_size(&mut self, nodes: &mut Vec<Node>, size: u16) {
+		let null = Node::add_null_into(nodes);
 		let count = usize::from(size).saturating_sub(self.locals.len());
 
 		self.locals.extend(core::iter::repeat_n(null, count));
@@ -148,47 +150,47 @@ impl BasicBlockLifter {
 		self.condition = self.locals[usize::from(source)];
 	}
 
-	fn handle_i32_constant(&mut self, graph: &mut DataFlowGraph, instruction: I32Constant) {
+	fn handle_i32_constant(&mut self, nodes: &mut Vec<Node>, instruction: I32Constant) {
 		let I32Constant { destination, data } = instruction;
 
-		self.locals[usize::from(destination)] = Node::add_i32_into(graph, data);
+		self.locals[usize::from(destination)] = Node::add_i32_into(nodes, data);
 	}
 
-	fn handle_i64_constant(&mut self, graph: &mut DataFlowGraph, instruction: I64Constant) {
+	fn handle_i64_constant(&mut self, nodes: &mut Vec<Node>, instruction: I64Constant) {
 		let I64Constant { destination, data } = instruction;
 
-		self.locals[usize::from(destination)] = Node::add_i64_into(graph, data);
+		self.locals[usize::from(destination)] = Node::add_i64_into(nodes, data);
 	}
 
-	fn handle_f32_constant(&mut self, graph: &mut DataFlowGraph, instruction: F32Constant) {
+	fn handle_f32_constant(&mut self, nodes: &mut Vec<Node>, instruction: F32Constant) {
 		let F32Constant { destination, data } = instruction;
 
-		self.locals[usize::from(destination)] = Node::add_f32_into(graph, data);
+		self.locals[usize::from(destination)] = Node::add_f32_into(nodes, data);
 	}
 
-	fn handle_f64_constant(&mut self, graph: &mut DataFlowGraph, instruction: F64Constant) {
+	fn handle_f64_constant(&mut self, nodes: &mut Vec<Node>, instruction: F64Constant) {
 		let F64Constant { destination, data } = instruction;
 
-		self.locals[usize::from(destination)] = Node::add_f64_into(graph, data);
+		self.locals[usize::from(destination)] = Node::add_f64_into(nodes, data);
 	}
 
-	fn handle_ref_is_null(&mut self, graph: &mut DataFlowGraph, instruction: RefIsNull) {
+	fn handle_ref_is_null(&mut self, nodes: &mut Vec<Node>, instruction: RefIsNull) {
 		let RefIsNull {
 			destination,
 			source,
 		} = instruction;
 
 		self.locals[usize::from(destination)] =
-			simple::RefIsNull::add_into(graph, self.locals[usize::from(source)]);
+			simple::RefIsNull::add_into(nodes, self.locals[usize::from(source)]);
 	}
 
-	fn handle_ref_null(&mut self, graph: &mut DataFlowGraph, instruction: RefNull) {
+	fn handle_ref_null(&mut self, nodes: &mut Vec<Node>, instruction: RefNull) {
 		let RefNull { destination } = instruction;
 
-		self.locals[usize::from(destination)] = Node::add_null_into(graph);
+		self.locals[usize::from(destination)] = Node::add_null_into(nodes);
 	}
 
-	fn handle_ref_function(&mut self, graph: &mut DataFlowGraph, instruction: RefFunction) {
+	fn handle_ref_function(&mut self, nodes: &mut Vec<Node>, instruction: RefFunction) {
 		let RefFunction {
 			destination,
 			function,
@@ -196,24 +198,24 @@ impl BasicBlockLifter {
 
 		let state = self.dependencies.get(ReferenceType::Function, function);
 
-		self.locals[usize::from(destination)] = simple::GlobalGet::add_into(graph, state).0;
+		self.locals[usize::from(destination)] = simple::GlobalGet::add_into(nodes, state).0;
 	}
 
-	fn handle_unreachable(&mut self, graph: &mut DataFlowGraph) {
-		self.trap = Node::add_trap_into(graph);
+	fn handle_unreachable(&mut self, nodes: &mut Vec<Node>) {
+		self.trap = Node::add_trap_into(nodes);
 	}
 
-	fn handle_pre_call(&mut self, graph: &mut DataFlowGraph, from: u16, to: u16) -> Vec<Link> {
+	fn handle_pre_call(&mut self, nodes: &mut Vec<Node>, from: u16, to: u16) -> Vec<Link> {
 		let mut arguments = self.locals[usize::from(from)..usize::from(to)].to_vec();
 
-		self.create_fence(graph);
+		self.create_fence(nodes);
 
 		arguments.push(self.trap);
 
 		arguments
 	}
 
-	fn handle_post_call(&mut self, graph: &mut DataFlowGraph, call: u32, from: u16, to: u16) {
+	fn handle_post_call(&mut self, nodes: &mut Vec<Node>, call: u32, from: u16, to: u16) {
 		let destinations = self.locals[usize::from(from)..usize::from(to)].iter_mut();
 		let mut call = (0..u16::MAX).map(|port| Link(call, port));
 
@@ -223,31 +225,31 @@ impl BasicBlockLifter {
 
 		self.trap = call.next().unwrap();
 
-		self.create_fence(graph);
+		self.create_fence(nodes);
 	}
 
-	fn handle_call(&mut self, graph: &mut DataFlowGraph, instruction: Call) {
+	fn handle_call(&mut self, nodes: &mut Vec<Node>, instruction: Call) {
 		let Call {
 			destinations,
 			sources,
 			function,
 		} = instruction;
 
-		let arguments = self.handle_pre_call(graph, sources.0, sources.1);
+		let arguments = self.handle_pre_call(nodes, sources.0, sources.1);
 
 		let call = simple::Apply::add_into(
-			graph,
+			nodes,
 			self.locals[usize::from(function)],
 			arguments,
 			destinations.1 - destinations.0,
 		);
 
-		self.handle_post_call(graph, call, destinations.0, destinations.1);
+		self.handle_post_call(nodes, call, destinations.0, destinations.1);
 	}
 
 	fn handle_integer_unary_operation(
 		&mut self,
-		graph: &mut DataFlowGraph,
+		nodes: &mut Vec<Node>,
 		instruction: IntegerUnaryOperation,
 	) {
 		let IntegerUnaryOperation {
@@ -258,7 +260,7 @@ impl BasicBlockLifter {
 		} = instruction;
 
 		self.locals[usize::from(destination)] = simple::IntegerUnaryOperation::add_into(
-			graph,
+			nodes,
 			self.locals[usize::from(source)],
 			kind,
 			operator,
@@ -267,7 +269,7 @@ impl BasicBlockLifter {
 
 	fn handle_integer_binary_operation(
 		&mut self,
-		graph: &mut DataFlowGraph,
+		nodes: &mut Vec<Node>,
 		instruction: IntegerBinaryOperation,
 	) {
 		let IntegerBinaryOperation {
@@ -279,7 +281,7 @@ impl BasicBlockLifter {
 		} = instruction;
 
 		self.locals[usize::from(destination)] = simple::IntegerBinaryOperation::add_into(
-			graph,
+			nodes,
 			self.locals[usize::from(lhs)],
 			self.locals[usize::from(rhs)],
 			kind,
@@ -289,7 +291,7 @@ impl BasicBlockLifter {
 
 	fn handle_integer_compare_operation(
 		&mut self,
-		graph: &mut DataFlowGraph,
+		nodes: &mut Vec<Node>,
 		instruction: IntegerCompareOperation,
 	) {
 		let IntegerCompareOperation {
@@ -301,7 +303,7 @@ impl BasicBlockLifter {
 		} = instruction;
 
 		self.locals[usize::from(destination)] = simple::IntegerCompareOperation::add_into(
-			graph,
+			nodes,
 			self.locals[usize::from(lhs)],
 			self.locals[usize::from(rhs)],
 			kind,
@@ -309,27 +311,27 @@ impl BasicBlockLifter {
 		);
 	}
 
-	fn handle_integer_narrow(&mut self, graph: &mut DataFlowGraph, instruction: IntegerNarrow) {
+	fn handle_integer_narrow(&mut self, nodes: &mut Vec<Node>, instruction: IntegerNarrow) {
 		let IntegerNarrow {
 			destination,
 			source,
 		} = instruction;
 
 		self.locals[usize::from(destination)] =
-			simple::IntegerNarrow::add_into(graph, self.locals[usize::from(source)]);
+			simple::IntegerNarrow::add_into(nodes, self.locals[usize::from(source)]);
 	}
 
-	fn handle_integer_widen(&mut self, graph: &mut DataFlowGraph, instruction: IntegerWiden) {
+	fn handle_integer_widen(&mut self, nodes: &mut Vec<Node>, instruction: IntegerWiden) {
 		let IntegerWiden {
 			destination,
 			source,
 		} = instruction;
 
 		self.locals[usize::from(destination)] =
-			simple::IntegerWiden::add_into(graph, self.locals[usize::from(source)]);
+			simple::IntegerWiden::add_into(nodes, self.locals[usize::from(source)]);
 	}
 
-	fn handle_integer_extend(&mut self, graph: &mut DataFlowGraph, instruction: IntegerExtend) {
+	fn handle_integer_extend(&mut self, nodes: &mut Vec<Node>, instruction: IntegerExtend) {
 		let IntegerExtend {
 			destination,
 			source,
@@ -337,12 +339,12 @@ impl BasicBlockLifter {
 		} = instruction;
 
 		self.locals[usize::from(destination)] =
-			simple::IntegerExtend::add_into(graph, self.locals[usize::from(source)], kind);
+			simple::IntegerExtend::add_into(nodes, self.locals[usize::from(source)], kind);
 	}
 
 	fn handle_integer_convert_to_number(
 		&mut self,
-		graph: &mut DataFlowGraph,
+		nodes: &mut Vec<Node>,
 		instruction: IntegerConvertToNumber,
 	) {
 		let IntegerConvertToNumber {
@@ -354,7 +356,7 @@ impl BasicBlockLifter {
 		} = instruction;
 
 		self.locals[usize::from(destination)] = simple::IntegerConvertToNumber::add_into(
-			graph,
+			nodes,
 			self.locals[usize::from(source)],
 			signed,
 			to,
@@ -364,7 +366,7 @@ impl BasicBlockLifter {
 
 	fn handle_integer_transmute_to_number(
 		&mut self,
-		graph: &mut DataFlowGraph,
+		nodes: &mut Vec<Node>,
 		instruction: IntegerTransmuteToNumber,
 	) {
 		let IntegerTransmuteToNumber {
@@ -374,7 +376,7 @@ impl BasicBlockLifter {
 		} = instruction;
 
 		self.locals[usize::from(destination)] = simple::IntegerTransmuteToNumber::add_into(
-			graph,
+			nodes,
 			self.locals[usize::from(source)],
 			from,
 		);
@@ -382,7 +384,7 @@ impl BasicBlockLifter {
 
 	fn handle_number_unary_operation(
 		&mut self,
-		graph: &mut DataFlowGraph,
+		nodes: &mut Vec<Node>,
 		instruction: NumberUnaryOperation,
 	) {
 		let NumberUnaryOperation {
@@ -393,7 +395,7 @@ impl BasicBlockLifter {
 		} = instruction;
 
 		self.locals[usize::from(destination)] = simple::NumberUnaryOperation::add_into(
-			graph,
+			nodes,
 			self.locals[usize::from(source)],
 			kind,
 			operator,
@@ -402,7 +404,7 @@ impl BasicBlockLifter {
 
 	fn handle_number_binary_operation(
 		&mut self,
-		graph: &mut DataFlowGraph,
+		nodes: &mut Vec<Node>,
 		instruction: NumberBinaryOperation,
 	) {
 		let NumberBinaryOperation {
@@ -414,7 +416,7 @@ impl BasicBlockLifter {
 		} = instruction;
 
 		self.locals[usize::from(destination)] = simple::NumberBinaryOperation::add_into(
-			graph,
+			nodes,
 			self.locals[usize::from(lhs)],
 			self.locals[usize::from(rhs)],
 			kind,
@@ -424,7 +426,7 @@ impl BasicBlockLifter {
 
 	fn handle_number_compare_operation(
 		&mut self,
-		graph: &mut DataFlowGraph,
+		nodes: &mut Vec<Node>,
 		instruction: NumberCompareOperation,
 	) {
 		let NumberCompareOperation {
@@ -436,7 +438,7 @@ impl BasicBlockLifter {
 		} = instruction;
 
 		self.locals[usize::from(destination)] = simple::NumberCompareOperation::add_into(
-			graph,
+			nodes,
 			self.locals[usize::from(lhs)],
 			self.locals[usize::from(rhs)],
 			kind,
@@ -444,29 +446,29 @@ impl BasicBlockLifter {
 		);
 	}
 
-	fn handle_number_narrow(&mut self, graph: &mut DataFlowGraph, instruction: NumberNarrow) {
+	fn handle_number_narrow(&mut self, nodes: &mut Vec<Node>, instruction: NumberNarrow) {
 		let NumberNarrow {
 			destination,
 			source,
 		} = instruction;
 
 		self.locals[usize::from(destination)] =
-			simple::NumberNarrow::add_into(graph, self.locals[usize::from(source)]);
+			simple::NumberNarrow::add_into(nodes, self.locals[usize::from(source)]);
 	}
 
-	fn handle_number_widen(&mut self, graph: &mut DataFlowGraph, instruction: NumberWiden) {
+	fn handle_number_widen(&mut self, nodes: &mut Vec<Node>, instruction: NumberWiden) {
 		let NumberWiden {
 			destination,
 			source,
 		} = instruction;
 
 		self.locals[usize::from(destination)] =
-			simple::NumberWiden::add_into(graph, self.locals[usize::from(source)]);
+			simple::NumberWiden::add_into(nodes, self.locals[usize::from(source)]);
 	}
 
 	fn handle_number_truncate_to_integer(
 		&mut self,
-		graph: &mut DataFlowGraph,
+		nodes: &mut Vec<Node>,
 		instruction: NumberTruncateToInteger,
 	) {
 		let NumberTruncateToInteger {
@@ -479,7 +481,7 @@ impl BasicBlockLifter {
 		} = instruction;
 
 		self.locals[usize::from(destination)] = simple::NumberTruncateToInteger::add_into(
-			graph,
+			nodes,
 			self.locals[usize::from(source)],
 			signed,
 			saturate,
@@ -490,7 +492,7 @@ impl BasicBlockLifter {
 
 	fn handle_number_transmute_to_integer(
 		&mut self,
-		graph: &mut DataFlowGraph,
+		nodes: &mut Vec<Node>,
 		instruction: NumberTransmuteToInteger,
 	) {
 		let NumberTransmuteToInteger {
@@ -500,34 +502,34 @@ impl BasicBlockLifter {
 		} = instruction;
 
 		self.locals[usize::from(destination)] = simple::NumberTransmuteToInteger::add_into(
-			graph,
+			nodes,
 			self.locals[usize::from(source)],
 			from,
 		);
 	}
 
-	fn handle_global_get(&mut self, graph: &mut DataFlowGraph, instruction: GlobalGet) {
+	fn handle_global_get(&mut self, nodes: &mut Vec<Node>, instruction: GlobalGet) {
 		let GlobalGet {
 			destination,
 			source,
 		} = instruction;
 
 		let state = self.dependencies.get(ReferenceType::Global, source);
-		let (result, state) = simple::GlobalGet::add_into(graph, state);
+		let (result, state) = simple::GlobalGet::add_into(nodes, state);
 
 		self.locals[usize::from(destination)] = result;
 
 		self.dependencies.set(ReferenceType::Global, source, state);
 	}
 
-	fn handle_global_set(&mut self, graph: &mut DataFlowGraph, instruction: GlobalSet) {
+	fn handle_global_set(&mut self, nodes: &mut Vec<Node>, instruction: GlobalSet) {
 		let GlobalSet {
 			destination,
 			source,
 		} = instruction;
 
 		let state = simple::GlobalSet::add_into(
-			graph,
+			nodes,
 			self.dependencies.get(ReferenceType::Global, destination),
 			self.locals[usize::from(source)],
 		);
@@ -545,14 +547,14 @@ impl BasicBlockLifter {
 		}
 	}
 
-	fn handle_table_get(&mut self, graph: &mut DataFlowGraph, instruction: TableGet) {
+	fn handle_table_get(&mut self, nodes: &mut Vec<Node>, instruction: TableGet) {
 		let TableGet {
 			destination,
 			source,
 		} = instruction;
 
 		let state = self.load_location(ReferenceType::Table, source);
-		let (result, state) = simple::TableGet::add_into(graph, state);
+		let (result, state) = simple::TableGet::add_into(nodes, state);
 
 		self.locals[usize::from(destination)] = result;
 
@@ -560,14 +562,14 @@ impl BasicBlockLifter {
 			.set(ReferenceType::Table, source.reference, state);
 	}
 
-	fn handle_table_set(&mut self, graph: &mut DataFlowGraph, instruction: TableSet) {
+	fn handle_table_set(&mut self, nodes: &mut Vec<Node>, instruction: TableSet) {
 		let TableSet {
 			destination,
 			source,
 		} = instruction;
 
 		let state = simple::TableSet::add_into(
-			graph,
+			nodes,
 			self.load_location(ReferenceType::Table, destination),
 			self.locals[usize::from(source)],
 		);
@@ -576,18 +578,18 @@ impl BasicBlockLifter {
 			.set(ReferenceType::Table, destination.reference, state);
 	}
 
-	fn handle_table_size(&mut self, graph: &mut DataFlowGraph, instruction: TableSize) {
+	fn handle_table_size(&mut self, nodes: &mut Vec<Node>, instruction: TableSize) {
 		let TableSize { destination, table } = instruction;
 
 		let state = self.dependencies.get(ReferenceType::Table, table);
-		let (result, state) = simple::TableSize::add_into(graph, state);
+		let (result, state) = simple::TableSize::add_into(nodes, state);
 
 		self.locals[usize::from(destination)] = result;
 
 		self.dependencies.set(ReferenceType::Table, table, state);
 	}
 
-	fn handle_table_grow(&mut self, graph: &mut DataFlowGraph, instruction: TableGrow) {
+	fn handle_table_grow(&mut self, nodes: &mut Vec<Node>, instruction: TableGrow) {
 		let TableGrow {
 			destination,
 			table,
@@ -596,7 +598,7 @@ impl BasicBlockLifter {
 		} = instruction;
 
 		let (result, state) = simple::TableGrow::add_into(
-			graph,
+			nodes,
 			self.dependencies.get(ReferenceType::Table, table),
 			self.locals[usize::from(initializer)],
 			self.locals[usize::from(size)],
@@ -607,7 +609,7 @@ impl BasicBlockLifter {
 		self.dependencies.set(ReferenceType::Table, table, state);
 	}
 
-	fn handle_table_fill(&mut self, graph: &mut DataFlowGraph, instruction: TableFill) {
+	fn handle_table_fill(&mut self, nodes: &mut Vec<Node>, instruction: TableFill) {
 		let TableFill {
 			destination,
 			source,
@@ -615,7 +617,7 @@ impl BasicBlockLifter {
 		} = instruction;
 
 		let state = simple::TableFill::add_into(
-			graph,
+			nodes,
 			self.load_location(ReferenceType::Table, destination),
 			self.locals[usize::from(source)],
 			self.locals[usize::from(size)],
@@ -625,7 +627,7 @@ impl BasicBlockLifter {
 			.set(ReferenceType::Table, destination.reference, state);
 	}
 
-	fn handle_table_copy(&mut self, graph: &mut DataFlowGraph, instruction: TableCopy) {
+	fn handle_table_copy(&mut self, nodes: &mut Vec<Node>, instruction: TableCopy) {
 		let TableCopy {
 			destination,
 			source,
@@ -633,7 +635,7 @@ impl BasicBlockLifter {
 		} = instruction;
 
 		let (destination_state, source_state) = simple::TableCopy::add_into(
-			graph,
+			nodes,
 			self.load_location(ReferenceType::Table, destination),
 			self.load_location(ReferenceType::Table, source),
 			self.locals[usize::from(size)],
@@ -649,7 +651,7 @@ impl BasicBlockLifter {
 			.set(ReferenceType::Table, source.reference, source_state);
 	}
 
-	fn handle_table_init(&mut self, graph: &mut DataFlowGraph, instruction: TableInit) {
+	fn handle_table_init(&mut self, nodes: &mut Vec<Node>, instruction: TableInit) {
 		let TableInit {
 			destination,
 			source,
@@ -659,7 +661,7 @@ impl BasicBlockLifter {
 		let elements = self.load_location(ReferenceType::Elements, source);
 
 		let (destination_state, source_state) = simple::TableCopy::add_into(
-			graph,
+			nodes,
 			self.load_location(ReferenceType::Table, destination),
 			elements,
 			self.locals[usize::from(size)],
@@ -675,17 +677,17 @@ impl BasicBlockLifter {
 			.set(ReferenceType::Elements, source.reference, source_state);
 	}
 
-	fn handle_elements_drop(&mut self, graph: &mut DataFlowGraph, instruction: ElementsDrop) {
+	fn handle_elements_drop(&mut self, nodes: &mut Vec<Node>, instruction: ElementsDrop) {
 		let ElementsDrop { source } = instruction;
 
 		let state = self.dependencies.get(ReferenceType::Elements, source);
-		let state = simple::TableDrop::add_into(graph, state);
+		let state = simple::TableDrop::add_into(nodes, state);
 
 		self.dependencies
 			.set(ReferenceType::Elements, source, state);
 	}
 
-	fn handle_memory_load(&mut self, graph: &mut DataFlowGraph, instruction: MemoryLoad) {
+	fn handle_memory_load(&mut self, nodes: &mut Vec<Node>, instruction: MemoryLoad) {
 		let MemoryLoad {
 			destination,
 			source,
@@ -693,7 +695,7 @@ impl BasicBlockLifter {
 		} = instruction;
 
 		let state = self.load_location(ReferenceType::Memory, source);
-		let (result, state) = simple::MemoryLoad::add_into(graph, state, kind);
+		let (result, state) = simple::MemoryLoad::add_into(nodes, state, kind);
 
 		self.locals[usize::from(destination)] = result;
 
@@ -701,7 +703,7 @@ impl BasicBlockLifter {
 			.set(ReferenceType::Memory, source.reference, state);
 	}
 
-	fn handle_memory_store(&mut self, graph: &mut DataFlowGraph, instruction: MemoryStore) {
+	fn handle_memory_store(&mut self, nodes: &mut Vec<Node>, instruction: MemoryStore) {
 		let MemoryStore {
 			destination,
 			source,
@@ -709,7 +711,7 @@ impl BasicBlockLifter {
 		} = instruction;
 
 		let state = simple::MemoryStore::add_into(
-			graph,
+			nodes,
 			self.load_location(ReferenceType::Memory, destination),
 			self.locals[usize::from(source)],
 			kind,
@@ -719,21 +721,21 @@ impl BasicBlockLifter {
 			.set(ReferenceType::Memory, destination.reference, state);
 	}
 
-	fn handle_memory_size(&mut self, graph: &mut DataFlowGraph, instruction: MemorySize) {
+	fn handle_memory_size(&mut self, nodes: &mut Vec<Node>, instruction: MemorySize) {
 		let MemorySize {
 			destination,
 			memory,
 		} = instruction;
 
 		let state = self.dependencies.get(ReferenceType::Memory, memory);
-		let (result, state) = simple::MemorySize::add_into(graph, state);
+		let (result, state) = simple::MemorySize::add_into(nodes, state);
 
 		self.locals[usize::from(destination)] = result;
 
 		self.dependencies.set(ReferenceType::Memory, memory, state);
 	}
 
-	fn handle_memory_grow(&mut self, graph: &mut DataFlowGraph, instruction: MemoryGrow) {
+	fn handle_memory_grow(&mut self, nodes: &mut Vec<Node>, instruction: MemoryGrow) {
 		let MemoryGrow {
 			destination,
 			memory,
@@ -741,7 +743,7 @@ impl BasicBlockLifter {
 		} = instruction;
 
 		let (result, state) = simple::MemoryGrow::add_into(
-			graph,
+			nodes,
 			self.dependencies.get(ReferenceType::Memory, memory),
 			self.locals[usize::from(size)],
 		);
@@ -751,7 +753,7 @@ impl BasicBlockLifter {
 		self.dependencies.set(ReferenceType::Memory, memory, state);
 	}
 
-	fn handle_memory_fill(&mut self, graph: &mut DataFlowGraph, instruction: MemoryFill) {
+	fn handle_memory_fill(&mut self, nodes: &mut Vec<Node>, instruction: MemoryFill) {
 		let MemoryFill {
 			destination,
 			byte,
@@ -759,7 +761,7 @@ impl BasicBlockLifter {
 		} = instruction;
 
 		let state = simple::MemoryFill::add_into(
-			graph,
+			nodes,
 			self.load_location(ReferenceType::Memory, destination),
 			self.locals[usize::from(byte)],
 			self.locals[usize::from(size)],
@@ -769,7 +771,7 @@ impl BasicBlockLifter {
 			.set(ReferenceType::Memory, destination.reference, state);
 	}
 
-	fn handle_memory_copy(&mut self, graph: &mut DataFlowGraph, instruction: MemoryCopy) {
+	fn handle_memory_copy(&mut self, nodes: &mut Vec<Node>, instruction: MemoryCopy) {
 		let MemoryCopy {
 			destination,
 			source,
@@ -777,7 +779,7 @@ impl BasicBlockLifter {
 		} = instruction;
 
 		let (destination_state, source_state) = simple::MemoryCopy::add_into(
-			graph,
+			nodes,
 			self.load_location(ReferenceType::Memory, destination),
 			self.load_location(ReferenceType::Memory, source),
 			self.locals[usize::from(size)],
@@ -793,7 +795,7 @@ impl BasicBlockLifter {
 			.set(ReferenceType::Memory, source.reference, source_state);
 	}
 
-	fn handle_memory_init(&mut self, graph: &mut DataFlowGraph, instruction: MemoryInit) {
+	fn handle_memory_init(&mut self, nodes: &mut Vec<Node>, instruction: MemoryInit) {
 		let MemoryInit {
 			destination,
 			source,
@@ -801,7 +803,7 @@ impl BasicBlockLifter {
 		} = instruction;
 
 		let (destination_state, source_state) = simple::MemoryCopy::add_into(
-			graph,
+			nodes,
 			self.load_location(ReferenceType::Memory, destination),
 			self.load_location(ReferenceType::Data, source),
 			self.locals[usize::from(size)],
@@ -817,91 +819,91 @@ impl BasicBlockLifter {
 			.set(ReferenceType::Data, source.reference, source_state);
 	}
 
-	fn handle_data_drop(&mut self, graph: &mut DataFlowGraph, instruction: DataDrop) {
+	fn handle_data_drop(&mut self, nodes: &mut Vec<Node>, instruction: DataDrop) {
 		let DataDrop { source } = instruction;
 
 		let state = self.dependencies.get(ReferenceType::Data, source);
-		let state = simple::MemoryDrop::add_into(graph, state);
+		let state = simple::MemoryDrop::add_into(nodes, state);
 
 		self.dependencies.set(ReferenceType::Data, source, state);
 	}
 
-	fn handle_instruction(&mut self, graph: &mut DataFlowGraph, instruction: Instruction) {
+	fn handle_instruction(&mut self, nodes: &mut Vec<Node>, instruction: Instruction) {
 		match instruction {
 			Instruction::LocalSet(instruction) => self.handle_local_set(instruction),
 			Instruction::LocalBranch(instruction) => self.handle_local_branch(instruction),
-			Instruction::I32Constant(instruction) => self.handle_i32_constant(graph, instruction),
-			Instruction::I64Constant(instruction) => self.handle_i64_constant(graph, instruction),
-			Instruction::F32Constant(instruction) => self.handle_f32_constant(graph, instruction),
-			Instruction::F64Constant(instruction) => self.handle_f64_constant(graph, instruction),
-			Instruction::RefIsNull(instruction) => self.handle_ref_is_null(graph, instruction),
-			Instruction::RefNull(instruction) => self.handle_ref_null(graph, instruction),
-			Instruction::RefFunction(instruction) => self.handle_ref_function(graph, instruction),
-			Instruction::Call(instruction) => self.handle_call(graph, instruction),
-			Instruction::Unreachable => self.handle_unreachable(graph),
+			Instruction::I32Constant(instruction) => self.handle_i32_constant(nodes, instruction),
+			Instruction::I64Constant(instruction) => self.handle_i64_constant(nodes, instruction),
+			Instruction::F32Constant(instruction) => self.handle_f32_constant(nodes, instruction),
+			Instruction::F64Constant(instruction) => self.handle_f64_constant(nodes, instruction),
+			Instruction::RefIsNull(instruction) => self.handle_ref_is_null(nodes, instruction),
+			Instruction::RefNull(instruction) => self.handle_ref_null(nodes, instruction),
+			Instruction::RefFunction(instruction) => self.handle_ref_function(nodes, instruction),
+			Instruction::Call(instruction) => self.handle_call(nodes, instruction),
+			Instruction::Unreachable => self.handle_unreachable(nodes),
 			Instruction::IntegerUnaryOperation(instruction) => {
-				self.handle_integer_unary_operation(graph, instruction);
+				self.handle_integer_unary_operation(nodes, instruction);
 			}
 			Instruction::IntegerBinaryOperation(instruction) => {
-				self.handle_integer_binary_operation(graph, instruction);
+				self.handle_integer_binary_operation(nodes, instruction);
 			}
 			Instruction::IntegerCompareOperation(instruction) => {
-				self.handle_integer_compare_operation(graph, instruction);
+				self.handle_integer_compare_operation(nodes, instruction);
 			}
 			Instruction::IntegerNarrow(instruction) => {
-				self.handle_integer_narrow(graph, instruction);
+				self.handle_integer_narrow(nodes, instruction);
 			}
-			Instruction::IntegerWiden(instruction) => self.handle_integer_widen(graph, instruction),
+			Instruction::IntegerWiden(instruction) => self.handle_integer_widen(nodes, instruction),
 			Instruction::IntegerExtend(instruction) => {
-				self.handle_integer_extend(graph, instruction);
+				self.handle_integer_extend(nodes, instruction);
 			}
 			Instruction::IntegerConvertToNumber(instruction) => {
-				self.handle_integer_convert_to_number(graph, instruction);
+				self.handle_integer_convert_to_number(nodes, instruction);
 			}
 			Instruction::IntegerTransmuteToNumber(instruction) => {
-				self.handle_integer_transmute_to_number(graph, instruction);
+				self.handle_integer_transmute_to_number(nodes, instruction);
 			}
 			Instruction::NumberUnaryOperation(instruction) => {
-				self.handle_number_unary_operation(graph, instruction);
+				self.handle_number_unary_operation(nodes, instruction);
 			}
 			Instruction::NumberBinaryOperation(instruction) => {
-				self.handle_number_binary_operation(graph, instruction);
+				self.handle_number_binary_operation(nodes, instruction);
 			}
 			Instruction::NumberCompareOperation(instruction) => {
-				self.handle_number_compare_operation(graph, instruction);
+				self.handle_number_compare_operation(nodes, instruction);
 			}
-			Instruction::NumberNarrow(instruction) => self.handle_number_narrow(graph, instruction),
-			Instruction::NumberWiden(instruction) => self.handle_number_widen(graph, instruction),
+			Instruction::NumberNarrow(instruction) => self.handle_number_narrow(nodes, instruction),
+			Instruction::NumberWiden(instruction) => self.handle_number_widen(nodes, instruction),
 			Instruction::NumberTruncateToInteger(instruction) => {
-				self.handle_number_truncate_to_integer(graph, instruction);
+				self.handle_number_truncate_to_integer(nodes, instruction);
 			}
 			Instruction::NumberTransmuteToInteger(instruction) => {
-				self.handle_number_transmute_to_integer(graph, instruction);
+				self.handle_number_transmute_to_integer(nodes, instruction);
 			}
-			Instruction::GlobalGet(instruction) => self.handle_global_get(graph, instruction),
-			Instruction::GlobalSet(instruction) => self.handle_global_set(graph, instruction),
-			Instruction::TableGet(instruction) => self.handle_table_get(graph, instruction),
-			Instruction::TableSet(instruction) => self.handle_table_set(graph, instruction),
-			Instruction::TableSize(instruction) => self.handle_table_size(graph, instruction),
-			Instruction::TableGrow(instruction) => self.handle_table_grow(graph, instruction),
-			Instruction::TableFill(instruction) => self.handle_table_fill(graph, instruction),
-			Instruction::TableCopy(instruction) => self.handle_table_copy(graph, instruction),
-			Instruction::TableInit(instruction) => self.handle_table_init(graph, instruction),
-			Instruction::ElementsDrop(instruction) => self.handle_elements_drop(graph, instruction),
-			Instruction::MemoryLoad(instruction) => self.handle_memory_load(graph, instruction),
-			Instruction::MemoryStore(instruction) => self.handle_memory_store(graph, instruction),
-			Instruction::MemorySize(instruction) => self.handle_memory_size(graph, instruction),
-			Instruction::MemoryGrow(instruction) => self.handle_memory_grow(graph, instruction),
-			Instruction::MemoryFill(instruction) => self.handle_memory_fill(graph, instruction),
-			Instruction::MemoryCopy(instruction) => self.handle_memory_copy(graph, instruction),
-			Instruction::MemoryInit(instruction) => self.handle_memory_init(graph, instruction),
-			Instruction::DataDrop(instruction) => self.handle_data_drop(graph, instruction),
+			Instruction::GlobalGet(instruction) => self.handle_global_get(nodes, instruction),
+			Instruction::GlobalSet(instruction) => self.handle_global_set(nodes, instruction),
+			Instruction::TableGet(instruction) => self.handle_table_get(nodes, instruction),
+			Instruction::TableSet(instruction) => self.handle_table_set(nodes, instruction),
+			Instruction::TableSize(instruction) => self.handle_table_size(nodes, instruction),
+			Instruction::TableGrow(instruction) => self.handle_table_grow(nodes, instruction),
+			Instruction::TableFill(instruction) => self.handle_table_fill(nodes, instruction),
+			Instruction::TableCopy(instruction) => self.handle_table_copy(nodes, instruction),
+			Instruction::TableInit(instruction) => self.handle_table_init(nodes, instruction),
+			Instruction::ElementsDrop(instruction) => self.handle_elements_drop(nodes, instruction),
+			Instruction::MemoryLoad(instruction) => self.handle_memory_load(nodes, instruction),
+			Instruction::MemoryStore(instruction) => self.handle_memory_store(nodes, instruction),
+			Instruction::MemorySize(instruction) => self.handle_memory_size(nodes, instruction),
+			Instruction::MemoryGrow(instruction) => self.handle_memory_grow(nodes, instruction),
+			Instruction::MemoryFill(instruction) => self.handle_memory_fill(nodes, instruction),
+			Instruction::MemoryCopy(instruction) => self.handle_memory_copy(nodes, instruction),
+			Instruction::MemoryInit(instruction) => self.handle_memory_init(nodes, instruction),
+			Instruction::DataDrop(instruction) => self.handle_data_drop(nodes, instruction),
 		}
 	}
 
-	pub fn run(&mut self, graph: &mut DataFlowGraph, instructions: &[Instruction]) {
+	pub fn run(&mut self, nodes: &mut Vec<Node>, instructions: &[Instruction]) {
 		for &instruction in instructions {
-			self.handle_instruction(graph, instruction);
+			self.handle_instruction(nodes, instruction);
 		}
 	}
 }

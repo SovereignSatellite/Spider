@@ -4,17 +4,17 @@
 
 extern crate alloc;
 
-mod basic_block;
-mod dot;
-
-/// Instruction types used in the control flow graph.
-pub mod instruction;
-
 use alloc::vec::Vec;
 
 use self::instruction::{I32Constant, Instruction, LocalBranch, Name};
 
 pub use self::{basic_block::BasicBlock, dot::Dot};
+
+mod basic_block;
+mod dot;
+
+/// Instruction types used in the control flow graph.
+pub mod instruction;
 
 /// A directed graph of basic blocks containing instructions.
 ///

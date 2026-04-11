@@ -1,6 +1,6 @@
 use core::fmt::{Display, Formatter, Result};
 
-use crate::{ControlFlowGraph, Instruction};
+use super::{ControlFlowGraph, Instruction};
 
 #[derive(PartialEq, Eq, Clone, Copy)]
 enum Vertex {

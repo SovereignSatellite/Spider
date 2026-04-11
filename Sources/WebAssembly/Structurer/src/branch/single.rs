@@ -1,4 +1,5 @@
 use alloc::vec::Vec;
+
 use web_assembly_graph::{ControlFlowGraph, instruction::Name};
 
 use super::continuation_finder::ContinuationFinder;

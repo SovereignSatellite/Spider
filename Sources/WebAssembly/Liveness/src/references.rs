@@ -1,6 +1,7 @@
 //! External reference tracking.
 
 use alloc::vec::Vec;
+
 use web_assembly_graph::instruction::{
 	DataDrop, ElementsDrop, GlobalGet, GlobalSet, Instruction, MemoryCopy, MemoryFill, MemoryGrow,
 	MemoryInit, MemoryLoad, MemorySize, MemoryStore, RefFunction, TableCopy, TableFill, TableGet,

@@ -8,3 +8,5 @@ workspace = true
 
 [dependencies]
 ir-graph = { path = "../../IR/Graph" }
+
+parking_lot.workspace = true

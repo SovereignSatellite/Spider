@@ -1,15 +1,14 @@
 //! Turing machine lifter that compiles source code into a data flow graph.
 
-#![no_std]
-
 extern crate alloc;
 
-use alloc::{sync::Arc, vec::Vec};
+use alloc::sync::{Arc, Weak};
+
+use parking_lot::Mutex;
+
 use ir_graph::{
-	DataFlowGraph, Link, Node,
-	control::{
-		GammaIn, GammaOut, Import, OmegaIn, OmegaOut, RegionIn, RegionOut, ThetaIn, ThetaOut,
-	},
+	Link, Node,
+	control::{Branch, Import, Match, Module, ModuleArguments, Repeat},
 	list::resizable::Resizable,
 	simple::{
 		Apply, Fence, IntegerBinaryOperation, IntegerBinaryOperator, IntegerCompareOperation,
@@ -23,10 +22,36 @@ const _: () = assert!(size_of::<u32>() == 4);
 
 const MEMORY_SIZE: u32 = 1_024 * 4 * CELL_SIZE;
 
-struct Block {
-	gamma: u32,
-	region: u32,
-	theta: u32,
+enum Operator {
+	OffsetAdd,
+	OffsetSubtract,
+	MemoryAdd,
+	MemorySubtract,
+	Ask,
+	Tell,
+	Start,
+	End,
+}
+
+impl TryFrom<char> for Operator {
+	type Error = ();
+
+	fn try_from(character: char) -> Result<Self, Self::Error> {
+		let operator = match character {
+			'>' => Self::OffsetAdd,
+			'<' => Self::OffsetSubtract,
+			'+' => Self::MemoryAdd,
+			'-' => Self::MemorySubtract,
+			',' => Self::Ask,
+			'.' => Self::Tell,
+			'[' => Self::Start,
+			']' => Self::End,
+
+			_ => return Err(()),
+		};
+
+		Ok(operator)
+	}
 }
 
 /// A lifter that compiles source code into a data flow graph.
@@ -39,7 +64,7 @@ pub struct TuringMachineLifter {
 	ask: Link,
 	tell: Link,
 
-	blocks: Vec<Block>,
+	operators: Vec<Operator>,
 }
 
 impl TuringMachineLifter {
@@ -55,27 +80,27 @@ impl TuringMachineLifter {
 			ask: Link::DANGLING,
 			tell: Link::DANGLING,
 
-			blocks: Vec::new(),
+			operators: Vec::new(),
 		}
 	}
 
-	fn create_memory(&mut self, graph: &mut DataFlowGraph) {
+	fn create_memory(&mut self, nodes: &mut Vec<Node>) {
 		self.loads.clear();
 
-		self.store = MemoryNew::add_into(graph, Vec::new(), MEMORY_SIZE, MEMORY_SIZE);
-		self.offset = Node::add_i32_into(graph, 0);
+		self.store = MemoryNew::add_into(nodes, Vec::new(), MEMORY_SIZE, MEMORY_SIZE);
+		self.offset = Node::add_i32_into(nodes, 0);
 	}
 
-	fn create_io(&mut self, graph: &mut DataFlowGraph, omega_in: u32) {
-		let environment = Link(omega_in, OmegaIn::ENVIRONMENT_PORT);
+	fn create_io(&mut self, nodes: &mut Vec<Node>, arguments: u32) {
+		let environment = Link(arguments, ModuleArguments::ENVIRONMENT_PORT);
 		let namespace = Arc::<str>::from("turing");
 
-		self.io = Link(omega_in, OmegaIn::STATE_PORT);
-		self.ask = Import::add_into(graph, environment, Arc::clone(&namespace), "ask".into());
-		self.tell = Import::add_into(graph, environment, namespace, "tell".into());
+		self.io = Link(arguments, ModuleArguments::STATE_PORT);
+		self.ask = Import::add_into(nodes, environment, Arc::clone(&namespace), "ask".into());
+		self.tell = Import::add_into(nodes, environment, namespace, "tell".into());
 	}
 
-	fn reconcile_store(&mut self, graph: &mut DataFlowGraph) -> Link {
+	fn reconcile_store(&mut self, nodes: &mut Vec<Node>) -> Link {
 		let sources: Resizable<_, _> = self.loads.iter().copied().collect();
 
 		self.loads.clear();
@@ -83,37 +108,37 @@ impl TuringMachineLifter {
 		match *sources {
 			[state] => state,
 			[] => self.store,
-			[..] => Link(Fence::add_into(graph, sources), 0),
+			[..] => Link(Fence::add_into(nodes, sources), 0),
 		}
 	}
 
-	fn do_load(&mut self, graph: &mut DataFlowGraph) -> Link {
+	fn do_load(&mut self, nodes: &mut Vec<Node>) -> Link {
 		let source = Location {
 			reference: self.store,
 			offset: self.offset,
 		};
-		let (result, state) = MemoryLoad::add_into(graph, source, LoadType::I32);
+		let (result, state) = MemoryLoad::add_into(nodes, source, LoadType::I32);
 
 		self.loads.push(state);
 
 		result
 	}
 
-	fn do_store(&mut self, graph: &mut DataFlowGraph, source: Link) {
+	fn do_store(&mut self, nodes: &mut Vec<Node>, source: Link) {
 		let destination = Location {
-			reference: self.reconcile_store(graph),
+			reference: self.reconcile_store(nodes),
 			offset: self.offset,
 		};
 
-		self.store = MemoryStore::add_into(graph, destination, source, StoreType::I32);
+		self.store = MemoryStore::add_into(nodes, destination, source, StoreType::I32);
 	}
 
-	fn do_condition(&mut self, graph: &mut DataFlowGraph) -> Link {
-		let lhs = self.do_load(graph);
-		let rhs = Node::add_i32_into(graph, 0);
+	fn do_condition(&mut self, nodes: &mut Vec<Node>) -> Link {
+		let lhs = self.do_load(nodes);
+		let rhs = Node::add_i32_into(nodes, 0);
 
 		IntegerCompareOperation::add_into(
-			graph,
+			nodes,
 			lhs,
 			rhs,
 			IntegerType::I32,
@@ -121,47 +146,39 @@ impl TuringMachineLifter {
 		)
 	}
 
-	fn handle_offset_operation(
-		&mut self,
-		graph: &mut DataFlowGraph,
-		operator: IntegerBinaryOperator,
-	) {
-		let rhs = Node::add_i32_into(graph, CELL_SIZE.try_into().unwrap());
+	fn handle_offset_operation(&mut self, nodes: &mut Vec<Node>, operator: IntegerBinaryOperator) {
+		let rhs = Node::add_i32_into(nodes, CELL_SIZE.try_into().unwrap());
 
 		self.offset =
-			IntegerBinaryOperation::add_into(graph, self.offset, rhs, IntegerType::I32, operator);
+			IntegerBinaryOperation::add_into(nodes, self.offset, rhs, IntegerType::I32, operator);
 	}
 
-	fn handle_memory_operation(
-		&mut self,
-		graph: &mut DataFlowGraph,
-		operator: IntegerBinaryOperator,
-	) {
-		let lhs = self.do_load(graph);
-		let rhs = Node::add_i32_into(graph, 1);
-		let source = IntegerBinaryOperation::add_into(graph, lhs, rhs, IntegerType::I32, operator);
+	fn handle_memory_operation(&mut self, nodes: &mut Vec<Node>, operator: IntegerBinaryOperator) {
+		let lhs = self.do_load(nodes);
+		let rhs = Node::add_i32_into(nodes, 1);
+		let source = IntegerBinaryOperation::add_into(nodes, lhs, rhs, IntegerType::I32, operator);
 
-		self.do_store(graph, source);
+		self.do_store(nodes, source);
 	}
 
-	fn handle_ask(&mut self, graph: &mut DataFlowGraph) {
-		let apply = Apply::add_into(graph, self.ask, alloc::vec![self.io], 2);
+	fn handle_ask(&mut self, nodes: &mut Vec<Node>) {
+		let apply = Apply::add_into(nodes, self.ask, vec![self.io], 2);
 
 		self.io = Link(apply, 0);
 
-		self.do_store(graph, Link(apply, 1));
+		self.do_store(nodes, Link(apply, 1));
 	}
 
-	fn handle_tell(&mut self, graph: &mut DataFlowGraph) {
-		let source = self.do_load(graph);
-		let apply = Apply::add_into(graph, self.tell, alloc::vec![self.io, source], 1);
+	fn handle_tell(&mut self, nodes: &mut Vec<Node>) {
+		let source = self.do_load(nodes);
+		let apply = Apply::add_into(nodes, self.tell, vec![self.io, source], 1);
 
 		self.io = Link(apply, 0);
 	}
 
-	fn pull_all_active(&mut self, graph: &mut DataFlowGraph) -> Vec<Link> {
-		alloc::vec![
-			self.reconcile_store(graph),
+	fn pull_all_active(&mut self, nodes: &mut Vec<Node>) -> Vec<Link> {
+		vec![
+			self.reconcile_store(nodes),
 			self.offset,
 			self.io,
 			self.ask,
@@ -172,118 +189,99 @@ impl TuringMachineLifter {
 	const fn push_all_active(&mut self, source: u32) {
 		self.store = Link(source, 0);
 		self.offset = Link(source, 1);
-		self.io = Link(source, 3);
-		self.ask = Link(source, 2);
+		self.io = Link(source, 2);
+		self.ask = Link(source, 3);
 		self.tell = Link(source, 4);
 	}
 
-	fn create_if_entry(&mut self, graph: &mut DataFlowGraph) -> u32 {
-		let condition = self.do_condition(graph);
-		let arguments = self.pull_all_active(graph);
-
-		GammaIn::add_into(graph, arguments, condition)
-	}
-
-	fn create_true_entry(&mut self, graph: &mut DataFlowGraph, gamma_in: u32) -> u32 {
-		let region_in = RegionIn::add_into(graph, gamma_in);
-
-		self.push_all_active(region_in);
-
-		region_in
-	}
-
-	fn create_repeat_entry(&mut self, graph: &mut DataFlowGraph) -> u32 {
-		let arguments = self.pull_all_active(graph);
-		let theta_in = ThetaIn::add_into(graph, arguments);
-
-		self.push_all_active(theta_in);
-
-		theta_in
-	}
-
-	fn handle_block_start(&mut self, graph: &mut DataFlowGraph) {
-		let gamma = self.create_if_entry(graph);
-		let region = self.create_true_entry(graph, gamma);
-		let theta = self.create_repeat_entry(graph);
-
-		self.blocks.push(Block {
-			gamma,
-			region,
-			theta,
-		});
-	}
-
-	fn create_repeat_exit(&mut self, graph: &mut DataFlowGraph, theta_in: u32) {
-		let condition = self.do_condition(graph);
-		let results = self.pull_all_active(graph);
-		let theta_out = ThetaOut::add_into(graph, theta_in, results, condition);
-
-		self.push_all_active(theta_out);
-	}
-
-	fn create_true_exit(&mut self, graph: &mut DataFlowGraph, region_in: u32) -> u32 {
-		let results = self.pull_all_active(graph);
-
-		RegionOut::add_into(graph, region_in, results)
-	}
-
-	fn create_false_case(&mut self, graph: &mut DataFlowGraph, gamma_in: u32) -> u32 {
-		RegionOut::add_scoped_into(graph, gamma_in, |graph, region_in| {
-			self.push_all_active(region_in);
-			self.pull_all_active(graph)
+	fn create_false_branch(&mut self, parent: &Weak<Mutex<Match>>) -> Arc<Mutex<Branch>> {
+		Branch::create(Weak::clone(parent), |nodes, arguments| {
+			self.push_all_active(arguments);
+			self.pull_all_active(nodes)
 		})
 	}
 
-	fn create_if_exit(&mut self, graph: &mut DataFlowGraph, region_in: u32, gamma_in: u32) {
-		let on_true = self.create_true_exit(graph, region_in);
-		let on_false = self.create_false_case(graph, gamma_in);
-		let gamma_out = GammaOut::add_into(graph, gamma_in, alloc::vec![on_false, on_true]);
+	fn create_repeat(&mut self, nodes: &mut Vec<Node>) {
+		let arguments = self.pull_all_active(nodes);
 
-		self.push_all_active(gamma_out);
+		let repeat = Repeat::add_into(nodes, arguments, |nodes, repeat_arguments| {
+			self.push_all_active(repeat_arguments);
+			self.handle_code(nodes);
+
+			let condition = self.do_condition(nodes);
+			let results = self.pull_all_active(nodes);
+
+			(results, condition)
+		});
+
+		self.push_all_active(repeat);
 	}
 
-	fn handle_block_end(&mut self, graph: &mut DataFlowGraph) {
-		let Block {
-			gamma,
-			region,
-			theta,
-		} = self.blocks.pop().unwrap();
-
-		self.create_repeat_exit(graph, theta);
-		self.create_if_exit(graph, region, gamma);
+	fn create_true_branch(&mut self, parent: &Weak<Mutex<Match>>) -> Arc<Mutex<Branch>> {
+		Branch::create(Weak::clone(parent), |nodes, arguments| {
+			self.push_all_active(arguments);
+			self.create_repeat(nodes);
+			self.pull_all_active(nodes)
+		})
 	}
 
-	fn handle_code(&mut self, graph: &mut DataFlowGraph, source: &str) {
-		self.blocks.clear();
+	fn handle_block(&mut self, nodes: &mut Vec<Node>) {
+		let condition = self.do_condition(nodes);
+		let arguments = self.pull_all_active(nodes);
 
-		for character in source.chars() {
-			match character {
-				'>' => self.handle_offset_operation(graph, IntegerBinaryOperator::Add),
-				'<' => self.handle_offset_operation(graph, IntegerBinaryOperator::Subtract),
+		let match_id = Match::add_into(nodes, arguments, condition, |parent| {
+			let false_branch = self.create_false_branch(parent);
+			let true_branch = self.create_true_branch(parent);
 
-				'+' => self.handle_memory_operation(graph, IntegerBinaryOperator::Add),
-				'-' => self.handle_memory_operation(graph, IntegerBinaryOperator::Subtract),
+			vec![false_branch, true_branch]
+		});
 
-				',' => self.handle_ask(graph),
-				'.' => self.handle_tell(graph),
+		self.push_all_active(match_id);
+	}
 
-				'[' => self.handle_block_start(graph),
-				']' => self.handle_block_end(graph),
+	fn handle_code(&mut self, nodes: &mut Vec<Node>) {
+		while let Some(operator) = self.operators.pop() {
+			match operator {
+				Operator::OffsetAdd => {
+					self.handle_offset_operation(nodes, IntegerBinaryOperator::Add);
+				}
+				Operator::OffsetSubtract => {
+					self.handle_offset_operation(nodes, IntegerBinaryOperator::Subtract);
+				}
 
-				_ => {}
+				Operator::MemoryAdd => {
+					self.handle_memory_operation(nodes, IntegerBinaryOperator::Add);
+				}
+				Operator::MemorySubtract => {
+					self.handle_memory_operation(nodes, IntegerBinaryOperator::Subtract);
+				}
+
+				Operator::Ask => self.handle_ask(nodes),
+				Operator::Tell => self.handle_tell(nodes),
+
+				Operator::Start => self.handle_block(nodes),
+				Operator::End => return,
 			}
 		}
 	}
 
-	/// Compiles the given source code into the data flow graph.
-	pub fn run(&mut self, graph: &mut DataFlowGraph, source: &str) -> u32 {
-		let omega_in = OmegaIn::add_into(graph);
+	/// Compiles the given source code into a module.
+	pub fn run(&mut self, source: &str) -> Arc<Mutex<Module>> {
+		self.operators.clear();
+		self.operators.extend(
+			source
+				.chars()
+				.rev()
+				.filter_map(|character| Operator::try_from(character).ok()),
+		);
 
-		self.create_memory(graph);
-		self.create_io(graph, omega_in);
-		self.handle_code(graph, source);
+		Module::create(|nodes, arguments| {
+			self.create_memory(nodes);
+			self.create_io(nodes, arguments);
+			self.handle_code(nodes);
 
-		OmegaOut::add_into(graph, omega_in, self.io, Vec::new())
+			(self.io, Vec::new())
+		})
 	}
 }
 

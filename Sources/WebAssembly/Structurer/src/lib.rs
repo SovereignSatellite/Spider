@@ -7,16 +7,16 @@
 
 extern crate alloc;
 
-mod branch;
-mod repeat;
-mod single_exit_patcher;
-
 use web_assembly_graph::ControlFlowGraph;
 
 use self::{
 	branch::bulk::Bulk as Branch, repeat::bulk::Bulk as Repeat,
 	single_exit_patcher::SingleExitPatcher,
 };
+
+mod branch;
+mod repeat;
+mod single_exit_patcher;
 
 /// Restructures a control flow graph into structured control flow.
 pub struct ControlFlowStructurer {

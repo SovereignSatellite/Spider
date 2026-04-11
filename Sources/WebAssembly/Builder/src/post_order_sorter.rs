@@ -1,7 +1,9 @@
 //! Post-order sorting of basic blocks using depth-first search.
 
 use alloc::vec::Vec;
+
 use set::Set;
+
 use web_assembly_graph::BasicBlock;
 
 struct DepthFirstSearcher {

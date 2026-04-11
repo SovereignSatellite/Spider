@@ -1,21 +1,24 @@
-mod basic_block_lifter;
-mod dependency_map;
-mod region_stack;
+use alloc::sync::{Arc, Weak};
+use core::ops::Range;
 
-use alloc::vec::Vec;
+use parking_lot::Mutex;
+
 use ir_graph::{
-	DataFlowGraph, Link,
-	control::{GammaIn, GammaOut, LambdaIn, RegionIn, RegionOut, ThetaIn, ThetaOut, ValueType},
+	Link, Node,
+	control::{Branch, Match, Repeat, ValueType},
 };
 use web_assembly_graph::ControlFlowGraph;
 use web_assembly_liveness::{locals::Locals, references::Reference};
 
-use self::{basic_block_lifter::BasicBlockLifter, region_stack::RegionStack};
+use self::basic_block_lifter::BasicBlockLifter;
+
+mod basic_block_lifter;
+mod dependency_map;
 
 pub struct ControlFlowLifter {
 	basic_block_lifter: BasicBlockLifter,
-	region_stack: RegionStack,
 	successors: Vec<u16>,
+	block_ids: Range<u16>,
 }
 
 impl ControlFlowLifter {
@@ -24,158 +27,222 @@ impl ControlFlowLifter {
 		Self {
 			basic_block_lifter: BasicBlockLifter::new(),
 
-			region_stack: RegionStack::new(),
 			successors: Vec::new(),
+			block_ids: 0..0,
 		}
 	}
 
-	fn handle_repeat_start(&mut self, graph: &mut DataFlowGraph, locals: &[u16]) {
-		let arguments = self.basic_block_lifter.get_active_bindings(locals);
-
-		let theta_in = ThetaIn::add_into(graph, arguments);
-
+	fn handle_repeat_start(&mut self, arguments: u32, locals: &[u16]) {
 		self.basic_block_lifter
-			.set_active_bindings(theta_in, locals);
-
-		self.region_stack.push(theta_in);
+			.set_active_bindings(arguments, locals);
 	}
 
-	fn handle_repeat_end(&mut self, graph: &mut DataFlowGraph, condition: Link, locals: &[u16]) {
+	fn handle_repeat_body(
+		&mut self,
+		nodes: &mut Vec<Node>,
+		graph: &ControlFlowGraph,
+		locals: &Locals,
+		id: u16,
+	) {
+		self.basic_block_lifter.run(nodes, graph.instructions(id));
+
+		if graph.is_branch_start(id) {
+			self.enter_match(nodes, graph, locals, id);
+		}
+
+		if graph.find_repeat_start(id).is_none() {
+			self.handle_blocks(nodes, graph, locals);
+		}
+	}
+
+	fn handle_repeat_end(&self, locals: &[u16]) -> (Vec<Link>, Link) {
+		let condition = self.basic_block_lifter.get_condition();
 		let results = self.basic_block_lifter.get_active_bindings(locals);
 
-		let theta_in = self.region_stack.pop();
-		let theta_out = ThetaOut::add_into(graph, theta_in, results, condition);
-
-		self.basic_block_lifter
-			.set_active_bindings(theta_out, locals);
+		(results, condition)
 	}
 
-	fn handle_branch_start(&mut self, graph: &mut DataFlowGraph, condition: Link) {
+	fn enter_repeat(
+		&mut self,
+		nodes: &mut Vec<Node>,
+		graph: &ControlFlowGraph,
+		locals: &Locals,
+		id: u16,
+	) {
+		let repeat_locals = locals.get(id);
+		let arguments = self.basic_block_lifter.get_active_bindings(repeat_locals);
+
+		let repeat = Repeat::add_into(nodes, arguments, |nodes, repeat_arguments| {
+			self.handle_repeat_start(repeat_arguments, repeat_locals);
+			self.handle_repeat_body(nodes, graph, locals, id);
+			self.handle_repeat_end(repeat_locals)
+		});
+
+		self.basic_block_lifter
+			.set_active_bindings(repeat, repeat_locals);
+	}
+
+	fn handle_path_start(
+		&mut self,
+		graph: &ControlFlowGraph,
+		locals: &Locals,
+		arguments: u32,
+		start: u16,
+	) {
+		locals.get_union(graph.successors(start), &mut self.successors);
+
+		self.basic_block_lifter
+			.set_active_bindings(arguments, &self.successors);
+	}
+
+	fn handle_path_end(&self, graph: &ControlFlowGraph, locals: &Locals) -> Vec<Link> {
+		// We just finished a path in a branch.
+		let last = self.block_ids.start - 1;
+		let end = graph.find_branch_end(last).unwrap();
+
+		self.basic_block_lifter.get_active_bindings(locals.get(end))
+	}
+
+	fn handle_path(
+		&mut self,
+		parent: &Weak<Mutex<Match>>,
+		graph: &ControlFlowGraph,
+		locals: &Locals,
+		start: u16,
+	) -> Arc<Mutex<Branch>> {
+		Branch::create(Weak::clone(parent), |path_nodes, arguments| {
+			self.handle_path_start(graph, locals, arguments, start);
+			self.handle_blocks(path_nodes, graph, locals);
+			self.handle_path_end(graph, locals)
+		})
+	}
+
+	fn handle_branch_start(
+		&mut self,
+		graph: &ControlFlowGraph,
+		locals: &Locals,
+		start: u16,
+	) -> (Link, Vec<Link>) {
+		let condition = self.basic_block_lifter.get_condition();
+
+		locals.get_union(graph.successors(start), &mut self.successors);
+
 		let arguments = self
 			.basic_block_lifter
 			.get_active_bindings(&self.successors);
 
-		let gamma_in = GammaIn::add_into(graph, arguments, condition);
-
-		self.region_stack.push_gamma();
-		self.region_stack.push(gamma_in);
+		(condition, arguments)
 	}
 
-	fn handle_branch_end(&mut self, graph: &mut DataFlowGraph, locals: &[u16]) {
-		let regions = self.region_stack.pop_gamma();
-
-		let gamma_in = self.region_stack.pop();
-		let gamma_out = GammaOut::add_into(graph, gamma_in, regions);
+	fn handle_branch_end(&mut self, id: u32, locals: &Locals) {
+		// We just finished a branch region.
+		let merge = self.block_ids.start;
 
 		self.basic_block_lifter
-			.set_active_bindings(gamma_out, locals);
+			.set_active_bindings(id, locals.get(merge));
 	}
 
-	fn handle_path_start(&mut self, graph: &mut DataFlowGraph) {
-		let gamma_in = self.region_stack.peek_gamma();
-		let region_in = RegionIn::add_into(graph, gamma_in);
+	fn enter_match(
+		&mut self,
+		nodes: &mut Vec<Node>,
+		graph: &ControlFlowGraph,
+		locals: &Locals,
+		start: u16,
+	) {
+		let (condition, arguments) = self.handle_branch_start(graph, locals, start);
 
-		self.region_stack.push(region_in);
+		let id = Match::add_into(nodes, arguments, condition, |parent| {
+			graph
+				.successors(start)
+				.map(|_| self.handle_path(parent, graph, locals, start))
+				.collect()
+		});
 
-		self.basic_block_lifter
-			.set_active_bindings(region_in, &self.successors);
-	}
-
-	fn handle_path_end(&mut self, graph: &mut DataFlowGraph, locals: &[u16]) {
-		let results = self.basic_block_lifter.get_active_bindings(locals);
-
-		let region_in = self.region_stack.pop();
-		let region_out = RegionOut::add_into(graph, region_in, results);
-
-		self.region_stack.push(region_out);
+		self.handle_branch_end(id, locals);
 	}
 
 	fn handle_basic_block(
 		&mut self,
-		data_flow_graph: &mut DataFlowGraph,
-		control_flow_graph: &ControlFlowGraph,
-		id: u16,
+		nodes: &mut Vec<Node>,
+		graph: &ControlFlowGraph,
 		locals: &Locals,
-	) {
-		// We just started down the paths in a branch.
-		if let Some(start) = control_flow_graph.find_branch_start(id) {
-			locals.get_union(control_flow_graph.successors(start), &mut self.successors);
-
-			self.handle_path_start(data_flow_graph);
-		}
-		// We just finished a branch region.
-		else if control_flow_graph.is_branch_end(id) {
-			self.handle_branch_end(data_flow_graph, locals.get(id));
-		}
-
+		id: u16,
+	) -> bool {
 		// We just started a repeat region.
-		if control_flow_graph.find_repeat_end(id).is_some() {
-			self.handle_repeat_start(data_flow_graph, locals.get(id));
+		if graph.find_repeat_end(id).is_some() {
+			self.enter_repeat(nodes, graph, locals, id);
+
+			return true;
 		}
 
-		self.basic_block_lifter
-			.run(data_flow_graph, control_flow_graph.instructions(id));
+		self.basic_block_lifter.run(nodes, graph.instructions(id));
 
 		// We just started a branch region.
-		if control_flow_graph.is_branch_start(id) {
-			let condition = self.basic_block_lifter.get_condition();
+		if graph.is_branch_start(id) {
+			self.enter_match(nodes, graph, locals, id);
 
-			locals.get_union(control_flow_graph.successors(id), &mut self.successors);
-
-			self.handle_branch_start(data_flow_graph, condition);
-
-			return;
+			return true;
 		}
 
 		// We just ended a repeat region.
-		if let Some(start) = control_flow_graph.find_repeat_start(id) {
-			let condition = self.basic_block_lifter.get_condition();
-
-			self.handle_repeat_end(data_flow_graph, condition, locals.get(start));
+		if graph.find_repeat_start(id).is_some() {
+			return false;
 		}
 
 		// We just finished a path in a branch.
-		if let Some(end) = control_flow_graph.find_branch_end(id) {
-			self.handle_path_end(data_flow_graph, locals.get(end));
+		if graph.find_branch_end(id).is_some() {
+			return false;
+		}
+
+		true
+	}
+
+	fn handle_blocks(&mut self, nodes: &mut Vec<Node>, graph: &ControlFlowGraph, locals: &Locals) {
+		while let Some(id) = self.block_ids.next() {
+			if !self.handle_basic_block(nodes, graph, locals, id) {
+				return;
+			}
 		}
 	}
 
+	#[expect(
+		clippy::too_many_arguments,
+		reason = "lifter setup requires all parameters"
+	)]
 	pub fn set_function_data(
 		&mut self,
-		graph: &mut DataFlowGraph,
-		lambda_in: u32,
+		nodes: &mut Vec<Node>,
+		captures: u32,
+		arguments: u32,
+		argument_count: usize,
 		stack_size: u16,
 		local_types: &[ValueType],
 		dependencies: &[Reference],
 	) {
-		let LambdaIn { kind, .. } = graph.get(lambda_in).as_lambda_in().unwrap();
+		self.basic_block_lifter.set_function_inputs(
+			captures,
+			arguments,
+			argument_count,
+			dependencies,
+		);
 
-		let arguments = kind.arguments.len();
+		self.basic_block_lifter.set_local_types(nodes, local_types);
 
-		self.basic_block_lifter
-			.set_function_inputs(lambda_in, arguments, dependencies);
-
-		self.basic_block_lifter.set_local_types(graph, local_types);
-
-		self.basic_block_lifter.set_stack_size(graph, stack_size);
+		self.basic_block_lifter.set_stack_size(nodes, stack_size);
 	}
 
 	pub fn run(
 		&mut self,
-		data_flow_graph: &mut DataFlowGraph,
+		nodes: &mut Vec<Node>,
 		control_flow_graph: &ControlFlowGraph,
-		lambda_in: u32,
+		result_count: usize,
 		locals: &Locals,
 	) -> Vec<Link> {
-		let LambdaIn { kind, .. } = data_flow_graph.get(lambda_in).as_lambda_in().unwrap();
+		self.block_ids = control_flow_graph.block_ids();
 
-		let results = kind.results.len();
-
-		for id in control_flow_graph.block_ids() {
-			self.handle_basic_block(data_flow_graph, control_flow_graph, id, locals);
-		}
+		self.handle_blocks(nodes, control_flow_graph, locals);
 
 		self.basic_block_lifter
-			.get_function_outputs(data_flow_graph, results)
+			.get_function_outputs(nodes, result_count)
 	}
 }

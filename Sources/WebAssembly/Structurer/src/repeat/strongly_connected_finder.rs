@@ -3,7 +3,9 @@
 //     by S. Rao Kosaraju
 
 use alloc::vec::Vec;
+
 use set::Set;
+
 use web_assembly_graph::ControlFlowGraph;
 
 struct DepthFirstSearcher {
