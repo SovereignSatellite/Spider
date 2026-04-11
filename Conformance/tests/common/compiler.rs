@@ -1,38 +1,42 @@
-use ir_graph::{DataFlowGraph, Link};
+use alloc::sync::Arc;
+
+use parking_lot::Mutex;
+
+use ir_graph::{Node, Region, control::Module};
 use ir_visitor::{
 	control::{
 		dead_port_eliminator::DeadPortEliminator, invariant_port_mover::InvariantPortMover,
 		region_identity,
 	},
-	isle,
-	topological_normalizer::TopologicalNormalizer,
+	isle, region_driver,
+	topological_compactor::TopologicalCompactor,
 };
 use web_assembly_lifter::WebAssemblyLifter;
 
 struct Optimizer {
+	topological_compactor: TopologicalCompactor,
 	invariant_port_mover: InvariantPortMover,
 	dead_port_eliminator: DeadPortEliminator,
-	topological_normalizer: TopologicalNormalizer,
 }
 
 impl Optimizer {
 	fn new() -> Self {
 		Self {
+			topological_compactor: TopologicalCompactor::new(),
 			invariant_port_mover: InvariantPortMover::new(),
 			dead_port_eliminator: DeadPortEliminator::new(),
-			topological_normalizer: TopologicalNormalizer::new(),
 		}
 	}
 
-	fn apply_isle(graph: &mut DataFlowGraph) -> bool {
+	fn apply_isle(nodes: &mut Vec<Node>) -> bool {
 		let mut applied = false;
-		let len = graph.len();
+		let len = nodes.len();
 
 		for id in (0..len.try_into().unwrap()).rev() {
-			while isle::simplify_i32(graph, id)
-				|| isle::simplify_global(graph, id)
-				|| isle::simplify_table(graph, id)
-				|| isle::simplify_memory(graph, id)
+			while isle::simplify_i32(nodes, id)
+				|| isle::simplify_global(nodes, id)
+				|| isle::simplify_table(nodes, id)
+				|| isle::simplify_memory(nodes, id)
 			{
 				applied = true;
 			}
@@ -41,27 +45,23 @@ impl Optimizer {
 		applied
 	}
 
-	fn apply(&mut self, graph: &mut DataFlowGraph, mut omega: u32) -> u32 {
+	fn apply(&mut self, region: &mut Region) {
 		loop {
-			omega = self.topological_normalizer.run(graph, omega);
+			self.topological_compactor.run(region);
+			self.invariant_port_mover.run(region.nodes_mut());
+			self.dead_port_eliminator.run(region.nodes_mut());
 
-			self.invariant_port_mover.run(graph);
-			self.dead_port_eliminator.run(graph, Link(omega, 0));
-
-			if !Self::apply_isle(graph) {
+			if !Self::apply_isle(region.nodes_mut()) {
 				break;
 			}
 
-			region_identity::remove(graph);
+			region_identity::remove(region.nodes_mut());
 		}
-
-		omega
 	}
 
-	fn finalize(&mut self, graph: &mut DataFlowGraph, omega: u32) {
-		region_identity::insert(graph);
-
-		self.topological_normalizer.run(graph, omega);
+	fn finalize(&mut self, region: &mut Region) {
+		region_identity::insert(region);
+		self.topological_compactor.run(region);
 	}
 }
 
@@ -78,16 +78,17 @@ impl Compiler {
 		}
 	}
 
-	pub fn run(&mut self, data: &[u8], optimize: bool) -> DataFlowGraph {
-		let mut graph = DataFlowGraph::new();
-		let mut omega = self.web_assembly_lifter.run(&mut graph, data);
+	pub fn run(&mut self, data: &[u8], optimize: bool) -> Arc<Mutex<Module>> {
+		let module = self.web_assembly_lifter.run(data);
 
-		if optimize {
-			omega = self.optimizer.apply(&mut graph, omega);
-		}
+		region_driver::run_module(&module, &mut |mut region| {
+			if optimize {
+				self.optimizer.apply(&mut region);
+			}
 
-		self.optimizer.finalize(&mut graph, omega);
+			self.optimizer.finalize(&mut region);
+		});
 
-		graph
+		module
 	}
 }

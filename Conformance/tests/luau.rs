@@ -2,8 +2,7 @@
 
 extern crate alloc;
 
-mod common;
-
+use alloc::sync::Arc;
 use std::{
 	ffi::OsStr,
 	fs::File,
@@ -11,23 +10,24 @@ use std::{
 	path::{Path, PathBuf},
 };
 
-use alloc::sync::Arc;
 use datatest_stable::Result;
-use luau_builder::LuauBuilder;
-use luau_printer::{
-	LuauPrinter,
-	library::{NamesFinder, Printer as LibraryPrinter, Sections as LibrarySections},
-};
 use wast::{
 	QuoteWat, WastArg, WastExecute, WastInvoke, WastRet, WastThread, Wat,
 	core::{NanPattern, WastArgCore, WastRetCore},
 	token::{F32, F64, Id, Span},
 };
 
-use common::{compiler::Compiler, process, visitor::Visitor};
-
 use luajit_builder as _;
 use luajit_printer as _;
+use luau_builder::LuauBuilder;
+use luau_printer::{
+	LuauPrinter,
+	library::{NamesFinder, Printer as LibraryPrinter, Sections as LibrarySections},
+};
+
+use common::{compiler::Compiler, process, visitor::Visitor};
+
+mod common;
 
 const HARNESS_START_SOURCE: &str = include_str!("harness/luau.start.luau");
 const HARNESS_END_SOURCE: &str = include_str!("harness/luau.end.luau");
@@ -87,8 +87,8 @@ impl Luau {
 	}
 
 	fn fmt_source(&mut self, data: &[u8]) -> Result<()> {
-		let graph = self.compiler.run(data, self.optimized);
-		let tree = self.builder.run(&graph);
+		let module = self.compiler.run(data, self.optimized);
+		let tree = self.builder.run(&module);
 
 		NamesFinder::new(&mut self.references).run(&tree);
 
@@ -189,23 +189,23 @@ impl Luau {
 		};
 
 		match argument {
-			WastArgCore::I32(i32) => {
-				self.fmt_argument_i32(i32)?;
+			WastArgCore::I32(value) => {
+				self.fmt_argument_i32(value)?;
 
 				Ok(())
 			}
-			WastArgCore::I64(i64) => {
-				self.fmt_argument_i64(i64)?;
+			WastArgCore::I64(value) => {
+				self.fmt_argument_i64(value)?;
 
 				Ok(())
 			}
-			WastArgCore::F32(f32) => {
-				self.fmt_argument_f32(f32)?;
+			WastArgCore::F32(value) => {
+				self.fmt_argument_f32(value)?;
 
 				Ok(())
 			}
-			WastArgCore::F64(f64) => {
-				self.fmt_argument_f64(f64)?;
+			WastArgCore::F64(value) => {
+				self.fmt_argument_f64(value)?;
 
 				Ok(())
 			}
@@ -344,13 +344,13 @@ impl Luau {
 		};
 
 		match result {
-			WastRetCore::I32(i32) => {
-				self.fmt_assert_equal_i32(i32)?;
+			WastRetCore::I32(value) => {
+				self.fmt_assert_equal_i32(value)?;
 
 				Ok(())
 			}
-			WastRetCore::I64(i64) => {
-				self.fmt_assert_equal_i64(i64)?;
+			WastRetCore::I64(value) => {
+				self.fmt_assert_equal_i64(value)?;
 
 				Ok(())
 			}
@@ -365,8 +365,8 @@ impl Luau {
 
 				write!(self.file, "hn_is_f32_nan_arithmetic")
 			}
-			WastRetCore::F32(NanPattern::Value(f32)) => {
-				self.fmt_assert_equal_f32(f32)?;
+			WastRetCore::F32(NanPattern::Value(value)) => {
+				self.fmt_assert_equal_f32(value)?;
 
 				Ok(())
 			}
@@ -381,8 +381,8 @@ impl Luau {
 
 				write!(self.file, "hn_is_f64_nan_arithmetic")
 			}
-			WastRetCore::F64(NanPattern::Value(f64)) => {
-				self.fmt_assert_equal_f64(f64)?;
+			WastRetCore::F64(NanPattern::Value(value)) => {
+				self.fmt_assert_equal_f64(value)?;
 
 				Ok(())
 			}
