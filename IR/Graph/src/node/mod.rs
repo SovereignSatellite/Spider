@@ -1,9 +1,12 @@
-use alloc::boxed::Box;
+use alloc::sync::Arc;
+
+use parking_lot::Mutex;
 
 use self::{
 	control::{
-		GammaIn, GammaOut, Import, LambdaIn, LambdaOut, OmegaIn, OmegaOut, RegionIn, RegionOut,
-		ThetaIn, ThetaOut,
+		BranchArguments, BranchResults, Function, FunctionArguments, FunctionCaptures,
+		FunctionResults, Import, Match, ModuleArguments, ModuleResults, Repeat, RepeatArguments,
+		RepeatResults,
 	},
 	simple::{
 		Apply, Fence, GlobalGet, GlobalNew, GlobalSet, Host, Identity, IntegerBinaryOperation,
@@ -16,6 +19,8 @@ use self::{
 	},
 };
 
+pub use self::control::Region;
+
 mod sinks;
 mod sources;
 
@@ -25,30 +30,31 @@ pub mod simple;
 /// A node in the data flow graph.
 #[derive(Default)]
 pub enum Node {
-	/// A lambda (function) input.
-	LambdaIn(LambdaIn),
-	/// A lambda (function) output.
-	LambdaOut(LambdaOut),
+	/// A function region.
+	Function(Arc<Mutex<Function>>),
+	/// A match (conditional) region.
+	Match(Arc<Mutex<Match>>),
+	/// A repeat (loop) region.
+	Repeat(Arc<Mutex<Repeat>>),
 
-	/// A region (scope) input.
-	RegionIn(RegionIn),
-	/// A region (scope) output.
-	RegionOut(RegionOut),
-
-	/// A gamma (conditional) input.
-	GammaIn(GammaIn),
-	/// A gamma (conditional) output.
-	GammaOut(GammaOut),
-
-	/// A theta (loop) input.
-	ThetaIn(ThetaIn),
-	/// A theta (loop) output.
-	ThetaOut(ThetaOut),
-
-	/// An omega (program) input.
-	OmegaIn(OmegaIn),
-	/// An omega (program) output.
-	OmegaOut(OmegaOut),
+	/// The boundary arguments of a module region.
+	ModuleArguments(ModuleArguments),
+	/// The boundary results of a module region.
+	ModuleResults(ModuleResults),
+	/// The boundary captures of a function region.
+	FunctionCaptures(FunctionCaptures),
+	/// The boundary arguments of a function region.
+	FunctionArguments(FunctionArguments),
+	/// The boundary results of a function region.
+	FunctionResults(FunctionResults),
+	/// The boundary arguments of a branch region.
+	BranchArguments(BranchArguments),
+	/// The boundary results of a branch region.
+	BranchResults(BranchResults),
+	/// The boundary arguments of a repeat region.
+	RepeatArguments(RepeatArguments),
+	/// The boundary results of a repeat region.
+	RepeatResults(RepeatResults),
 
 	/// An external import.
 	Import(Box<Import>),
@@ -60,7 +66,6 @@ pub enum Node {
 	Trap,
 	/// A null reference constant.
 	Null,
-
 	/// A 32-bit integer constant.
 	I32(i32),
 	/// A 64-bit integer constant.
@@ -153,56 +158,4 @@ pub enum Node {
 	MemoryCopy(MemoryCopy),
 	/// A memory drop.
 	MemoryDrop(MemoryDrop),
-}
-
-macro_rules! as_ref_inner {
-	($inner:ident, $name:ident) => {
-		#[doc = concat!("Returns a reference to the inner `", stringify!($inner), "`, if this node is one.")]
-		#[must_use]
-		pub const fn $name(&self) -> Option<&$inner> {
-			if let Self::$inner(node) = self {
-				Some(node)
-			} else {
-				None
-			}
-		}
-	};
-}
-
-macro_rules! as_mut_inner {
-	($inner:ident, $name:ident) => {
-		#[doc = concat!("Returns a mutable reference to the inner `", stringify!($inner), "`, if this node is one.")]
-		#[must_use]
-		pub const fn $name(&mut self) -> Option<&mut $inner> {
-			if let Self::$inner(node) = self {
-				Some(node)
-			} else {
-				None
-			}
-		}
-	};
-}
-
-impl Node {
-	as_ref_inner!(LambdaIn, as_lambda_in);
-	as_ref_inner!(LambdaOut, as_lambda_out);
-	as_ref_inner!(RegionIn, as_region_in);
-	as_ref_inner!(RegionOut, as_region_out);
-	as_ref_inner!(GammaIn, as_gamma_in);
-	as_ref_inner!(GammaOut, as_gamma_out);
-	as_ref_inner!(ThetaIn, as_theta_in);
-	as_ref_inner!(ThetaOut, as_theta_out);
-	as_ref_inner!(OmegaIn, as_omega_in);
-	as_ref_inner!(OmegaOut, as_omega_out);
-
-	as_mut_inner!(LambdaIn, as_mut_lambda_in);
-	as_mut_inner!(LambdaOut, as_mut_lambda_out);
-	as_mut_inner!(RegionIn, as_mut_region_in);
-	as_mut_inner!(RegionOut, as_mut_region_out);
-	as_mut_inner!(GammaIn, as_mut_gamma_in);
-	as_mut_inner!(GammaOut, as_mut_gamma_out);
-	as_mut_inner!(ThetaIn, as_mut_theta_in);
-	as_mut_inner!(ThetaOut, as_mut_theta_out);
-	as_mut_inner!(OmegaIn, as_mut_omega_in);
-	as_mut_inner!(OmegaOut, as_mut_omega_out);
 }

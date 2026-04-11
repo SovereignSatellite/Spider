@@ -1,69 +1,71 @@
 //! ISLE-based peephole optimizations.
 
-mod context;
-mod internal;
-
-use ir_graph::{DataFlowGraph, Link, Node, simple::Identity};
+use ir_graph::{Link, Node, simple::Identity};
 
 use self::internal::{
 	constructor_SimplifyGlobal, constructor_SimplifyI32, constructor_SimplifyMemory,
 	constructor_SimplifyTable,
 };
 
-fn replace_with_identity(graph: &mut DataFlowGraph, destination: u32, sources: &[Link]) {
+pub use self::context::RegionContext;
+
+mod context;
+mod internal;
+
+fn replace_with_identity(nodes: &mut [Node], destination: u32, sources: &[Link]) {
 	let sources = sources.iter().copied().collect();
 
-	*graph.get_mut(destination) = Node::Identity(Identity { sources });
+	nodes[usize::try_from(destination).unwrap()] = Node::Identity(Identity { sources });
 }
 
-fn replace_with_direct(graph: &mut DataFlowGraph, destination: u32, source: u32) {
-	let source = core::mem::take(graph.get_mut(source));
+fn replace_with_direct(nodes: &mut [Node], destination: u32, source: u32) {
+	let source = core::mem::take(&mut nodes[usize::try_from(source).unwrap()]);
 
-	*graph.get_mut(destination) = source;
+	nodes[usize::try_from(destination).unwrap()] = source;
 }
 
-fn replace_node(graph: &mut DataFlowGraph, destination: u32, sources: &[Link]) {
+fn replace_node(nodes: &mut [Node], destination: u32, sources: &[Link]) {
 	if let &[source] = sources
 		&& source.1 == 0
 		&& source.0 > destination
 	{
-		replace_with_direct(graph, destination, source.0);
+		replace_with_direct(nodes, destination, source.0);
 	} else {
-		replace_with_identity(graph, destination, sources);
+		replace_with_identity(nodes, destination, sources);
 	}
 }
 
 /// Simplifies an I32 operation at the given node ID.
-pub fn simplify_i32(graph: &mut DataFlowGraph, id: u32) -> bool {
-	constructor_SimplifyI32(graph, Link(id, 0)).is_some_and(|source| {
-		replace_node(graph, id, &[source]);
+pub fn simplify_i32(nodes: &mut Vec<Node>, id: u32) -> bool {
+	constructor_SimplifyI32(&mut RegionContext(nodes), Link(id, 0)).is_some_and(|source| {
+		replace_node(nodes, id, &[source]);
 
 		true
 	})
 }
 
 /// Simplifies a global operation at the given node ID.
-pub fn simplify_global(graph: &mut DataFlowGraph, id: u32) -> bool {
-	constructor_SimplifyGlobal(graph, Link(id, 0)).is_some_and(|sources| {
-		replace_node(graph, id, &sources.as_fixed());
+pub fn simplify_global(nodes: &mut Vec<Node>, id: u32) -> bool {
+	constructor_SimplifyGlobal(&mut RegionContext(nodes), Link(id, 0)).is_some_and(|sources| {
+		replace_node(nodes, id, &sources.as_fixed());
 
 		true
 	})
 }
 
 /// Simplifies a table operation at the given node ID.
-pub fn simplify_table(graph: &mut DataFlowGraph, id: u32) -> bool {
-	constructor_SimplifyTable(graph, Link(id, 0)).is_some_and(|sources| {
-		replace_node(graph, id, &sources.as_fixed());
+pub fn simplify_table(nodes: &mut Vec<Node>, id: u32) -> bool {
+	constructor_SimplifyTable(&mut RegionContext(nodes), Link(id, 0)).is_some_and(|sources| {
+		replace_node(nodes, id, &sources.as_fixed());
 
 		true
 	})
 }
 
 /// Simplifies a memory operation at the given node ID.
-pub fn simplify_memory(graph: &mut DataFlowGraph, id: u32) -> bool {
-	constructor_SimplifyMemory(graph, Link(id, 0)).is_some_and(|sources| {
-		replace_node(graph, id, &sources.as_fixed());
+pub fn simplify_memory(nodes: &mut Vec<Node>, id: u32) -> bool {
+	constructor_SimplifyMemory(&mut RegionContext(nodes), Link(id, 0)).is_some_and(|sources| {
+		replace_node(nodes, id, &sources.as_fixed());
 
 		true
 	})

@@ -1,19 +1,21 @@
 //! Dead port elimination.
 
-use alloc::vec::Vec;
+use alloc::sync::Arc;
+
 use hashbrown::HashMap;
-use ir_graph::{
-	DataFlowGraph, Link, Node,
-	control::{GammaIn, GammaOut, LambdaIn, LambdaOut, RegionIn, RegionOut, ThetaIn, ThetaOut},
-};
+use parking_lot::Mutex;
 use set::Set;
 
-/// Eliminates dead (unused) ports from control flow regions.
+use ir_graph::{
+	Link, Node,
+	control::{Branch, Function, Match, Repeat},
+};
+
+/// Eliminates unused ports from control flow region nodes.
 pub struct DeadPortEliminator {
 	map: HashMap<Link, Link>,
-
-	seen: Set,
-	stack: Vec<Link>,
+	live: Set,
+	remap: Vec<u16>,
 }
 
 impl DeadPortEliminator {
@@ -22,131 +24,179 @@ impl DeadPortEliminator {
 	pub fn new() -> Self {
 		Self {
 			map: HashMap::new(),
-
-			seen: Set::new(),
-			stack: Vec::new(),
+			live: Set::new(),
+			remap: Vec::new(),
 		}
 	}
 
-	fn add_predecessor(&mut self, link: Link) {
-		if self.seen.grow_insert(link.into_usize()) {
+	fn mark_use(&mut self, boundary: u32, link: Link) {
+		if link.0 == boundary {
+			self.live.grow_insert(link.1.into());
+		}
+	}
+
+	fn mark_nodes(&mut self, nodes: &[Node], boundary: u32) {
+		for node in nodes {
+			node.for_each_outer(|link| self.mark_use(boundary, link));
+		}
+	}
+
+	fn mark_external(&mut self, id: u32, nodes: &[Node]) {
+		self.live.clear();
+		self.mark_nodes(nodes, id);
+	}
+
+	fn mark_branches(&mut self, branches: &[Arc<Mutex<Branch>>]) {
+		self.live.clear();
+
+		for branch in branches {
+			let guard = branch.lock();
+
+			self.mark_nodes(&guard.nodes, 0);
+		}
+	}
+
+	fn build_remap(&mut self, length: u16) -> bool {
+		self.remap.clear();
+		self.remap.resize(length.into(), u16::MAX);
+
+		let mut cursor = 0_u16;
+
+		for old in 0..usize::from(length) {
+			if self.live.contains(old) {
+				self.remap[old] = cursor;
+				cursor += 1;
+			}
+		}
+
+		cursor != length
+	}
+
+	fn remap_link(&self, boundary: u32, link: &mut Link) {
+		if link.0 != boundary {
 			return;
 		}
 
-		self.stack.push(link);
+		link.1 = self.remap[usize::from(link.1)];
+
+		debug_assert_ne!(link.1, u16::MAX);
 	}
 
-	fn add_region_sides(&mut self, links: &[Link], id: u32) {
-		let len = links.len();
-
-		self.seen.extend(
-			(0..)
-				.map(|port| Link(id, port))
-				.map(Link::into_usize)
-				.take(len),
-		);
-
-		for &link in links {
-			self.add_predecessor(link);
+	fn remap_nodes(&self, nodes: &mut [Node], boundary: u32) {
+		for node in nodes {
+			node.for_each_mut_outer(|link| self.remap_link(boundary, link));
 		}
 	}
 
-	fn mark_lambda_in(&mut self, node: &LambdaIn, id: u32) {
-		let LambdaIn { dependencies, .. } = node;
+	fn trim_slots(&self, slots: &mut Vec<Link>) {
+		let mut iter = self.remap.iter().copied();
 
-		self.add_region_sides(dependencies, id);
+		slots.retain(|_| iter.next().unwrap() != u16::MAX);
 	}
 
-	fn mark_lambda_out(&mut self, node: &LambdaOut, id: u32) {
-		let LambdaOut { results, .. } = node;
+	fn record_outer_remap(&mut self, id: u32) {
+		for (old, &new) in self.remap.iter().enumerate() {
+			let old = u16::try_from(old).unwrap();
 
-		self.add_region_sides(results, id);
-	}
-
-	fn mark_region_in(&mut self, node: RegionIn, port: u16) {
-		let RegionIn { input, .. } = node;
-
-		self.add_predecessor(Link(input, port));
-	}
-
-	fn mark_region_out(&mut self, node: &RegionOut, port: u16) {
-		let RegionOut { results, .. } = node;
-
-		self.add_predecessor(results[usize::from(port)]);
-	}
-
-	fn mark_gamma_in(&mut self, graph: &DataFlowGraph, node: &GammaIn, port: u16) {
-		let GammaIn {
-			output,
-			ref arguments,
-			..
-		} = *node;
-		let GammaOut { regions, .. } = graph.get(output).as_gamma_out().unwrap();
-
-		for &region in regions {
-			let RegionOut { input, .. } = *graph.get(region).as_region_out().unwrap();
-
-			self.add_predecessor(Link(input, port));
-		}
-
-		self.add_predecessor(arguments[usize::from(port)]);
-	}
-
-	fn mark_gamma_out(&mut self, graph: &DataFlowGraph, node: &GammaOut, port: u16) {
-		let GammaOut { input, ref regions } = *node;
-		let GammaIn { condition, .. } = *graph.get(input).as_gamma_in().unwrap();
-
-		self.add_predecessor(condition);
-
-		for &region in regions {
-			self.add_predecessor(Link(region, port));
+			if new != u16::MAX && new != old {
+				self.map.insert(Link(id, old), Link(id, new));
+			}
 		}
 	}
 
-	fn mark_theta_in(&mut self, node: &ThetaIn, port: u16) {
-		let ThetaIn {
-			output,
-			ref arguments,
-		} = *node;
+	fn find_match_outputs(&mut self, id: u32, matcher: &Match) {
+		if !self.build_remap(matcher.result_count()) {
+			return;
+		}
 
-		self.add_predecessor(Link(output, port));
-		self.add_predecessor(arguments[usize::from(port)]);
+		for branch in &matcher.branches {
+			let mut guard = branch.lock();
+
+			self.trim_slots(&mut guard.results_mut().sources);
+		}
+
+		self.record_outer_remap(id);
 	}
 
-	fn mark_theta_out(&mut self, node: &ThetaOut, port: u16) {
-		let ThetaOut {
-			input,
-			ref results,
-			condition,
-		} = *node;
+	fn find_match_inputs(&mut self, matcher: &mut Match) {
+		self.mark_branches(&matcher.branches);
 
-		self.add_predecessor(Link(input, port));
-		self.add_predecessor(results[usize::from(port)]);
-		self.add_predecessor(condition);
+		if !self.build_remap(matcher.argument_count()) {
+			return;
+		}
+
+		for branch in &matcher.branches {
+			let mut guard = branch.lock();
+
+			self.remap_nodes(&mut guard.nodes, 0);
+		}
+
+		self.trim_slots(&mut matcher.arguments);
 	}
 
-	fn mark_operation(&mut self, node: &Node) {
-		node.for_each_argument(|link| self.add_predecessor(link));
+	fn find_match(&mut self, id: u32, arc: &Arc<Mutex<Match>>, nodes: &[Node]) {
+		self.mark_external(id, nodes);
+
+		let mut guard = arc.lock();
+
+		self.find_match_outputs(id, &guard);
+		self.find_match_inputs(&mut guard);
 	}
 
-	fn mark(&mut self, graph: &DataFlowGraph, result: Link) {
-		self.seen.clear();
+	fn find_repeat(&mut self, id: u32, arc: &Arc<Mutex<Repeat>>, nodes: &[Node]) {
+		self.mark_external(id, nodes);
 
-		self.add_predecessor(result);
+		let mut guard = arc.lock();
 
-		while let Some(Link(id, port)) = self.stack.pop() {
-			match graph.get(id) {
-				Node::LambdaIn(node) => self.mark_lambda_in(node, id),
-				Node::LambdaOut(node) => self.mark_lambda_out(node, id),
-				Node::RegionIn(node) => self.mark_region_in(*node, port),
-				Node::RegionOut(node) => self.mark_region_out(node, port),
-				Node::GammaIn(node) => self.mark_gamma_in(graph, node, port),
-				Node::GammaOut(node) => self.mark_gamma_out(graph, node, port),
-				Node::ThetaIn(node) => self.mark_theta_in(node, port),
-				Node::ThetaOut(node) => self.mark_theta_out(node, port),
+		self.mark_nodes(&guard.nodes, 0);
 
-				node @ (Node::OmegaIn(_)
-				| Node::OmegaOut(_)
+		if !self.build_remap(guard.result_count()) {
+			return;
+		}
+
+		self.remap_nodes(&mut guard.nodes, 0);
+		self.trim_slots(&mut guard.arguments);
+		self.trim_slots(&mut guard.results_mut().sources);
+
+		drop(guard);
+
+		self.record_outer_remap(id);
+	}
+
+	fn find_function(&mut self, arc: &Arc<Mutex<Function>>) {
+		let mut guard = arc.lock();
+
+		self.live.clear();
+		self.mark_nodes(&guard.nodes, 0);
+
+		if !self.build_remap(guard.capture_count()) {
+			return;
+		}
+
+		self.remap_nodes(&mut guard.nodes, 0);
+		self.trim_slots(&mut guard.captures);
+	}
+
+	fn find_all(&mut self, nodes: &[Node]) {
+		self.map.clear();
+
+		for (index, node) in nodes.iter().enumerate() {
+			let id = u32::try_from(index).unwrap();
+
+			match node {
+				Node::Function(arc) => self.find_function(arc),
+				Node::Match(arc) => self.find_match(id, arc, nodes),
+				Node::Repeat(arc) => self.find_repeat(id, arc, nodes),
+
+				Node::ModuleArguments(_)
+				| Node::ModuleResults(_)
+				| Node::FunctionCaptures(_)
+				| Node::FunctionArguments(_)
+				| Node::FunctionResults(_)
+				| Node::BranchArguments(_)
+				| Node::BranchResults(_)
+				| Node::RepeatArguments(_)
+				| Node::RepeatResults(_)
 				| Node::Import(_)
 				| Node::Host(_)
 				| Node::Trap
@@ -192,64 +242,27 @@ impl DeadPortEliminator {
 				| Node::MemoryGrow(_)
 				| Node::MemoryFill(_)
 				| Node::MemoryCopy(_)
-				| Node::MemoryDrop(_)) => self.mark_operation(node),
+				| Node::MemoryDrop(_) => {}
 			}
 		}
 	}
 
-	fn sweep_outputs(&mut self, graph: &DataFlowGraph, id: u32) {
-		let Some(ports) = graph.get(id).ports_output(graph) else {
-			return;
-		};
-
-		let mut outputs = (0..).map(|port| Link(id, port));
-
-		for from in outputs.clone().take(ports) {
-			if !self.seen.contains(from.into_usize()) {
-				continue;
-			}
-
-			let to = outputs.next().unwrap();
-
-			if from.1 != to.1 {
-				self.map.insert(from, to);
-			}
+	fn assign_single(&self, link: &mut Link) {
+		if let Some(&new) = self.map.get(link) {
+			*link = new;
 		}
 	}
 
-	fn sweep_inputs(&self, graph: &mut DataFlowGraph, id: u32) {
-		let Some(arguments) = graph.get_mut(id).as_mut_ports() else {
-			return;
-		};
-
-		let mut inputs = (0..).map(|port| Link(id, port)).map(Link::into_usize);
-
-		arguments.retain(|_| self.seen.contains(inputs.next().unwrap()));
-	}
-
-	fn sweep(&mut self, graph: &mut DataFlowGraph) {
-		let len = graph.len();
-
-		self.map.clear();
-
-		for id in (0..len.try_into().unwrap()).rev() {
-			self.sweep_outputs(graph, id);
-			self.sweep_inputs(graph, id);
-		}
-
-		for node in graph.nodes_mut() {
-			node.for_each_mut_argument(|old| {
-				if let Some(new) = self.map.get(old) {
-					*old = *new;
-				}
-			});
+	fn assign_all(&self, nodes: &mut [Node]) {
+		for node in nodes.iter_mut() {
+			node.for_each_mut_outer(|link| self.assign_single(link));
 		}
 	}
 
-	/// Runs the dead port elimination pass on the graph.
-	pub fn run(&mut self, graph: &mut DataFlowGraph, result: Link) {
-		self.mark(graph, result);
-		self.sweep(graph);
+	/// Runs the dead port elimination pass on the region.
+	pub fn run(&mut self, nodes: &mut [Node]) {
+		self.find_all(nodes);
+		self.assign_all(nodes);
 	}
 }
 

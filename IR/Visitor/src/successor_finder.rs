@@ -1,7 +1,6 @@
 //! Successor relationship analysis.
 
-use alloc::vec::Vec;
-use ir_graph::{DataFlowGraph, Link};
+use ir_graph::{Link, Node};
 
 /// A bidirectional link between two nodes.
 #[derive(PartialEq, Eq, PartialOrd, Ord, Clone, Copy)]
@@ -51,12 +50,12 @@ impl SuccessorFinder {
 		&self.successors[start..end]
 	}
 
-	/// Computes all successor relationships in the graph.
-	pub fn run(&mut self, graph: &DataFlowGraph) {
+	/// Computes all successor relationships in the region.
+	pub fn run(&mut self, nodes: &[Node]) {
 		self.successors.clear();
 
-		for (node, to) in graph.nodes().zip(0..) {
-			node.for_each_argument(|Link(from, port)| {
+		for (node, to) in nodes.iter().zip(0..) {
+			node.for_each_outer(|Link(from, port)| {
 				self.successors.push(BiLink { from, port, to });
 			});
 		}

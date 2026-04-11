@@ -11,6 +11,7 @@ ir-graph = { path = "../Graph" }
 
 set.workspace = true
 hashbrown.workspace = true
+parking_lot.workspace = true
 
 [build-dependencies]
 cranelift-isle.workspace = true
