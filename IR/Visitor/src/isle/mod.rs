@@ -1,5 +1,7 @@
 //! ISLE-based peephole optimizations.
 
+use core::mem;
+
 use ir_graph::{Link, Node, simple::Identity};
 
 use self::internal::{
@@ -19,7 +21,7 @@ fn replace_with_identity(nodes: &mut [Node], destination: u32, sources: &[Link])
 }
 
 fn replace_with_direct(nodes: &mut [Node], destination: u32, source: u32) {
-	let source = core::mem::take(&mut nodes[usize::try_from(source).unwrap()]);
+	let source = mem::take(&mut nodes[usize::try_from(source).unwrap()]);
 
 	nodes[usize::try_from(destination).unwrap()] = source;
 }

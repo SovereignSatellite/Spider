@@ -1,8 +1,11 @@
 #![expect(
+	clippy::absolute_paths,
 	clippy::collapsible_if,
 	clippy::equatable_if_let,
+	clippy::excessive_nesting,
 	clippy::match_ref_pats,
 	clippy::needless_return,
+	clippy::too_many_lines,
 	clippy::trivially_copy_pass_by_ref,
 	clippy::wildcard_enum_match_arm,
 	dead_code,

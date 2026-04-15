@@ -1,5 +1,7 @@
 //! Region identity insertion and removal.
 
+use core::mem;
+
 use ir_graph::{Link, Node, Region, list, simple::Identity};
 
 fn route_to_source(nodes: &[Node], from: &mut Link) {
@@ -18,7 +20,7 @@ fn route_all_to_source(nodes: &[Node], node: &mut Node) {
 /// Removes all identity nodes from the region.
 pub fn remove(nodes: &mut [Node]) {
 	for id in 0..nodes.len() {
-		let mut node = core::mem::take(&mut nodes[id]);
+		let mut node = mem::take(&mut nodes[id]);
 
 		route_all_to_source(nodes, &mut node);
 
@@ -40,7 +42,7 @@ fn route_all_to_identity(nodes: &mut Vec<Node>, results: &mut [Link]) {
 }
 
 fn route_results_node(nodes: &mut Vec<Node>, position: usize) {
-	let mut results_node = core::mem::take(&mut nodes[position]);
+	let mut results_node = mem::take(&mut nodes[position]);
 
 	results_node.for_each_mut_outer(|link| route_to_identity(nodes, link));
 
@@ -74,7 +76,7 @@ fn route_repeat_child(nodes: &mut Vec<Node>, node: &Node) {
 
 fn route_children(nodes: &mut Vec<Node>) {
 	for id in 0..nodes.len() {
-		let node = core::mem::take(&mut nodes[id]);
+		let node = mem::take(&mut nodes[id]);
 
 		route_repeat_child(nodes, &node);
 

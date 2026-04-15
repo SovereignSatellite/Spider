@@ -79,7 +79,7 @@ impl DeadPortEliminator {
 
 		link.1 = self.remap[usize::from(link.1)];
 
-		debug_assert_ne!(link.1, u16::MAX);
+		debug_assert_ne!(link.1, u16::MAX, "link port must not be dangling");
 	}
 
 	fn remap_nodes(&self, nodes: &mut [Node], boundary: u32) {
@@ -177,6 +177,7 @@ impl DeadPortEliminator {
 		self.trim_slots(&mut guard.captures);
 	}
 
+	#[expect(clippy::too_many_lines, reason = "exhaustive match over node variants")]
 	fn find_all(&mut self, nodes: &[Node]) {
 		self.map.clear();
 

@@ -60,6 +60,7 @@ impl InvariantPortMover {
 		}
 	}
 
+	#[expect(clippy::too_many_lines, reason = "exhaustive match over node variants")]
 	fn find_all(&mut self, nodes: &[Node]) {
 		self.map.clear();
 

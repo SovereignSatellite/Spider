@@ -69,6 +69,7 @@ where
 }
 
 /// Recursively applies `handle` to any region nested inside `node`.
+#[expect(clippy::too_many_lines, reason = "exhaustive match over node variants")]
 pub fn run_node<H>(node: &Node, handler: &mut H)
 where
 	H: FnMut(Region),
