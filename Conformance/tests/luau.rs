@@ -4,10 +4,12 @@ extern crate alloc;
 
 use alloc::sync::Arc;
 use std::{
+	env,
 	ffi::OsStr,
-	fs::File,
-	io::{BufWriter, Write},
+	fs::{self, File},
+	io::{self, BufWriter, Write},
 	path::{Path, PathBuf},
+	thread,
 };
 
 use datatest_stable::Result;
@@ -338,6 +340,10 @@ impl Luau {
 		Ok(())
 	}
 
+	#[expect(
+		clippy::too_many_lines,
+		reason = "exhaustive match over wast result pattern variants"
+	)]
 	fn fmt_assert_pattern(&mut self, result: WastRet<'_>) -> Result<()> {
 		let WastRet::Core(result) = result else {
 			unimplemented!()
@@ -572,7 +578,7 @@ fn get_path_target(name: &OsStr, optimized: bool, native: bool) -> Result<Arc<Pa
 	.iter()
 	.collect::<PathBuf>();
 
-	std::fs::create_dir_all(&path)?;
+	fs::create_dir_all(&path)?;
 
 	path.push(name);
 	path.set_extension("luau");
@@ -594,7 +600,7 @@ fn compile_test(destination: &Path, tested: &str, optimized: bool) -> Result<()>
 	Ok(())
 }
 
-fn run_file(destination: &Path, optimized: bool, native: bool) -> std::io::Result<Box<str>> {
+fn run_file(destination: &Path, optimized: bool, native: bool) -> io::Result<Box<str>> {
 	let mut arguments = vec![OsStr::new(if optimized { "-O2" } else { "-O0" })];
 
 	if native {
@@ -603,14 +609,14 @@ fn run_file(destination: &Path, optimized: bool, native: bool) -> std::io::Resul
 
 	arguments.push(destination.as_ref());
 
-	let program = std::env::var_os("LUAU_PATH").unwrap_or_else(|| "luau".into());
+	let program = env::var_os("LUAU_PATH").unwrap_or_else(|| "luau".into());
 	let output = process::run(&program, &arguments)?;
 
 	Ok(output)
 }
 
 fn run_and_assert(path: &Path, optimized: bool, native: bool) -> Result<()> {
-	let tested = std::fs::read_to_string(path)?;
+	let tested = fs::read_to_string(path)?;
 	let destination = get_path_target(path.file_name().unwrap(), optimized, native)?;
 
 	compile_test(&destination, &tested, optimized)?;
@@ -619,7 +625,7 @@ fn run_and_assert(path: &Path, optimized: bool, native: bool) -> Result<()> {
 
 	for _ in 0..REPETITION_COUNT {
 		let destination = Arc::clone(&destination);
-		let handle = std::thread::spawn(move || run_file(&destination, optimized, native));
+		let handle = thread::spawn(move || run_file(&destination, optimized, native));
 
 		handles.push(handle);
 	}

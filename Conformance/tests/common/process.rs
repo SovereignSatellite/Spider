@@ -1,8 +1,9 @@
 use core::time::Duration;
 use std::{
 	ffi::OsStr,
-	io::{Read as _, Result},
+	io::{self, Read as _, Result},
 	process::{Child, Command, ExitStatus, Stdio},
+	thread,
 	time::Instant,
 };
 
@@ -10,7 +11,7 @@ fn poll_until_timeout(child: &mut Child, duration: Duration) -> Result<ExitStatu
 	let now = Instant::now();
 
 	while now.elapsed() < duration {
-		std::thread::yield_now();
+		thread::yield_now();
 
 		if let Some(status) = child.try_wait()? {
 			return Ok(status);
@@ -19,8 +20,8 @@ fn poll_until_timeout(child: &mut Child, duration: Duration) -> Result<ExitStatu
 
 	child.kill()?;
 
-	Err(std::io::Error::new(
-		std::io::ErrorKind::TimedOut,
+	Err(io::Error::new(
+		io::ErrorKind::TimedOut,
 		"the sub-process has timed out",
 	))
 }
