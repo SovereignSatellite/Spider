@@ -1,6 +1,12 @@
 //! Low-level code builder for emitting WebAssembly IR instructions and basic blocks.
 
+#![expect(
+	clippy::too_many_arguments,
+	reason = "CFG instruction constructors mirror their struct fields"
+)]
+
 use alloc::vec::Vec;
+use core::{iter, mem};
 
 use list::resizable::Resizable;
 
@@ -25,7 +31,7 @@ use super::stack_builder::{Jump, Level, SHARED_LOCAL};
 fn fill_predecessors(basic_blocks: &mut [BasicBlock]) {
 	for predecessor_usize in 0..basic_blocks.len() {
 		let predecessor = predecessor_usize.try_into().unwrap();
-		let successors = core::mem::take(&mut basic_blocks[predecessor_usize].successors);
+		let successors = mem::take(&mut basic_blocks[predecessor_usize].successors);
 
 		for &successor in &successors {
 			let successor_usize = usize::from(successor);
@@ -69,8 +75,8 @@ impl CodeBuilder {
 
 		fill_predecessors(&mut self.basic_blocks);
 
-		core::mem::swap(&mut self.instructions, instructions);
-		core::mem::swap(&mut self.basic_blocks, basic_blocks);
+		mem::swap(&mut self.instructions, instructions);
+		mem::swap(&mut self.basic_blocks, basic_blocks);
 	}
 
 	pub fn add_basic_block(&mut self, successors: usize) -> u16 {
@@ -79,7 +85,7 @@ impl CodeBuilder {
 
 		self.basic_blocks.push(BasicBlock {
 			predecessors: Resizable::new(),
-			successors: core::iter::repeat_n(basic_blocks + 1, successors).collect(),
+			successors: iter::repeat_n(basic_blocks + 1, successors).collect(),
 			start: self.position,
 			end: instructions,
 		});

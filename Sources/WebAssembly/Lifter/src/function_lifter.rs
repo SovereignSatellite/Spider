@@ -1,3 +1,5 @@
+use core::iter;
+
 use list::resizable::Resizable;
 use wasmparser::{BlockType, FunctionBody, LocalsReader, OperatorsReader, ValType};
 
@@ -56,7 +58,7 @@ fn read_local_types_into(local_types: &mut Vec<ValueType>, reader: LocalsReader<
 		let val_type = web_type_to_data_type(val_type);
 		let count = count.try_into().unwrap();
 
-		local_types.extend(core::iter::repeat_n(val_type, count));
+		local_types.extend(iter::repeat_n(val_type, count));
 	}
 }
 
@@ -132,6 +134,10 @@ impl FunctionLifter {
 		)
 	}
 
+	#[expect(
+		clippy::too_many_arguments,
+		reason = "lifter setup requires all parameters"
+	)]
 	pub fn build_function(
 		&mut self,
 		nodes: &mut Vec<Node>,
@@ -157,6 +163,10 @@ impl FunctionLifter {
 		self.build_data_flow(nodes, argument_types, result_types, global_state)
 	}
 
+	#[expect(
+		clippy::too_many_arguments,
+		reason = "lifter setup requires all parameters"
+	)]
 	pub fn build_expression(
 		&mut self,
 		nodes: &mut Vec<Node>,

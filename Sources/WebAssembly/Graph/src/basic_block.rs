@@ -1,3 +1,5 @@
+use core::ops::Range;
+
 use list::resizable::Resizable;
 
 /// A basic block in the control flow graph.
@@ -36,7 +38,7 @@ impl BasicBlock {
 	///
 	/// Panics if the indices cannot be converted; if this happens, it is a bug.
 	#[must_use]
-	pub fn range(&self) -> core::ops::Range<usize> {
+	pub fn range(&self) -> Range<usize> {
 		self.start.try_into().unwrap()..self.end.try_into().unwrap()
 	}
 

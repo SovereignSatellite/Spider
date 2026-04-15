@@ -6,6 +6,10 @@ pub use ir_graph::simple::{
 
 /// Local variable names used as branch conditions.
 #[derive(PartialEq, Eq, Clone, Copy)]
+#[expect(
+	clippy::min_ident_chars,
+	reason = "single-letter variable names are the semantic domain"
+)]
 pub enum Name {
 	/// Variable A.
 	A,

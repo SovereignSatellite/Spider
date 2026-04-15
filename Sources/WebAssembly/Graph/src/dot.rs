@@ -49,54 +49,54 @@ impl Display for Vertex {
 	}
 }
 
-fn fmt_instruction(instruction: Instruction, f: &mut Formatter<'_>) -> Result {
+fn fmt_instruction(instruction: Instruction, formatter: &mut Formatter<'_>) -> Result {
 	use core::fmt::Debug;
 
 	match instruction {
-		Instruction::LocalSet(instruction) => Debug::fmt(&instruction, f),
-		Instruction::LocalBranch(instruction) => Debug::fmt(&instruction, f),
-		Instruction::I32Constant(instruction) => Debug::fmt(&instruction, f),
-		Instruction::I64Constant(instruction) => Debug::fmt(&instruction, f),
-		Instruction::F32Constant(instruction) => Debug::fmt(&instruction, f),
-		Instruction::F64Constant(instruction) => Debug::fmt(&instruction, f),
-		Instruction::RefIsNull(instruction) => Debug::fmt(&instruction, f),
-		Instruction::RefNull(instruction) => Debug::fmt(&instruction, f),
-		Instruction::RefFunction(instruction) => Debug::fmt(&instruction, f),
-		Instruction::Call(instruction) => Debug::fmt(&instruction, f),
-		Instruction::Unreachable => write!(f, "Unreachable"),
-		Instruction::IntegerUnaryOperation(instruction) => Debug::fmt(&instruction, f),
-		Instruction::IntegerBinaryOperation(instruction) => Debug::fmt(&instruction, f),
-		Instruction::IntegerCompareOperation(instruction) => Debug::fmt(&instruction, f),
-		Instruction::IntegerNarrow(instruction) => Debug::fmt(&instruction, f),
-		Instruction::IntegerWiden(instruction) => Debug::fmt(&instruction, f),
-		Instruction::IntegerExtend(instruction) => Debug::fmt(&instruction, f),
-		Instruction::IntegerConvertToNumber(instruction) => Debug::fmt(&instruction, f),
-		Instruction::IntegerTransmuteToNumber(instruction) => Debug::fmt(&instruction, f),
-		Instruction::NumberUnaryOperation(instruction) => Debug::fmt(&instruction, f),
-		Instruction::NumberBinaryOperation(instruction) => Debug::fmt(&instruction, f),
-		Instruction::NumberCompareOperation(instruction) => Debug::fmt(&instruction, f),
-		Instruction::NumberNarrow(instruction) => Debug::fmt(&instruction, f),
-		Instruction::NumberWiden(instruction) => Debug::fmt(&instruction, f),
-		Instruction::NumberTruncateToInteger(instruction) => Debug::fmt(&instruction, f),
-		Instruction::NumberTransmuteToInteger(instruction) => Debug::fmt(&instruction, f),
-		Instruction::GlobalGet(instruction) => Debug::fmt(&instruction, f),
-		Instruction::GlobalSet(instruction) => Debug::fmt(&instruction, f),
-		Instruction::TableGet(instruction) => Debug::fmt(&instruction, f),
-		Instruction::TableSet(instruction) => Debug::fmt(&instruction, f),
-		Instruction::TableSize(instruction) => Debug::fmt(&instruction, f),
-		Instruction::TableGrow(instruction) => Debug::fmt(&instruction, f),
-		Instruction::TableFill(instruction) => Debug::fmt(&instruction, f),
-		Instruction::TableCopy(instruction) => Debug::fmt(&instruction, f),
-		Instruction::TableInit(instruction) => Debug::fmt(&instruction, f),
-		Instruction::ElementsDrop(instruction) => Debug::fmt(&instruction, f),
-		Instruction::MemoryLoad(instruction) => Debug::fmt(&instruction, f),
-		Instruction::MemoryStore(instruction) => Debug::fmt(&instruction, f),
-		Instruction::MemorySize(instruction) => Debug::fmt(&instruction, f),
-		Instruction::MemoryGrow(instruction) => Debug::fmt(&instruction, f),
-		Instruction::MemoryFill(instruction) => Debug::fmt(&instruction, f),
-		Instruction::MemoryCopy(instruction) => Debug::fmt(&instruction, f),
-		Instruction::MemoryInit(instruction) => Debug::fmt(&instruction, f),
-		Instruction::DataDrop(instruction) => Debug::fmt(&instruction, f),
+		Instruction::LocalSet(instruction) => Debug::fmt(&instruction, formatter),
+		Instruction::LocalBranch(instruction) => Debug::fmt(&instruction, formatter),
+		Instruction::I32Constant(instruction) => Debug::fmt(&instruction, formatter),
+		Instruction::I64Constant(instruction) => Debug::fmt(&instruction, formatter),
+		Instruction::F32Constant(instruction) => Debug::fmt(&instruction, formatter),
+		Instruction::F64Constant(instruction) => Debug::fmt(&instruction, formatter),
+		Instruction::RefIsNull(instruction) => Debug::fmt(&instruction, formatter),
+		Instruction::RefNull(instruction) => Debug::fmt(&instruction, formatter),
+		Instruction::RefFunction(instruction) => Debug::fmt(&instruction, formatter),
+		Instruction::Call(instruction) => Debug::fmt(&instruction, formatter),
+		Instruction::Unreachable => write!(formatter, "Unreachable"),
+		Instruction::IntegerUnaryOperation(instruction) => Debug::fmt(&instruction, formatter),
+		Instruction::IntegerBinaryOperation(instruction) => Debug::fmt(&instruction, formatter),
+		Instruction::IntegerCompareOperation(instruction) => Debug::fmt(&instruction, formatter),
+		Instruction::IntegerNarrow(instruction) => Debug::fmt(&instruction, formatter),
+		Instruction::IntegerWiden(instruction) => Debug::fmt(&instruction, formatter),
+		Instruction::IntegerExtend(instruction) => Debug::fmt(&instruction, formatter),
+		Instruction::IntegerConvertToNumber(instruction) => Debug::fmt(&instruction, formatter),
+		Instruction::IntegerTransmuteToNumber(instruction) => Debug::fmt(&instruction, formatter),
+		Instruction::NumberUnaryOperation(instruction) => Debug::fmt(&instruction, formatter),
+		Instruction::NumberBinaryOperation(instruction) => Debug::fmt(&instruction, formatter),
+		Instruction::NumberCompareOperation(instruction) => Debug::fmt(&instruction, formatter),
+		Instruction::NumberNarrow(instruction) => Debug::fmt(&instruction, formatter),
+		Instruction::NumberWiden(instruction) => Debug::fmt(&instruction, formatter),
+		Instruction::NumberTruncateToInteger(instruction) => Debug::fmt(&instruction, formatter),
+		Instruction::NumberTransmuteToInteger(instruction) => Debug::fmt(&instruction, formatter),
+		Instruction::GlobalGet(instruction) => Debug::fmt(&instruction, formatter),
+		Instruction::GlobalSet(instruction) => Debug::fmt(&instruction, formatter),
+		Instruction::TableGet(instruction) => Debug::fmt(&instruction, formatter),
+		Instruction::TableSet(instruction) => Debug::fmt(&instruction, formatter),
+		Instruction::TableSize(instruction) => Debug::fmt(&instruction, formatter),
+		Instruction::TableGrow(instruction) => Debug::fmt(&instruction, formatter),
+		Instruction::TableFill(instruction) => Debug::fmt(&instruction, formatter),
+		Instruction::TableCopy(instruction) => Debug::fmt(&instruction, formatter),
+		Instruction::TableInit(instruction) => Debug::fmt(&instruction, formatter),
+		Instruction::ElementsDrop(instruction) => Debug::fmt(&instruction, formatter),
+		Instruction::MemoryLoad(instruction) => Debug::fmt(&instruction, formatter),
+		Instruction::MemoryStore(instruction) => Debug::fmt(&instruction, formatter),
+		Instruction::MemorySize(instruction) => Debug::fmt(&instruction, formatter),
+		Instruction::MemoryGrow(instruction) => Debug::fmt(&instruction, formatter),
+		Instruction::MemoryFill(instruction) => Debug::fmt(&instruction, formatter),
+		Instruction::MemoryCopy(instruction) => Debug::fmt(&instruction, formatter),
+		Instruction::MemoryInit(instruction) => Debug::fmt(&instruction, formatter),
+		Instruction::DataDrop(instruction) => Debug::fmt(&instruction, formatter),
 	}
 }
 
@@ -112,12 +112,15 @@ impl<'inner> Dot<'inner> {
 		Self { inner }
 	}
 
-	fn fmt_nodes(&self, f: &mut Formatter<'_>) -> Result {
-		writeln!(f, "\tnode [shape = box, style = filled, ordering = out];")?;
+	fn fmt_nodes(&self, formatter: &mut Formatter<'_>) -> Result {
+		writeln!(
+			formatter,
+			"\tnode [shape = box, style = filled, ordering = out];"
+		)?;
 
 		let mut last_vertex = Vertex::Instructions;
 
-		last_vertex.fmt(f)?;
+		last_vertex.fmt(formatter)?;
 
 		self.inner.block_ids().try_for_each(|id| {
 			let instructions = self.inner.instructions(id);
@@ -126,23 +129,23 @@ impl<'inner> Dot<'inner> {
 			if vertex != last_vertex {
 				last_vertex = vertex;
 
-				last_vertex.fmt(f)?;
+				last_vertex.fmt(formatter)?;
 			}
 
-			write!(f, "\tN{id} [xlabel = {id}, label = \"")?;
+			write!(formatter, "\tN{id} [xlabel = {id}, label = \"")?;
 
 			instructions.iter().try_for_each(|&instruction| {
-				fmt_instruction(instruction, f)?;
+				fmt_instruction(instruction, formatter)?;
 
-				write!(f, "\\l")
+				write!(formatter, "\\l")
 			})?;
 
-			writeln!(f, "\"];")
+			writeln!(formatter, "\"];")
 		})
 	}
 
-	fn fmt_edges(&self, f: &mut Formatter<'_>) -> Result {
-		writeln!(f, "\tedge [color = \"#444477\"];")?;
+	fn fmt_edges(&self, formatter: &mut Formatter<'_>) -> Result {
+		writeln!(formatter, "\tedge [color = \"#444477\"];")?;
 
 		self.inner.block_ids().try_for_each(|id| {
 			self.inner.successors(id).try_for_each(|successor| {
@@ -152,7 +155,7 @@ impl<'inner> Dot<'inner> {
 					""
 				};
 
-				writeln!(f, "\tN{id} -> N{successor}{style};")
+				writeln!(formatter, "\tN{id} -> N{successor}{style};")
 			})
 		})
 	}

@@ -3,6 +3,7 @@
 extern crate alloc;
 
 use alloc::sync::Arc;
+use core::iter;
 
 use list::resizable::Resizable;
 use parking_lot::Mutex;
@@ -124,7 +125,7 @@ impl WebAssemblyLifter {
 
 		self.global_state
 			.functions
-			.extend(core::iter::repeat_with(|| add_global_from_null(nodes)).take(len));
+			.extend(iter::repeat_with(|| add_global_from_null(nodes)).take(len));
 	}
 
 	fn build_expression(
@@ -266,6 +267,10 @@ impl WebAssemblyLifter {
 		}
 	}
 
+	#[expect(
+		clippy::too_many_arguments,
+		reason = "copy operation requires source, destination, reference, offset, and size"
+	)]
 	fn load_table_copy(
 		&mut self,
 		nodes: &mut Vec<Node>,
@@ -344,6 +349,10 @@ impl WebAssemblyLifter {
 		);
 	}
 
+	#[expect(
+		clippy::too_many_arguments,
+		reason = "copy operation requires source, destination, reference, offset, and size"
+	)]
 	fn load_memory_copy(
 		&mut self,
 		nodes: &mut Vec<Node>,
@@ -429,7 +438,7 @@ impl WebAssemblyLifter {
 
 		self.global_state
 			.globals
-			.extend(core::iter::repeat_with(|| add_global_from_null(nodes)).take(len));
+			.extend(iter::repeat_with(|| add_global_from_null(nodes)).take(len));
 	}
 
 	fn initialize_global(

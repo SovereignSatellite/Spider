@@ -18,8 +18,6 @@ use ir_graph::{
 };
 
 const CELL_SIZE: u32 = 4;
-const _: () = assert!(size_of::<u32>() == 4);
-
 const MEMORY_SIZE: u32 = 1_024 * 4 * CELL_SIZE;
 
 enum Operator {
