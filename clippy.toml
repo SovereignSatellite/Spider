@@ -1,0 +1,13 @@
+allowed-idents-below-min-chars = []
+array-size-threshold = 65536
+cognitive-complexity-threshold = 20
+excessive-nesting-threshold = 5
+future-size-threshold = 16384
+max-fn-params-bools = 2
+max-struct-bools = 3
+min-ident-chars-threshold = 1
+pass-by-value-size-limit = 128
+single-char-binding-names-threshold = 1
+stack-size-threshold = 65536
+too-many-arguments-threshold = 5
+too-many-lines-threshold = 48
