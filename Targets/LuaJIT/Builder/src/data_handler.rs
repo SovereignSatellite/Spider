@@ -13,7 +13,7 @@ use luajit_tree::{
 		NumberUnaryOperation, NumberWiden, RefIsNull, Scoped, TableGet, TableGrow, TableNew,
 		TableSize,
 	},
-	statement::{Export, Sequence},
+	statement::Export,
 };
 
 type ScopedLink = (Link, usize);
@@ -117,22 +117,7 @@ impl DataHandler {
 		destinations.zip(sources).collect()
 	}
 
-	pub fn load_scoped(
-		dependencies: Vec<(Name, Expression)>,
-		arguments: Vec<Name>,
-		locals: Vec<Name>,
-		stack: u16,
-		code: Sequence,
-		returns: Vec<Expression>,
-	) -> Expression {
-		let function = Function {
-			arguments,
-			locals,
-			stack,
-			code,
-			returns,
-		};
-
+	pub fn load_scoped(dependencies: Vec<(Name, Expression)>, function: Function) -> Expression {
 		if dependencies.is_empty() {
 			Expression::Function(function.into())
 		} else {

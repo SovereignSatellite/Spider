@@ -1,7 +1,7 @@
 pub use self::{
 	names_finder::{NamesFinder, NeedsName},
 	printer::Printer,
-	sections::Sections,
+	sections::{Section, Sections},
 };
 
 mod names_finder;

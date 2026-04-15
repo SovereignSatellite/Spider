@@ -47,6 +47,11 @@ impl Section {
 	}
 
 	/// Tries to parse a section from the given source.
+	///
+	/// # Panics
+	///
+	/// Panics if the parsed references are not sorted.
+	#[must_use]
 	pub fn try_parse(source: &'static str) -> Option<(Self, &'static str)> {
 		let (name, source) = Self::try_parse_header(source, Self::SECTION_HEADER)?;
 		let (references, source) = Self::parse_references(source);

@@ -3,7 +3,10 @@ use alloc::sync::Arc;
 use hashbrown::HashMap;
 use parking_lot::Mutex;
 
-use ir_graph::{Link, Node, control::Function};
+use ir_graph::{
+	Link, Node,
+	control::{Function, Match, Repeat},
+};
 use luau_tree::expression::Local;
 
 use self::scalar_finder::ScalarFinder;
@@ -95,7 +98,7 @@ impl LocalAllocator {
 		assignments: &mut HashMap<ScopedLink, Local>,
 		id: u32,
 		scope: usize,
-		arc: &Arc<Mutex<ir_graph::control::Match>>,
+		arc: &Arc<Mutex<Match>>,
 	) {
 		let matcher = arc.lock();
 
@@ -115,7 +118,7 @@ impl LocalAllocator {
 		assignments: &mut HashMap<ScopedLink, Local>,
 		id: u32,
 		scope: usize,
-		arc: &Arc<Mutex<ir_graph::control::Repeat>>,
+		arc: &Arc<Mutex<Repeat>>,
 	) {
 		let repeat = arc.lock();
 		let repeat_scope = Arc::as_ptr(arc) as usize;
@@ -185,6 +188,10 @@ impl LocalAllocator {
 		stack_sizes.insert(scope, self.next_offset);
 	}
 
+	#[expect(
+		clippy::too_many_arguments,
+		reason = "allocator entry point requires all allocation state"
+	)]
 	pub fn run(
 		&mut self,
 		stack_sizes: &mut HashMap<usize, u16>,

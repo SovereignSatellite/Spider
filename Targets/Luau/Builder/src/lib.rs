@@ -8,7 +8,7 @@ use parking_lot::Mutex;
 
 use ir_graph::{
 	Link, Node,
-	control::{Import, Module, ModuleArguments, RepeatResults},
+	control::{Branch, Function, Import, Match, Module, ModuleArguments, Repeat, RepeatResults},
 	simple::{
 		Apply, Fence, GlobalGet, GlobalNew, GlobalSet, Host, Identity, IntegerBinaryOperation,
 		IntegerCompareOperation, IntegerConvertToNumber, IntegerExtend, IntegerNarrow,
@@ -21,7 +21,7 @@ use ir_graph::{
 };
 use luau_tree::{
 	LuauTree,
-	expression::{Expression, Local, Name},
+	expression::{self, Expression, Local, Name},
 };
 
 use self::{code_handler::CodeHandler, data_handler::DataHandler, local_allocator::LocalAllocator};
@@ -91,7 +91,7 @@ impl LuauBuilder {
 			.collect()
 	}
 
-	fn handle_function(&mut self, id: u32, arc: &Arc<Mutex<ir_graph::control::Function>>) {
+	fn handle_function(&mut self, id: u32, arc: &Arc<Mutex<Function>>) {
 		let function = arc.lock();
 		let function_scope = Arc::as_ptr(arc) as usize;
 		let parent_scope = self.data_handler.scope();
@@ -133,11 +133,13 @@ impl LuauBuilder {
 
 		let expression = DataHandler::load_scoped(
 			dependencies,
-			argument_names,
-			Vec::new(),
-			stack,
-			code,
-			returns,
+			expression::Function {
+				arguments: argument_names,
+				locals: Vec::new(),
+				stack,
+				code,
+				returns,
+			},
 		);
 
 		self.data_handler.set_scope(parent_scope);
@@ -153,8 +155,8 @@ impl LuauBuilder {
 
 	fn handle_branch(
 		&mut self,
-		branch_arc: &Arc<Mutex<ir_graph::control::Branch>>,
-		matcher: &ir_graph::control::Match,
+		branch_arc: &Arc<Mutex<Branch>>,
+		matcher: &Match,
 		parent_scope: usize,
 		result_locals: &[Local],
 	) -> usize {
@@ -191,7 +193,7 @@ impl LuauBuilder {
 		branch_scope
 	}
 
-	fn handle_match(&mut self, id: u32, arc: &Arc<Mutex<ir_graph::control::Match>>) {
+	fn handle_match(&mut self, id: u32, arc: &Arc<Mutex<Match>>) {
 		let matcher = arc.lock();
 		let parent_scope = self.data_handler.scope();
 
@@ -212,7 +214,7 @@ impl LuauBuilder {
 			.do_match(&branch_keys, matcher.condition, &mut self.data_handler);
 	}
 
-	fn handle_repeat(&mut self, _id: u32, arc: &Arc<Mutex<ir_graph::control::Repeat>>) {
+	fn handle_repeat(&mut self, _id: u32, arc: &Arc<Mutex<Repeat>>) {
 		let repeat = arc.lock();
 		let repeat_scope = Arc::as_ptr(arc) as usize;
 		let parent_scope = self.data_handler.scope();
@@ -658,6 +660,7 @@ impl LuauBuilder {
 		);
 	}
 
+	#[expect(clippy::too_many_lines, reason = "exhaustive match over node variants")]
 	fn handle_node(&mut self, id: u32, node: &Node) {
 		match *node {
 			Node::Function(ref arc) => self.handle_function(id, arc),

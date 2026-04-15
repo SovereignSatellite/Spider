@@ -310,6 +310,10 @@ impl MemoryGrow {
 }
 
 impl Expression {
+	#[expect(
+		clippy::too_many_lines,
+		reason = "exhaustive match over statement variants"
+	)]
 	fn accept<T: Visitor>(&self, visitor: &mut T) -> ControlFlow<T::Output> {
 		visitor.visit_expression(self)?;
 
