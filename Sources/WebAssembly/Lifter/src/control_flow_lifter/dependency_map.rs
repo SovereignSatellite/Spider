@@ -1,4 +1,3 @@
-use alloc::vec::Vec;
 use ir_graph::Link;
 use web_assembly_liveness::references::{Reference, ReferenceType};
 

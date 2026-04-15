@@ -1,4 +1,4 @@
-//! `LuaJIT` tree representation for compiled WebAssembly modules.
+//! The `LuaJIT` tree intermediate representation.
 
 #![no_std]
 #![expect(
@@ -8,10 +8,6 @@
 
 extern crate alloc;
 
-pub mod expression;
-pub mod statement;
-pub mod visitor;
-
 use alloc::vec::Vec;
 
 use self::{
@@ -19,12 +15,14 @@ use self::{
 	statement::{Export, Sequence},
 };
 
+pub mod expression;
+pub mod statement;
+pub mod visitor;
+
 /// The root tree node for a `LuaJIT` module.
 pub struct LuaJITTree {
 	/// The environment variable name.
 	pub environment: Name,
-	/// The local variable names.
-	pub locals: Vec<Name>,
 	/// The stack size.
 	pub stack: u16,
 

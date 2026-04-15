@@ -4,42 +4,51 @@
 	reason = "macro-generated visitors may not use all fields"
 )]
 
-use crate::{
-	Link, Node,
-	node::{
-		control::{
-			Export, GammaIn, GammaOut, Import, LambdaIn, LambdaOut, OmegaIn, OmegaOut, RegionIn,
-			RegionOut, ThetaIn, ThetaOut,
-		},
-		simple::{
-			Apply, Fence, GlobalGet, GlobalNew, GlobalSet, Identity, IntegerBinaryOperation,
-			IntegerCompareOperation, IntegerConvertToNumber, IntegerExtend, IntegerNarrow,
-			IntegerTransmuteToNumber, IntegerUnaryOperation, IntegerWiden, Location, MemoryCopy,
-			MemoryDrop, MemoryFill, MemoryGrow, MemoryLoad, MemoryNew, MemorySize, MemoryStore,
-			NumberBinaryOperation, NumberCompareOperation, NumberNarrow, NumberTransmuteToInteger,
-			NumberTruncateToInteger, NumberUnaryOperation, NumberWiden, RefIsNull, TableCopy,
-			TableDrop, TableFill, TableGet, TableGrow, TableNew, TableSet, TableSize,
-		},
+use crate::Link;
+
+use super::{
+	Node,
+	control::{
+		Branch, BranchResults, Function, FunctionResults, Import, Match, Module, ModuleResults,
+		Region, Repeat, RepeatResults,
+	},
+	simple::{
+		Apply, Fence, GlobalGet, GlobalNew, GlobalSet, Identity, IntegerBinaryOperation,
+		IntegerCompareOperation, IntegerConvertToNumber, IntegerExtend, IntegerNarrow,
+		IntegerTransmuteToNumber, IntegerUnaryOperation, IntegerWiden, Location, MemoryCopy,
+		MemoryDrop, MemoryFill, MemoryGrow, MemoryLoad, MemoryNew, MemorySize, MemoryStore,
+		NumberBinaryOperation, NumberCompareOperation, NumberNarrow, NumberTransmuteToInteger,
+		NumberTruncateToInteger, NumberUnaryOperation, NumberWiden, RefIsNull, TableCopy,
+		TableDrop, TableFill, TableGet, TableGrow, TableNew, TableSet, TableSize,
 	},
 };
 
 macro_rules! for_each_visit {
 	($self:ident, $visit:ident, $handler:ident) => {
 		match $self {
-			Self::LambdaIn(node) => node.$visit($handler),
-			Self::LambdaOut(node) => node.$visit($handler),
-			Self::RegionIn(node) => node.$visit($handler),
-			Self::RegionOut(node) => node.$visit($handler),
-			Self::GammaIn(node) => node.$visit($handler),
-			Self::GammaOut(node) => node.$visit($handler),
-			Self::ThetaIn(node) => node.$visit($handler),
-			Self::ThetaOut(node) => node.$visit($handler),
-			Self::OmegaIn(node) => node.$visit($handler),
-			Self::OmegaOut(node) => node.$visit($handler),
+			Self::Function(arc) => arc.lock().$visit($handler),
+			Self::Match(arc) => arc.lock().$visit($handler),
+			Self::Repeat(arc) => arc.lock().$visit($handler),
+
+			Self::ModuleArguments(_)
+			| Self::FunctionCaptures(_)
+			| Self::FunctionArguments(_)
+			| Self::BranchArguments(_)
+			| Self::RepeatArguments(_)
+			| Self::Trap
+			| Self::Null
+			| Self::I32(_)
+			| Self::I64(_)
+			| Self::F32(_)
+			| Self::F64(_) => {}
+
+			Self::ModuleResults(node) => node.$visit($handler),
+			Self::FunctionResults(node) => node.$visit($handler),
+			Self::BranchResults(node) => node.$visit($handler),
+			Self::RepeatResults(node) => node.$visit($handler),
+
 			Self::Import(node) => node.$visit($handler),
 			Self::Host(host) => host.$visit(&mut $handler),
-			Self::Trap | Self::Null | Self::I32(_) | Self::I64(_) | Self::F32(_) | Self::F64(_) => {
-			}
 
 			Self::Identity(node) => node.$visit($handler),
 			Self::Fence(node) => node.$visit($handler),
@@ -90,12 +99,6 @@ macro_rules! handle_field {
 	($handler:ident, $name:ident, dereference_call) => {
 		$handler(*$name);
 	};
-	($handler:ident, $name:ident, first_call) => {
-		$handler($name.0);
-	};
-	($handler:ident, $name:ident, first_mut_call) => {
-		$handler(&mut $name.0);
-	};
 	($handler:ident, $name:ident, for_each, $($rest:tt)*) => {
 		for item in $name {
 			handle_field!($handler, item, $($rest)*);
@@ -106,54 +109,8 @@ macro_rules! handle_field {
 	};
 }
 
-macro_rules! handle_id_source {
-	($handler:ident, $name:ident, ignore) => {};
-	($handler:ident, $name:ident, id) => {
-		handle_field!($handler, $name, dereference_call)
-	};
-	($handler:ident, $name:ident, id_list) => {
-		handle_field!($handler, $name, for_each, dereference_call)
-	};
-	($handler:ident, $name:ident, link) => {
-		handle_field!($handler, $name, first_call)
-	};
-	($handler:ident, $name:ident, link_list) => {
-		handle_field!($handler, $name, for_each, first_call)
-	};
-	($handler:ident, $name:ident, method) => {
-		handle_field!($handler, $name, method, for_each_id)
-	};
-	($handler:ident, $name:ident, method_list) => {
-		handle_field!($handler, $name, for_each, method, for_each_id)
-	};
-}
-
-macro_rules! handle_mut_id_source {
-	($handler:ident, $name:ident, ignore) => {};
-	($handler:ident, $name:ident, id) => {
-		handle_field!($handler, $name, call)
-	};
-	($handler:ident, $name:ident, id_list) => {
-		handle_field!($handler, $name, for_each, call)
-	};
-	($handler:ident, $name:ident, link) => {
-		handle_field!($handler, $name, first_mut_call)
-	};
-	($handler:ident, $name:ident, link_list) => {
-		handle_field!($handler, $name, for_each, first_mut_call)
-	};
-	($handler:ident, $name:ident, method) => {
-		handle_field!($handler, $name, method, for_each_mut_id)
-	};
-	($handler:ident, $name:ident, method_list) => {
-		handle_field!($handler, $name, for_each, method, for_each_mut_id)
-	};
-}
-
 macro_rules! handle_argument_source {
 	($handler:ident, $name:ident, ignore) => {};
-	($handler:ident, $name:ident, id) => {};
-	($handler:ident, $name:ident, id_list) => {};
 	($handler:ident, $name:ident, link) => {
 		handle_field!($handler, $name, dereference_call)
 	};
@@ -161,17 +118,12 @@ macro_rules! handle_argument_source {
 		handle_field!($handler, $name, for_each, dereference_call)
 	};
 	($handler:ident, $name:ident, method) => {
-		handle_field!($handler, $name, method, for_each_argument)
-	};
-	($handler:ident, $name:ident, method_list) => {
-		handle_field!($handler, $name, for_each, method, for_each_argument)
+		handle_field!($handler, $name, method, for_each_outer)
 	};
 }
 
 macro_rules! handle_mut_argument_source {
 	($handler:ident, $name:ident, ignore) => {};
-	($handler:ident, $name:ident, id) => {};
-	($handler:ident, $name:ident, id_list) => {};
 	($handler:ident, $name:ident, link) => {
 		handle_field!($handler, $name, call)
 	};
@@ -179,10 +131,7 @@ macro_rules! handle_mut_argument_source {
 		handle_field!($handler, $name, for_each, call)
 	};
 	($handler:ident, $name:ident, method) => {
-		handle_field!($handler, $name, method, for_each_mut_argument)
-	};
-	($handler:ident, $name:ident, method_list) => {
-		handle_field!($handler, $name, for_each, method, for_each_mut_argument)
+		handle_field!($handler, $name, method, for_each_mut_outer)
 	};
 }
 
@@ -212,68 +161,39 @@ macro_rules! handle_mut_visitor {
 
 macro_rules! handle_sources {
 	($( ($field:ident, $action:ident) ),*) => {
-		handle_visitor!(for_each_id, u32, handle_id_source, ( $( ($field, $action) ),* ));
-		handle_visitor!(for_each_argument, Link, handle_argument_source, ( $( ($field, $action) ),* ));
-
-		handle_mut_visitor!(for_each_mut_id, u32, handle_mut_id_source, ( $( ($field, $action) ),* ));
-		handle_mut_visitor!(for_each_mut_argument, Link, handle_mut_argument_source, ( $( ($field, $action) ),* ));
+		handle_visitor!(for_each_outer, Link, handle_argument_source, ( $( ($field, $action) ),* ));
+		handle_mut_visitor!(for_each_mut_outer, Link, handle_mut_argument_source, ( $( ($field, $action) ),* ));
 	};
 }
 
-macro_rules! handle_requirements {
-	($( ($field:ident, $action:ident) ),*) => {
-		handle_visitor!(for_each_requirement, u32, handle_id_source, ( $( ($field, $action) ),* ));
+impl ModuleResults {
+	fn for_each_outer<H: FnMut(Link)>(&self, mut handler: H) {
+		handler(self.state);
+
+		for export in &self.exports {
+			handler(export.reference);
+		}
+	}
+
+	fn for_each_mut_outer<H: FnMut(&mut Link)>(&mut self, mut handler: H) {
+		handler(&mut self.state);
+
+		for export in &mut self.exports {
+			handler(&mut export.reference);
+		}
 	}
 }
 
-impl LambdaIn {
-	handle_sources!((output, id), (kind, ignore), (dependencies, link_list));
+impl FunctionResults {
+	handle_sources!((parent, ignore), (sources, link_list));
 }
 
-impl LambdaOut {
-	handle_requirements!((input, id), (results, ignore));
-	handle_sources!((input, id), (results, link_list));
+impl BranchResults {
+	handle_sources!((parent, ignore), (sources, link_list));
 }
 
-impl RegionIn {
-	handle_requirements!((input, id), (output, ignore));
-	handle_sources!((input, id), (output, id));
-}
-
-impl RegionOut {
-	handle_requirements!((input, id), (output, ignore), (results, ignore));
-	handle_sources!((input, id), (output, id), (results, link_list));
-}
-
-impl GammaIn {
-	handle_sources!((output, id), (arguments, link_list), (condition, link));
-}
-
-impl GammaOut {
-	handle_requirements!((input, id), (regions, id_list));
-	handle_sources!((input, id), (regions, id_list));
-}
-
-impl ThetaIn {
-	handle_sources!((output, id), (arguments, link_list));
-}
-
-impl ThetaOut {
-	handle_requirements!((input, id), (results, ignore), (condition, ignore));
-	handle_sources!((input, id), (results, link_list), (condition, link));
-}
-
-impl OmegaIn {
-	handle_sources!((output, id));
-}
-
-impl Export {
-	handle_sources!((identifier, ignore), (reference, link));
-}
-
-impl OmegaOut {
-	handle_requirements!((input, id), (state, ignore), (exports, ignore));
-	handle_sources!((input, id), (state, link), (exports, method_list));
+impl RepeatResults {
+	handle_sources!((parent, ignore), (sources, link_list), (condition, link));
 }
 
 impl Import {
@@ -388,23 +308,7 @@ impl GlobalSet {
 }
 
 impl TableNew {
-	fn for_each_id<H: FnMut(u32)>(&self, mut handler: H) {
-		let Self { initializer, .. } = self;
-
-		for item in initializer {
-			handler(item.0.0);
-		}
-	}
-
-	fn for_each_mut_id<H: FnMut(&mut u32)>(&mut self, mut handler: H) {
-		let Self { initializer, .. } = self;
-
-		for item in initializer {
-			handler(&mut item.0.0);
-		}
-	}
-
-	fn for_each_argument<H: FnMut(Link)>(&self, mut handler: H) {
+	fn for_each_outer<H: FnMut(Link)>(&self, mut handler: H) {
 		let Self { initializer, .. } = self;
 
 		for item in initializer {
@@ -412,7 +316,7 @@ impl TableNew {
 		}
 	}
 
-	fn for_each_mut_argument<H: FnMut(&mut Link)>(&mut self, mut handler: H) {
+	fn for_each_mut_outer<H: FnMut(&mut Link)>(&mut self, mut handler: H) {
 		let Self { initializer, .. } = self;
 
 		for item in initializer {
@@ -481,87 +385,284 @@ impl MemoryDrop {
 	handle_sources!((source, link));
 }
 
-impl Node {
-	/// Calls `handler` for each structural requirement in this node.
-	pub fn for_each_requirement<H: FnMut(u32)>(&self, handler: H) {
-		match self {
-			Self::LambdaOut(node) => node.for_each_requirement(handler),
-			Self::RegionIn(node) => node.for_each_requirement(handler),
-			Self::RegionOut(node) => node.for_each_requirement(handler),
-			Self::GammaOut(node) => node.for_each_requirement(handler),
-			Self::ThetaOut(node) => node.for_each_requirement(handler),
-			Self::OmegaOut(node) => node.for_each_requirement(handler),
+impl Module {
+	fn nodes(&self) -> &[Node] {
+		&self.nodes
+	}
 
-			Self::Apply(_)
-			| Self::F32(_)
-			| Self::F64(_)
-			| Self::Fence(_)
-			| Self::GammaIn(_)
-			| Self::GlobalGet(_)
-			| Self::GlobalNew(_)
-			| Self::GlobalSet(_)
-			| Self::Host(_)
-			| Self::I32(_)
-			| Self::I64(_)
-			| Self::Identity(_)
-			| Self::Import(_)
-			| Self::IntegerBinaryOperation(_)
-			| Self::IntegerCompareOperation(_)
-			| Self::IntegerConvertToNumber(_)
-			| Self::IntegerExtend(_)
-			| Self::IntegerNarrow(_)
-			| Self::IntegerTransmuteToNumber(_)
-			| Self::IntegerUnaryOperation(_)
-			| Self::IntegerWiden(_)
-			| Self::LambdaIn(_)
-			| Self::MemoryCopy(_)
-			| Self::MemoryDrop(_)
-			| Self::MemoryFill(_)
-			| Self::MemoryGrow(_)
-			| Self::MemoryLoad(_)
-			| Self::MemoryNew(_)
-			| Self::MemorySize(_)
-			| Self::MemoryStore(_)
-			| Self::Null
-			| Self::NumberBinaryOperation(_)
-			| Self::NumberCompareOperation(_)
-			| Self::NumberNarrow(_)
-			| Self::NumberTransmuteToInteger(_)
-			| Self::NumberTruncateToInteger(_)
-			| Self::NumberUnaryOperation(_)
-			| Self::NumberWiden(_)
-			| Self::OmegaIn(_)
-			| Self::RefIsNull(_)
-			| Self::TableCopy(_)
-			| Self::TableDrop(_)
-			| Self::TableFill(_)
-			| Self::TableGet(_)
-			| Self::TableGrow(_)
-			| Self::TableNew(_)
-			| Self::TableSet(_)
-			| Self::TableSize(_)
-			| Self::ThetaIn(_)
-			| Self::Trap => {}
+	const fn nodes_mut(&mut self) -> &mut Vec<Node> {
+		&mut self.nodes
+	}
+
+	/// Returns the index of the results boundary node.
+	#[must_use]
+	pub fn results_index(&self) -> usize {
+		self.nodes
+			.iter()
+			.rposition(|node| matches!(node, Node::ModuleResults(_)))
+			.unwrap_or_else(|| unreachable!())
+	}
+
+	/// Returns a reference to the results boundary node.
+	#[must_use]
+	pub fn results(&self) -> &ModuleResults {
+		if let Node::ModuleResults(results) = &self.nodes[self.results_index()] {
+			results
+		} else {
+			unreachable!()
 		}
 	}
 
-	/// Calls `handler` for each identifier in this node.
-	pub fn for_each_id<H: FnMut(u32)>(&self, mut handler: H) {
-		for_each_visit!(self, for_each_id, handler);
+	/// Returns a mutable reference to the results boundary node.
+	pub fn results_mut(&mut self) -> &mut ModuleResults {
+		let index = self.results_index();
+
+		if let Node::ModuleResults(results) = &mut self.nodes[index] {
+			results
+		} else {
+			unreachable!()
+		}
 	}
 
-	/// Calls `handler` for each mutable identifier in this node.
-	pub fn for_each_mut_id<H: FnMut(&mut u32)>(&mut self, mut handler: H) {
-		for_each_visit!(self, for_each_mut_id, handler);
+	fn for_each_root<H: FnMut(u32)>(&self, mut handler: H) {
+		let result = u32::try_from(self.results_index()).unwrap_or_else(|_| unreachable!());
+
+		handler(Self::ARGUMENTS_ID);
+		handler(result);
+	}
+}
+
+impl Function {
+	/// Visits each outer link (captures).
+	pub fn for_each_outer<H: FnMut(Link)>(&self, mut handler: H) {
+		for &link in &self.captures {
+			handler(link);
+		}
 	}
 
-	/// Calls `handler` for each argument link in this node.
-	pub fn for_each_argument<H: FnMut(Link)>(&self, mut handler: H) {
-		for_each_visit!(self, for_each_argument, handler);
+	/// Mutably visits each outer link (captures).
+	pub fn for_each_mut_outer<H: FnMut(&mut Link)>(&mut self, mut handler: H) {
+		for link in &mut self.captures {
+			handler(link);
+		}
 	}
 
-	/// Calls `handler` for each mutable argument link in this node.
-	pub fn for_each_mut_argument<H: FnMut(&mut Link)>(&mut self, mut handler: H) {
-		for_each_visit!(self, for_each_mut_argument, handler);
+	fn nodes(&self) -> &[Node] {
+		&self.nodes
+	}
+
+	const fn nodes_mut(&mut self) -> &mut Vec<Node> {
+		&mut self.nodes
+	}
+
+	/// Returns the index of the results boundary node.
+	#[must_use]
+	pub fn results_index(&self) -> usize {
+		self.nodes
+			.iter()
+			.rposition(|node| matches!(node, Node::FunctionResults(_)))
+			.unwrap_or_else(|| unreachable!())
+	}
+
+	/// Returns a reference to the results boundary node.
+	#[must_use]
+	pub fn results(&self) -> &FunctionResults {
+		if let Node::FunctionResults(results) = &self.nodes[self.results_index()] {
+			results
+		} else {
+			unreachable!()
+		}
+	}
+
+	/// Returns a mutable reference to the results boundary node.
+	pub fn results_mut(&mut self) -> &mut FunctionResults {
+		let index = self.results_index();
+
+		if let Node::FunctionResults(results) = &mut self.nodes[index] {
+			results
+		} else {
+			unreachable!()
+		}
+	}
+
+	fn for_each_root<H: FnMut(u32)>(&self, mut handler: H) {
+		let result = u32::try_from(self.results_index()).unwrap_or_else(|_| unreachable!());
+
+		handler(Self::CAPTURES_ID);
+		handler(Self::ARGUMENTS_ID);
+		handler(result);
+	}
+}
+
+impl Match {
+	/// Visits each outer link (arguments, condition).
+	pub fn for_each_outer<H: FnMut(Link)>(&self, mut handler: H) {
+		for &link in &self.arguments {
+			handler(link);
+		}
+
+		handler(self.condition);
+	}
+
+	/// Mutably visits each outer link (arguments, condition).
+	pub fn for_each_mut_outer<H: FnMut(&mut Link)>(&mut self, mut handler: H) {
+		for link in &mut self.arguments {
+			handler(link);
+		}
+
+		handler(&mut self.condition);
+	}
+}
+
+impl Branch {
+	fn nodes(&self) -> &[Node] {
+		&self.nodes
+	}
+
+	const fn nodes_mut(&mut self) -> &mut Vec<Node> {
+		&mut self.nodes
+	}
+
+	/// Returns the index of the results boundary node.
+	#[must_use]
+	pub fn results_index(&self) -> usize {
+		self.nodes
+			.iter()
+			.rposition(|node| matches!(node, Node::BranchResults(_)))
+			.unwrap_or_else(|| unreachable!())
+	}
+
+	/// Returns a reference to the results boundary node.
+	#[must_use]
+	pub fn results(&self) -> &BranchResults {
+		if let Node::BranchResults(results) = &self.nodes[self.results_index()] {
+			results
+		} else {
+			unreachable!()
+		}
+	}
+
+	/// Returns a mutable reference to the results boundary node.
+	pub fn results_mut(&mut self) -> &mut BranchResults {
+		let index = self.results_index();
+
+		if let Node::BranchResults(results) = &mut self.nodes[index] {
+			results
+		} else {
+			unreachable!()
+		}
+	}
+
+	fn for_each_root<H: FnMut(u32)>(&self, mut handler: H) {
+		let result = u32::try_from(self.results_index()).unwrap_or_else(|_| unreachable!());
+
+		handler(Self::ARGUMENTS_ID);
+		handler(result);
+	}
+}
+
+impl Repeat {
+	/// Visits each outer link (arguments).
+	pub fn for_each_outer<H: FnMut(Link)>(&self, mut handler: H) {
+		for &link in &self.arguments {
+			handler(link);
+		}
+	}
+
+	/// Mutably visits each outer link (arguments).
+	pub fn for_each_mut_outer<H: FnMut(&mut Link)>(&mut self, mut handler: H) {
+		for link in &mut self.arguments {
+			handler(link);
+		}
+	}
+
+	fn nodes(&self) -> &[Node] {
+		&self.nodes
+	}
+
+	const fn nodes_mut(&mut self) -> &mut Vec<Node> {
+		&mut self.nodes
+	}
+
+	/// Returns the index of the results boundary node.
+	#[must_use]
+	pub fn results_index(&self) -> usize {
+		self.nodes
+			.iter()
+			.rposition(|node| matches!(node, Node::RepeatResults(_)))
+			.unwrap_or_else(|| unreachable!())
+	}
+
+	/// Returns a reference to the results boundary node.
+	#[must_use]
+	pub fn results(&self) -> &RepeatResults {
+		if let Node::RepeatResults(results) = &self.nodes[self.results_index()] {
+			results
+		} else {
+			unreachable!()
+		}
+	}
+
+	/// Returns a mutable reference to the results boundary node.
+	pub fn results_mut(&mut self) -> &mut RepeatResults {
+		let index = self.results_index();
+
+		if let Node::RepeatResults(results) = &mut self.nodes[index] {
+			results
+		} else {
+			unreachable!()
+		}
+	}
+
+	fn for_each_root<H: FnMut(u32)>(&self, mut handler: H) {
+		let result = u32::try_from(self.results_index()).unwrap_or_else(|_| unreachable!());
+
+		handler(Self::ARGUMENTS_ID);
+		handler(result);
+	}
+}
+
+impl Region {
+	/// Returns a reference to the region's nodes.
+	#[must_use]
+	pub fn nodes(&self) -> &[Node] {
+		match self {
+			Self::Module(region) => region.nodes(),
+			Self::Function(region) => region.nodes(),
+			Self::Branch(region) => region.nodes(),
+			Self::Repeat(region) => region.nodes(),
+		}
+	}
+
+	/// Returns a mutable reference to the region's nodes.
+	pub fn nodes_mut(&mut self) -> &mut Vec<Node> {
+		match self {
+			Self::Module(region) => region.nodes_mut(),
+			Self::Function(region) => region.nodes_mut(),
+			Self::Branch(region) => region.nodes_mut(),
+			Self::Repeat(region) => region.nodes_mut(),
+		}
+	}
+
+	/// Visits each root node index in the region.
+	pub fn for_each_root<H: FnMut(u32)>(&self, handler: H) {
+		match self {
+			Self::Module(region) => region.for_each_root(handler),
+			Self::Function(region) => region.for_each_root(handler),
+			Self::Branch(region) => region.for_each_root(handler),
+			Self::Repeat(region) => region.for_each_root(handler),
+		}
+	}
+}
+
+impl Node {
+	/// Visits each outer link (arguments from the parent region's perspective).
+	pub fn for_each_outer<H: FnMut(Link)>(&self, mut handler: H) {
+		for_each_visit!(self, for_each_outer, handler);
+	}
+
+	/// Mutably visits each outer link (arguments from the parent region's perspective).
+	pub fn for_each_mut_outer<H: FnMut(&mut Link)>(&mut self, mut handler: H) {
+		for_each_visit!(self, for_each_mut_outer, handler);
 	}
 }

@@ -1,4 +1,5 @@
 use alloc::vec::Vec;
+
 use web_assembly_graph::ControlFlowGraph;
 
 use super::{single::Single, strongly_connected_finder::StronglyConnectedFinder};

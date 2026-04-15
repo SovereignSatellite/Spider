@@ -1,14 +1,22 @@
 //! Invariant port motion.
 
+use alloc::sync::Arc;
+
 use hashbrown::HashMap;
+use parking_lot::Mutex;
+use set::Set;
+
 use ir_graph::{
-	DataFlowGraph, Link, Node,
-	control::{GammaIn, GammaOut, RegionOut, ThetaIn, ThetaOut},
+	Link, Node,
+	control::{Match, Repeat},
 };
+
+use super::tracer;
 
 /// Moves invariant ports out of control flow regions.
 pub struct InvariantPortMover {
 	map: HashMap<Link, Link>,
+	visited: Set,
 }
 
 impl InvariantPortMover {
@@ -17,157 +25,155 @@ impl InvariantPortMover {
 	pub fn new() -> Self {
 		Self {
 			map: HashMap::new(),
+			visited: Set::new(),
 		}
 	}
 
-	fn get_reference(&self, link: Link) -> Link {
+	fn get_redirected(&self, link: Link) -> Link {
 		self.map.get(&link).copied().unwrap_or(link)
 	}
 
-	fn find_argument(&self, result: Link, input: u32, arguments: &[Link]) -> Option<Link> {
-		let result = self.get_reference(result);
+	fn find_match(&mut self, id: u32, arc: &Arc<Mutex<Match>>) {
+		let guard = arc.lock();
 
-		(result.0 == input).then(|| {
-			let port = usize::from(result.1);
-
-			self.get_reference(arguments[port])
-		})
-	}
-
-	fn find_shared_reference(
-		&self,
-		graph: &DataFlowGraph,
-		regions: &[u32],
-		port: usize,
-		arguments: &[Link],
-	) -> Option<Link> {
-		let mut arguments = regions.iter().map(|&region| {
-			let RegionOut { input, results, .. } = graph.get(region).as_region_out().unwrap();
-
-			self.find_argument(results[port], *input, arguments)
-		});
-
-		arguments
-			.next()
-			.unwrap()
-			.filter(|&first| arguments.all(|link| link == Some(first)))
-	}
-
-	fn handle_simple_reference(
-		&mut self,
-		arguments: &[Link],
-		results: &[Link],
-		input: u32,
-		output: u32,
-	) {
-		// Assuming the result of the region is the same value as its argument,
-		// then we can replace it with a direct link.
-		for (port, &result) in results.iter().enumerate() {
-			if let Some(argument) = self.find_argument(result, input, arguments)
-				&& argument == self.get_reference(arguments[port])
-			{
-				let link = Link(output, port.try_into().unwrap());
-
-				self.map.insert(link, argument);
+		for port in 0..guard.result_count() {
+			if let Some(origin) = tracer::trace_match(&guard, port) {
+				self.map.insert(Link(id, port), self.get_redirected(origin));
 			}
 		}
 	}
 
-	fn handle_gamma(&mut self, graph: &DataFlowGraph, gamma_out: &GammaOut) {
-		let GammaOut { input, regions } = gamma_out;
-		let GammaIn {
-			output, arguments, ..
-		} = graph.get(*input).as_gamma_in().unwrap();
+	fn find_repeat(&mut self, id: u32, arc: &Arc<Mutex<Repeat>>) {
+		let mut guard = arc.lock();
 
-		for port in 0..gamma_out.ports_output(graph) {
-			if let Some(argument) = self.find_shared_reference(graph, regions, port, arguments) {
-				let link = Link(*output, port.try_into().unwrap());
+		for port in 0..guard.result_count() {
+			let Some(origin) = tracer::trace_repeat(&mut self.visited, &guard, port) else {
+				continue;
+			};
 
-				self.map.insert(link, argument);
-			}
+			let canonical = self.visited.ascending().next().unwrap();
+			let canonical = u16::try_from(canonical).unwrap();
+
+			self.map.insert(Link(id, port), self.get_redirected(origin));
+
+			guard.results_mut().sources[usize::from(port)] = Link(0, canonical);
 		}
 	}
 
-	fn handle_theta(&mut self, graph: &DataFlowGraph, theta_out: &ThetaOut) {
-		let ThetaOut { input, results, .. } = theta_out;
-		let ThetaIn { output, arguments } = graph.get(*input).as_theta_in().unwrap();
-
-		self.handle_simple_reference(arguments, results, *input, *output);
-	}
-
-	/// Runs the invariant port motion pass on the graph.
-	pub fn run(&mut self, graph: &mut DataFlowGraph) {
+	fn find_all(&mut self, nodes: &[Node]) {
 		self.map.clear();
 
-		for node in graph.nodes() {
-			match node {
-				Node::GammaOut(gamma_out) => self.handle_gamma(graph, gamma_out),
-				Node::ThetaOut(theta_out) => self.handle_theta(graph, theta_out),
+		for (index, node) in nodes.iter().enumerate() {
+			let id = u32::try_from(index).unwrap();
 
-				Node::Apply(_)
-				| Node::F32(_)
-				| Node::F64(_)
-				| Node::Fence(_)
-				| Node::GammaIn(_)
-				| Node::GlobalGet(_)
-				| Node::GlobalNew(_)
-				| Node::GlobalSet(_)
+			match node {
+				Node::Function(_)
+				| Node::ModuleArguments(_)
+				| Node::ModuleResults(_)
+				| Node::FunctionCaptures(_)
+				| Node::FunctionArguments(_)
+				| Node::FunctionResults(_)
+				| Node::BranchArguments(_)
+				| Node::BranchResults(_)
+				| Node::RepeatArguments(_)
+				| Node::RepeatResults(_)
+				| Node::Import(_)
 				| Node::Host(_)
+				| Node::Trap
+				| Node::Null
 				| Node::I32(_)
 				| Node::I64(_)
+				| Node::F32(_)
+				| Node::F64(_)
 				| Node::Identity(_)
-				| Node::Import(_)
+				| Node::Fence(_)
+				| Node::Apply(_)
+				| Node::RefIsNull(_)
+				| Node::IntegerUnaryOperation(_)
 				| Node::IntegerBinaryOperation(_)
 				| Node::IntegerCompareOperation(_)
-				| Node::IntegerConvertToNumber(_)
-				| Node::IntegerExtend(_)
 				| Node::IntegerNarrow(_)
-				| Node::IntegerTransmuteToNumber(_)
-				| Node::IntegerUnaryOperation(_)
 				| Node::IntegerWiden(_)
-				| Node::LambdaIn(_)
-				| Node::LambdaOut(_)
-				| Node::MemoryCopy(_)
-				| Node::MemoryDrop(_)
-				| Node::MemoryFill(_)
-				| Node::MemoryGrow(_)
-				| Node::MemoryLoad(_)
-				| Node::MemoryNew(_)
-				| Node::MemorySize(_)
-				| Node::MemoryStore(_)
-				| Node::Null
+				| Node::IntegerExtend(_)
+				| Node::IntegerConvertToNumber(_)
+				| Node::IntegerTransmuteToNumber(_)
+				| Node::NumberUnaryOperation(_)
 				| Node::NumberBinaryOperation(_)
 				| Node::NumberCompareOperation(_)
 				| Node::NumberNarrow(_)
-				| Node::NumberTransmuteToInteger(_)
-				| Node::NumberTruncateToInteger(_)
-				| Node::NumberUnaryOperation(_)
 				| Node::NumberWiden(_)
-				| Node::OmegaIn(_)
-				| Node::OmegaOut(_)
-				| Node::RefIsNull(_)
-				| Node::RegionIn(_)
-				| Node::RegionOut(_)
-				| Node::TableCopy(_)
-				| Node::TableDrop(_)
-				| Node::TableFill(_)
-				| Node::TableGet(_)
-				| Node::TableGrow(_)
+				| Node::NumberTruncateToInteger(_)
+				| Node::NumberTransmuteToInteger(_)
+				| Node::GlobalNew(_)
+				| Node::GlobalGet(_)
+				| Node::GlobalSet(_)
 				| Node::TableNew(_)
+				| Node::TableGet(_)
 				| Node::TableSet(_)
 				| Node::TableSize(_)
-				| Node::ThetaIn(_)
-				| Node::Trap => {}
+				| Node::TableGrow(_)
+				| Node::TableFill(_)
+				| Node::TableCopy(_)
+				| Node::TableDrop(_)
+				| Node::MemoryNew(_)
+				| Node::MemoryLoad(_)
+				| Node::MemoryStore(_)
+				| Node::MemorySize(_)
+				| Node::MemoryGrow(_)
+				| Node::MemoryFill(_)
+				| Node::MemoryCopy(_)
+				| Node::MemoryDrop(_) => {}
+
+				Node::Match(arc) => self.find_match(id, arc),
+				Node::Repeat(arc) => self.find_repeat(id, arc),
 			}
 		}
+	}
 
-		for node in graph.nodes_mut() {
-			node.for_each_mut_argument(|old| {
-				if let Some(new) = self.map.get(old) {
-					*old = *new;
+	fn assign_single(&self, link: &mut Link) {
+		if let Some(&new) = self.map.get(link) {
+			*link = new;
+		}
+	}
+
+	fn fixup_repeat_inner_references(repeat: &mut Repeat) {
+		let position = repeat.results_index();
+		let (inner, tail) = repeat.nodes.split_at_mut(position);
+		let Node::RepeatResults(results) = &tail[0] else {
+			unreachable!()
+		};
+
+		for node in inner.iter_mut() {
+			node.for_each_mut_outer(|link| {
+				if link.0 != 0 {
+					return;
+				}
+
+				let result = results.sources[usize::from(link.1)];
+
+				if result.0 == 0 && result.1 != link.1 {
+					*link = result;
 				}
 			});
 		}
+	}
+
+	fn assign_all(&self, nodes: &mut [Node]) {
+		for node in nodes.iter_mut() {
+			node.for_each_mut_outer(|link| self.assign_single(link));
+		}
+
+		for node in nodes.iter() {
+			if let Node::Repeat(arc) = node {
+				Self::fixup_repeat_inner_references(&mut arc.lock());
+			}
+		}
+	}
+
+	/// Runs the invariant port motion pass on the region.
+	pub fn run(&mut self, nodes: &mut [Node]) {
+		self.find_all(nodes);
+		self.assign_all(nodes);
 	}
 }
 

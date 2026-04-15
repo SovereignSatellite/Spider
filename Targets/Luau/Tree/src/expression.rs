@@ -2,13 +2,13 @@
 
 use alloc::{boxed::Box, sync::Arc, vec::Vec};
 
+use super::statement::Sequence;
+
 pub use ir_graph::simple::{
 	ExtendType, IntegerBinaryOperator, IntegerCompareOperator, IntegerType, IntegerUnaryOperator,
 	LoadType, MemoryNew, NumberBinaryOperator, NumberCompareOperator, NumberType,
 	NumberUnaryOperator,
 };
-
-use crate::statement::Sequence;
 
 /// A function definition.
 pub struct Function {
@@ -83,7 +83,7 @@ impl Local {
 		if let Self::Fast { name } = self {
 			name
 		} else {
-			panic!("`Local::Fast expected`, but we got `Local::Slow`")
+			unreachable!()
 		}
 	}
 }
@@ -470,7 +470,7 @@ impl Expression {
 		if let Self::Local(local) = *self {
 			local
 		} else {
-			panic!("`Expression::Local` expected, we got something else")
+			unreachable!()
 		}
 	}
 
@@ -562,7 +562,7 @@ impl Expression {
 			| Self::TableGet(_)
 			| Self::MemoryNew(_)
 			| Self::MemoryLoad(_) => {
-				panic!("`Expression` integer expected, we got something else")
+				unreachable!("integer `Expression` expected")
 			}
 		}
 	}

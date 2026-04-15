@@ -1,4 +1,3 @@
-use alloc::vec::Vec;
 use luajit_tree::expression::Local;
 
 pub struct AssignmentSimplifier {

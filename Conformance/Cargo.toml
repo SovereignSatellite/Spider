@@ -17,6 +17,8 @@ luau-printer = { path = "../Targets/Luau/Printer" }
 luajit-builder = { path = "../Targets/LuaJIT/Builder" }
 luajit-printer = { path = "../Targets/LuaJIT/Printer" }
 
+parking_lot.workspace = true
+
 datatest-stable = "0.3.2"
 wast = "222.0.0"
 

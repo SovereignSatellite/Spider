@@ -1,55 +1,78 @@
-use ir_graph::{DataFlowGraph, Link};
+use std::sync::Arc;
+
+use parking_lot::Mutex;
+
+use ir_graph::{Node, Region, control::Module};
+
 use ir_visitor::{
 	control::{
 		dead_port_eliminator::DeadPortEliminator, invariant_port_mover::InvariantPortMover,
 		region_identity,
 	},
-	isle,
-	topological_normalizer::TopologicalNormalizer,
+	isle, region_driver,
+	topological_compactor::TopologicalCompactor,
 };
 
-fn run_isle_optimizations(graph: &mut DataFlowGraph) -> bool {
-	let mut applied = false;
-	let len = graph.len();
+struct Optimizer {
+	topological_compactor: TopologicalCompactor,
+	invariant_port_mover: InvariantPortMover,
+	dead_port_eliminator: DeadPortEliminator,
+}
 
-	for id in (0..len.try_into().unwrap()).rev() {
-		while isle::simplify_i32(graph, id)
-			|| isle::simplify_global(graph, id)
-			|| isle::simplify_table(graph, id)
-			|| isle::simplify_memory(graph, id)
-		{
-			applied = true;
+impl Optimizer {
+	fn new() -> Self {
+		Self {
+			topological_compactor: TopologicalCompactor::new(),
+			invariant_port_mover: InvariantPortMover::new(),
+			dead_port_eliminator: DeadPortEliminator::new(),
 		}
 	}
 
-	applied
-}
+	fn apply_isle(nodes: &mut Vec<Node>) -> bool {
+		let mut applied = false;
+		let len = nodes.len();
 
-pub fn run_all_optimizations(graph: &mut DataFlowGraph, mut omega: u32) -> u32 {
-	let mut topological_normalizer = TopologicalNormalizer::new();
-	let mut invariant_port_mover = InvariantPortMover::new();
-	let mut dead_port_eliminator = DeadPortEliminator::new();
-
-	loop {
-		omega = topological_normalizer.run(graph, omega);
-
-		invariant_port_mover.run(graph);
-		dead_port_eliminator.run(graph, Link(omega, 0));
-
-		if !run_isle_optimizations(graph) {
-			break;
+		for id in (0..len.try_into().unwrap()).rev() {
+			while isle::simplify_i32(nodes, id)
+				|| isle::simplify_global(nodes, id)
+				|| isle::simplify_table(nodes, id)
+				|| isle::simplify_memory(nodes, id)
+			{
+				applied = true;
+			}
 		}
 
-		region_identity::remove(graph);
+		applied
 	}
 
-	omega
+	fn apply(&mut self, region: &mut Region) {
+		loop {
+			self.topological_compactor.run(region);
+			self.invariant_port_mover.run(region.nodes_mut());
+			self.dead_port_eliminator.run(region.nodes_mut());
+
+			if !Self::apply_isle(region.nodes_mut()) {
+				break;
+			}
+
+			region_identity::remove(region.nodes_mut());
+		}
+	}
+
+	fn finalize(&mut self, region: &mut Region) {
+		region_identity::insert(region);
+		self.topological_compactor.run(region);
+	}
 }
 
-pub fn run_post_process(graph: &mut DataFlowGraph, omega: u32) {
-	let mut topological_normalizer = TopologicalNormalizer::new();
+pub fn process_module(module: &Arc<Mutex<Module>>, optimize: bool) {
+	let mut optimizer = Optimizer::new();
 
-	region_identity::insert(graph);
+	region_driver::run_module(module, &mut |mut region| {
+		if optimize {
+			optimizer.apply(&mut region);
+		}
 
-	topological_normalizer.run(graph, omega);
+		optimizer.finalize(&mut region);
+	});
 }

@@ -1,7 +1,9 @@
 //! Local variable liveness tracking.
 
 use alloc::vec::Vec;
+
 use set::{Set, Slice};
+
 use web_assembly_graph::{
 	ControlFlowGraph,
 	instruction::{
@@ -561,7 +563,6 @@ impl LocalTracker {
 
 	fn handle_instruction(&mut self, instruction: Instruction) {
 		match instruction {
-			Instruction::Unreachable | Instruction::ElementsDrop(_) | Instruction::DataDrop(_) => {}
 			Instruction::LocalSet(instruction) => self.handle_local_set(instruction),
 			Instruction::LocalBranch(instruction) => self.handle_local_branch(instruction),
 			Instruction::I32Constant(instruction) => self.handle_i32_constant(instruction),
@@ -572,6 +573,7 @@ impl LocalTracker {
 			Instruction::RefNull(instruction) => self.handle_ref_null(instruction),
 			Instruction::RefFunction(instruction) => self.handle_ref_function(instruction),
 			Instruction::Call(instruction) => self.handle_call(instruction),
+			Instruction::Unreachable | Instruction::ElementsDrop(_) | Instruction::DataDrop(_) => {}
 			Instruction::IntegerUnaryOperation(instruction) => {
 				self.handle_integer_unary_operation(instruction);
 			}

@@ -1,9 +1,54 @@
 //! Control flow node types.
 
-use alloc::{boxed::Box, sync::Arc, vec::Vec};
-use list::resizable::Resizable;
+use alloc::sync::{Arc, Weak};
 
+use list::resizable::Resizable;
+use parking_lot::{ArcMutexGuard, Mutex, RawMutex};
+
+use super::Node;
 use crate::Link;
+
+/// An external import node.
+#[derive(Clone)]
+pub struct Import {
+	/// The environment link.
+	pub environment: Link,
+	/// The import namespace.
+	pub namespace: Arc<str>,
+	/// The import name.
+	pub identifier: Arc<str>,
+}
+
+/// An exported symbol.
+#[derive(Clone)]
+pub struct Export {
+	/// The export name.
+	pub identifier: Arc<str>,
+	/// The exported value link.
+	pub reference: Link,
+}
+
+/// A module region.
+pub struct Module {
+	/// The nodes in this region.
+	pub nodes: Vec<Node>,
+}
+
+/// The boundary arguments node for a module region.
+pub struct ModuleArguments {
+	/// The parent module.
+	pub parent: Weak<Mutex<Module>>,
+}
+
+/// The boundary results node for a module region.
+pub struct ModuleResults {
+	/// The parent module.
+	pub parent: Weak<Mutex<Module>>,
+	/// The final state link.
+	pub state: Link,
+	/// The exported symbols.
+	pub exports: Vec<Export>,
+}
 
 /// Value types for function signatures.
 #[derive(Clone, Copy)]
@@ -21,130 +66,102 @@ pub enum ValueType {
 	Reference,
 }
 
-/// A function type with argument and result types.
-#[derive(Clone)]
-pub struct FunctionType {
+/// A function region.
+pub struct Function {
 	/// The argument types.
-	pub arguments: Resizable<ValueType, 15>,
+	pub argument_types: Resizable<ValueType, 15>,
 	/// The result types.
-	pub results: Resizable<ValueType, 15>,
+	pub result_types: Resizable<ValueType, 15>,
+	/// The closure captures.
+	pub captures: Vec<Link>,
+	/// The nodes in this region.
+	pub nodes: Vec<Node>,
 }
 
-/// A lambda (function) input node.
-#[derive(Clone)]
-pub struct LambdaIn {
-	/// The paired output node.
-	pub output: u32,
-	/// The function type signature.
-	pub kind: Box<FunctionType>,
-	/// The closure dependencies.
-	pub dependencies: Vec<Link>,
+/// The boundary captures node for a function region.
+pub struct FunctionCaptures {
+	/// The parent function.
+	pub parent: Weak<Mutex<Function>>,
 }
 
-/// A lambda (function) output node.
-#[derive(Clone)]
-pub struct LambdaOut {
-	/// The paired input node.
-	pub input: u32,
-	/// The result links.
-	pub results: Vec<Link>,
+/// The boundary arguments node for a function region.
+pub struct FunctionArguments {
+	/// The parent function.
+	pub parent: Weak<Mutex<Function>>,
 }
 
-/// A region (scope) input node.
-#[derive(Clone, Copy)]
-pub struct RegionIn {
-	/// The parent gamma input node.
-	pub input: u32,
-	/// The paired output node.
-	pub output: u32,
+/// The boundary results node for a function region.
+pub struct FunctionResults {
+	/// The parent function.
+	pub parent: Weak<Mutex<Function>>,
+	/// The result value links.
+	pub sources: Vec<Link>,
 }
 
-/// A region (scope) output node.
-#[derive(Clone)]
-pub struct RegionOut {
-	/// The paired input node.
-	pub input: u32,
-	/// The parent gamma output node.
-	pub output: u32,
-	/// The result links.
-	pub results: Vec<Link>,
+/// A branch region within a match.
+pub struct Branch {
+	/// The nodes in this region.
+	pub nodes: Vec<Node>,
+	/// The parent match.
+	pub parent: Weak<Mutex<Match>>,
 }
 
-/// A gamma (conditional) input node.
-#[derive(Clone)]
-pub struct GammaIn {
-	/// The paired output node.
-	pub output: u32,
+/// The boundary arguments node for a branch region.
+pub struct BranchArguments {
+	/// The parent branch.
+	pub parent: Weak<Mutex<Branch>>,
+}
+
+/// The boundary results node for a branch region.
+pub struct BranchResults {
+	/// The parent branch.
+	pub parent: Weak<Mutex<Branch>>,
+	/// The result value links.
+	pub sources: Vec<Link>,
+}
+
+/// A match (conditional) region.
+pub struct Match {
 	/// The argument links.
 	pub arguments: Vec<Link>,
 	/// The condition link.
 	pub condition: Link,
+	/// The branch regions.
+	pub branches: Vec<Arc<Mutex<Branch>>>,
 }
 
-/// A gamma (conditional) output node.
-#[derive(Clone)]
-pub struct GammaOut {
-	/// The paired input node.
-	pub input: u32,
-	/// The region output nodes for each branch.
-	pub regions: Vec<u32>,
-}
-
-/// A theta (loop) input node.
-#[derive(Clone)]
-pub struct ThetaIn {
-	/// The paired output node.
-	pub output: u32,
+/// A repeat (loop) region.
+pub struct Repeat {
 	/// The argument links.
 	pub arguments: Vec<Link>,
+	/// The nodes in this region.
+	pub nodes: Vec<Node>,
 }
 
-/// A theta (loop) output node.
-#[derive(Clone)]
-pub struct ThetaOut {
-	/// The paired input node.
-	pub input: u32,
-	/// The result links fed back to the loop or out.
-	pub results: Vec<Link>,
+/// The boundary arguments node for a repeat region.
+pub struct RepeatArguments {
+	/// The parent repeat.
+	pub parent: Weak<Mutex<Repeat>>,
+}
+
+/// The boundary results node for a repeat region.
+pub struct RepeatResults {
+	/// The parent repeat.
+	pub parent: Weak<Mutex<Repeat>>,
+	/// The result value links fed back to the loop or out.
+	pub sources: Vec<Link>,
 	/// The loop continuation condition.
 	pub condition: Link,
 }
 
-/// An external import node.
-#[derive(Clone)]
-pub struct Import {
-	/// The environment link.
-	pub environment: Link,
-	/// The import namespace.
-	pub namespace: Arc<str>,
-	/// The import name.
-	pub identifier: Arc<str>,
-}
-
-/// An omega (program) input node.
-#[derive(Clone, Copy)]
-pub struct OmegaIn {
-	/// The paired output node.
-	pub output: u32,
-}
-
-/// An exported symbol.
-#[derive(Clone)]
-pub struct Export {
-	/// The export name.
-	pub identifier: Arc<str>,
-	/// The exported value link.
-	pub reference: Link,
-}
-
-/// An omega (program) output node.
-#[derive(Clone)]
-pub struct OmegaOut {
-	/// The paired input node.
-	pub input: u32,
-
-	/// The final state link.
-	pub state: Link,
-	/// The exported symbols.
-	pub exports: Vec<Export>,
+/// A locked reference to a concrete region type.
+pub enum Region {
+	/// A module region.
+	Module(ArcMutexGuard<RawMutex, Module>),
+	/// A function region.
+	Function(ArcMutexGuard<RawMutex, Function>),
+	/// A branch region within a match.
+	Branch(ArcMutexGuard<RawMutex, Branch>),
+	/// A repeat (loop) region.
+	Repeat(ArcMutexGuard<RawMutex, Repeat>),
 }

@@ -12,14 +12,15 @@ pub enum Color {
 impl Color {
 	pub const fn from_reference(node: &Node) -> Self {
 		match node {
-			Node::OmegaIn(_) | Node::OmegaOut(_) => Self::Brown,
-			Node::LambdaIn(_) | Node::LambdaOut(_) => Self::Blue,
-			Node::GammaIn(_) | Node::GammaOut(_) => Self::Green,
-			Node::ThetaIn(_) | Node::ThetaOut(_) => Self::Red,
+			Node::Function(_)
+			| Node::FunctionCaptures(_)
+			| Node::FunctionArguments(_)
+			| Node::FunctionResults(_) => Self::Blue,
+			Node::Match(_) | Node::BranchArguments(_) | Node::BranchResults(_) => Self::Green,
+			Node::Repeat(_) | Node::RepeatArguments(_) | Node::RepeatResults(_) => Self::Red,
+			Node::ModuleArguments(_) | Node::ModuleResults(_) => Self::Brown,
 
-			Node::RegionIn(_)
-			| Node::RegionOut(_)
-			| Node::Import(_)
+			Node::Import(_)
 			| Node::Host(_)
 			| Node::Trap
 			| Node::Null

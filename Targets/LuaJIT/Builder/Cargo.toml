@@ -11,4 +11,4 @@ ir-graph = { path = "../../../IR/Graph" }
 luajit-tree = { path = "../Tree" }
 
 hashbrown.workspace = true
-set.workspace = true
+parking_lot.workspace = true

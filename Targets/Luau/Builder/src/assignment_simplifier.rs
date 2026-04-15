@@ -1,4 +1,3 @@
-use alloc::vec::Vec;
 use luau_tree::expression::Local;
 
 pub struct AssignmentSimplifier {

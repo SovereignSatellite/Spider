@@ -1,4 +1,3 @@
-use alloc::vec::Vec;
 use wasmparser::{
 	BinaryReader, Data, Element, Export, FunctionBody, Global, Import, MemoryType, Parser, Payload,
 	RecGroup, Result, SectionLimited, Table, TagType,

@@ -2,8 +2,7 @@
 
 extern crate alloc;
 
-mod common;
-
+use alloc::sync::Arc;
 use std::{
 	ffi::OsStr,
 	fs::File,
@@ -11,23 +10,24 @@ use std::{
 	path::{Path, PathBuf},
 };
 
-use alloc::sync::Arc;
 use datatest_stable::Result;
-use luajit_builder::LuaJITBuilder;
-use luajit_printer::{
-	LuaJITPrinter,
-	library::{NamesFinder, Printer as LibraryPrinter, Sections as LibrarySections},
-};
 use wast::{
 	QuoteWat, WastArg, WastExecute, WastInvoke, WastRet, WastThread, Wat,
 	core::{NanPattern, WastArgCore, WastRetCore},
 	token::{F32, F64, Id, Span},
 };
 
-use common::{compiler::Compiler, process, visitor::Visitor};
-
+use luajit_builder::LuaJITBuilder;
+use luajit_printer::{
+	LuaJITPrinter,
+	library::{NamesFinder, Printer as LibraryPrinter, Sections as LibrarySections},
+};
 use luau_builder as _;
 use luau_printer as _;
+
+use common::{compiler::Compiler, process, visitor::Visitor};
+
+mod common;
 
 const HARNESS_START_SOURCE: &str = include_str!("harness/luajit.start.lua");
 const HARNESS_END_SOURCE: &str = include_str!("harness/luajit.end.lua");

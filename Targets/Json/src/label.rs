@@ -14,16 +14,32 @@ use ir_graph::{
 #[must_use]
 pub fn get_static(node: &Node) -> Option<&'static str> {
 	let name = match node {
-		Node::LambdaIn(_) => "Lambda In",
-		Node::LambdaOut(_) => "Lambda Out",
-		Node::RegionIn(_) => "Region In",
-		Node::RegionOut(_) => "Region Out",
-		Node::GammaIn(_) => "Gamma In",
-		Node::GammaOut(_) => "Gamma Out",
-		Node::ThetaIn(_) => "Theta In",
-		Node::ThetaOut(_) => "Theta Out",
-		Node::OmegaIn(_) => "Omega In",
-		Node::OmegaOut(_) => "Omega Out",
+		Node::Function(_) => "Function",
+		Node::Match(_) => "Match",
+		Node::Repeat(_) => "Repeat",
+
+		Node::ModuleArguments(_) => "Module Arguments",
+		Node::ModuleResults(_) => "Module Results",
+		Node::FunctionCaptures(_) => "Function Captures",
+		Node::FunctionArguments(_) => "Function Arguments",
+		Node::FunctionResults(_) => "Function Results",
+		Node::BranchArguments(_) => "Branch Arguments",
+		Node::BranchResults(_) => "Branch Results",
+		Node::RepeatArguments(_) => "Repeat Arguments",
+		Node::RepeatResults(_) => "Repeat Results",
+
+		Node::Import(_)
+		| Node::I32(_)
+		| Node::I64(_)
+		| Node::F32(_)
+		| Node::F64(_)
+		| Node::IntegerUnaryOperation(_)
+		| Node::IntegerBinaryOperation(_)
+		| Node::IntegerCompareOperation(_)
+		| Node::IntegerExtend(_)
+		| Node::NumberUnaryOperation(_)
+		| Node::NumberBinaryOperation(_)
+		| Node::NumberCompareOperation(_) => return None,
 
 		Node::Host(host) => host.identifier(),
 		Node::Trap => "Trap",
@@ -59,19 +75,6 @@ pub fn get_static(node: &Node) -> Option<&'static str> {
 		Node::MemoryFill(_) => "Memory Fill",
 		Node::MemoryCopy(_) => "Memory Copy",
 		Node::MemoryDrop(_) => "Memory Drop",
-
-		Node::Import(_)
-		| Node::I32(_)
-		| Node::I64(_)
-		| Node::F32(_)
-		| Node::F64(_)
-		| Node::IntegerUnaryOperation(_)
-		| Node::IntegerBinaryOperation(_)
-		| Node::IntegerCompareOperation(_)
-		| Node::IntegerExtend(_)
-		| Node::NumberUnaryOperation(_)
-		| Node::NumberBinaryOperation(_)
-		| Node::NumberCompareOperation(_) => return None,
 	};
 
 	Some(name)
@@ -249,29 +252,18 @@ fn write_number_compare_operation(node: NumberCompareOperation, out: &mut dyn Wr
 
 pub fn write(node: &Node, out: &mut dyn Write) -> Result<()> {
 	match *node {
-		Node::Import(ref node) => write_import(node, out),
-		Node::I32(i32) => write!(out, "{i32}_i32"),
-		Node::I64(i64) => write!(out, "{i64}_i64"),
-		Node::F32(f32) => write!(out, "{f32:e}_f32"),
-		Node::F64(f64) => write!(out, "{f64:e}_f64"),
-		Node::IntegerUnaryOperation(node) => write_integer_unary_operation(node, out),
-		Node::IntegerBinaryOperation(node) => write_integer_binary_operation(node, out),
-		Node::IntegerCompareOperation(node) => write_integer_compare_operation(node, out),
-		Node::IntegerExtend(node) => write_integer_extend(node, out),
-		Node::NumberUnaryOperation(node) => write_number_unary_operation(node, out),
-		Node::NumberBinaryOperation(node) => write_number_binary_operation(node, out),
-		Node::NumberCompareOperation(node) => write_number_compare_operation(node, out),
-
-		Node::LambdaIn(_)
-		| Node::LambdaOut(_)
-		| Node::RegionIn(_)
-		| Node::RegionOut(_)
-		| Node::GammaIn(_)
-		| Node::GammaOut(_)
-		| Node::ThetaIn(_)
-		| Node::ThetaOut(_)
-		| Node::OmegaIn(_)
-		| Node::OmegaOut(_)
+		Node::Function(_)
+		| Node::Match(_)
+		| Node::Repeat(_)
+		| Node::ModuleArguments(_)
+		| Node::ModuleResults(_)
+		| Node::FunctionCaptures(_)
+		| Node::FunctionArguments(_)
+		| Node::FunctionResults(_)
+		| Node::BranchArguments(_)
+		| Node::BranchResults(_)
+		| Node::RepeatArguments(_)
+		| Node::RepeatResults(_)
 		| Node::Host(_)
 		| Node::Trap
 		| Node::Null
@@ -306,5 +298,18 @@ pub fn write(node: &Node, out: &mut dyn Write) -> Result<()> {
 		| Node::MemoryFill(_)
 		| Node::MemoryCopy(_)
 		| Node::MemoryDrop(_) => Err(Error::other("node does not have a dynamic name")),
+
+		Node::Import(ref node) => write_import(node, out),
+		Node::I32(i32) => write!(out, "{i32}_i32"),
+		Node::I64(i64) => write!(out, "{i64}_i64"),
+		Node::F32(f32) => write!(out, "{f32:e}_f32"),
+		Node::F64(f64) => write!(out, "{f64:e}_f64"),
+		Node::IntegerUnaryOperation(node) => write_integer_unary_operation(node, out),
+		Node::IntegerBinaryOperation(node) => write_integer_binary_operation(node, out),
+		Node::IntegerCompareOperation(node) => write_integer_compare_operation(node, out),
+		Node::IntegerExtend(node) => write_integer_extend(node, out),
+		Node::NumberUnaryOperation(node) => write_number_unary_operation(node, out),
+		Node::NumberBinaryOperation(node) => write_number_binary_operation(node, out),
+		Node::NumberCompareOperation(node) => write_number_compare_operation(node, out),
 	}
 }

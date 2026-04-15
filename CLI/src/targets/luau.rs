@@ -1,6 +1,8 @@
-use std::io::Write;
+use std::{io::Write, sync::Arc};
 
-use ir_graph::DataFlowGraph;
+use parking_lot::Mutex;
+
+use ir_graph::control::Module;
 use luau_builder::LuauBuilder;
 use luau_printer::{
 	LuauPrinter,
@@ -8,10 +10,10 @@ use luau_printer::{
 };
 use luau_tree::LuauTree;
 
-fn build_tree(graph: &DataFlowGraph) -> LuauTree {
+fn build_tree(module: &Arc<Mutex<Module>>) -> LuauTree {
 	let mut builder = LuauBuilder::new();
 
-	builder.run(graph)
+	builder.run(module)
 }
 
 fn print_library(tree: &LuauTree, out: &mut dyn Write) -> std::io::Result<()> {
@@ -34,8 +36,8 @@ fn print_tree(tree: &LuauTree, out: &mut dyn Write) -> std::io::Result<()> {
 	out.flush()
 }
 
-pub fn print(graph: &DataFlowGraph, out: &mut dyn Write) {
-	let tree = build_tree(graph);
+pub fn print(module: &Arc<Mutex<Module>>, out: &mut dyn Write) {
+	let tree = build_tree(module);
 
 	print_library(&tree, out).expect("library should print");
 	print_tree(&tree, out).expect("source should print");

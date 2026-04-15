@@ -10,3 +10,4 @@ workspace = true
 ir-graph = { path = "../../IR/Graph" }
 
 hashbrown.workspace = true
+parking_lot.workspace = true

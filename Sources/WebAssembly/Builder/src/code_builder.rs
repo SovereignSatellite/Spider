@@ -1,7 +1,9 @@
 //! Low-level code builder for emitting WebAssembly IR instructions and basic blocks.
 
 use alloc::vec::Vec;
+
 use list::resizable::Resizable;
+
 use web_assembly_graph::{
 	BasicBlock, ControlFlowGraph,
 	instruction::{
@@ -18,7 +20,7 @@ use web_assembly_graph::{
 	},
 };
 
-use crate::stack_builder::{Jump, Level, SHARED_LOCAL};
+use super::stack_builder::{Jump, Level, SHARED_LOCAL};
 
 fn fill_predecessors(basic_blocks: &mut [BasicBlock]) {
 	for predecessor_usize in 0..basic_blocks.len() {

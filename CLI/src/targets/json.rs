@@ -1,10 +1,12 @@
-use std::io::Write;
+use std::{io::Write, sync::Arc};
 
-use ir_graph::DataFlowGraph;
+use parking_lot::Mutex;
+
+use ir_graph::control::Module;
 use json_printer::JsonPrinter;
 
-pub fn print(graph: &DataFlowGraph, out: &mut dyn Write) {
+pub fn print(module: &Arc<Mutex<Module>>, out: &mut dyn Write) {
 	let mut printer = JsonPrinter::new();
 
-	printer.print(graph, out).expect("graph should print");
+	printer.print(module, out).expect("module should print");
 }

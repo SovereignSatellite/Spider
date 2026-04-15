@@ -30,4 +30,6 @@ clap = { version = "4.5.23", default-features = false, features = [
 	"usage",
 ] }
 
+parking_lot.workspace = true
+
 wasmparser = { workspace = true, features = ["validate"] }

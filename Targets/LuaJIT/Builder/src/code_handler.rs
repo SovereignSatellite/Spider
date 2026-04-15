@@ -1,5 +1,5 @@
-use alloc::vec::Vec;
 use hashbrown::HashMap;
+
 use ir_graph::{Link, simple};
 use luajit_tree::{
 	expression::{Expression, Local},
@@ -14,7 +14,7 @@ use super::{assignment_simplifier::AssignmentSimplifier, data_handler::DataHandl
 pub struct CodeHandler {
 	scopes: Vec<Vec<Statement>>,
 
-	regions: HashMap<u32, Sequence>,
+	regions: HashMap<usize, Sequence>,
 }
 
 impl CodeHandler {
@@ -32,27 +32,36 @@ impl CodeHandler {
 		Sequence { list }
 	}
 
-	pub fn pop_branch(&mut self, id: u32) {
+	pub fn pop_branch(&mut self, key: usize) {
 		let code = self.pop_scope();
 
-		self.regions.insert(id, code);
+		self.regions.insert(key, code);
 	}
 
 	pub fn push_scope(&mut self) {
 		self.scopes.push(Vec::new());
 	}
 
-	pub fn do_match(&mut self, regions: &[u32], condition: Link, data_handler: &mut DataHandler) {
+	fn push_statement(&mut self, statement: Statement) {
+		self.scopes.last_mut().unwrap().push(statement);
+	}
+
+	pub fn do_match(
+		&mut self,
+		branch_keys: &[usize],
+		condition: Link,
+		data_handler: &mut DataHandler,
+	) {
 		let condition = data_handler.load(condition);
-		let condition = if regions.len() == 2 {
+		let condition = if branch_keys.len() == 2 {
 			condition.into_boolean()
 		} else {
 			condition
 		};
 
-		let branches: Vec<_> = regions
+		let branches = branch_keys
 			.iter()
-			.map(|id| self.regions.remove(id).unwrap())
+			.map(|key| self.regions.remove(key).unwrap())
 			.collect();
 
 		let statement = Statement::Match(
@@ -63,7 +72,7 @@ impl CodeHandler {
 			.into(),
 		);
 
-		self.scopes.last_mut().unwrap().push(statement);
+		self.push_statement(statement);
 	}
 
 	pub fn do_repeat(&mut self, condition: Link, data_handler: &mut DataHandler) {
@@ -72,7 +81,7 @@ impl CodeHandler {
 
 		let statement = Statement::Repeat(Repeat { code, condition }.into());
 
-		self.scopes.last_mut().unwrap().push(statement);
+		self.push_statement(statement);
 	}
 
 	pub fn do_rename(&mut self, destination: Link, source: Link, data_handler: &DataHandler) {
@@ -100,13 +109,20 @@ impl CodeHandler {
 			.into(),
 		);
 
-		self.scopes.last_mut().unwrap().push(statement);
+		self.push_statement(statement);
 	}
 
-	pub fn do_bulk_assignment(&mut self, id: u32, sources: &[Link], data_handler: &DataHandler) {
+	pub fn do_bulk_assignment(
+		&mut self,
+		id: u32,
+		sources: &[Link],
+		source_scope: usize,
+		data_handler: &DataHandler,
+	) {
 		let scope = self.scopes.last_mut().unwrap();
 
-		let mut handler = AssignmentSimplifier::new(data_handler.load_assign_all(id, sources));
+		let mut handler =
+			AssignmentSimplifier::new(data_handler.load_assign_all(id, sources, source_scope));
 
 		handler.find_all_assigns(|destination, source| {
 			let source = Expression::Local(source);
@@ -147,7 +163,7 @@ impl CodeHandler {
 			.into(),
 		);
 
-		self.scopes.last_mut().unwrap().push(statement);
+		self.push_statement(statement);
 	}
 
 	pub fn do_global_set(&mut self, node: simple::GlobalSet, data_handler: &mut DataHandler) {
@@ -162,7 +178,7 @@ impl CodeHandler {
 			.into(),
 		);
 
-		self.scopes.last_mut().unwrap().push(statement);
+		self.push_statement(statement);
 	}
 
 	pub fn do_table_set(&mut self, node: simple::TableSet, data_handler: &mut DataHandler) {
@@ -177,7 +193,7 @@ impl CodeHandler {
 			.into(),
 		);
 
-		self.scopes.last_mut().unwrap().push(statement);
+		self.push_statement(statement);
 	}
 
 	pub fn do_table_fill(&mut self, node: simple::TableFill, data_handler: &mut DataHandler) {
@@ -194,7 +210,7 @@ impl CodeHandler {
 			.into(),
 		);
 
-		self.scopes.last_mut().unwrap().push(statement);
+		self.push_statement(statement);
 	}
 
 	pub fn do_table_copy(&mut self, node: simple::TableCopy, data_handler: &mut DataHandler) {
@@ -211,7 +227,7 @@ impl CodeHandler {
 			.into(),
 		);
 
-		self.scopes.last_mut().unwrap().push(statement);
+		self.push_statement(statement);
 	}
 
 	pub fn do_table_drop(&mut self, node: simple::TableDrop, data_handler: &mut DataHandler) {
@@ -222,7 +238,7 @@ impl CodeHandler {
 			.into(),
 		);
 
-		self.scopes.last_mut().unwrap().push(statement);
+		self.push_statement(statement);
 	}
 
 	pub fn do_memory_store(&mut self, node: simple::MemoryStore, data_handler: &mut DataHandler) {
@@ -238,7 +254,7 @@ impl CodeHandler {
 			.into(),
 		);
 
-		self.scopes.last_mut().unwrap().push(statement);
+		self.push_statement(statement);
 	}
 
 	pub fn do_memory_fill(&mut self, node: simple::MemoryFill, data_handler: &mut DataHandler) {
@@ -255,7 +271,7 @@ impl CodeHandler {
 			.into(),
 		);
 
-		self.scopes.last_mut().unwrap().push(statement);
+		self.push_statement(statement);
 	}
 
 	pub fn do_memory_copy(&mut self, node: simple::MemoryCopy, data_handler: &mut DataHandler) {
@@ -272,7 +288,7 @@ impl CodeHandler {
 			.into(),
 		);
 
-		self.scopes.last_mut().unwrap().push(statement);
+		self.push_statement(statement);
 	}
 
 	pub fn do_memory_drop(&mut self, node: simple::MemoryDrop, data_handler: &mut DataHandler) {
@@ -283,6 +299,6 @@ impl CodeHandler {
 			.into(),
 		);
 
-		self.scopes.last_mut().unwrap().push(statement);
+		self.push_statement(statement);
 	}
 }

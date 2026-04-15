@@ -1,6 +1,7 @@
 //! Expression builder that converts WebAssembly operators into IR instructions.
 
 use wasmparser::{BlockType, BrTable, FuncType, Ieee32, Ieee64, MemArg, Operator, OperatorsReader};
+
 use web_assembly_graph::{
 	ControlFlowGraph,
 	instruction::{
@@ -10,7 +11,7 @@ use web_assembly_graph::{
 	},
 };
 
-use crate::{
+use super::{
 	code_builder::CodeBuilder,
 	stack_builder::{Jump, LOCAL_BASE, Level, SHARED_LOCAL, StackBuilder},
 	types::Types,
@@ -1100,7 +1101,7 @@ impl ExpressionBuilder {
 			| Operator::I64MulWideS
 			| Operator::I64MulWideU
 			| _ => {
-				panic!("unsupported WebAssembly operator should not appear in validated input")
+				unimplemented!("WebAssembly operator {operator:?} is not supported")
 			}
 		}
 	}

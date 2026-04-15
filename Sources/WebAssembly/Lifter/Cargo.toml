@@ -13,4 +13,5 @@ web-assembly-liveness = { path = "../Liveness" }
 ir-graph = { path = "../../../IR/Graph" }
 
 list.workspace = true
+parking_lot.workspace = true
 wasmparser.workspace = true

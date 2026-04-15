@@ -2,7 +2,7 @@
 
 use core::ops::ControlFlow;
 
-use crate::{
+use super::{
 	LuauTree,
 	expression::{
 		BooleanToInteger, Call as ExpressionCall, Expression, Function, GlobalGet, GlobalNew,

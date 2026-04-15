@@ -1,6 +1,7 @@
 //! Simple operation node types.
 
-use alloc::{sync::Arc, vec::Vec};
+use alloc::sync::Arc;
+
 use list::resizable::Resizable;
 
 use crate::Link;
@@ -10,23 +11,16 @@ pub trait Host {
 	/// Returns the name of this node type.
 	fn identifier(&self) -> &'static str;
 
-	/// Calls `handler` for each identifier.
-	fn for_each_id(&self, handler: &mut dyn FnMut(u32)) {
+	/// Returns the number of output ports.
+	fn result_count(&self) -> u16;
+
+	/// Calls `handler` for each outer link.
+	fn for_each_outer(&self, handler: &mut dyn FnMut(Link)) {
 		let _ = handler;
 	}
 
-	/// Calls `handler` for each mutable identifier.
-	fn for_each_mut_id(&mut self, handler: &mut dyn FnMut(&mut u32)) {
-		let _ = handler;
-	}
-
-	/// Calls `handler` for each argument link.
-	fn for_each_argument(&self, handler: &mut dyn FnMut(Link)) {
-		let _ = handler;
-	}
-
-	/// Calls `handler` for each mutable argument link.
-	fn for_each_mut_argument(&mut self, handler: &mut dyn FnMut(&mut Link)) {
+	/// Calls `handler` for each mutable outer link.
+	fn for_each_mut_outer(&mut self, handler: &mut dyn FnMut(&mut Link)) {
 		let _ = handler;
 	}
 }

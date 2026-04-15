@@ -1,6 +1,6 @@
-use alloc::vec::Vec;
-use ir_graph::Link;
 use wasmparser::{ExternalKind, TypeRef};
+
+use ir_graph::Link;
 use web_assembly_liveness::references::{Reference, ReferenceType};
 
 pub struct GlobalState {

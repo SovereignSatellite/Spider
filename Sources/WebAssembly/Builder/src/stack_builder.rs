@@ -1,11 +1,13 @@
 //! Stack-based builder for managing WebAssembly operand stack and control flow levels.
 
 use alloc::vec::Vec;
+
 use list::resizable::Resizable;
 use wasmparser::{BlockType, FuncType};
+
 use web_assembly_graph::instruction::Name;
 
-use crate::types::Types;
+use super::types::Types;
 
 pub const SHARED_LOCAL: u16 = Name::D as u16;
 pub const LOCAL_BASE: u16 = Name::COUNT;

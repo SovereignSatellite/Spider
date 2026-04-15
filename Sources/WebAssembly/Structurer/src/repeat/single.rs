@@ -1,5 +1,7 @@
 use alloc::vec::Vec;
+
 use set::{Set, Slice};
+
 use web_assembly_graph::{ControlFlowGraph, instruction::Name};
 
 pub struct Single {
