@@ -13,16 +13,15 @@ use super::{
 		Repeat, RepeatArguments, RepeatResults, ValueType,
 	},
 	simple::{
-		Apply, ExtendType, Fence, GlobalGet, GlobalNew, GlobalSet, Identity,
-		IntegerBinaryOperation, IntegerBinaryOperator, IntegerCompareOperation,
-		IntegerCompareOperator, IntegerConvertToNumber, IntegerExtend, IntegerNarrow,
-		IntegerTransmuteToNumber, IntegerType, IntegerUnaryOperation, IntegerUnaryOperator,
-		IntegerWiden, LoadType, Location, MemoryCopy, MemoryDrop, MemoryFill, MemoryGrow,
-		MemoryLoad, MemoryNew, MemorySize, MemoryStore, NumberBinaryOperation,
-		NumberBinaryOperator, NumberCompareOperation, NumberCompareOperator, NumberNarrow,
-		NumberTransmuteToInteger, NumberTruncateToInteger, NumberType, NumberUnaryOperation,
-		NumberUnaryOperator, NumberWiden, RefIsNull, StoreType, TableCopy, TableDrop, TableFill,
-		TableGet, TableGrow, TableNew, TableSet, TableSize,
+		Apply, ExtendType, Fence, Identity, IntegerBinaryOperation, IntegerBinaryOperator,
+		IntegerCompareOperation, IntegerCompareOperator, IntegerConvertToNumber, IntegerNarrow,
+		IntegerSignExtend, IntegerTransmuteToNumber, IntegerType, IntegerUnaryOperation,
+		IntegerUnaryOperator, IntegerWiden, LoadType, Location, MemoryCopy, MemoryDrop, MemoryFill,
+		MemoryGrow, MemoryLoad, MemoryNew, MemorySize, MemoryStore, MutableGet, MutableNew,
+		MutableSet, NumberBinaryOperation, NumberBinaryOperator, NumberCompareOperation,
+		NumberCompareOperator, NumberNarrow, NumberTransmuteToInteger, NumberTruncateToInteger,
+		NumberType, NumberUnaryOperation, NumberUnaryOperator, NumberWiden, RefIsNull, StoreType,
+		TableCopy, TableDrop, TableFill, TableGet, TableGrow, TableNew, TableSet, TableSize,
 	},
 };
 
@@ -198,11 +197,11 @@ impl IntegerWiden {
 	}
 }
 
-impl IntegerExtend {
+impl IntegerSignExtend {
 	/// Adds an integer sign-extension node to the graph.
 	pub fn add_into(nodes: &mut Vec<Node>, source: Link, kind: ExtendType) -> Link {
 		let id = nodes.len().try_into().unwrap_or_else(|_| unreachable!());
-		let node = Node::IntegerExtend(Self { source, kind });
+		let node = Node::IntegerSignExtend(Self { source, kind });
 
 		nodes.push(node);
 
@@ -377,11 +376,11 @@ impl NumberWiden {
 	}
 }
 
-impl GlobalNew {
-	/// Adds a global creation node to the graph.
+impl MutableNew {
+	/// Adds a mutable-cell creation node to the graph.
 	pub fn add_into(nodes: &mut Vec<Node>, initializer: Link) -> Link {
 		let id = nodes.len().try_into().unwrap_or_else(|_| unreachable!());
-		let node = Node::GlobalNew(Self { initializer });
+		let node = Node::MutableNew(Self { initializer });
 
 		nodes.push(node);
 
@@ -389,7 +388,7 @@ impl GlobalNew {
 	}
 }
 
-impl GlobalGet {
+impl MutableGet {
 	/// The number of output ports.
 	pub const RESULT_COUNT: u16 = 2;
 	/// The port index for the result value.
@@ -397,10 +396,10 @@ impl GlobalGet {
 	/// The port index for the state token.
 	pub const STATE_PORT: u16 = 1;
 
-	/// Adds a global read node to the graph.
+	/// Adds a mutable-cell read node to the graph.
 	pub fn add_into(nodes: &mut Vec<Node>, source: Link) -> (Link, Link) {
 		let id = nodes.len().try_into().unwrap_or_else(|_| unreachable!());
-		let node = Node::GlobalGet(Self { source });
+		let node = Node::MutableGet(Self { source });
 
 		nodes.push(node);
 
@@ -408,16 +407,16 @@ impl GlobalGet {
 	}
 }
 
-impl GlobalSet {
+impl MutableSet {
 	/// The number of output ports.
 	pub const RESULT_COUNT: u16 = 1;
 	/// The port index for the state token.
 	pub const STATE_PORT: u16 = 0;
 
-	/// Adds a global write node to the graph.
+	/// Adds a mutable-cell write node to the graph.
 	pub fn add_into(nodes: &mut Vec<Node>, destination: Link, source: Link) -> Link {
 		let id = nodes.len().try_into().unwrap_or_else(|_| unreachable!());
-		let node = Node::GlobalSet(Self {
+		let node = Node::MutableSet(Self {
 			destination,
 			source,
 		});
@@ -1369,7 +1368,7 @@ impl Node {
 			| Self::IntegerCompareOperation(_)
 			| Self::IntegerNarrow(_)
 			| Self::IntegerWiden(_)
-			| Self::IntegerExtend(_)
+			| Self::IntegerSignExtend(_)
 			| Self::IntegerConvertToNumber(_)
 			| Self::IntegerTransmuteToNumber(_)
 			| Self::NumberUnaryOperation(_)
@@ -1379,7 +1378,7 @@ impl Node {
 			| Self::NumberWiden(_)
 			| Self::NumberTruncateToInteger(_)
 			| Self::NumberTransmuteToInteger(_)
-			| Self::GlobalNew(_)
+			| Self::MutableNew(_)
 			| Self::TableNew(_)
 			| Self::MemoryNew(_) => 1,
 
@@ -1400,14 +1399,14 @@ impl Node {
 
 			Self::RepeatArguments(node) => node.result_count(),
 
-			Self::Host(host) => host.result_count(),
+			Self::Foreign(foreign) => foreign.result_count(),
 
 			Self::Identity(node) => node.result_count(),
 			Self::Fence(node) => node.result_count(),
 			Self::Apply(node) => node.result_count(),
 
-			Self::GlobalGet(_) => GlobalGet::RESULT_COUNT,
-			Self::GlobalSet(_) => GlobalSet::RESULT_COUNT,
+			Self::MutableGet(_) => MutableGet::RESULT_COUNT,
+			Self::MutableSet(_) => MutableSet::RESULT_COUNT,
 
 			Self::TableGet(_) => TableGet::RESULT_COUNT,
 			Self::TableSet(_) => TableSet::RESULT_COUNT,

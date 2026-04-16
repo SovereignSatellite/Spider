@@ -1,13 +1,14 @@
 //! Simple operation node types.
 
 use alloc::sync::Arc;
+use core::any::Any;
 
 use list::resizable::Resizable;
 
 use crate::Link;
 
-/// Trait for node types that host links and identifiers.
-pub trait Host {
+/// Trait for nodes that live outside the core computation universe.
+pub trait Foreign: Any {
 	/// Returns the name of this node type.
 	fn identifier(&self) -> &'static str;
 
@@ -214,7 +215,7 @@ pub enum ExtendType {
 
 /// An integer sign-extension node.
 #[derive(Clone, Copy)]
-pub struct IntegerExtend {
+pub struct IntegerSignExtend {
 	/// The link to the source value.
 	pub source: Link,
 	/// The extension type pair.
@@ -391,24 +392,24 @@ pub struct Location {
 	pub offset: Link,
 }
 
-/// A global variable creation node.
+/// A mutable-cell creation node.
 #[derive(Clone, Copy)]
-pub struct GlobalNew {
+pub struct MutableNew {
 	/// The link to the initial value.
 	pub initializer: Link,
 }
 
-/// A global variable read node.
+/// A mutable-cell read node.
 #[derive(Clone, Copy)]
-pub struct GlobalGet {
-	/// The link to the global variable.
+pub struct MutableGet {
+	/// The link to the mutable cell.
 	pub source: Link,
 }
 
-/// A global variable write node.
+/// A mutable-cell write node.
 #[derive(Clone, Copy)]
-pub struct GlobalSet {
-	/// The link to the global variable.
+pub struct MutableSet {
+	/// The link to the mutable cell.
 	pub destination: Link,
 	/// The link to the value being stored.
 	pub source: Link,

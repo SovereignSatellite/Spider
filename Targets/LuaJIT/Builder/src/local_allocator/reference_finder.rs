@@ -7,8 +7,8 @@ use ir_graph::{
 	Link, Node,
 	control::{Match, ModuleArguments, Repeat},
 	simple::{
-		Fence, GlobalGet, GlobalSet, Identity, MemoryCopy, MemoryDrop, MemoryFill, MemoryGrow,
-		MemoryLoad, MemorySize, MemoryStore, TableCopy, TableDrop, TableFill, TableGet, TableGrow,
+		Fence, Identity, MemoryCopy, MemoryDrop, MemoryFill, MemoryGrow, MemoryLoad, MemorySize,
+		MemoryStore, MutableGet, MutableSet, TableCopy, TableDrop, TableFill, TableGet, TableGrow,
 		TableSet, TableSize,
 	},
 };
@@ -187,32 +187,32 @@ fn handle_fence(
 	}
 }
 
-fn handle_global_get(
+fn handle_mutable_get(
 	assignments: &mut HashMap<ScopedLink, ScopedLink>,
 	scope: usize,
 	id: u32,
-	node: GlobalGet,
+	node: MutableGet,
 ) {
-	let GlobalGet { source } = node;
+	let MutableGet { source } = node;
 
-	let _ = assignments.insert((source, scope), (Link(id, GlobalGet::STATE_PORT), scope));
+	let _ = assignments.insert((source, scope), (Link(id, MutableGet::STATE_PORT), scope));
 }
 
-fn handle_global_set(
+fn handle_mutable_set(
 	assignments: &mut HashMap<ScopedLink, ScopedLink>,
 	nodes: &[Node],
 	scope: usize,
 	id: u32,
-	node: GlobalSet,
+	node: MutableSet,
 ) {
-	let GlobalSet {
+	let MutableSet {
 		destination,
 		source,
 	} = node;
 
 	assignments.insert(
 		(destination, scope),
-		(Link(id, GlobalSet::STATE_PORT), scope),
+		(Link(id, MutableSet::STATE_PORT), scope),
 	);
 
 	add_state_assignment(assignments, nodes, scope, source);
@@ -437,7 +437,7 @@ fn handle_node(
 		| Node::RepeatArguments(_)
 		| Node::RepeatResults(_)
 		| Node::Import(_)
-		| Node::Host(_)
+		| Node::Foreign(_)
 		| Node::Null
 		| Node::I32(_)
 		| Node::I64(_)
@@ -450,7 +450,7 @@ fn handle_node(
 		| Node::IntegerCompareOperation(_)
 		| Node::IntegerNarrow(_)
 		| Node::IntegerWiden(_)
-		| Node::IntegerExtend(_)
+		| Node::IntegerSignExtend(_)
 		| Node::IntegerConvertToNumber(_)
 		| Node::IntegerTransmuteToNumber(_)
 		| Node::NumberUnaryOperation(_)
@@ -460,7 +460,7 @@ fn handle_node(
 		| Node::NumberWiden(_)
 		| Node::NumberTruncateToInteger(_)
 		| Node::NumberTransmuteToInteger(_)
-		| Node::GlobalNew(_)
+		| Node::MutableNew(_)
 		| Node::TableNew(_)
 		| Node::MemoryNew(_) => {}
 
@@ -479,8 +479,8 @@ fn handle_node(
 
 		Node::Identity(ref node) => handle_identity(assignments, scope, id, node),
 		Node::Fence(ref node) => handle_fence(assignments, scope, id, node),
-		Node::GlobalGet(node) => handle_global_get(assignments, scope, id, node),
-		Node::GlobalSet(node) => handle_global_set(assignments, nodes, scope, id, node),
+		Node::MutableGet(node) => handle_mutable_get(assignments, scope, id, node),
+		Node::MutableSet(node) => handle_mutable_set(assignments, nodes, scope, id, node),
 		Node::TableGet(node) => handle_table_get(assignments, scope, id, node),
 		Node::TableSet(node) => handle_table_set(assignments, scope, id, node),
 		Node::TableSize(node) => handle_table_size(assignments, scope, id, node),
@@ -520,7 +520,7 @@ fn run_region(assignments: &mut HashMap<ScopedLink, ScopedLink>, nodes: &[Node],
 			| Node::RepeatArguments(_)
 			| Node::RepeatResults(_)
 			| Node::Import(_)
-			| Node::Host(_)
+			| Node::Foreign(_)
 			| Node::Trap
 			| Node::Null
 			| Node::I32(_)
@@ -536,7 +536,7 @@ fn run_region(assignments: &mut HashMap<ScopedLink, ScopedLink>, nodes: &[Node],
 			| Node::IntegerCompareOperation(_)
 			| Node::IntegerNarrow(_)
 			| Node::IntegerWiden(_)
-			| Node::IntegerExtend(_)
+			| Node::IntegerSignExtend(_)
 			| Node::IntegerConvertToNumber(_)
 			| Node::IntegerTransmuteToNumber(_)
 			| Node::NumberUnaryOperation(_)
@@ -546,9 +546,9 @@ fn run_region(assignments: &mut HashMap<ScopedLink, ScopedLink>, nodes: &[Node],
 			| Node::NumberWiden(_)
 			| Node::NumberTruncateToInteger(_)
 			| Node::NumberTransmuteToInteger(_)
-			| Node::GlobalNew(_)
-			| Node::GlobalGet(_)
-			| Node::GlobalSet(_)
+			| Node::MutableNew(_)
+			| Node::MutableGet(_)
+			| Node::MutableSet(_)
 			| Node::TableNew(_)
 			| Node::TableGet(_)
 			| Node::TableSet(_)

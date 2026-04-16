@@ -200,7 +200,7 @@ impl BasicBlockLifter {
 
 		let state = self.dependencies.get(ReferenceType::Function, function);
 
-		self.locals[usize::from(destination)] = simple::GlobalGet::add_into(nodes, state).0;
+		self.locals[usize::from(destination)] = simple::MutableGet::add_into(nodes, state).0;
 	}
 
 	fn handle_unreachable(&mut self, nodes: &mut Vec<Node>) {
@@ -341,7 +341,7 @@ impl BasicBlockLifter {
 		} = instruction;
 
 		self.locals[usize::from(destination)] =
-			simple::IntegerExtend::add_into(nodes, self.locals[usize::from(source)], kind);
+			simple::IntegerSignExtend::add_into(nodes, self.locals[usize::from(source)], kind);
 	}
 
 	fn handle_integer_convert_to_number(
@@ -517,7 +517,7 @@ impl BasicBlockLifter {
 		} = instruction;
 
 		let state = self.dependencies.get(ReferenceType::Global, source);
-		let (result, state) = simple::GlobalGet::add_into(nodes, state);
+		let (result, state) = simple::MutableGet::add_into(nodes, state);
 
 		self.locals[usize::from(destination)] = result;
 
@@ -530,7 +530,7 @@ impl BasicBlockLifter {
 			source,
 		} = instruction;
 
-		let state = simple::GlobalSet::add_into(
+		let state = simple::MutableSet::add_into(
 			nodes,
 			self.dependencies.get(ReferenceType::Global, destination),
 			self.locals[usize::from(source)],

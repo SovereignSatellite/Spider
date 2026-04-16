@@ -5,7 +5,7 @@ use ir_graph::{
 	control::Import,
 	simple::{
 		ExtendType, IntegerBinaryOperation, IntegerBinaryOperator, IntegerCompareOperation,
-		IntegerCompareOperator, IntegerExtend, IntegerType, IntegerUnaryOperation,
+		IntegerCompareOperator, IntegerSignExtend, IntegerType, IntegerUnaryOperation,
 		IntegerUnaryOperator, NumberBinaryOperation, NumberBinaryOperator, NumberCompareOperation,
 		NumberCompareOperator, NumberType, NumberUnaryOperation, NumberUnaryOperator,
 	},
@@ -37,12 +37,12 @@ pub fn get_static(node: &Node) -> Option<&'static str> {
 		| Node::IntegerUnaryOperation(_)
 		| Node::IntegerBinaryOperation(_)
 		| Node::IntegerCompareOperation(_)
-		| Node::IntegerExtend(_)
+		| Node::IntegerSignExtend(_)
 		| Node::NumberUnaryOperation(_)
 		| Node::NumberBinaryOperation(_)
 		| Node::NumberCompareOperation(_) => return None,
 
-		Node::Host(host) => host.identifier(),
+		Node::Foreign(foreign) => foreign.identifier(),
 		Node::Trap => "Trap",
 		Node::Null => "Null",
 		Node::Identity(_) => "Identity",
@@ -57,9 +57,9 @@ pub fn get_static(node: &Node) -> Option<&'static str> {
 		Node::NumberWiden(_) => "Number Widen",
 		Node::NumberTruncateToInteger(_) => "Truncate To Integer",
 		Node::NumberTransmuteToInteger(_) => "Transmute To Integer",
-		Node::GlobalNew(_) => "Global New",
-		Node::GlobalGet(_) => "Global Get",
-		Node::GlobalSet(_) => "Global Set",
+		Node::MutableNew(_) => "Mutable New",
+		Node::MutableGet(_) => "Mutable Get",
+		Node::MutableSet(_) => "Mutable Set",
 		Node::TableNew(_) => "Table New",
 		Node::TableGet(_) => "Table Get",
 		Node::TableSet(_) => "Table Set",
@@ -98,8 +98,8 @@ const fn extend_type_name(kind: ExtendType) -> &'static str {
 	}
 }
 
-fn write_integer_extend(node: IntegerExtend, out: &mut dyn Write) -> Result<()> {
-	write!(out, "Extend {}", extend_type_name(node.kind))
+fn write_integer_sign_extend(node: IntegerSignExtend, out: &mut dyn Write) -> Result<()> {
+	write!(out, "Sign Extend {}", extend_type_name(node.kind))
 }
 
 const fn integer_type_name(kind: IntegerType) -> &'static str {
@@ -266,7 +266,7 @@ pub fn write(node: &Node, out: &mut dyn Write) -> Result<()> {
 		| Node::BranchResults(_)
 		| Node::RepeatArguments(_)
 		| Node::RepeatResults(_)
-		| Node::Host(_)
+		| Node::Foreign(_)
 		| Node::Trap
 		| Node::Null
 		| Node::Identity(_)
@@ -281,9 +281,9 @@ pub fn write(node: &Node, out: &mut dyn Write) -> Result<()> {
 		| Node::NumberWiden(_)
 		| Node::NumberTruncateToInteger(_)
 		| Node::NumberTransmuteToInteger(_)
-		| Node::GlobalNew(_)
-		| Node::GlobalGet(_)
-		| Node::GlobalSet(_)
+		| Node::MutableNew(_)
+		| Node::MutableGet(_)
+		| Node::MutableSet(_)
 		| Node::TableNew(_)
 		| Node::TableGet(_)
 		| Node::TableSet(_)
@@ -309,7 +309,7 @@ pub fn write(node: &Node, out: &mut dyn Write) -> Result<()> {
 		Node::IntegerUnaryOperation(node) => write_integer_unary_operation(node, out),
 		Node::IntegerBinaryOperation(node) => write_integer_binary_operation(node, out),
 		Node::IntegerCompareOperation(node) => write_integer_compare_operation(node, out),
-		Node::IntegerExtend(node) => write_integer_extend(node, out),
+		Node::IntegerSignExtend(node) => write_integer_sign_extend(node, out),
 		Node::NumberUnaryOperation(node) => write_number_unary_operation(node, out),
 		Node::NumberBinaryOperation(node) => write_number_binary_operation(node, out),
 		Node::NumberCompareOperation(node) => write_number_compare_operation(node, out),

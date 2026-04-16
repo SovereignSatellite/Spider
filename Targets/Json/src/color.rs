@@ -22,7 +22,7 @@ impl Color {
 			Node::ModuleArguments(_) | Node::ModuleResults(_) => Self::Brown,
 
 			Node::Import(_)
-			| Node::Host(_)
+			| Node::Foreign(_)
 			| Node::Trap
 			| Node::Null
 			| Node::I32(_)
@@ -38,7 +38,7 @@ impl Color {
 			| Node::IntegerCompareOperation(_)
 			| Node::IntegerNarrow(_)
 			| Node::IntegerWiden(_)
-			| Node::IntegerExtend(_)
+			| Node::IntegerSignExtend(_)
 			| Node::IntegerConvertToNumber(_)
 			| Node::IntegerTransmuteToNumber(_)
 			| Node::NumberUnaryOperation(_)
@@ -48,9 +48,9 @@ impl Color {
 			| Node::NumberWiden(_)
 			| Node::NumberTruncateToInteger(_)
 			| Node::NumberTransmuteToInteger(_)
-			| Node::GlobalNew(_)
-			| Node::GlobalGet(_)
-			| Node::GlobalSet(_)
+			| Node::MutableNew(_)
+			| Node::MutableGet(_)
+			| Node::MutableSet(_)
 			| Node::TableNew(_)
 			| Node::TableGet(_)
 			| Node::TableSet(_)
