@@ -9,20 +9,20 @@ use wasmparser::{BlockType, OperatorsReader};
 use web_assembly_graph::ControlFlowGraph;
 use web_assembly_structurer::ControlFlowStructurer;
 
-use self::{expression_builder::ExpressionBuilder, post_order_sorter::PostOrderSorter};
+use self::{expression_builder::ExpressionBuilder, topological_compactor::TopologicalCompactor};
 
 pub use self::types::Types;
 
 mod code_builder;
 mod expression_builder;
-mod post_order_sorter;
 mod stack_builder;
+mod topological_compactor;
 mod types;
 
 /// Builds a structured control flow graph from WebAssembly operators.
 pub struct ControlFlowBuilder {
 	expression_builder: ExpressionBuilder,
-	post_order_sorter: PostOrderSorter,
+	topological_compactor: TopologicalCompactor,
 	control_flow_structurer: ControlFlowStructurer,
 }
 
@@ -32,7 +32,7 @@ impl ControlFlowBuilder {
 	pub const fn new() -> Self {
 		Self {
 			expression_builder: ExpressionBuilder::new(),
-			post_order_sorter: PostOrderSorter::new(),
+			topological_compactor: TopologicalCompactor::new(),
 			control_flow_structurer: ControlFlowStructurer::new(),
 		}
 	}
@@ -53,12 +53,12 @@ impl ControlFlowBuilder {
 		self.expression_builder
 			.run(graph, types, function_type, locals, operators);
 
-		self.post_order_sorter.run(&mut graph.basic_blocks, 0);
+		self.topological_compactor.run(&mut graph.basic_blocks, 0);
 
 		let exit = graph.add_no_operation();
 
 		self.control_flow_structurer.run(graph, 0, exit);
-		self.post_order_sorter.run(&mut graph.basic_blocks, 0);
+		self.topological_compactor.run(&mut graph.basic_blocks, 0);
 	}
 }
 

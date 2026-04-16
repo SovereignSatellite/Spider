@@ -8,7 +8,6 @@ workspace = true
 
 [dependencies]
 list.workspace = true
-set.workspace = true
 wasmparser.workspace = true
 web-assembly-graph.workspace = true
 
