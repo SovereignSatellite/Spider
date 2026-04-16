@@ -1106,6 +1106,10 @@ impl ExpressionBuilder {
 		}
 	}
 
+	#[expect(
+		clippy::too_many_arguments,
+		reason = "entry point requires all builder state"
+	)]
 	pub fn run(
 		&mut self,
 		graph: &mut ControlFlowGraph,

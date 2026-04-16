@@ -653,6 +653,10 @@ impl Print for MemoryGrow {
 }
 
 impl Print for Expression {
+	#[expect(
+		clippy::too_many_lines,
+		reason = "exhaustive match over expression variants"
+	)]
 	fn print(&self, printer: &mut LuaJITPrinter, out: &mut dyn Write) -> Result<()> {
 		match self {
 			Self::Function(function) => function.print(printer, out),

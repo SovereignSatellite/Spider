@@ -1,5 +1,7 @@
 //! Eliminates dead nodes and topologically sorts the survivors.
 
+use core::mem;
+
 use ir_graph::{Node, Region};
 
 /// Eliminate unreachable nodes and compact the remainder in dependency order.
@@ -25,7 +27,7 @@ impl TopologicalCompactor {
 			return;
 		}
 
-		let node = core::mem::take(&mut nodes[id]);
+		let node = mem::take(&mut nodes[id]);
 
 		node.for_each_outer(|link| self.handle_node(nodes, link.0));
 
@@ -44,7 +46,7 @@ impl TopologicalCompactor {
 			self.handle_node(nodes, root);
 		}
 
-		core::mem::swap(nodes, &mut self.nodes);
+		mem::swap(nodes, &mut self.nodes);
 	}
 
 	fn remap_link(&self, link: &mut ir_graph::Link) {

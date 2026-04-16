@@ -1,6 +1,7 @@
 //! Post-order sorting of basic blocks using depth-first search.
 
 use alloc::vec::Vec;
+use core::mem;
 
 use set::Set;
 
@@ -82,7 +83,7 @@ impl PostOrderSorter {
 		self.depth_first_searcher
 			.run(basic_blocks, entry, |basic_blocks, block_id| {
 				let block_id_usize = usize::from(block_id);
-				let basic_block = core::mem::take(&mut basic_blocks[block_id_usize]);
+				let basic_block = mem::take(&mut basic_blocks[block_id_usize]);
 
 				self.basic_blocks.push(basic_block);
 				self.id_to_post[block_id_usize] = post_index;

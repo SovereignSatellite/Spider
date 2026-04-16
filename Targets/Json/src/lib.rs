@@ -3,6 +3,7 @@
 extern crate alloc;
 
 use alloc::sync::Arc;
+use core::str;
 use std::io::{Result, Write};
 
 use parking_lot::Mutex;
@@ -115,7 +116,7 @@ impl JsonPrinter {
 			self.scratch.clear();
 
 			label::write(node, &mut self.scratch).unwrap();
-			core::str::from_utf8(&self.scratch).unwrap()
+			str::from_utf8(&self.scratch).unwrap()
 		});
 
 		self.interner.resolve(name)
@@ -187,6 +188,7 @@ impl JsonPrinter {
 		self.record_subgraph(parent, entry, exit);
 	}
 
+	#[expect(clippy::too_many_lines, reason = "exhaustive match over node variants")]
 	fn assign_ids(&mut self, nodes: &[Node]) {
 		for node in nodes {
 			let global = self.names.assign();

@@ -1,3 +1,5 @@
+use core::iter;
+
 use list::resizable::Resizable;
 
 use ir_graph::{Link, Node, control::ValueType, simple};
@@ -75,7 +77,7 @@ impl BasicBlockLifter {
 		self.dependencies.fill_keys(dependencies);
 		self.dependencies.set_all_from(&mut captures);
 
-		let reserved = core::iter::repeat_n(Link::DANGLING, LOCAL_BASE);
+		let reserved = iter::repeat_n(Link::DANGLING, LOCAL_BASE);
 		let mut arguments = (0..u16::MAX).map(|port| Link(arguments, port));
 
 		self.locals.clear();
@@ -99,7 +101,7 @@ impl BasicBlockLifter {
 		let null = Node::add_null_into(nodes);
 		let count = usize::from(size).saturating_sub(self.locals.len());
 
-		self.locals.extend(core::iter::repeat_n(null, count));
+		self.locals.extend(iter::repeat_n(null, count));
 		self.locals[..LOCAL_BASE].fill(null);
 	}
 
@@ -828,6 +830,10 @@ impl BasicBlockLifter {
 		self.dependencies.set(ReferenceType::Data, source, state);
 	}
 
+	#[expect(
+		clippy::too_many_lines,
+		reason = "exhaustive match over instruction variants"
+	)]
 	fn handle_instruction(&mut self, nodes: &mut Vec<Node>, instruction: Instruction) {
 		match instruction {
 			Instruction::LocalSet(instruction) => self.handle_local_set(instruction),

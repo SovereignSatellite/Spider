@@ -1,4 +1,5 @@
 use alloc::vec::Vec;
+use core::mem;
 
 use set::Set;
 
@@ -103,7 +104,7 @@ impl ContinuationFinder {
 		self.set_entry(graph, entry);
 
 		while self.handle_stack(graph) {
-			core::mem::swap(&mut self.points, &mut self.stack);
+			mem::swap(&mut self.points, &mut self.stack);
 		}
 	}
 }

@@ -5,7 +5,7 @@ use parking_lot::Mutex;
 
 use ir_graph::{
 	Link, Node,
-	control::{Match, Repeat},
+	control::{Match, ModuleArguments, Repeat},
 	simple::{
 		Fence, GlobalGet, GlobalSet, Identity, MemoryCopy, MemoryDrop, MemoryFill, MemoryGrow,
 		MemoryLoad, MemorySize, MemoryStore, TableCopy, TableDrop, TableFill, TableGet, TableGrow,
@@ -418,6 +418,7 @@ fn handle_memory_drop(
 	assignments.insert((source, scope), (Link(id, MemoryDrop::STATE_PORT), scope));
 }
 
+#[expect(clippy::too_many_lines, reason = "exhaustive match over node variants")]
 fn handle_node(
 	assignments: &mut HashMap<ScopedLink, ScopedLink>,
 	nodes: &[Node],
@@ -467,7 +468,7 @@ fn handle_node(
 		Node::Repeat(ref arc) => handle_repeat(assignments, scope, id, arc),
 
 		Node::ModuleArguments(_) => {
-			for port in 0..ir_graph::control::ModuleArguments::RESULT_COUNT {
+			for port in 0..ModuleArguments::RESULT_COUNT {
 				let _ = assignments.try_insert((Link(id, port), scope), (Link::DANGLING, 0));
 			}
 		}
@@ -497,6 +498,7 @@ fn handle_node(
 	}
 }
 
+#[expect(clippy::too_many_lines, reason = "exhaustive match over node variants")]
 fn run_region(assignments: &mut HashMap<ScopedLink, ScopedLink>, nodes: &[Node], scope: usize) {
 	for (id, node) in nodes.iter().enumerate() {
 		let id = id.try_into().unwrap();

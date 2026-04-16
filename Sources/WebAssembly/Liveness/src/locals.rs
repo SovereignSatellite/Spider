@@ -561,6 +561,10 @@ impl LocalTracker {
 		self.read_local(size);
 	}
 
+	#[expect(
+		clippy::too_many_lines,
+		reason = "exhaustive match over instruction variants"
+	)]
 	fn handle_instruction(&mut self, instruction: Instruction) {
 		match instruction {
 			Instruction::LocalSet(instruction) => self.handle_local_set(instruction),

@@ -5,6 +5,7 @@
 extern crate alloc;
 
 use alloc::vec::Vec;
+use core::ops::Range;
 
 use self::instruction::{I32Constant, Instruction, LocalBranch, Name};
 
@@ -46,13 +47,13 @@ impl ControlFlowGraph {
 	///
 	/// Panics if the number of basic blocks exceeds `u16::MAX`.
 	#[must_use]
-	pub fn block_ids(&self) -> core::ops::Range<u16> {
+	pub fn block_ids(&self) -> Range<u16> {
 		0..self.basic_blocks.len().try_into().unwrap()
 	}
 
 	/// Returns the instruction offset range for the given basic block.
 	#[must_use]
-	pub fn offsets(&self, id: u16) -> core::ops::Range<usize> {
+	pub fn offsets(&self, id: u16) -> Range<usize> {
 		self.basic_blocks[usize::from(id)].range()
 	}
 

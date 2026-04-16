@@ -2,7 +2,7 @@ use datatest_stable::Result;
 use wast::{
 	QuoteWat, Wast, WastDirective, WastExecute, WastInvoke, WastRet, WastThread, Wat,
 	lexer::Lexer,
-	parser::ParseBuffer,
+	parser::{self, ParseBuffer},
 	token::{Id, Span},
 };
 
@@ -69,6 +69,10 @@ pub trait Visitor {
 
 	fn visit_wait(&mut self, span: Span, thread: Id<'_>) -> Result<()>;
 
+	#[expect(
+		clippy::too_many_lines,
+		reason = "exhaustive match over wast directive variants"
+	)]
 	fn visit_directive(&mut self, directive: WastDirective<'_>) -> Result<()> {
 		match directive {
 			WastDirective::Module(quote_wat) => self.visit_module(quote_wat),
@@ -131,7 +135,7 @@ pub trait Visitor {
 		lexer.allow_confusing_unicode(true);
 
 		let buffer = ParseBuffer::new_with_lexer(lexer)?;
-		let wast = wast::parser::parse::<Wast<'_>>(&buffer)?;
+		let wast = parser::parse::<Wast<'_>>(&buffer)?;
 
 		wast.directives
 			.into_iter()

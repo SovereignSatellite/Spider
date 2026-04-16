@@ -38,6 +38,10 @@ impl ControlFlowBuilder {
 	}
 
 	/// Builds and restructures the control flow graph from WebAssembly operators.
+	#[expect(
+		clippy::too_many_arguments,
+		reason = "entry point requires all builder state"
+	)]
 	pub fn run(
 		&mut self,
 		graph: &mut ControlFlowGraph,

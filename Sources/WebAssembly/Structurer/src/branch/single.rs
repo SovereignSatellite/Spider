@@ -1,4 +1,5 @@
 use alloc::vec::Vec;
+use core::iter;
 
 use web_assembly_graph::{ControlFlowGraph, instruction::Name};
 
@@ -160,7 +161,7 @@ impl Single {
 	}
 
 	pub fn run(&mut self, graph: &mut ControlFlowGraph, entry: u16) -> u16 {
-		self.continuation_finder.set_excluded(core::iter::empty());
+		self.continuation_finder.set_excluded(iter::empty());
 
 		self.find_all_continuations(graph, entry);
 

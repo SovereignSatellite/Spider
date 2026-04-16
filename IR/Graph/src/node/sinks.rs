@@ -314,6 +314,10 @@ impl NumberCompareOperation {
 
 impl NumberTruncateToInteger {
 	/// Adds a floating-point-to-integer truncation node to the graph.
+	#[expect(
+		clippy::too_many_arguments,
+		reason = "conversion constructor requires source, signedness, saturation, and type pair"
+	)]
 	pub fn add_into(
 		nodes: &mut Vec<Node>,
 		source: Link,
@@ -1348,6 +1352,7 @@ impl Node {
 impl Node {
 	/// Returns the number of output ports for this node.
 	#[must_use]
+	#[expect(clippy::too_many_lines, reason = "exhaustive match over node variants")]
 	pub fn result_count(&self) -> u16 {
 		match self {
 			Self::Function(_)

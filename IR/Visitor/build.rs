@@ -1,6 +1,7 @@
 //! Build script for generating ISLE visitor code.
 
 use std::path::Path;
+use std::{env, fs};
 
 use cranelift_isle::{codegen::CodegenOptions, compile::from_files};
 
@@ -10,18 +11,16 @@ static CODE_OPTIONS: CodegenOptions = CodegenOptions {
 };
 
 fn read_from_files(path: &Path) -> String {
-	let files = std::fs::read_dir(path)
-		.unwrap()
-		.map(|file| file.unwrap().path());
+	let files = fs::read_dir(path).unwrap().map(|file| file.unwrap().path());
 
 	from_files(files, &CODE_OPTIONS).unwrap()
 }
 
 fn write_into_file(path: &Path, code: String) {
-	let directory = std::env::var("OUT_DIR").unwrap();
+	let directory = env::var("OUT_DIR").unwrap();
 	let path = Path::new(&directory).join(path);
 
-	std::fs::write(path, code).unwrap();
+	fs::write(path, code).unwrap();
 }
 
 fn fixup_generated_code(code: &str) -> String {

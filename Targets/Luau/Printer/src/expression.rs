@@ -13,6 +13,7 @@ use luau_tree::expression::{
 use super::{LuauPrinter, library::NeedsName as _, print::Print};
 
 mod conditional {
+	use core::ops::Range;
 	use std::io::{Result, Write};
 
 	use luau_tree::expression::Expression;
@@ -22,32 +23,31 @@ mod conditional {
 	fn print_recursive(
 		branches: &[Expression],
 		condition: &Expression,
-		start: usize,
-		end: usize,
+		range: Range<usize>,
 		printer: &mut LuauPrinter,
 		out: &mut dyn Write,
 	) -> Result<()> {
-		let center = start + (end - start) / 2;
+		let center = range.start + (range.end - range.start) / 2;
 
-		if start != center {
+		if range.start != center {
 			write!(out, "if (")?;
 
 			condition.print(printer, out)?;
 
 			write!(out, ") < {center} then ")?;
 
-			print_recursive(branches, condition, start, center, printer, out)?;
+			print_recursive(branches, condition, range.start..center, printer, out)?;
 
 			write!(out, " else")?;
 
-			if end != center + 1 {
+			if range.end != center + 1 {
 				write!(out, "if (")?;
 
 				condition.print(printer, out)?;
 
 				write!(out, ") > {center} then ")?;
 
-				print_recursive(branches, condition, center + 1, end, printer, out)?;
+				print_recursive(branches, condition, (center + 1)..range.end, printer, out)?;
 
 				write!(out, " else")?;
 			}
@@ -64,7 +64,7 @@ mod conditional {
 		printer: &mut LuauPrinter,
 		out: &mut dyn Write,
 	) -> Result<()> {
-		print_recursive(branches, condition, 0, branches.len(), printer, out)
+		print_recursive(branches, condition, 0..branches.len(), printer, out)
 	}
 
 	pub fn print_if(
@@ -830,6 +830,10 @@ impl Print for MemoryGrow {
 }
 
 impl Print for Expression {
+	#[expect(
+		clippy::too_many_lines,
+		reason = "exhaustive match over expression variants"
+	)]
 	fn print(&self, printer: &mut LuauPrinter, out: &mut dyn Write) -> Result<()> {
 		match self {
 			Self::Function(function) => function.print(printer, out),

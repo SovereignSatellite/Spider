@@ -1,3 +1,8 @@
+#![expect(
+	clippy::too_many_lines,
+	reason = "exhaustive matches over expression variants in NeedsName impls"
+)]
+
 use core::ops::ControlFlow;
 
 use luajit_tree::{

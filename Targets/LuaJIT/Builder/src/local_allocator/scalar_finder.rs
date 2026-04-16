@@ -1,7 +1,10 @@
+use alloc::sync::Arc;
+
 use hashbrown::{HashMap, hash_map::Entry};
 
 use ir_graph::{Link, Node};
 
+#[expect(clippy::too_many_lines, reason = "exhaustive match over node variants")]
 pub fn value_port_count_of(node: &Node) -> u16 {
 	match node {
 		Node::Function(_)
@@ -96,6 +99,10 @@ impl ScalarFinder {
 		}
 	}
 
+	#[expect(
+		clippy::too_many_arguments,
+		reason = "pass-through parameters for region traversal"
+	)]
 	fn handle_effects(
 		&mut self,
 		assignments: &mut HashMap<ScopedLink, ScopedLink>,
@@ -194,6 +201,7 @@ impl ScalarFinder {
 		}
 	}
 
+	#[expect(clippy::too_many_lines, reason = "exhaustive match over node variants")]
 	fn run_region(
 		&mut self,
 		assignments: &mut HashMap<ScopedLink, ScopedLink>,
@@ -281,7 +289,7 @@ impl ScalarFinder {
 
 					for branch_arc in &matcher.branches {
 						let branch = branch_arc.lock();
-						let branch_scope = alloc::sync::Arc::as_ptr(branch_arc) as usize;
+						let branch_scope = Arc::as_ptr(branch_arc) as usize;
 
 						self.run_region(
 							assignments,
@@ -293,7 +301,7 @@ impl ScalarFinder {
 				}
 				Node::Repeat(arc) => {
 					let repeat = arc.lock();
-					let repeat_scope = alloc::sync::Arc::as_ptr(arc) as usize;
+					let repeat_scope = Arc::as_ptr(arc) as usize;
 
 					self.run_region(
 						assignments,

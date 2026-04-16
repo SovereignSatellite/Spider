@@ -32,6 +32,10 @@ impl<'data> Sections<'data> {
 		clippy::wildcard_enum_match_arm,
 		reason = "catch-all for unsupported payloads"
 	)]
+	#[expect(
+		clippy::too_many_lines,
+		reason = "payload processing loop with struct construction is just over the limit"
+	)]
 	pub fn load(data: &'data [u8]) -> Self {
 		let mut types = Self::reader_with_empty();
 		let mut imports = Self::reader_with_empty();

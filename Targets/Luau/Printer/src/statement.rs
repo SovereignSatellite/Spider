@@ -16,6 +16,7 @@ use super::{
 };
 
 mod conditional {
+	use core::ops::Range;
 	use std::io::{Result, Write};
 
 	use luau_tree::{expression::Expression, statement::Sequence};
@@ -25,14 +26,13 @@ mod conditional {
 	fn print_recursive(
 		branches: &[Sequence],
 		condition: &Expression,
-		start: usize,
-		end: usize,
+		range: Range<usize>,
 		printer: &mut LuauPrinter,
 		out: &mut dyn Write,
 	) -> Result<()> {
-		let center = start + (end - start) / 2;
-		let has_minimum = start != center;
-		let has_maximum = end != center + 1;
+		let center = range.start + (range.end - range.start) / 2;
+		let has_minimum = range.start != center;
+		let has_maximum = range.end != center + 1;
 
 		if has_minimum {
 			printer.tab(out)?;
@@ -43,7 +43,7 @@ mod conditional {
 			writeln!(out, ") < {center} then")?;
 
 			printer.indent();
-			print_recursive(branches, condition, start, center, printer, out)?;
+			print_recursive(branches, condition, range.start..center, printer, out)?;
 			printer.outdent();
 
 			printer.tab(out)?;
@@ -57,7 +57,7 @@ mod conditional {
 				writeln!(out, ") > {center} then")?;
 
 				printer.indent();
-				print_recursive(branches, condition, center + 1, end, printer, out)?;
+				print_recursive(branches, condition, (center + 1)..range.end, printer, out)?;
 				printer.outdent();
 
 				printer.tab(out)?;
@@ -87,7 +87,7 @@ mod conditional {
 		printer: &mut LuauPrinter,
 		out: &mut dyn Write,
 	) -> Result<()> {
-		print_recursive(branches, condition, 0, branches.len(), printer, out)
+		print_recursive(branches, condition, 0..branches.len(), printer, out)
 	}
 
 	fn print_if_true(

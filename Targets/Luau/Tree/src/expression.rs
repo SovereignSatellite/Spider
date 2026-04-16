@@ -492,6 +492,10 @@ impl Expression {
 	/// Panics if the expression cannot be converted to a boolean;
 	/// if this happens, it is a bug.
 	#[must_use]
+	#[expect(
+		clippy::too_many_lines,
+		reason = "exhaustive match over expression variants"
+	)]
 	pub fn into_boolean(self) -> Self {
 		match self {
 			Self::Match(_)
