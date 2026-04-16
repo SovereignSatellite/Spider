@@ -13,8 +13,8 @@ use ir_graph::{
 	Link, Node,
 	control::{Export, Import, Module, ModuleArguments},
 	simple::{
-		Apply, Fence, GlobalGet, GlobalNew, GlobalSet, Location, MemoryCopy, MemoryDrop, MemoryNew,
-		TableCopy, TableDrop, TableFill, TableNew, TableSet,
+		Apply, Fence, Location, MemoryCopy, MemoryDrop, MemoryNew, MutableGet, MutableNew,
+		MutableSet, TableCopy, TableDrop, TableFill, TableNew, TableSet,
 	},
 };
 use web_assembly_builder::Types;
@@ -76,7 +76,7 @@ fn add_memory_from_data(nodes: &mut Vec<Node>, data: &[u8]) -> Link {
 fn add_global_from_null(nodes: &mut Vec<Node>) -> Link {
 	let null = Node::add_null_into(nodes);
 
-	GlobalNew::add_into(nodes, null)
+	MutableNew::add_into(nodes, null)
 }
 
 /// Lifts WebAssembly binary data into an IR data flow graph.
@@ -111,7 +111,7 @@ impl WebAssemblyLifter {
 			if let wasmparser::TypeRef::Func(function) = ty {
 				self.types.add_function(function);
 
-				link = GlobalNew::add_into(nodes, link);
+				link = MutableNew::add_into(nodes, link);
 			}
 
 			self.global_state.get_mut_type_ref(ty).push(link);
@@ -221,7 +221,7 @@ impl WebAssemblyLifter {
 
 		for (function, offset) in section.into_iter().map(Result::unwrap).zip(0_i32..) {
 			let function = functions[usize::try_from(function).unwrap()];
-			let source = GlobalGet::add_into(nodes, function).0;
+			let source = MutableGet::add_into(nodes, function).0;
 			let destination = Location {
 				reference: element,
 				offset: Node::add_i32_into(nodes, offset),
@@ -450,7 +450,7 @@ impl WebAssemblyLifter {
 		let source = self.build_expression(nodes, &global.init_expr, global.ty.content_type);
 
 		self.global_state.globals[index] =
-			GlobalSet::add_into(nodes, self.global_state.globals[index], source);
+			MutableSet::add_into(nodes, self.global_state.globals[index], source);
 	}
 
 	fn handle_global_initializations(
@@ -509,7 +509,7 @@ impl WebAssemblyLifter {
 			let function = self.build_function(nodes, body, imports);
 			let functions = &mut self.global_state.functions;
 
-			functions[imports] = GlobalSet::add_into(nodes, functions[imports], function);
+			functions[imports] = MutableSet::add_into(nodes, functions[imports], function);
 
 			imports += 1;
 		}
@@ -524,7 +524,7 @@ impl WebAssemblyLifter {
 		let mut reference = self.global_state.get_external_kind(export.kind)[index];
 
 		if export.kind == wasmparser::ExternalKind::Func {
-			reference = GlobalGet::add_into(nodes, reference).0;
+			reference = MutableGet::add_into(nodes, reference).0;
 		}
 
 		Export {
@@ -566,7 +566,7 @@ impl WebAssemblyLifter {
 
 		start.map_or(state, |start| {
 			let function = self.global_state.functions[usize::try_from(start).unwrap()];
-			let function = GlobalGet::add_into(nodes, function).0;
+			let function = MutableGet::add_into(nodes, function).0;
 			let apply = Apply::add_into(nodes, function, vec![state], 1);
 
 			Link(apply, 0)
