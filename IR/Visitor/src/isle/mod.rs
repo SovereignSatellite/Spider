@@ -5,7 +5,7 @@ use core::mem;
 use ir_graph::{Link, Node, simple::Identity};
 
 use self::internal::{
-	constructor_SimplifyGlobal, constructor_SimplifyI32, constructor_SimplifyMemory,
+	constructor_SimplifyI32, constructor_SimplifyMemory, constructor_SimplifyMutable,
 	constructor_SimplifyTable,
 };
 
@@ -46,9 +46,9 @@ pub fn simplify_i32(nodes: &mut Vec<Node>, id: u32) -> bool {
 	})
 }
 
-/// Simplifies a global operation at the given node ID.
-pub fn simplify_global(nodes: &mut Vec<Node>, id: u32) -> bool {
-	constructor_SimplifyGlobal(&mut RegionContext(nodes), Link(id, 0)).is_some_and(|sources| {
+/// Simplifies a mutable-cell operation at the given node ID.
+pub fn simplify_mutable(nodes: &mut Vec<Node>, id: u32) -> bool {
+	constructor_SimplifyMutable(&mut RegionContext(nodes), Link(id, 0)).is_some_and(|sources| {
 		replace_node(nodes, id, &sources.as_fixed());
 
 		true

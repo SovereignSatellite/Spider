@@ -13,13 +13,14 @@ use super::{
 		Region, Repeat, RepeatResults,
 	},
 	simple::{
-		Apply, Fence, GlobalGet, GlobalNew, GlobalSet, Identity, IntegerBinaryOperation,
-		IntegerCompareOperation, IntegerConvertToNumber, IntegerExtend, IntegerNarrow,
-		IntegerTransmuteToNumber, IntegerUnaryOperation, IntegerWiden, Location, MemoryCopy,
-		MemoryDrop, MemoryFill, MemoryGrow, MemoryLoad, MemoryNew, MemorySize, MemoryStore,
-		NumberBinaryOperation, NumberCompareOperation, NumberNarrow, NumberTransmuteToInteger,
-		NumberTruncateToInteger, NumberUnaryOperation, NumberWiden, RefIsNull, TableCopy,
-		TableDrop, TableFill, TableGet, TableGrow, TableNew, TableSet, TableSize,
+		Apply, Fence, Identity, IntegerBinaryOperation, IntegerCompareOperation,
+		IntegerConvertToNumber, IntegerNarrow, IntegerSignExtend, IntegerTransmuteToNumber,
+		IntegerUnaryOperation, IntegerWiden, Location, MemoryCopy, MemoryDrop, MemoryFill,
+		MemoryGrow, MemoryLoad, MemoryNew, MemorySize, MemoryStore, MutableGet, MutableNew,
+		MutableSet, NumberBinaryOperation, NumberCompareOperation, NumberNarrow,
+		NumberTransmuteToInteger, NumberTruncateToInteger, NumberUnaryOperation, NumberWiden,
+		RefIsNull, TableCopy, TableDrop, TableFill, TableGet, TableGrow, TableNew, TableSet,
+		TableSize,
 	},
 };
 
@@ -48,7 +49,7 @@ macro_rules! for_each_visit {
 			Self::RepeatResults(node) => node.$visit($handler),
 
 			Self::Import(node) => node.$visit($handler),
-			Self::Host(host) => host.$visit(&mut $handler),
+			Self::Foreign(foreign) => foreign.$visit(&mut $handler),
 
 			Self::Identity(node) => node.$visit($handler),
 			Self::Fence(node) => node.$visit($handler),
@@ -59,7 +60,7 @@ macro_rules! for_each_visit {
 			Self::IntegerCompareOperation(node) => node.$visit($handler),
 			Self::IntegerNarrow(node) => node.$visit($handler),
 			Self::IntegerWiden(node) => node.$visit($handler),
-			Self::IntegerExtend(node) => node.$visit($handler),
+			Self::IntegerSignExtend(node) => node.$visit($handler),
 			Self::IntegerConvertToNumber(node) => node.$visit($handler),
 			Self::IntegerTransmuteToNumber(node) => node.$visit($handler),
 			Self::NumberUnaryOperation(node) => node.$visit($handler),
@@ -69,9 +70,9 @@ macro_rules! for_each_visit {
 			Self::NumberWiden(node) => node.$visit($handler),
 			Self::NumberTruncateToInteger(node) => node.$visit($handler),
 			Self::NumberTransmuteToInteger(node) => node.$visit($handler),
-			Self::GlobalNew(node) => node.$visit($handler),
-			Self::GlobalGet(node) => node.$visit($handler),
-			Self::GlobalSet(node) => node.$visit($handler),
+			Self::MutableNew(node) => node.$visit($handler),
+			Self::MutableGet(node) => node.$visit($handler),
+			Self::MutableSet(node) => node.$visit($handler),
 			Self::TableNew(node) => node.$visit($handler),
 			Self::TableGet(node) => node.$visit($handler),
 			Self::TableSet(node) => node.$visit($handler),
@@ -240,7 +241,7 @@ impl IntegerWiden {
 	handle_sources!((source, link));
 }
 
-impl IntegerExtend {
+impl IntegerSignExtend {
 	handle_sources!((source, link), (kind, ignore));
 }
 
@@ -295,15 +296,15 @@ impl Location {
 	handle_sources!((reference, link), (offset, link));
 }
 
-impl GlobalNew {
+impl MutableNew {
 	handle_sources!((initializer, link));
 }
 
-impl GlobalGet {
+impl MutableGet {
 	handle_sources!((source, link));
 }
 
-impl GlobalSet {
+impl MutableSet {
 	handle_sources!((destination, link), (source, link));
 }
 

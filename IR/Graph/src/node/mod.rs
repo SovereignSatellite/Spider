@@ -9,10 +9,10 @@ use self::{
 		RepeatResults,
 	},
 	simple::{
-		Apply, Fence, GlobalGet, GlobalNew, GlobalSet, Host, Identity, IntegerBinaryOperation,
-		IntegerCompareOperation, IntegerConvertToNumber, IntegerExtend, IntegerNarrow,
-		IntegerTransmuteToNumber, IntegerUnaryOperation, IntegerWiden, MemoryCopy, MemoryDrop,
-		MemoryFill, MemoryGrow, MemoryLoad, MemoryNew, MemorySize, MemoryStore,
+		Apply, Fence, Foreign, Identity, IntegerBinaryOperation, IntegerCompareOperation,
+		IntegerConvertToNumber, IntegerNarrow, IntegerSignExtend, IntegerTransmuteToNumber,
+		IntegerUnaryOperation, IntegerWiden, MemoryCopy, MemoryDrop, MemoryFill, MemoryGrow,
+		MemoryLoad, MemoryNew, MemorySize, MemoryStore, MutableGet, MutableNew, MutableSet,
 		NumberBinaryOperation, NumberCompareOperation, NumberNarrow, NumberTransmuteToInteger,
 		NumberTruncateToInteger, NumberUnaryOperation, NumberWiden, RefIsNull, TableCopy,
 		TableDrop, TableFill, TableGet, TableGrow, TableNew, TableSet, TableSize,
@@ -58,8 +58,8 @@ pub enum Node {
 
 	/// An external import.
 	Import(Box<Import>),
-	/// A host-defined operation.
-	Host(Box<dyn Host>),
+	/// An operation outside the core computation universe.
+	Foreign(Box<dyn Foreign>),
 
 	/// An unreachable trap.
 	#[default]
@@ -97,7 +97,7 @@ pub enum Node {
 	/// An integer widening from 32-bit to 64-bit.
 	IntegerWiden(IntegerWiden),
 	/// An integer sign extension.
-	IntegerExtend(IntegerExtend),
+	IntegerSignExtend(IntegerSignExtend),
 	/// An integer-to-floating-point conversion.
 	IntegerConvertToNumber(IntegerConvertToNumber),
 	/// An integer-to-floating-point bit reinterpretation.
@@ -118,12 +118,12 @@ pub enum Node {
 	/// A floating-point-to-integer bit reinterpretation.
 	NumberTransmuteToInteger(NumberTransmuteToInteger),
 
-	/// A global variable creation.
-	GlobalNew(GlobalNew),
-	/// A global variable read.
-	GlobalGet(GlobalGet),
-	/// A global variable write.
-	GlobalSet(GlobalSet),
+	/// A mutable-cell creation.
+	MutableNew(MutableNew),
+	/// A mutable-cell read.
+	MutableGet(MutableGet),
+	/// A mutable-cell write.
+	MutableSet(MutableSet),
 
 	/// A table creation.
 	TableNew(TableNew),

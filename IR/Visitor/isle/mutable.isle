@@ -1,0 +1,17 @@
+(decl partial SimplifyMutable (Link) Links)
+
+(rule 2
+	(SimplifyMutable
+		(MutableGet mutable @ (MutableNew source))
+	)
+
+	(Links.N2 source mutable)
+)
+
+(rule 1
+	(SimplifyMutable
+		(MutableGet mutable @ (MutableSet _ source))
+	)
+
+	(Links.N2 source mutable)
+)

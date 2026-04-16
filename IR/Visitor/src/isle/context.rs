@@ -3,8 +3,8 @@
 use ir_graph::{
 	Link, Node,
 	simple::{
-		GlobalGet, GlobalNew, GlobalSet, Identity, IntegerBinaryOperation, IntegerBinaryOperator,
-		IntegerType, LoadType, Location, MemoryLoad, MemoryStore, StoreType, TableGet, TableSet,
+		Identity, IntegerBinaryOperation, IntegerBinaryOperator, IntegerType, LoadType, Location,
+		MemoryLoad, MemoryStore, MutableGet, MutableNew, MutableSet, StoreType, TableGet, TableSet,
 	},
 };
 
@@ -119,24 +119,24 @@ impl Context for RegionContext<'_> {
 		Node::add_f64_into(self.0, arg0)
 	}
 
-	fn get_global_new(&mut self, arg0: Link) -> Option<Link> {
-		if let &Node::GlobalNew(GlobalNew { initializer }) = self.at(arg0) {
+	fn get_mutable_new(&mut self, arg0: Link) -> Option<Link> {
+		if let &Node::MutableNew(MutableNew { initializer }) = self.at(arg0) {
 			Some(self.trace(initializer))
 		} else {
 			None
 		}
 	}
 
-	fn get_global_get(&mut self, arg0: Link) -> Option<Link> {
-		if let &Node::GlobalGet(GlobalGet { source }) = self.at(arg0) {
+	fn get_mutable_get(&mut self, arg0: Link) -> Option<Link> {
+		if let &Node::MutableGet(MutableGet { source }) = self.at(arg0) {
 			Some(self.trace(source))
 		} else {
 			None
 		}
 	}
 
-	fn get_global_set(&mut self, arg0: Link) -> Option<(Link, Link)> {
-		if let &Node::GlobalSet(GlobalSet {
+	fn get_mutable_set(&mut self, arg0: Link) -> Option<(Link, Link)> {
+		if let &Node::MutableSet(MutableSet {
 			destination,
 			source,
 		}) = self.at(arg0)
