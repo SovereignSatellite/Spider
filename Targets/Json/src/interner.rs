@@ -1,10 +1,10 @@
-use alloc::rc::Rc;
+use alloc::sync::Arc;
 
 use hashbrown::HashMap;
 
 pub struct Interner {
-	map: HashMap<Rc<str>, u32>,
-	list: Vec<Rc<str>>,
+	map: HashMap<Arc<str>, u32>,
+	list: Vec<Arc<str>>,
 }
 
 impl Interner {
@@ -15,7 +15,7 @@ impl Interner {
 		}
 	}
 
-	pub fn list(&self) -> &[Rc<str>] {
+	pub fn list(&self) -> &[Arc<str>] {
 		&self.list
 	}
 
@@ -30,9 +30,9 @@ impl Interner {
 		}
 
 		let position = self.list.len().try_into().unwrap();
-		let source = Rc::<str>::from(key);
+		let source = Arc::<str>::from(key);
 
-		self.list.push(Rc::clone(&source));
+		self.list.push(Arc::clone(&source));
 		self.map.insert(source, position);
 
 		position

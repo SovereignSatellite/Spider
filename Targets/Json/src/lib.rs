@@ -13,66 +13,39 @@ use ir_graph::{
 	control::{Function, Match, Module, Repeat},
 };
 
-use self::{color::Color, interner::Interner, print::Print as _};
+use self::{color::Color, interner::Interner, names::Names};
 
 mod color;
 mod interner;
 mod label;
-mod print;
+mod names;
 
-struct Names {
-	mapping: Vec<u32>,
-	scopes: Vec<usize>,
-	next_id: u32,
+fn write_integers(values: &[u32], output: &mut dyn Write) -> Result<()> {
+	let mut values = values.iter();
+
+	if let Some(first) = values.next() {
+		write!(output, "{first}")?;
+
+		values.try_for_each(|value| write!(output, ", {value}"))?;
+	}
+
+	Ok(())
 }
 
-impl Names {
-	const fn new() -> Self {
-		Self {
-			mapping: Vec::new(),
-			scopes: Vec::new(),
-			next_id: 0,
-		}
+fn write_strings(values: &[Arc<str>], output: &mut dyn Write) -> Result<()> {
+	let mut values = values.iter();
+
+	if let Some(first) = values.next() {
+		write!(output, "{first}")?;
+
+		values.try_for_each(|value| {
+			let escaped = value.as_bytes().escape_ascii();
+
+			write!(output, "\"{escaped}\"")
+		})?;
 	}
 
-	fn clear(&mut self) {
-		self.mapping.clear();
-		self.scopes.clear();
-		self.next_id = 0;
-	}
-
-	fn enter_scope(&mut self) {
-		self.scopes.push(self.mapping.len());
-	}
-
-	fn leave_scope(&mut self) {
-		let base = self.scopes.pop().unwrap();
-
-		self.mapping.truncate(base);
-	}
-
-	fn assign(&mut self) -> u32 {
-		let global = self.next_id;
-
-		self.next_id += 1;
-		self.mapping.push(global);
-
-		global
-	}
-
-	fn entry(&self) -> u32 {
-		self.mapping[*self.scopes.last().unwrap()]
-	}
-
-	fn exit(&self) -> u32 {
-		*self.mapping.last().unwrap()
-	}
-
-	fn resolve(&self, local: usize) -> u32 {
-		let base = *self.scopes.last().unwrap();
-
-		self.mapping[base + local]
-	}
+	Ok(())
 }
 
 /// A JSON printer for data flow graphs.
@@ -298,20 +271,15 @@ impl JsonPrinter {
 	}
 
 	fn print_all_fields(&self, out: &mut dyn Write) -> Result<()> {
-		write!(out, "{{")?;
-
-		("subgraphs", &self.subgraphs).print(out)?;
-		write!(out, ",")?;
-
-		("nodes", &self.nodes).print(out)?;
-		write!(out, ",")?;
-
-		("edges", &self.edges).print(out)?;
-		write!(out, ",")?;
-
-		("strings", self.interner.list()).print(out)?;
-
-		write!(out, "}}")
+		write!(out, r#"{{"subgraphs":["#)?;
+		write_integers(&self.subgraphs, out)?;
+		write!(out, r#"],"nodes":["#)?;
+		write_integers(&self.nodes, out)?;
+		write!(out, r#"],"edges":["#)?;
+		write_integers(&self.edges, out)?;
+		write!(out, r#"],"strings":["#)?;
+		write_strings(self.interner.list(), out)?;
+		write!(out, "]}}")
 	}
 
 	/// Prints the module as JSON to the given writer.
