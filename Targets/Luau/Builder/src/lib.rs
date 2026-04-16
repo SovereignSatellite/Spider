@@ -10,10 +10,10 @@ use ir_graph::{
 	Link, Node,
 	control::{Branch, Function, Import, Match, Module, ModuleArguments, Repeat, RepeatResults},
 	simple::{
-		Apply, Fence, GlobalGet, GlobalNew, GlobalSet, Host, Identity, IntegerBinaryOperation,
-		IntegerCompareOperation, IntegerConvertToNumber, IntegerExtend, IntegerNarrow,
-		IntegerTransmuteToNumber, IntegerUnaryOperation, IntegerWiden, MemoryCopy, MemoryDrop,
-		MemoryFill, MemoryGrow, MemoryLoad, MemoryNew, MemorySize, MemoryStore,
+		Apply, Fence, Foreign, Identity, IntegerBinaryOperation, IntegerCompareOperation,
+		IntegerConvertToNumber, IntegerNarrow, IntegerSignExtend, IntegerTransmuteToNumber,
+		IntegerUnaryOperation, IntegerWiden, MemoryCopy, MemoryDrop, MemoryFill, MemoryGrow,
+		MemoryLoad, MemoryNew, MemorySize, MemoryStore, MutableGet, MutableNew, MutableSet,
 		NumberBinaryOperation, NumberCompareOperation, NumberNarrow, NumberTransmuteToInteger,
 		NumberTruncateToInteger, NumberUnaryOperation, NumberWiden, RefIsNull, TableCopy,
 		TableDrop, TableFill, TableGet, TableGrow, TableNew, TableSet, TableSize,
@@ -284,8 +284,8 @@ impl LuauBuilder {
 		clippy::needless_pass_by_ref_mut,
 		reason = "signature matches other handlers"
 	)]
-	fn handle_host(&mut self, id: u32, host: &dyn Host) {
-		unimplemented!("`{}` at {id}", host.identifier());
+	fn handle_foreign(&mut self, id: u32, foreign: &dyn Foreign) {
+		unimplemented!("`{}` at {id}", foreign.identifier());
 	}
 
 	fn handle_trap(&mut self, id: u32) {
@@ -388,8 +388,8 @@ impl LuauBuilder {
 		self.do_assignment(id, expression);
 	}
 
-	fn handle_integer_extend(&mut self, id: u32, node: IntegerExtend) {
-		let expression = self.data_handler.load_integer_extend(node);
+	fn handle_integer_sign_extend(&mut self, id: u32, node: IntegerSignExtend) {
+		let expression = self.data_handler.load_integer_sign_extend(node);
 
 		self.do_assignment(id, expression);
 	}
@@ -448,30 +448,30 @@ impl LuauBuilder {
 		self.do_assignment(id, expression);
 	}
 
-	fn handle_global_new(&mut self, id: u32, node: GlobalNew) {
-		let expression = self.data_handler.load_global_new(node);
+	fn handle_mutable_new(&mut self, id: u32, node: MutableNew) {
+		let expression = self.data_handler.load_mutable_new(node);
 
 		self.do_assignment(id, expression);
 	}
 
-	fn handle_global_get(&mut self, id: u32, node: GlobalGet) {
-		let expression = self.data_handler.load_global_get(node);
+	fn handle_mutable_get(&mut self, id: u32, node: MutableGet) {
+		let expression = self.data_handler.load_mutable_get(node);
 
 		self.do_assignment(id, expression);
 
 		self.code_handler.do_rename(
-			Link(id, GlobalGet::STATE_PORT),
+			Link(id, MutableGet::STATE_PORT),
 			node.source,
 			&self.data_handler,
 		);
 	}
 
-	fn handle_global_set(&mut self, id: u32, node: GlobalSet) {
+	fn handle_mutable_set(&mut self, id: u32, node: MutableSet) {
 		self.code_handler
-			.do_global_set(node, &mut self.data_handler);
+			.do_mutable_set(node, &mut self.data_handler);
 
 		self.code_handler.do_rename(
-			Link(id, GlobalSet::STATE_PORT),
+			Link(id, MutableSet::STATE_PORT),
 			node.destination,
 			&self.data_handler,
 		);
@@ -679,7 +679,7 @@ impl LuauBuilder {
 			Node::RepeatResults(ref node) => self.handle_repeat_results(node),
 
 			Node::Import(ref node) => self.handle_import(id, node),
-			Node::Host(ref node) => self.handle_host(id, node.as_ref()),
+			Node::Foreign(ref node) => self.handle_foreign(id, node.as_ref()),
 			Node::Trap => self.handle_trap(id),
 			Node::Null => self.handle_null(id),
 			Node::I32(value) => self.handle_i32_const(id, value),
@@ -696,7 +696,7 @@ impl LuauBuilder {
 			Node::IntegerCompareOperation(node) => self.handle_integer_compare_operation(id, node),
 			Node::IntegerNarrow(node) => self.handle_integer_narrow(id, node),
 			Node::IntegerWiden(node) => self.handle_integer_widen(id, node),
-			Node::IntegerExtend(node) => self.handle_integer_extend(id, node),
+			Node::IntegerSignExtend(node) => self.handle_integer_sign_extend(id, node),
 			Node::IntegerConvertToNumber(node) => {
 				self.handle_integer_convert_to_number(id, node);
 			}
@@ -712,9 +712,9 @@ impl LuauBuilder {
 			Node::NumberTransmuteToInteger(node) => {
 				self.handle_number_transmute_to_integer(id, node);
 			}
-			Node::GlobalNew(node) => self.handle_global_new(id, node),
-			Node::GlobalGet(node) => self.handle_global_get(id, node),
-			Node::GlobalSet(node) => self.handle_global_set(id, node),
+			Node::MutableNew(node) => self.handle_mutable_new(id, node),
+			Node::MutableGet(node) => self.handle_mutable_get(id, node),
+			Node::MutableSet(node) => self.handle_mutable_set(id, node),
 			Node::TableNew(ref node) => self.handle_table_new(id, node),
 			Node::TableGet(node) => self.handle_table_get(id, node),
 			Node::TableSet(node) => self.handle_table_set(id, node),

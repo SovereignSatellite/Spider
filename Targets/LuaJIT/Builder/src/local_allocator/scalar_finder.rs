@@ -21,7 +21,7 @@ pub fn value_port_count_of(node: &Node) -> u16 {
 		| Node::IntegerCompareOperation(_)
 		| Node::IntegerNarrow(_)
 		| Node::IntegerWiden(_)
-		| Node::IntegerExtend(_)
+		| Node::IntegerSignExtend(_)
 		| Node::IntegerConvertToNumber(_)
 		| Node::IntegerTransmuteToNumber(_)
 		| Node::NumberUnaryOperation(_)
@@ -31,8 +31,8 @@ pub fn value_port_count_of(node: &Node) -> u16 {
 		| Node::NumberWiden(_)
 		| Node::NumberTruncateToInteger(_)
 		| Node::NumberTransmuteToInteger(_)
-		| Node::GlobalNew(_)
-		| Node::GlobalGet(_)
+		| Node::MutableNew(_)
+		| Node::MutableGet(_)
 		| Node::TableNew(_)
 		| Node::TableGet(_)
 		| Node::TableSize(_)
@@ -55,7 +55,7 @@ pub fn value_port_count_of(node: &Node) -> u16 {
 		| Node::RepeatArguments(_)
 		| Node::RepeatResults(_)
 		| Node::Fence(_)
-		| Node::GlobalSet(_)
+		| Node::MutableSet(_)
 		| Node::TableSet(_)
 		| Node::TableFill(_)
 		| Node::TableCopy(_)
@@ -65,7 +65,7 @@ pub fn value_port_count_of(node: &Node) -> u16 {
 		| Node::MemoryCopy(_)
 		| Node::MemoryDrop(_) => 0,
 
-		Node::Host(_node) => 0,
+		Node::Foreign(_node) => 0,
 
 		Node::Identity(node) => node.result_count(),
 
@@ -238,7 +238,7 @@ impl ScalarFinder {
 				| Node::RepeatArguments(_)
 				| Node::RepeatResults(_)
 				| Node::Import(_)
-				| Node::Host(_)
+				| Node::Foreign(_)
 				| Node::Trap
 				| Node::Null
 				| Node::I32(_)
@@ -254,7 +254,7 @@ impl ScalarFinder {
 				| Node::IntegerCompareOperation(_)
 				| Node::IntegerNarrow(_)
 				| Node::IntegerWiden(_)
-				| Node::IntegerExtend(_)
+				| Node::IntegerSignExtend(_)
 				| Node::IntegerConvertToNumber(_)
 				| Node::IntegerTransmuteToNumber(_)
 				| Node::NumberUnaryOperation(_)
@@ -264,9 +264,9 @@ impl ScalarFinder {
 				| Node::NumberWiden(_)
 				| Node::NumberTruncateToInteger(_)
 				| Node::NumberTransmuteToInteger(_)
-				| Node::GlobalNew(_)
-				| Node::GlobalGet(_)
-				| Node::GlobalSet(_)
+				| Node::MutableNew(_)
+				| Node::MutableGet(_)
+				| Node::MutableSet(_)
 				| Node::TableNew(_)
 				| Node::TableGet(_)
 				| Node::TableSet(_)

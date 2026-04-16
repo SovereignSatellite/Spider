@@ -176,7 +176,7 @@ impl CodeHandler {
 		self.push_statement(statement);
 	}
 
-	pub fn do_global_set(&mut self, node: simple::GlobalSet, data_handler: &mut DataHandler) {
+	pub fn do_mutable_set(&mut self, node: simple::MutableSet, data_handler: &mut DataHandler) {
 		let destination = data_handler.load(node.destination);
 		let source = data_handler.load(node.source);
 

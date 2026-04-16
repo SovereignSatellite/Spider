@@ -258,7 +258,7 @@ impl DataHandler {
 		Expression::IntegerWiden(expression.into())
 	}
 
-	pub fn load_integer_extend(&mut self, node: simple::IntegerExtend) -> Expression {
+	pub fn load_integer_sign_extend(&mut self, node: simple::IntegerSignExtend) -> Expression {
 		let expression = IntegerExtend {
 			source: self.load(node.source),
 			kind: node.kind,
@@ -381,7 +381,7 @@ impl DataHandler {
 		Expression::NumberTransmuteToInteger(expression.into())
 	}
 
-	pub fn load_global_new(&mut self, node: simple::GlobalNew) -> Expression {
+	pub fn load_mutable_new(&mut self, node: simple::MutableNew) -> Expression {
 		let expression = GlobalNew {
 			initializer: self.load(node.initializer),
 		};
@@ -389,7 +389,7 @@ impl DataHandler {
 		Expression::GlobalNew(expression.into())
 	}
 
-	pub fn load_global_get(&mut self, node: simple::GlobalGet) -> Expression {
+	pub fn load_mutable_get(&mut self, node: simple::MutableGet) -> Expression {
 		let expression = GlobalGet {
 			source: self.load(node.source),
 		};
