@@ -36,12 +36,14 @@ fn write_strings(values: &[Arc<str>], output: &mut dyn Write) -> Result<()> {
 	let mut values = values.iter();
 
 	if let Some(first) = values.next() {
-		write!(output, "{first}")?;
+		let first = first.as_bytes().escape_ascii();
+
+		write!(output, "\"{first}\"")?;
 
 		values.try_for_each(|value| {
-			let escaped = value.as_bytes().escape_ascii();
+			let value = value.as_bytes().escape_ascii();
 
-			write!(output, "\"{escaped}\"")
+			write!(output, ", \"{value}\"")
 		})?;
 	}
 
