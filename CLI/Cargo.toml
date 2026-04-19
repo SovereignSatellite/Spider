@@ -4,13 +4,13 @@ version = "1.0.0"
 edition = "2024"
 
 [dependencies]
-turing-machine-lifter = { path = "../Sources/TuringMachine" }
+turing-machine-source = { path = "../Sources/TuringMachine" }
 web-assembly-lifter = { path = "../Sources/WebAssembly/Lifter" }
 
 ir-graph = { path = "../IR/Graph" }
-ir-visitor = { path = "../IR/Visitor" }
+ir-pipeline = { path = "../IR/Pipeline" }
 
-json-printer = { path = "../Targets/Json" }
+json-target = { path = "../Targets/Json" }
 
 luajit-tree = { path = "../Targets/LuaJIT/Tree" }
 luajit-builder = { path = "../Targets/LuaJIT/Builder" }

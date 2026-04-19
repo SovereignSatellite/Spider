@@ -2,7 +2,7 @@ use std::{io::Write, sync::Arc};
 
 use parking_lot::Mutex;
 
-use ir_graph::control::Module;
+use ir_graph::region::Module;
 use luajit_builder::LuaJITBuilder;
 use luajit_printer::{
 	LuaJITPrinter,

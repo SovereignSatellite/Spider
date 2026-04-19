@@ -4,17 +4,14 @@ use std::{
 };
 
 use clap::Parser as _;
+use ir_pipeline::Optimizer;
 use parking_lot::Mutex;
 
-use ir_graph::control::Module;
+use ir_graph::region::Module;
 
-use self::{
-	arguments::{Arguments, Source, Target},
-	common::process_module,
-};
+use self::arguments::{Arguments, Source, Target};
 
 mod arguments;
-mod common;
 mod sources;
 mod targets;
 
@@ -30,7 +27,7 @@ fn build_module(data: &[u8], optimize: bool, source: Source) -> Arc<Mutex<Module
 		Source::WebAssembly => sources::from_web_assembly(data),
 	};
 
-	process_module(&module, optimize);
+	Optimizer::new().run(&module, optimize);
 
 	module
 }

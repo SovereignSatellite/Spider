@@ -3,7 +3,7 @@ use std::sync::Arc;
 use parking_lot::Mutex;
 use wasmparser::Validator;
 
-use ir_graph::control::Module;
+use ir_graph::region::Module;
 use web_assembly_lifter::WebAssemblyLifter;
 
 pub fn lift(data: &[u8]) -> Arc<Mutex<Module>> {

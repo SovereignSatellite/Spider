@@ -2,8 +2,8 @@ use std::sync::Arc;
 
 use parking_lot::Mutex;
 
-use ir_graph::control::Module;
-use turing_machine_lifter::TuringMachineLifter;
+use ir_graph::region::Module;
+use turing_machine_source::TuringMachineLifter;
 
 fn has_balanced_brackets(source: &str) -> bool {
 	let mut open = 0;
