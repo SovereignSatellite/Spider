@@ -133,14 +133,6 @@ impl ControlFlowGraph {
 		self.predecessors(id).find(|&id_2| id <= id_2)
 	}
 
-	/// Returns `true` if the graph has exactly one entry block.
-	#[must_use]
-	pub fn has_single_entry(&self) -> bool {
-		let mut basic_blocks = self.basic_blocks.iter();
-
-		basic_blocks.any(BasicBlock::is_source) && !basic_blocks.any(BasicBlock::is_source)
-	}
-
 	/// Returns `true` if the graph contains any repeat (loop) edges.
 	#[must_use]
 	pub fn has_repeats(&self) -> bool {

@@ -499,7 +499,7 @@ fn handle_node(
 }
 
 #[expect(clippy::too_many_lines, reason = "exhaustive match over node variants")]
-fn run_region(assignments: &mut HashMap<ScopedLink, ScopedLink>, nodes: &[Node], scope: usize) {
+pub fn run(assignments: &mut HashMap<ScopedLink, ScopedLink>, nodes: &[Node], scope: usize) {
 	for (id, node) in nodes.iter().enumerate() {
 		let id = id.try_into().unwrap();
 
@@ -573,19 +573,15 @@ fn run_region(assignments: &mut HashMap<ScopedLink, ScopedLink>, nodes: &[Node],
 					let branch = branch_arc.lock();
 					let branch_scope = Arc::as_ptr(branch_arc) as usize;
 
-					run_region(assignments, &branch.nodes, branch_scope);
+					run(assignments, &branch.nodes, branch_scope);
 				}
 			}
 			Node::Repeat(arc) => {
 				let repeat = arc.lock();
 				let repeat_scope = Arc::as_ptr(arc) as usize;
 
-				run_region(assignments, &repeat.nodes, repeat_scope);
+				run(assignments, &repeat.nodes, repeat_scope);
 			}
 		}
 	}
-}
-
-pub fn run(assignments: &mut HashMap<ScopedLink, ScopedLink>, nodes: &[Node], scope: usize) {
-	run_region(assignments, nodes, scope);
 }
