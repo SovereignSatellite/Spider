@@ -1,0 +1,13 @@
+[package]
+name = "ir-pipeline"
+version = "1.0.0"
+edition = "2024"
+
+[lints]
+workspace = true
+
+[dependencies]
+ir-graph = { path = "../Graph" }
+ir-passes = { path = "../Passes" }
+
+parking_lot.workspace = true

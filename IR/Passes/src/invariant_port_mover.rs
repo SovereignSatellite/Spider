@@ -8,10 +8,10 @@ use set::Set;
 
 use ir_graph::{
 	Link, Node,
-	control::{Match, Repeat},
+	region::{Match, Repeat},
 };
 
-use super::tracer;
+use crate::tracer;
 
 /// Moves invariant ports out of control flow regions.
 pub struct InvariantPortMover {

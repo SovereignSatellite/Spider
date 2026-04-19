@@ -4,9 +4,9 @@ use alloc::sync::Arc;
 
 use parking_lot::Mutex;
 
-use ir_graph::{
+use crate::{
 	Node, Region,
-	control::{Branch, Function, Match, Module, Repeat},
+	node::region::{Branch, Function, Match, Module, Repeat},
 };
 
 fn run_region<H>(region: Region, handler: &mut H)

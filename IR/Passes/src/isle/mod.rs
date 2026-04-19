@@ -2,7 +2,7 @@
 
 use core::mem;
 
-use ir_graph::{Link, Node, simple::Identity};
+use ir_graph::{Link, Node, operation::Identity};
 
 use self::internal::{
 	constructor_SimplifyI32, constructor_SimplifyMemory, constructor_SimplifyMutable,
