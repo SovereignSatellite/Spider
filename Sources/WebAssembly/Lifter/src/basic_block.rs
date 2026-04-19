@@ -2,7 +2,7 @@ use core::iter;
 
 use list::resizable::Resizable;
 
-use ir_graph::{Link, Node, control::ValueType, simple};
+use ir_graph::{Link, Node, operation, region::ValueType};
 use web_assembly_graph::instruction::{
 	Call, DataDrop, ElementsDrop, F32Constant, F64Constant, GlobalGet, GlobalSet, I32Constant,
 	I64Constant, Instruction, IntegerBinaryOperation, IntegerCompareOperation,
@@ -15,7 +15,7 @@ use web_assembly_graph::instruction::{
 };
 use web_assembly_liveness::references::{Reference, ReferenceType};
 
-use super::dependency_map::DependencyMap;
+use super::dependencies::DependencyMap;
 
 const LOCAL_BASE: usize = Name::COUNT as usize;
 
@@ -47,7 +47,7 @@ impl BasicBlockLifter {
 
 		self.dependencies.get_mutable_into(&mut sources);
 
-		let fence = simple::Fence::add_into(nodes, Resizable::Heap(sources));
+		let fence = operation::Fence::add_into(nodes, Resizable::Heap(sources));
 		let mut fence = (0..u16::MAX).map(|port| Link(fence, port));
 
 		self.trap = fence.next().unwrap();
@@ -183,7 +183,7 @@ impl BasicBlockLifter {
 		} = instruction;
 
 		self.locals[usize::from(destination)] =
-			simple::RefIsNull::add_into(nodes, self.locals[usize::from(source)]);
+			operation::RefIsNull::add_into(nodes, self.locals[usize::from(source)]);
 	}
 
 	fn handle_ref_null(&mut self, nodes: &mut Vec<Node>, instruction: RefNull) {
@@ -200,7 +200,7 @@ impl BasicBlockLifter {
 
 		let state = self.dependencies.get(ReferenceType::Function, function);
 
-		self.locals[usize::from(destination)] = simple::MutableGet::add_into(nodes, state).0;
+		self.locals[usize::from(destination)] = operation::MutableGet::add_into(nodes, state).0;
 	}
 
 	fn handle_unreachable(&mut self, nodes: &mut Vec<Node>) {
@@ -239,7 +239,7 @@ impl BasicBlockLifter {
 
 		let arguments = self.handle_pre_call(nodes, sources.0, sources.1);
 
-		let call = simple::Apply::add_into(
+		let call = operation::Apply::add_into(
 			nodes,
 			self.locals[usize::from(function)],
 			arguments,
@@ -261,7 +261,7 @@ impl BasicBlockLifter {
 			operator,
 		} = instruction;
 
-		self.locals[usize::from(destination)] = simple::IntegerUnaryOperation::add_into(
+		self.locals[usize::from(destination)] = operation::integer::UnaryOperation::add_into(
 			nodes,
 			self.locals[usize::from(source)],
 			kind,
@@ -282,7 +282,7 @@ impl BasicBlockLifter {
 			operator,
 		} = instruction;
 
-		self.locals[usize::from(destination)] = simple::IntegerBinaryOperation::add_into(
+		self.locals[usize::from(destination)] = operation::integer::BinaryOperation::add_into(
 			nodes,
 			self.locals[usize::from(lhs)],
 			self.locals[usize::from(rhs)],
@@ -304,7 +304,7 @@ impl BasicBlockLifter {
 			operator,
 		} = instruction;
 
-		self.locals[usize::from(destination)] = simple::IntegerCompareOperation::add_into(
+		self.locals[usize::from(destination)] = operation::integer::CompareOperation::add_into(
 			nodes,
 			self.locals[usize::from(lhs)],
 			self.locals[usize::from(rhs)],
@@ -320,7 +320,7 @@ impl BasicBlockLifter {
 		} = instruction;
 
 		self.locals[usize::from(destination)] =
-			simple::IntegerNarrow::add_into(nodes, self.locals[usize::from(source)]);
+			operation::IntegerNarrow::add_into(nodes, self.locals[usize::from(source)]);
 	}
 
 	fn handle_integer_widen(&mut self, nodes: &mut Vec<Node>, instruction: IntegerWiden) {
@@ -330,7 +330,7 @@ impl BasicBlockLifter {
 		} = instruction;
 
 		self.locals[usize::from(destination)] =
-			simple::IntegerWiden::add_into(nodes, self.locals[usize::from(source)]);
+			operation::IntegerWiden::add_into(nodes, self.locals[usize::from(source)]);
 	}
 
 	fn handle_integer_extend(&mut self, nodes: &mut Vec<Node>, instruction: IntegerExtend) {
@@ -341,7 +341,7 @@ impl BasicBlockLifter {
 		} = instruction;
 
 		self.locals[usize::from(destination)] =
-			simple::IntegerSignExtend::add_into(nodes, self.locals[usize::from(source)], kind);
+			operation::IntegerSignExtend::add_into(nodes, self.locals[usize::from(source)], kind);
 	}
 
 	fn handle_integer_convert_to_number(
@@ -357,7 +357,7 @@ impl BasicBlockLifter {
 			from,
 		} = instruction;
 
-		self.locals[usize::from(destination)] = simple::IntegerConvertToNumber::add_into(
+		self.locals[usize::from(destination)] = operation::IntegerConvertToNumber::add_into(
 			nodes,
 			self.locals[usize::from(source)],
 			signed,
@@ -377,7 +377,7 @@ impl BasicBlockLifter {
 			from,
 		} = instruction;
 
-		self.locals[usize::from(destination)] = simple::IntegerTransmuteToNumber::add_into(
+		self.locals[usize::from(destination)] = operation::IntegerTransmuteToNumber::add_into(
 			nodes,
 			self.locals[usize::from(source)],
 			from,
@@ -396,7 +396,7 @@ impl BasicBlockLifter {
 			operator,
 		} = instruction;
 
-		self.locals[usize::from(destination)] = simple::NumberUnaryOperation::add_into(
+		self.locals[usize::from(destination)] = operation::number::UnaryOperation::add_into(
 			nodes,
 			self.locals[usize::from(source)],
 			kind,
@@ -417,7 +417,7 @@ impl BasicBlockLifter {
 			operator,
 		} = instruction;
 
-		self.locals[usize::from(destination)] = simple::NumberBinaryOperation::add_into(
+		self.locals[usize::from(destination)] = operation::number::BinaryOperation::add_into(
 			nodes,
 			self.locals[usize::from(lhs)],
 			self.locals[usize::from(rhs)],
@@ -439,7 +439,7 @@ impl BasicBlockLifter {
 			operator,
 		} = instruction;
 
-		self.locals[usize::from(destination)] = simple::NumberCompareOperation::add_into(
+		self.locals[usize::from(destination)] = operation::number::CompareOperation::add_into(
 			nodes,
 			self.locals[usize::from(lhs)],
 			self.locals[usize::from(rhs)],
@@ -455,7 +455,7 @@ impl BasicBlockLifter {
 		} = instruction;
 
 		self.locals[usize::from(destination)] =
-			simple::NumberNarrow::add_into(nodes, self.locals[usize::from(source)]);
+			operation::NumberNarrow::add_into(nodes, self.locals[usize::from(source)]);
 	}
 
 	fn handle_number_widen(&mut self, nodes: &mut Vec<Node>, instruction: NumberWiden) {
@@ -465,7 +465,7 @@ impl BasicBlockLifter {
 		} = instruction;
 
 		self.locals[usize::from(destination)] =
-			simple::NumberWiden::add_into(nodes, self.locals[usize::from(source)]);
+			operation::NumberWiden::add_into(nodes, self.locals[usize::from(source)]);
 	}
 
 	fn handle_number_truncate_to_integer(
@@ -482,7 +482,7 @@ impl BasicBlockLifter {
 			from,
 		} = instruction;
 
-		self.locals[usize::from(destination)] = simple::NumberTruncateToInteger::add_into(
+		self.locals[usize::from(destination)] = operation::NumberTruncateToInteger::add_into(
 			nodes,
 			self.locals[usize::from(source)],
 			signed,
@@ -503,7 +503,7 @@ impl BasicBlockLifter {
 			from,
 		} = instruction;
 
-		self.locals[usize::from(destination)] = simple::NumberTransmuteToInteger::add_into(
+		self.locals[usize::from(destination)] = operation::NumberTransmuteToInteger::add_into(
 			nodes,
 			self.locals[usize::from(source)],
 			from,
@@ -517,7 +517,7 @@ impl BasicBlockLifter {
 		} = instruction;
 
 		let state = self.dependencies.get(ReferenceType::Global, source);
-		let (result, state) = simple::MutableGet::add_into(nodes, state);
+		let (result, state) = operation::MutableGet::add_into(nodes, state);
 
 		self.locals[usize::from(destination)] = result;
 
@@ -530,7 +530,7 @@ impl BasicBlockLifter {
 			source,
 		} = instruction;
 
-		let state = simple::MutableSet::add_into(
+		let state = operation::MutableSet::add_into(
 			nodes,
 			self.dependencies.get(ReferenceType::Global, destination),
 			self.locals[usize::from(source)],
@@ -540,10 +540,10 @@ impl BasicBlockLifter {
 			.set(ReferenceType::Global, destination, state);
 	}
 
-	fn load_location(&self, kind: ReferenceType, location: Location) -> simple::Location {
+	fn load_location(&self, kind: ReferenceType, location: Location) -> operation::Location {
 		let Location { reference, offset } = location;
 
-		simple::Location {
+		operation::Location {
 			reference: self.dependencies.get(kind, reference),
 			offset: self.locals[usize::from(offset)],
 		}
@@ -556,7 +556,7 @@ impl BasicBlockLifter {
 		} = instruction;
 
 		let state = self.load_location(ReferenceType::Table, source);
-		let (result, state) = simple::TableGet::add_into(nodes, state);
+		let (result, state) = operation::TableGet::add_into(nodes, state);
 
 		self.locals[usize::from(destination)] = result;
 
@@ -570,7 +570,7 @@ impl BasicBlockLifter {
 			source,
 		} = instruction;
 
-		let state = simple::TableSet::add_into(
+		let state = operation::TableSet::add_into(
 			nodes,
 			self.load_location(ReferenceType::Table, destination),
 			self.locals[usize::from(source)],
@@ -584,7 +584,7 @@ impl BasicBlockLifter {
 		let TableSize { destination, table } = instruction;
 
 		let state = self.dependencies.get(ReferenceType::Table, table);
-		let (result, state) = simple::TableSize::add_into(nodes, state);
+		let (result, state) = operation::TableSize::add_into(nodes, state);
 
 		self.locals[usize::from(destination)] = result;
 
@@ -599,7 +599,7 @@ impl BasicBlockLifter {
 			initializer,
 		} = instruction;
 
-		let (result, state) = simple::TableGrow::add_into(
+		let (result, state) = operation::TableGrow::add_into(
 			nodes,
 			self.dependencies.get(ReferenceType::Table, table),
 			self.locals[usize::from(initializer)],
@@ -618,7 +618,7 @@ impl BasicBlockLifter {
 			size,
 		} = instruction;
 
-		let state = simple::TableFill::add_into(
+		let state = operation::TableFill::add_into(
 			nodes,
 			self.load_location(ReferenceType::Table, destination),
 			self.locals[usize::from(source)],
@@ -636,7 +636,7 @@ impl BasicBlockLifter {
 			size,
 		} = instruction;
 
-		let (destination_state, source_state) = simple::TableCopy::add_into(
+		let (destination_state, source_state) = operation::TableCopy::add_into(
 			nodes,
 			self.load_location(ReferenceType::Table, destination),
 			self.load_location(ReferenceType::Table, source),
@@ -662,7 +662,7 @@ impl BasicBlockLifter {
 
 		let elements = self.load_location(ReferenceType::Elements, source);
 
-		let (destination_state, source_state) = simple::TableCopy::add_into(
+		let (destination_state, source_state) = operation::TableCopy::add_into(
 			nodes,
 			self.load_location(ReferenceType::Table, destination),
 			elements,
@@ -683,7 +683,7 @@ impl BasicBlockLifter {
 		let ElementsDrop { source } = instruction;
 
 		let state = self.dependencies.get(ReferenceType::Elements, source);
-		let state = simple::TableDrop::add_into(nodes, state);
+		let state = operation::TableDrop::add_into(nodes, state);
 
 		self.dependencies
 			.set(ReferenceType::Elements, source, state);
@@ -697,7 +697,7 @@ impl BasicBlockLifter {
 		} = instruction;
 
 		let state = self.load_location(ReferenceType::Memory, source);
-		let (result, state) = simple::MemoryLoad::add_into(nodes, state, kind);
+		let (result, state) = operation::MemoryLoad::add_into(nodes, state, kind);
 
 		self.locals[usize::from(destination)] = result;
 
@@ -712,7 +712,7 @@ impl BasicBlockLifter {
 			kind,
 		} = instruction;
 
-		let state = simple::MemoryStore::add_into(
+		let state = operation::MemoryStore::add_into(
 			nodes,
 			self.load_location(ReferenceType::Memory, destination),
 			self.locals[usize::from(source)],
@@ -730,7 +730,7 @@ impl BasicBlockLifter {
 		} = instruction;
 
 		let state = self.dependencies.get(ReferenceType::Memory, memory);
-		let (result, state) = simple::MemorySize::add_into(nodes, state);
+		let (result, state) = operation::MemorySize::add_into(nodes, state);
 
 		self.locals[usize::from(destination)] = result;
 
@@ -744,7 +744,7 @@ impl BasicBlockLifter {
 			size,
 		} = instruction;
 
-		let (result, state) = simple::MemoryGrow::add_into(
+		let (result, state) = operation::MemoryGrow::add_into(
 			nodes,
 			self.dependencies.get(ReferenceType::Memory, memory),
 			self.locals[usize::from(size)],
@@ -762,7 +762,7 @@ impl BasicBlockLifter {
 			size,
 		} = instruction;
 
-		let state = simple::MemoryFill::add_into(
+		let state = operation::MemoryFill::add_into(
 			nodes,
 			self.load_location(ReferenceType::Memory, destination),
 			self.locals[usize::from(byte)],
@@ -780,7 +780,7 @@ impl BasicBlockLifter {
 			size,
 		} = instruction;
 
-		let (destination_state, source_state) = simple::MemoryCopy::add_into(
+		let (destination_state, source_state) = operation::MemoryCopy::add_into(
 			nodes,
 			self.load_location(ReferenceType::Memory, destination),
 			self.load_location(ReferenceType::Memory, source),
@@ -804,7 +804,7 @@ impl BasicBlockLifter {
 			size,
 		} = instruction;
 
-		let (destination_state, source_state) = simple::MemoryCopy::add_into(
+		let (destination_state, source_state) = operation::MemoryCopy::add_into(
 			nodes,
 			self.load_location(ReferenceType::Memory, destination),
 			self.load_location(ReferenceType::Data, source),
@@ -825,7 +825,7 @@ impl BasicBlockLifter {
 		let DataDrop { source } = instruction;
 
 		let state = self.dependencies.get(ReferenceType::Data, source);
-		let state = simple::MemoryDrop::add_into(nodes, state);
+		let state = operation::MemoryDrop::add_into(nodes, state);
 
 		self.dependencies.set(ReferenceType::Data, source, state);
 	}

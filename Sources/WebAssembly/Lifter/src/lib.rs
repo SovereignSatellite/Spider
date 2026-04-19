@@ -11,19 +11,21 @@ use wasmparser::{ConstExpr, ElementItems, FunctionBody, SectionLimited, ValType}
 
 use ir_graph::{
 	Link, Node,
-	control::{Export, Import, Module, ModuleArguments},
-	simple::{
+	operation::{
 		Apply, Fence, Location, MemoryCopy, MemoryDrop, MemoryNew, MutableGet, MutableNew,
 		MutableSet, TableCopy, TableDrop, TableFill, TableNew, TableSet,
 	},
+	region::{Export, Import, Module, module},
 };
 use web_assembly_builder::Types;
 use web_assembly_graph::instruction::MemorySize;
 
-use self::{function_lifter::FunctionLifter, global_state::GlobalState, sections::Sections};
+use self::{function::FunctionLifter, global_state::GlobalState, sections::Sections};
 
-mod control_flow_lifter;
-mod function_lifter;
+mod basic_block;
+mod control_flow;
+mod dependencies;
+mod function;
 mod global_state;
 mod sections;
 
@@ -103,7 +105,7 @@ impl WebAssemblyLifter {
 		arguments: u32,
 		section: SectionLimited<'_, wasmparser::Import<'_>>,
 	) {
-		let environment = Link(arguments, ModuleArguments::ENVIRONMENT_PORT);
+		let environment = Link(arguments, module::Arguments::ENVIRONMENT_PORT);
 
 		for wasmparser::Import { module, name, ty } in section.into_iter().map(Result::unwrap) {
 			let mut link = Import::add_into(nodes, environment, module.into(), name.into());
@@ -561,7 +563,7 @@ impl WebAssemblyLifter {
 		arguments: u32,
 		start: Option<u32>,
 	) -> Link {
-		let state = Link(arguments, ModuleArguments::STATE_PORT);
+		let state = Link(arguments, module::Arguments::STATE_PORT);
 		let state = self.create_fence(nodes, state);
 
 		start.map_or(state, |start| {

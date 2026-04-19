@@ -5,8 +5,8 @@ use wasmparser::{BlockType, FunctionBody, LocalsReader, OperatorsReader, ValType
 
 use ir_graph::{
 	Link, Node,
-	control::{Function, ValueType},
-	simple::Apply,
+	operation::Apply,
+	region::{Function, ValueType},
 };
 use web_assembly_builder::{ControlFlowBuilder, Types};
 use web_assembly_graph::ControlFlowGraph;
@@ -15,7 +15,7 @@ use web_assembly_liveness::{
 	references::{self, Reference},
 };
 
-use super::{control_flow_lifter::ControlFlowLifter, global_state::GlobalState};
+use super::{control_flow::ControlFlowLifter, global_state::GlobalState};
 
 fn web_type_to_data_type(kind: ValType) -> ValueType {
 	match kind {

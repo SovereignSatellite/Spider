@@ -4,11 +4,7 @@ use wasmparser::{BlockType, BrTable, FuncType, Ieee32, Ieee64, MemArg, Operator,
 
 use web_assembly_graph::{
 	ControlFlowGraph,
-	instruction::{
-		ExtendType, IntegerBinaryOperator, IntegerCompareOperator, IntegerType,
-		IntegerUnaryOperator, LoadType, Location, NumberBinaryOperator, NumberCompareOperator,
-		NumberType, NumberUnaryOperator, StoreType,
-	},
+	instruction::{ExtendType, LoadType, Location, StoreType, integer, number},
 };
 
 use super::{
@@ -270,7 +266,7 @@ impl ExpressionBuilder {
 			destination,
 			lhs,
 			0,
-			IntegerCompareOperator::Equal,
+			integer::CompareOperator::Equal,
 		);
 	}
 
@@ -283,15 +279,15 @@ impl ExpressionBuilder {
 			destination,
 			lhs,
 			SHARED_LOCAL,
-			IntegerType::I64,
-			IntegerCompareOperator::Equal,
+			integer::Type::I64,
+			integer::CompareOperator::Equal,
 		);
 	}
 
 	fn handle_integer_unary_operation(
 		&mut self,
-		kind: IntegerType,
-		operator: IntegerUnaryOperator,
+		kind: integer::Type,
+		operator: integer::UnaryOperator,
 	) {
 		let source = self.stack_builder.pull_local();
 		let destination = self.stack_builder.push_local();
@@ -300,18 +296,18 @@ impl ExpressionBuilder {
 			.add_integer_unary_operation(destination, source, kind, operator);
 	}
 
-	fn handle_i32_unary(&mut self, operator: IntegerUnaryOperator) {
-		self.handle_integer_unary_operation(IntegerType::I32, operator);
+	fn handle_i32_unary(&mut self, operator: integer::UnaryOperator) {
+		self.handle_integer_unary_operation(integer::Type::I32, operator);
 	}
 
-	fn handle_i64_unary(&mut self, operator: IntegerUnaryOperator) {
-		self.handle_integer_unary_operation(IntegerType::I64, operator);
+	fn handle_i64_unary(&mut self, operator: integer::UnaryOperator) {
+		self.handle_integer_unary_operation(integer::Type::I64, operator);
 	}
 
 	fn handle_integer_compare_operation(
 		&mut self,
-		kind: IntegerType,
-		operator: IntegerCompareOperator,
+		kind: integer::Type,
+		operator: integer::CompareOperator,
 	) {
 		let rhs = self.stack_builder.pull_local();
 		let lhs = self.stack_builder.pull_local();
@@ -321,18 +317,18 @@ impl ExpressionBuilder {
 			.add_integer_compare_operation(destination, lhs, rhs, kind, operator);
 	}
 
-	fn handle_i32_compare(&mut self, operator: IntegerCompareOperator) {
-		self.handle_integer_compare_operation(IntegerType::I32, operator);
+	fn handle_i32_compare(&mut self, operator: integer::CompareOperator) {
+		self.handle_integer_compare_operation(integer::Type::I32, operator);
 	}
 
-	fn handle_i64_compare(&mut self, operator: IntegerCompareOperator) {
-		self.handle_integer_compare_operation(IntegerType::I64, operator);
+	fn handle_i64_compare(&mut self, operator: integer::CompareOperator) {
+		self.handle_integer_compare_operation(integer::Type::I64, operator);
 	}
 
 	fn handle_number_compare_operation(
 		&mut self,
-		kind: NumberType,
-		operator: NumberCompareOperator,
+		kind: number::Type,
+		operator: number::CompareOperator,
 	) {
 		let rhs = self.stack_builder.pull_local();
 		let lhs = self.stack_builder.pull_local();
@@ -342,18 +338,18 @@ impl ExpressionBuilder {
 			.add_number_compare_operation(destination, lhs, rhs, kind, operator);
 	}
 
-	fn handle_f32_compare(&mut self, operator: NumberCompareOperator) {
-		self.handle_number_compare_operation(NumberType::F32, operator);
+	fn handle_f32_compare(&mut self, operator: number::CompareOperator) {
+		self.handle_number_compare_operation(number::Type::F32, operator);
 	}
 
-	fn handle_f64_compare(&mut self, operator: NumberCompareOperator) {
-		self.handle_number_compare_operation(NumberType::F64, operator);
+	fn handle_f64_compare(&mut self, operator: number::CompareOperator) {
+		self.handle_number_compare_operation(number::Type::F64, operator);
 	}
 
 	fn handle_integer_binary_operation(
 		&mut self,
-		kind: IntegerType,
-		operator: IntegerBinaryOperator,
+		kind: integer::Type,
+		operator: integer::BinaryOperator,
 	) {
 		let rhs = self.stack_builder.pull_local();
 		let lhs = self.stack_builder.pull_local();
@@ -363,15 +359,19 @@ impl ExpressionBuilder {
 			.add_integer_binary_operation(destination, lhs, rhs, kind, operator);
 	}
 
-	fn handle_i32_binary(&mut self, operator: IntegerBinaryOperator) {
-		self.handle_integer_binary_operation(IntegerType::I32, operator);
+	fn handle_i32_binary(&mut self, operator: integer::BinaryOperator) {
+		self.handle_integer_binary_operation(integer::Type::I32, operator);
 	}
 
-	fn handle_i64_binary(&mut self, operator: IntegerBinaryOperator) {
-		self.handle_integer_binary_operation(IntegerType::I64, operator);
+	fn handle_i64_binary(&mut self, operator: integer::BinaryOperator) {
+		self.handle_integer_binary_operation(integer::Type::I64, operator);
 	}
 
-	fn handle_number_unary_operation(&mut self, kind: NumberType, operator: NumberUnaryOperator) {
+	fn handle_number_unary_operation(
+		&mut self,
+		kind: number::Type,
+		operator: number::UnaryOperator,
+	) {
 		let source = self.stack_builder.pull_local();
 		let destination = self.stack_builder.push_local();
 
@@ -379,15 +379,19 @@ impl ExpressionBuilder {
 			.add_number_unary_operation(destination, source, kind, operator);
 	}
 
-	fn handle_f32_unary(&mut self, operator: NumberUnaryOperator) {
-		self.handle_number_unary_operation(NumberType::F32, operator);
+	fn handle_f32_unary(&mut self, operator: number::UnaryOperator) {
+		self.handle_number_unary_operation(number::Type::F32, operator);
 	}
 
-	fn handle_f64_unary(&mut self, operator: NumberUnaryOperator) {
-		self.handle_number_unary_operation(NumberType::F64, operator);
+	fn handle_f64_unary(&mut self, operator: number::UnaryOperator) {
+		self.handle_number_unary_operation(number::Type::F64, operator);
 	}
 
-	fn handle_number_binary_operation(&mut self, kind: NumberType, operator: NumberBinaryOperator) {
+	fn handle_number_binary_operation(
+		&mut self,
+		kind: number::Type,
+		operator: number::BinaryOperator,
+	) {
 		let rhs = self.stack_builder.pull_local();
 		let lhs = self.stack_builder.pull_local();
 		let destination = self.stack_builder.push_local();
@@ -396,12 +400,12 @@ impl ExpressionBuilder {
 			.add_number_binary_operation(destination, lhs, rhs, kind, operator);
 	}
 
-	fn handle_f32_binary(&mut self, operator: NumberBinaryOperator) {
-		self.handle_number_binary_operation(NumberType::F32, operator);
+	fn handle_f32_binary(&mut self, operator: number::BinaryOperator) {
+		self.handle_number_binary_operation(number::Type::F32, operator);
 	}
 
-	fn handle_f64_binary(&mut self, operator: NumberBinaryOperator) {
-		self.handle_number_binary_operation(NumberType::F64, operator);
+	fn handle_f64_binary(&mut self, operator: number::BinaryOperator) {
+		self.handle_number_binary_operation(number::Type::F64, operator);
 	}
 
 	fn handle_integer_narrow(&mut self) {
@@ -415,8 +419,8 @@ impl ExpressionBuilder {
 		&mut self,
 		signed: bool,
 		saturate: bool,
-		to: IntegerType,
-		from: NumberType,
+		to: integer::Type,
+		from: number::Type,
 	) {
 		let source = self.stack_builder.pull_local();
 		let destination = self.stack_builder.push_local();
@@ -431,12 +435,12 @@ impl ExpressionBuilder {
 		);
 	}
 
-	fn handle_f32_truncate(&mut self, signed: bool, to: IntegerType) {
-		self.handle_number_truncate(signed, false, to, NumberType::F32);
+	fn handle_f32_truncate(&mut self, signed: bool, to: integer::Type) {
+		self.handle_number_truncate(signed, false, to, number::Type::F32);
 	}
 
-	fn handle_f64_truncate(&mut self, signed: bool, to: IntegerType) {
-		self.handle_number_truncate(signed, false, to, NumberType::F64);
+	fn handle_f64_truncate(&mut self, signed: bool, to: integer::Type) {
+		self.handle_number_truncate(signed, false, to, number::Type::F64);
 	}
 
 	fn handle_integer_widen(&mut self, signed: bool) {
@@ -454,8 +458,8 @@ impl ExpressionBuilder {
 	fn handle_integer_convert_to_number(
 		&mut self,
 		signed: bool,
-		to: NumberType,
-		from: IntegerType,
+		to: number::Type,
+		from: integer::Type,
 	) {
 		let source = self.stack_builder.pull_local();
 		let destination = self.stack_builder.push_local();
@@ -464,12 +468,12 @@ impl ExpressionBuilder {
 			.add_integer_convert_to_number(destination, source, signed, to, from);
 	}
 
-	fn handle_i32_convert_to_number(&mut self, signed: bool, to: NumberType) {
-		self.handle_integer_convert_to_number(signed, to, IntegerType::I32);
+	fn handle_i32_convert_to_number(&mut self, signed: bool, to: number::Type) {
+		self.handle_integer_convert_to_number(signed, to, integer::Type::I32);
 	}
 
-	fn handle_i64_convert_to_number(&mut self, signed: bool, to: NumberType) {
-		self.handle_integer_convert_to_number(signed, to, IntegerType::I64);
+	fn handle_i64_convert_to_number(&mut self, signed: bool, to: number::Type) {
+		self.handle_integer_convert_to_number(signed, to, integer::Type::I64);
 	}
 
 	fn handle_number_narrow(&mut self) {
@@ -486,7 +490,7 @@ impl ExpressionBuilder {
 		self.code_builder.add_number_widen(destination, source);
 	}
 
-	fn handle_number_reinterpret(&mut self, from: NumberType) {
+	fn handle_number_reinterpret(&mut self, from: number::Type) {
 		let source = self.stack_builder.pull_local();
 		let destination = self.stack_builder.push_local();
 
@@ -494,7 +498,7 @@ impl ExpressionBuilder {
 			.add_number_transmute_to_integer(destination, source, from);
 	}
 
-	fn handle_integer_reinterpret(&mut self, from: IntegerType) {
+	fn handle_integer_reinterpret(&mut self, from: integer::Type) {
 		let source = self.stack_builder.pull_local();
 		let destination = self.stack_builder.push_local();
 
@@ -510,12 +514,12 @@ impl ExpressionBuilder {
 			.add_integer_extend(destination, source, kind);
 	}
 
-	fn handle_f32_saturate(&mut self, signed: bool, to: IntegerType) {
-		self.handle_number_truncate(signed, true, to, NumberType::F32);
+	fn handle_f32_saturate(&mut self, signed: bool, to: integer::Type) {
+		self.handle_number_truncate(signed, true, to, number::Type::F32);
 	}
 
-	fn handle_f64_saturate(&mut self, signed: bool, to: IntegerType) {
-		self.handle_number_truncate(signed, true, to, NumberType::F64);
+	fn handle_f64_saturate(&mut self, signed: bool, to: integer::Type) {
+		self.handle_number_truncate(signed, true, to, number::Type::F64);
 	}
 
 	fn handle_memory_init(&mut self, memory: u32, data: u32) {
@@ -728,197 +732,205 @@ impl ExpressionBuilder {
 			Operator::F32Const { value } => self.handle_f32_const(value),
 			Operator::F64Const { value } => self.handle_f64_const(value),
 			Operator::I32Eqz => self.handle_i32_equals_zero(),
-			Operator::I32Eq => self.handle_i32_compare(IntegerCompareOperator::Equal),
-			Operator::I32Ne => self.handle_i32_compare(IntegerCompareOperator::NotEqual),
+			Operator::I32Eq => self.handle_i32_compare(integer::CompareOperator::Equal),
+			Operator::I32Ne => self.handle_i32_compare(integer::CompareOperator::NotEqual),
 			Operator::I32LtS => {
-				self.handle_i32_compare(IntegerCompareOperator::LessThan { signed: true });
+				self.handle_i32_compare(integer::CompareOperator::LessThan { signed: true });
 			}
 			Operator::I32LtU => {
-				self.handle_i32_compare(IntegerCompareOperator::LessThan { signed: false });
+				self.handle_i32_compare(integer::CompareOperator::LessThan { signed: false });
 			}
 			Operator::I32GtS => {
-				self.handle_i32_compare(IntegerCompareOperator::GreaterThan { signed: true });
+				self.handle_i32_compare(integer::CompareOperator::GreaterThan { signed: true });
 			}
 			Operator::I32GtU => {
-				self.handle_i32_compare(IntegerCompareOperator::GreaterThan { signed: false });
+				self.handle_i32_compare(integer::CompareOperator::GreaterThan { signed: false });
 			}
 			Operator::I32LeS => {
-				self.handle_i32_compare(IntegerCompareOperator::LessThanEqual { signed: true });
+				self.handle_i32_compare(integer::CompareOperator::LessThanEqual { signed: true });
 			}
 			Operator::I32LeU => {
-				self.handle_i32_compare(IntegerCompareOperator::LessThanEqual { signed: false });
+				self.handle_i32_compare(integer::CompareOperator::LessThanEqual { signed: false });
 			}
 			Operator::I32GeS => {
-				self.handle_i32_compare(IntegerCompareOperator::GreaterThanEqual { signed: true });
+				self.handle_i32_compare(integer::CompareOperator::GreaterThanEqual {
+					signed: true,
+				});
 			}
 			Operator::I32GeU => {
-				self.handle_i32_compare(IntegerCompareOperator::GreaterThanEqual { signed: false });
+				self.handle_i32_compare(integer::CompareOperator::GreaterThanEqual {
+					signed: false,
+				});
 			}
 			Operator::I64Eqz => self.handle_i64_equals_zero(),
-			Operator::I64Eq => self.handle_i64_compare(IntegerCompareOperator::Equal),
-			Operator::I64Ne => self.handle_i64_compare(IntegerCompareOperator::NotEqual),
+			Operator::I64Eq => self.handle_i64_compare(integer::CompareOperator::Equal),
+			Operator::I64Ne => self.handle_i64_compare(integer::CompareOperator::NotEqual),
 			Operator::I64LtS => {
-				self.handle_i64_compare(IntegerCompareOperator::LessThan { signed: true });
+				self.handle_i64_compare(integer::CompareOperator::LessThan { signed: true });
 			}
 			Operator::I64LtU => {
-				self.handle_i64_compare(IntegerCompareOperator::LessThan { signed: false });
+				self.handle_i64_compare(integer::CompareOperator::LessThan { signed: false });
 			}
 			Operator::I64GtS => {
-				self.handle_i64_compare(IntegerCompareOperator::GreaterThan { signed: true });
+				self.handle_i64_compare(integer::CompareOperator::GreaterThan { signed: true });
 			}
 			Operator::I64GtU => {
-				self.handle_i64_compare(IntegerCompareOperator::GreaterThan { signed: false });
+				self.handle_i64_compare(integer::CompareOperator::GreaterThan { signed: false });
 			}
 			Operator::I64LeS => {
-				self.handle_i64_compare(IntegerCompareOperator::LessThanEqual { signed: true });
+				self.handle_i64_compare(integer::CompareOperator::LessThanEqual { signed: true });
 			}
 			Operator::I64LeU => {
-				self.handle_i64_compare(IntegerCompareOperator::LessThanEqual { signed: false });
+				self.handle_i64_compare(integer::CompareOperator::LessThanEqual { signed: false });
 			}
 			Operator::I64GeS => {
-				self.handle_i64_compare(IntegerCompareOperator::GreaterThanEqual { signed: true });
+				self.handle_i64_compare(integer::CompareOperator::GreaterThanEqual {
+					signed: true,
+				});
 			}
 			Operator::I64GeU => {
-				self.handle_i64_compare(IntegerCompareOperator::GreaterThanEqual { signed: false });
+				self.handle_i64_compare(integer::CompareOperator::GreaterThanEqual {
+					signed: false,
+				});
 			}
-			Operator::F32Eq => self.handle_f32_compare(NumberCompareOperator::Equal),
-			Operator::F32Ne => self.handle_f32_compare(NumberCompareOperator::NotEqual),
-			Operator::F32Lt => self.handle_f32_compare(NumberCompareOperator::LessThan),
-			Operator::F32Gt => self.handle_f32_compare(NumberCompareOperator::GreaterThan),
-			Operator::F32Le => self.handle_f32_compare(NumberCompareOperator::LessThanEqual),
-			Operator::F32Ge => self.handle_f32_compare(NumberCompareOperator::GreaterThanEqual),
-			Operator::F64Eq => self.handle_f64_compare(NumberCompareOperator::Equal),
-			Operator::F64Ne => self.handle_f64_compare(NumberCompareOperator::NotEqual),
-			Operator::F64Lt => self.handle_f64_compare(NumberCompareOperator::LessThan),
-			Operator::F64Gt => self.handle_f64_compare(NumberCompareOperator::GreaterThan),
-			Operator::F64Le => self.handle_f64_compare(NumberCompareOperator::LessThanEqual),
-			Operator::F64Ge => self.handle_f64_compare(NumberCompareOperator::GreaterThanEqual),
-			Operator::I32Clz => self.handle_i32_unary(IntegerUnaryOperator::LeadingZeroes),
-			Operator::I32Ctz => self.handle_i32_unary(IntegerUnaryOperator::TrailingZeroes),
-			Operator::I32Popcnt => self.handle_i32_unary(IntegerUnaryOperator::CountOnes),
-			Operator::I32Add => self.handle_i32_binary(IntegerBinaryOperator::Add),
-			Operator::I32Sub => self.handle_i32_binary(IntegerBinaryOperator::Subtract),
-			Operator::I32Mul => self.handle_i32_binary(IntegerBinaryOperator::Multiply),
+			Operator::F32Eq => self.handle_f32_compare(number::CompareOperator::Equal),
+			Operator::F32Ne => self.handle_f32_compare(number::CompareOperator::NotEqual),
+			Operator::F32Lt => self.handle_f32_compare(number::CompareOperator::LessThan),
+			Operator::F32Gt => self.handle_f32_compare(number::CompareOperator::GreaterThan),
+			Operator::F32Le => self.handle_f32_compare(number::CompareOperator::LessThanEqual),
+			Operator::F32Ge => self.handle_f32_compare(number::CompareOperator::GreaterThanEqual),
+			Operator::F64Eq => self.handle_f64_compare(number::CompareOperator::Equal),
+			Operator::F64Ne => self.handle_f64_compare(number::CompareOperator::NotEqual),
+			Operator::F64Lt => self.handle_f64_compare(number::CompareOperator::LessThan),
+			Operator::F64Gt => self.handle_f64_compare(number::CompareOperator::GreaterThan),
+			Operator::F64Le => self.handle_f64_compare(number::CompareOperator::LessThanEqual),
+			Operator::F64Ge => self.handle_f64_compare(number::CompareOperator::GreaterThanEqual),
+			Operator::I32Clz => self.handle_i32_unary(integer::UnaryOperator::LeadingZeroes),
+			Operator::I32Ctz => self.handle_i32_unary(integer::UnaryOperator::TrailingZeroes),
+			Operator::I32Popcnt => self.handle_i32_unary(integer::UnaryOperator::CountOnes),
+			Operator::I32Add => self.handle_i32_binary(integer::BinaryOperator::Add),
+			Operator::I32Sub => self.handle_i32_binary(integer::BinaryOperator::Subtract),
+			Operator::I32Mul => self.handle_i32_binary(integer::BinaryOperator::Multiply),
 			Operator::I32DivS => {
-				self.handle_i32_binary(IntegerBinaryOperator::Divide { signed: true });
+				self.handle_i32_binary(integer::BinaryOperator::Divide { signed: true });
 			}
 			Operator::I32DivU => {
-				self.handle_i32_binary(IntegerBinaryOperator::Divide { signed: false });
+				self.handle_i32_binary(integer::BinaryOperator::Divide { signed: false });
 			}
 			Operator::I32RemS => {
-				self.handle_i32_binary(IntegerBinaryOperator::Remainder { signed: true });
+				self.handle_i32_binary(integer::BinaryOperator::Remainder { signed: true });
 			}
 			Operator::I32RemU => {
-				self.handle_i32_binary(IntegerBinaryOperator::Remainder { signed: false });
+				self.handle_i32_binary(integer::BinaryOperator::Remainder { signed: false });
 			}
-			Operator::I32And => self.handle_i32_binary(IntegerBinaryOperator::And),
-			Operator::I32Or => self.handle_i32_binary(IntegerBinaryOperator::Or),
-			Operator::I32Xor => self.handle_i32_binary(IntegerBinaryOperator::ExclusiveOr),
-			Operator::I32Shl => self.handle_i32_binary(IntegerBinaryOperator::ShiftLeft),
+			Operator::I32And => self.handle_i32_binary(integer::BinaryOperator::And),
+			Operator::I32Or => self.handle_i32_binary(integer::BinaryOperator::Or),
+			Operator::I32Xor => self.handle_i32_binary(integer::BinaryOperator::ExclusiveOr),
+			Operator::I32Shl => self.handle_i32_binary(integer::BinaryOperator::ShiftLeft),
 			Operator::I32ShrS => {
-				self.handle_i32_binary(IntegerBinaryOperator::ShiftRight { signed: true });
+				self.handle_i32_binary(integer::BinaryOperator::ShiftRight { signed: true });
 			}
 			Operator::I32ShrU => {
-				self.handle_i32_binary(IntegerBinaryOperator::ShiftRight { signed: false });
+				self.handle_i32_binary(integer::BinaryOperator::ShiftRight { signed: false });
 			}
-			Operator::I32Rotl => self.handle_i32_binary(IntegerBinaryOperator::RotateLeft),
-			Operator::I32Rotr => self.handle_i32_binary(IntegerBinaryOperator::RotateRight),
-			Operator::I64Clz => self.handle_i64_unary(IntegerUnaryOperator::LeadingZeroes),
-			Operator::I64Ctz => self.handle_i64_unary(IntegerUnaryOperator::TrailingZeroes),
-			Operator::I64Popcnt => self.handle_i64_unary(IntegerUnaryOperator::CountOnes),
-			Operator::I64Add => self.handle_i64_binary(IntegerBinaryOperator::Add),
-			Operator::I64Sub => self.handle_i64_binary(IntegerBinaryOperator::Subtract),
-			Operator::I64Mul => self.handle_i64_binary(IntegerBinaryOperator::Multiply),
+			Operator::I32Rotl => self.handle_i32_binary(integer::BinaryOperator::RotateLeft),
+			Operator::I32Rotr => self.handle_i32_binary(integer::BinaryOperator::RotateRight),
+			Operator::I64Clz => self.handle_i64_unary(integer::UnaryOperator::LeadingZeroes),
+			Operator::I64Ctz => self.handle_i64_unary(integer::UnaryOperator::TrailingZeroes),
+			Operator::I64Popcnt => self.handle_i64_unary(integer::UnaryOperator::CountOnes),
+			Operator::I64Add => self.handle_i64_binary(integer::BinaryOperator::Add),
+			Operator::I64Sub => self.handle_i64_binary(integer::BinaryOperator::Subtract),
+			Operator::I64Mul => self.handle_i64_binary(integer::BinaryOperator::Multiply),
 			Operator::I64DivS => {
-				self.handle_i64_binary(IntegerBinaryOperator::Divide { signed: true });
+				self.handle_i64_binary(integer::BinaryOperator::Divide { signed: true });
 			}
 			Operator::I64DivU => {
-				self.handle_i64_binary(IntegerBinaryOperator::Divide { signed: false });
+				self.handle_i64_binary(integer::BinaryOperator::Divide { signed: false });
 			}
 			Operator::I64RemS => {
-				self.handle_i64_binary(IntegerBinaryOperator::Remainder { signed: true });
+				self.handle_i64_binary(integer::BinaryOperator::Remainder { signed: true });
 			}
 			Operator::I64RemU => {
-				self.handle_i64_binary(IntegerBinaryOperator::Remainder { signed: false });
+				self.handle_i64_binary(integer::BinaryOperator::Remainder { signed: false });
 			}
-			Operator::I64And => self.handle_i64_binary(IntegerBinaryOperator::And),
-			Operator::I64Or => self.handle_i64_binary(IntegerBinaryOperator::Or),
-			Operator::I64Xor => self.handle_i64_binary(IntegerBinaryOperator::ExclusiveOr),
-			Operator::I64Shl => self.handle_i64_binary(IntegerBinaryOperator::ShiftLeft),
+			Operator::I64And => self.handle_i64_binary(integer::BinaryOperator::And),
+			Operator::I64Or => self.handle_i64_binary(integer::BinaryOperator::Or),
+			Operator::I64Xor => self.handle_i64_binary(integer::BinaryOperator::ExclusiveOr),
+			Operator::I64Shl => self.handle_i64_binary(integer::BinaryOperator::ShiftLeft),
 			Operator::I64ShrS => {
-				self.handle_i64_binary(IntegerBinaryOperator::ShiftRight { signed: true });
+				self.handle_i64_binary(integer::BinaryOperator::ShiftRight { signed: true });
 			}
 			Operator::I64ShrU => {
-				self.handle_i64_binary(IntegerBinaryOperator::ShiftRight { signed: false });
+				self.handle_i64_binary(integer::BinaryOperator::ShiftRight { signed: false });
 			}
-			Operator::I64Rotl => self.handle_i64_binary(IntegerBinaryOperator::RotateLeft),
-			Operator::I64Rotr => self.handle_i64_binary(IntegerBinaryOperator::RotateRight),
-			Operator::F32Abs => self.handle_f32_unary(NumberUnaryOperator::Absolute),
-			Operator::F32Neg => self.handle_f32_unary(NumberUnaryOperator::Negate),
-			Operator::F32Ceil => self.handle_f32_unary(NumberUnaryOperator::RoundUp),
-			Operator::F32Floor => self.handle_f32_unary(NumberUnaryOperator::RoundDown),
-			Operator::F32Trunc => self.handle_f32_unary(NumberUnaryOperator::Truncate),
-			Operator::F32Nearest => self.handle_f32_unary(NumberUnaryOperator::Nearest),
-			Operator::F32Sqrt => self.handle_f32_unary(NumberUnaryOperator::SquareRoot),
-			Operator::F32Add => self.handle_f32_binary(NumberBinaryOperator::Add),
-			Operator::F32Sub => self.handle_f32_binary(NumberBinaryOperator::Subtract),
-			Operator::F32Mul => self.handle_f32_binary(NumberBinaryOperator::Multiply),
-			Operator::F32Div => self.handle_f32_binary(NumberBinaryOperator::Divide),
-			Operator::F32Min => self.handle_f32_binary(NumberBinaryOperator::Minimum),
-			Operator::F32Max => self.handle_f32_binary(NumberBinaryOperator::Maximum),
-			Operator::F32Copysign => self.handle_f32_binary(NumberBinaryOperator::CopySign),
-			Operator::F64Abs => self.handle_f64_unary(NumberUnaryOperator::Absolute),
-			Operator::F64Neg => self.handle_f64_unary(NumberUnaryOperator::Negate),
-			Operator::F64Ceil => self.handle_f64_unary(NumberUnaryOperator::RoundUp),
-			Operator::F64Floor => self.handle_f64_unary(NumberUnaryOperator::RoundDown),
-			Operator::F64Trunc => self.handle_f64_unary(NumberUnaryOperator::Truncate),
-			Operator::F64Nearest => self.handle_f64_unary(NumberUnaryOperator::Nearest),
-			Operator::F64Sqrt => self.handle_f64_unary(NumberUnaryOperator::SquareRoot),
-			Operator::F64Add => self.handle_f64_binary(NumberBinaryOperator::Add),
-			Operator::F64Sub => self.handle_f64_binary(NumberBinaryOperator::Subtract),
-			Operator::F64Mul => self.handle_f64_binary(NumberBinaryOperator::Multiply),
-			Operator::F64Div => self.handle_f64_binary(NumberBinaryOperator::Divide),
-			Operator::F64Min => self.handle_f64_binary(NumberBinaryOperator::Minimum),
-			Operator::F64Max => self.handle_f64_binary(NumberBinaryOperator::Maximum),
-			Operator::F64Copysign => self.handle_f64_binary(NumberBinaryOperator::CopySign),
+			Operator::I64Rotl => self.handle_i64_binary(integer::BinaryOperator::RotateLeft),
+			Operator::I64Rotr => self.handle_i64_binary(integer::BinaryOperator::RotateRight),
+			Operator::F32Abs => self.handle_f32_unary(number::UnaryOperator::Absolute),
+			Operator::F32Neg => self.handle_f32_unary(number::UnaryOperator::Negate),
+			Operator::F32Ceil => self.handle_f32_unary(number::UnaryOperator::RoundUp),
+			Operator::F32Floor => self.handle_f32_unary(number::UnaryOperator::RoundDown),
+			Operator::F32Trunc => self.handle_f32_unary(number::UnaryOperator::Truncate),
+			Operator::F32Nearest => self.handle_f32_unary(number::UnaryOperator::Nearest),
+			Operator::F32Sqrt => self.handle_f32_unary(number::UnaryOperator::SquareRoot),
+			Operator::F32Add => self.handle_f32_binary(number::BinaryOperator::Add),
+			Operator::F32Sub => self.handle_f32_binary(number::BinaryOperator::Subtract),
+			Operator::F32Mul => self.handle_f32_binary(number::BinaryOperator::Multiply),
+			Operator::F32Div => self.handle_f32_binary(number::BinaryOperator::Divide),
+			Operator::F32Min => self.handle_f32_binary(number::BinaryOperator::Minimum),
+			Operator::F32Max => self.handle_f32_binary(number::BinaryOperator::Maximum),
+			Operator::F32Copysign => self.handle_f32_binary(number::BinaryOperator::CopySign),
+			Operator::F64Abs => self.handle_f64_unary(number::UnaryOperator::Absolute),
+			Operator::F64Neg => self.handle_f64_unary(number::UnaryOperator::Negate),
+			Operator::F64Ceil => self.handle_f64_unary(number::UnaryOperator::RoundUp),
+			Operator::F64Floor => self.handle_f64_unary(number::UnaryOperator::RoundDown),
+			Operator::F64Trunc => self.handle_f64_unary(number::UnaryOperator::Truncate),
+			Operator::F64Nearest => self.handle_f64_unary(number::UnaryOperator::Nearest),
+			Operator::F64Sqrt => self.handle_f64_unary(number::UnaryOperator::SquareRoot),
+			Operator::F64Add => self.handle_f64_binary(number::BinaryOperator::Add),
+			Operator::F64Sub => self.handle_f64_binary(number::BinaryOperator::Subtract),
+			Operator::F64Mul => self.handle_f64_binary(number::BinaryOperator::Multiply),
+			Operator::F64Div => self.handle_f64_binary(number::BinaryOperator::Divide),
+			Operator::F64Min => self.handle_f64_binary(number::BinaryOperator::Minimum),
+			Operator::F64Max => self.handle_f64_binary(number::BinaryOperator::Maximum),
+			Operator::F64Copysign => self.handle_f64_binary(number::BinaryOperator::CopySign),
 			Operator::I32WrapI64 => self.handle_integer_narrow(),
-			Operator::I32TruncF32S => self.handle_f32_truncate(true, IntegerType::I32),
-			Operator::I32TruncF32U => self.handle_f32_truncate(false, IntegerType::I32),
-			Operator::I32TruncF64S => self.handle_f64_truncate(true, IntegerType::I32),
-			Operator::I32TruncF64U => self.handle_f64_truncate(false, IntegerType::I32),
+			Operator::I32TruncF32S => self.handle_f32_truncate(true, integer::Type::I32),
+			Operator::I32TruncF32U => self.handle_f32_truncate(false, integer::Type::I32),
+			Operator::I32TruncF64S => self.handle_f64_truncate(true, integer::Type::I32),
+			Operator::I32TruncF64U => self.handle_f64_truncate(false, integer::Type::I32),
 			Operator::I64ExtendI32S => self.handle_integer_widen(true),
 			Operator::I64ExtendI32U => self.handle_integer_widen(false),
-			Operator::I64TruncF32S => self.handle_f32_truncate(true, IntegerType::I64),
-			Operator::I64TruncF32U => self.handle_f32_truncate(false, IntegerType::I64),
-			Operator::I64TruncF64S => self.handle_f64_truncate(true, IntegerType::I64),
-			Operator::I64TruncF64U => self.handle_f64_truncate(false, IntegerType::I64),
-			Operator::F32ConvertI32S => self.handle_i32_convert_to_number(true, NumberType::F32),
-			Operator::F32ConvertI32U => self.handle_i32_convert_to_number(false, NumberType::F32),
-			Operator::F32ConvertI64S => self.handle_i64_convert_to_number(true, NumberType::F32),
-			Operator::F32ConvertI64U => self.handle_i64_convert_to_number(false, NumberType::F32),
+			Operator::I64TruncF32S => self.handle_f32_truncate(true, integer::Type::I64),
+			Operator::I64TruncF32U => self.handle_f32_truncate(false, integer::Type::I64),
+			Operator::I64TruncF64S => self.handle_f64_truncate(true, integer::Type::I64),
+			Operator::I64TruncF64U => self.handle_f64_truncate(false, integer::Type::I64),
+			Operator::F32ConvertI32S => self.handle_i32_convert_to_number(true, number::Type::F32),
+			Operator::F32ConvertI32U => self.handle_i32_convert_to_number(false, number::Type::F32),
+			Operator::F32ConvertI64S => self.handle_i64_convert_to_number(true, number::Type::F32),
+			Operator::F32ConvertI64U => self.handle_i64_convert_to_number(false, number::Type::F32),
 			Operator::F32DemoteF64 => self.handle_number_narrow(),
-			Operator::F64ConvertI32S => self.handle_i32_convert_to_number(true, NumberType::F64),
-			Operator::F64ConvertI32U => self.handle_i32_convert_to_number(false, NumberType::F64),
-			Operator::F64ConvertI64S => self.handle_i64_convert_to_number(true, NumberType::F64),
-			Operator::F64ConvertI64U => self.handle_i64_convert_to_number(false, NumberType::F64),
+			Operator::F64ConvertI32S => self.handle_i32_convert_to_number(true, number::Type::F64),
+			Operator::F64ConvertI32U => self.handle_i32_convert_to_number(false, number::Type::F64),
+			Operator::F64ConvertI64S => self.handle_i64_convert_to_number(true, number::Type::F64),
+			Operator::F64ConvertI64U => self.handle_i64_convert_to_number(false, number::Type::F64),
 			Operator::F64PromoteF32 => self.handle_number_widen(),
-			Operator::I32ReinterpretF32 => self.handle_number_reinterpret(NumberType::F32),
-			Operator::I64ReinterpretF64 => self.handle_number_reinterpret(NumberType::F64),
-			Operator::F32ReinterpretI32 => self.handle_integer_reinterpret(IntegerType::I32),
-			Operator::F64ReinterpretI64 => self.handle_integer_reinterpret(IntegerType::I64),
+			Operator::I32ReinterpretF32 => self.handle_number_reinterpret(number::Type::F32),
+			Operator::I64ReinterpretF64 => self.handle_number_reinterpret(number::Type::F64),
+			Operator::F32ReinterpretI32 => self.handle_integer_reinterpret(integer::Type::I32),
+			Operator::F64ReinterpretI64 => self.handle_integer_reinterpret(integer::Type::I64),
 			Operator::I32Extend8S => self.handle_integer_extend(ExtendType::I32_S8),
 			Operator::I32Extend16S => self.handle_integer_extend(ExtendType::I32_S16),
 			Operator::I64Extend8S => self.handle_integer_extend(ExtendType::I64_S8),
 			Operator::I64Extend16S => self.handle_integer_extend(ExtendType::I64_S16),
 			Operator::I64Extend32S => self.handle_integer_extend(ExtendType::I64_S32),
-			Operator::I32TruncSatF32S => self.handle_f32_saturate(true, IntegerType::I32),
-			Operator::I32TruncSatF32U => self.handle_f32_saturate(false, IntegerType::I32),
-			Operator::I32TruncSatF64S => self.handle_f64_saturate(true, IntegerType::I32),
-			Operator::I32TruncSatF64U => self.handle_f64_saturate(false, IntegerType::I32),
-			Operator::I64TruncSatF32S => self.handle_f32_saturate(true, IntegerType::I64),
-			Operator::I64TruncSatF32U => self.handle_f32_saturate(false, IntegerType::I64),
-			Operator::I64TruncSatF64S => self.handle_f64_saturate(true, IntegerType::I64),
-			Operator::I64TruncSatF64U => self.handle_f64_saturate(false, IntegerType::I64),
+			Operator::I32TruncSatF32S => self.handle_f32_saturate(true, integer::Type::I32),
+			Operator::I32TruncSatF32U => self.handle_f32_saturate(false, integer::Type::I32),
+			Operator::I32TruncSatF64S => self.handle_f64_saturate(true, integer::Type::I32),
+			Operator::I32TruncSatF64U => self.handle_f64_saturate(false, integer::Type::I32),
+			Operator::I64TruncSatF32S => self.handle_f32_saturate(true, integer::Type::I64),
+			Operator::I64TruncSatF32U => self.handle_f32_saturate(false, integer::Type::I64),
+			Operator::I64TruncSatF64S => self.handle_f64_saturate(true, integer::Type::I64),
+			Operator::I64TruncSatF64U => self.handle_f64_saturate(false, integer::Type::I64),
 			Operator::MemoryInit { data_index, mem } => self.handle_memory_init(mem, data_index),
 			Operator::DataDrop { data_index } => self.handle_data_drop(data_index),
 			Operator::MemoryCopy { dst_mem, src_mem } => self.handle_memory_copy(dst_mem, src_mem),
