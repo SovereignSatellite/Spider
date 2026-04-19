@@ -4,7 +4,7 @@ use set::Set;
 
 use ir_graph::{
 	Link,
-	control::{Match, Repeat},
+	region::{Match, Repeat},
 };
 
 fn find_argument(source: Link, arguments: &[Link]) -> Option<Link> {

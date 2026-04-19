@@ -2,9 +2,13 @@
 
 use ir_graph::{
 	Link, Node,
-	simple::{
-		Identity, IntegerBinaryOperation, IntegerBinaryOperator, IntegerType, LoadType, Location,
-		MemoryLoad, MemoryStore, MutableGet, MutableNew, MutableSet, StoreType, TableGet, TableSet,
+	operation::{
+		Identity, LoadType, Location, MemoryLoad, MemoryStore, MutableGet, MutableNew, MutableSet,
+		StoreType, TableGet, TableSet,
+		integer::{
+			BinaryOperation as IntegerBinaryOperation, BinaryOperator as IntegerBinaryOperator,
+			Type as IntegerType,
+		},
 	},
 };
 

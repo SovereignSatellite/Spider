@@ -5,12 +5,12 @@ use parking_lot::Mutex;
 
 use ir_graph::{
 	Link, Node,
-	control::{Match, ModuleArguments, Repeat},
-	simple::{
+	operation::{
 		Fence, Identity, MemoryCopy, MemoryDrop, MemoryFill, MemoryGrow, MemoryLoad, MemorySize,
 		MemoryStore, MutableGet, MutableSet, TableCopy, TableDrop, TableFill, TableGet, TableGrow,
 		TableSet, TableSize,
 	},
+	region::{Match, Repeat, module},
 };
 
 use super::scalar_finder::value_port_count_of;
@@ -468,7 +468,7 @@ fn handle_node(
 		Node::Repeat(ref arc) => handle_repeat(assignments, scope, id, arc),
 
 		Node::ModuleArguments(_) => {
-			for port in 0..ModuleArguments::RESULT_COUNT {
+			for port in 0..module::Arguments::RESULT_COUNT {
 				let _ = assignments.try_insert((Link(id, port), scope), (Link::DANGLING, 0));
 			}
 		}

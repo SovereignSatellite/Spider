@@ -1,26 +1,28 @@
-use std::sync::Arc;
+//! Fixpoint optimization driver that composes the region-local passes.
+
+extern crate alloc;
+
+use alloc::sync::Arc;
 
 use parking_lot::Mutex;
 
-use ir_graph::{Node, Region, control::Module};
-
-use ir_visitor::{
-	control::{
-		dead_port_eliminator::DeadPortEliminator, invariant_port_mover::InvariantPortMover,
-		region_identity,
-	},
-	isle, region_driver,
-	topological_compactor::TopologicalCompactor,
+use ir_graph::{Node, Region, region::Module, region_driver};
+use ir_passes::{
+	dead_port_eliminator::DeadPortEliminator, identity, invariant_port_mover::InvariantPortMover,
+	isle, topological_compactor::TopologicalCompactor,
 };
 
-struct Optimizer {
+/// Composes the region-local passes into a fixpoint optimization loop.
+pub struct Optimizer {
 	topological_compactor: TopologicalCompactor,
 	invariant_port_mover: InvariantPortMover,
 	dead_port_eliminator: DeadPortEliminator,
 }
 
 impl Optimizer {
-	fn new() -> Self {
+	/// Creates a new optimizer.
+	#[must_use]
+	pub fn new() -> Self {
 		Self {
 			topological_compactor: TopologicalCompactor::new(),
 			invariant_port_mover: InvariantPortMover::new(),
@@ -55,24 +57,29 @@ impl Optimizer {
 				break;
 			}
 
-			region_identity::remove(region.nodes_mut());
+			identity::remove(region.nodes_mut());
 		}
 	}
 
 	fn finalize(&mut self, region: &mut Region) {
-		region_identity::insert(region);
+		identity::insert(region);
 		self.topological_compactor.run(region);
+	}
+
+	/// Runs the optimization pipeline over every region in the module.
+	pub fn run(&mut self, module: &Arc<Mutex<Module>>, optimize: bool) {
+		region_driver::run_module(module, &mut |mut region| {
+			if optimize {
+				self.apply(&mut region);
+			}
+
+			self.finalize(&mut region);
+		});
 	}
 }
 
-pub fn process_module(module: &Arc<Mutex<Module>>, optimize: bool) {
-	let mut optimizer = Optimizer::new();
-
-	region_driver::run_module(module, &mut |mut region| {
-		if optimize {
-			optimizer.apply(&mut region);
-		}
-
-		optimizer.finalize(&mut region);
-	});
+impl Default for Optimizer {
+	fn default() -> Self {
+		Self::new()
+	}
 }

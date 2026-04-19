@@ -2,7 +2,7 @@ use alloc::sync::Arc;
 
 use hashbrown::HashMap;
 
-use ir_graph::{Link, control, simple};
+use ir_graph::{Link, operation, region};
 use luau_tree::{
 	expression::{
 		BooleanToInteger, Call, Expression, Function, GlobalGet, GlobalNew, Import,
@@ -145,7 +145,7 @@ impl DataHandler {
 		)
 	}
 
-	pub fn load_import(&mut self, node: &control::Import) -> Expression {
+	pub fn load_import(&mut self, node: &region::Import) -> Expression {
 		let environment = self.load(node.environment);
 
 		let expression = Import {
@@ -157,7 +157,7 @@ impl DataHandler {
 		Expression::Import(expression.into())
 	}
 
-	fn load_export(&mut self, node: &control::Export) -> Export {
+	fn load_export(&mut self, node: &region::Export) -> Export {
 		let source = self.load(node.reference);
 
 		Export {
@@ -166,14 +166,14 @@ impl DataHandler {
 		}
 	}
 
-	pub fn load_exports(&mut self, nodes: &[control::Export]) -> Vec<Export> {
+	pub fn load_exports(&mut self, nodes: &[region::Export]) -> Vec<Export> {
 		nodes
 			.iter()
 			.map(|export| self.load_export(export))
 			.collect()
 	}
 
-	pub fn load_call(&mut self, node: &simple::Apply) -> Expression {
+	pub fn load_call(&mut self, node: &operation::Apply) -> Expression {
 		let function = self.load(node.function);
 		let arguments = self.load_all(&node.arguments);
 
@@ -185,7 +185,7 @@ impl DataHandler {
 		Expression::Call(call.into())
 	}
 
-	pub fn load_ref_is_null(&mut self, node: simple::RefIsNull) -> Expression {
+	pub fn load_ref_is_null(&mut self, node: operation::RefIsNull) -> Expression {
 		let expression = RefIsNull {
 			source: self.load(node.source),
 		};
@@ -199,7 +199,7 @@ impl DataHandler {
 
 	pub fn load_integer_unary_operation(
 		&mut self,
-		node: simple::IntegerUnaryOperation,
+		node: operation::integer::UnaryOperation,
 	) -> Expression {
 		let expression = IntegerUnaryOperation {
 			source: self.load(node.source),
@@ -212,7 +212,7 @@ impl DataHandler {
 
 	pub fn load_integer_binary_operation(
 		&mut self,
-		node: simple::IntegerBinaryOperation,
+		node: operation::integer::BinaryOperation,
 	) -> Expression {
 		let expression = IntegerBinaryOperation {
 			lhs: self.load(node.lhs),
@@ -226,7 +226,7 @@ impl DataHandler {
 
 	pub fn load_integer_compare_operation(
 		&mut self,
-		node: simple::IntegerCompareOperation,
+		node: operation::integer::CompareOperation,
 	) -> Expression {
 		let expression = IntegerCompareOperation {
 			lhs: self.load(node.lhs),
@@ -242,7 +242,7 @@ impl DataHandler {
 		Expression::BooleanToInteger(boolean.into())
 	}
 
-	pub fn load_integer_narrow(&mut self, node: simple::IntegerNarrow) -> Expression {
+	pub fn load_integer_narrow(&mut self, node: operation::IntegerNarrow) -> Expression {
 		let expression = IntegerNarrow {
 			source: self.load(node.source),
 		};
@@ -250,7 +250,7 @@ impl DataHandler {
 		Expression::IntegerNarrow(expression.into())
 	}
 
-	pub fn load_integer_widen(&mut self, node: simple::IntegerWiden) -> Expression {
+	pub fn load_integer_widen(&mut self, node: operation::IntegerWiden) -> Expression {
 		let expression = IntegerWiden {
 			source: self.load(node.source),
 		};
@@ -258,7 +258,7 @@ impl DataHandler {
 		Expression::IntegerWiden(expression.into())
 	}
 
-	pub fn load_integer_sign_extend(&mut self, node: simple::IntegerSignExtend) -> Expression {
+	pub fn load_integer_sign_extend(&mut self, node: operation::IntegerSignExtend) -> Expression {
 		let expression = IntegerExtend {
 			source: self.load(node.source),
 			kind: node.kind,
@@ -269,7 +269,7 @@ impl DataHandler {
 
 	pub fn load_integer_convert_to_number(
 		&mut self,
-		node: simple::IntegerConvertToNumber,
+		node: operation::IntegerConvertToNumber,
 	) -> Expression {
 		let expression = IntegerConvertToNumber {
 			source: self.load(node.source),
@@ -283,7 +283,7 @@ impl DataHandler {
 
 	pub fn load_integer_transmute_to_number(
 		&mut self,
-		node: simple::IntegerTransmuteToNumber,
+		node: operation::IntegerTransmuteToNumber,
 	) -> Expression {
 		let expression = IntegerTransmuteToNumber {
 			source: self.load(node.source),
@@ -295,7 +295,7 @@ impl DataHandler {
 
 	pub fn load_number_unary_operation(
 		&mut self,
-		node: simple::NumberUnaryOperation,
+		node: operation::number::UnaryOperation,
 	) -> Expression {
 		let expression = NumberUnaryOperation {
 			source: self.load(node.source),
@@ -308,7 +308,7 @@ impl DataHandler {
 
 	pub fn load_number_binary_operation(
 		&mut self,
-		node: simple::NumberBinaryOperation,
+		node: operation::number::BinaryOperation,
 	) -> Expression {
 		let expression = NumberBinaryOperation {
 			lhs: self.load(node.lhs),
@@ -322,7 +322,7 @@ impl DataHandler {
 
 	pub fn load_number_compare_operation(
 		&mut self,
-		node: simple::NumberCompareOperation,
+		node: operation::number::CompareOperation,
 	) -> Expression {
 		let expression = NumberCompareOperation {
 			lhs: self.load(node.lhs),
@@ -338,7 +338,7 @@ impl DataHandler {
 		Expression::BooleanToInteger(boolean.into())
 	}
 
-	pub fn load_number_narrow(&mut self, node: simple::NumberNarrow) -> Expression {
+	pub fn load_number_narrow(&mut self, node: operation::NumberNarrow) -> Expression {
 		let expression = NumberNarrow {
 			source: self.load(node.source),
 		};
@@ -346,7 +346,7 @@ impl DataHandler {
 		Expression::NumberNarrow(expression.into())
 	}
 
-	pub fn load_number_widen(&mut self, node: simple::NumberWiden) -> Expression {
+	pub fn load_number_widen(&mut self, node: operation::NumberWiden) -> Expression {
 		let expression = NumberWiden {
 			source: self.load(node.source),
 		};
@@ -356,7 +356,7 @@ impl DataHandler {
 
 	pub fn load_number_truncate_to_integer(
 		&mut self,
-		node: simple::NumberTruncateToInteger,
+		node: operation::NumberTruncateToInteger,
 	) -> Expression {
 		let expression = NumberTruncateToInteger {
 			source: self.load(node.source),
@@ -371,7 +371,7 @@ impl DataHandler {
 
 	pub fn load_number_transmute_to_integer(
 		&mut self,
-		node: simple::NumberTransmuteToInteger,
+		node: operation::NumberTransmuteToInteger,
 	) -> Expression {
 		let expression = NumberTransmuteToInteger {
 			source: self.load(node.source),
@@ -381,7 +381,7 @@ impl DataHandler {
 		Expression::NumberTransmuteToInteger(expression.into())
 	}
 
-	pub fn load_mutable_new(&mut self, node: simple::MutableNew) -> Expression {
+	pub fn load_mutable_new(&mut self, node: operation::MutableNew) -> Expression {
 		let expression = GlobalNew {
 			initializer: self.load(node.initializer),
 		};
@@ -389,7 +389,7 @@ impl DataHandler {
 		Expression::GlobalNew(expression.into())
 	}
 
-	pub fn load_mutable_get(&mut self, node: simple::MutableGet) -> Expression {
+	pub fn load_mutable_get(&mut self, node: operation::MutableGet) -> Expression {
 		let expression = GlobalGet {
 			source: self.load(node.source),
 		};
@@ -397,14 +397,14 @@ impl DataHandler {
 		Expression::GlobalGet(expression.into())
 	}
 
-	pub fn load_location(&mut self, location: simple::Location) -> Location {
+	pub fn load_location(&mut self, location: operation::Location) -> Location {
 		let reference = self.load(location.reference);
 		let offset = self.load(location.offset);
 
 		Location { reference, offset }
 	}
 
-	pub fn load_table_new(&mut self, node: &simple::TableNew) -> Expression {
+	pub fn load_table_new(&mut self, node: &operation::TableNew) -> Expression {
 		let initializer = node
 			.initializer
 			.iter()
@@ -420,7 +420,7 @@ impl DataHandler {
 		Expression::TableNew(expression.into())
 	}
 
-	pub fn load_table_get(&mut self, node: simple::TableGet) -> Expression {
+	pub fn load_table_get(&mut self, node: operation::TableGet) -> Expression {
 		let expression = TableGet {
 			source: self.load_location(node.source),
 		};
@@ -428,7 +428,7 @@ impl DataHandler {
 		Expression::TableGet(expression.into())
 	}
 
-	pub fn load_table_size(&mut self, node: simple::TableSize) -> Expression {
+	pub fn load_table_size(&mut self, node: operation::TableSize) -> Expression {
 		let expression = TableSize {
 			source: self.load(node.source),
 		};
@@ -436,7 +436,7 @@ impl DataHandler {
 		Expression::TableSize(expression.into())
 	}
 
-	pub fn load_table_grow(&mut self, node: simple::TableGrow) -> Expression {
+	pub fn load_table_grow(&mut self, node: operation::TableGrow) -> Expression {
 		let expression = TableGrow {
 			destination: self.load(node.destination),
 			initializer: self.load(node.initializer),
@@ -446,7 +446,7 @@ impl DataHandler {
 		Expression::TableGrow(expression.into())
 	}
 
-	pub fn load_memory_load(&mut self, node: simple::MemoryLoad) -> Expression {
+	pub fn load_memory_load(&mut self, node: operation::MemoryLoad) -> Expression {
 		let expression = MemoryLoad {
 			source: self.load_location(node.source),
 			kind: node.kind,
@@ -455,7 +455,7 @@ impl DataHandler {
 		Expression::MemoryLoad(expression.into())
 	}
 
-	pub fn load_memory_size(&mut self, node: simple::MemorySize) -> Expression {
+	pub fn load_memory_size(&mut self, node: operation::MemorySize) -> Expression {
 		let expression = MemorySize {
 			source: self.load(node.source),
 		};
@@ -463,7 +463,7 @@ impl DataHandler {
 		Expression::MemorySize(expression.into())
 	}
 
-	pub fn load_memory_grow(&mut self, node: simple::MemoryGrow) -> Expression {
+	pub fn load_memory_grow(&mut self, node: operation::MemoryGrow) -> Expression {
 		let expression = MemoryGrow {
 			destination: self.load(node.destination),
 			size: self.load(node.size),

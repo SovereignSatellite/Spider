@@ -2,13 +2,8 @@ use std::io::{Error, Result, Write};
 
 use ir_graph::{
 	Node,
-	control::Import,
-	simple::{
-		ExtendType, IntegerBinaryOperation, IntegerBinaryOperator, IntegerCompareOperation,
-		IntegerCompareOperator, IntegerSignExtend, IntegerType, IntegerUnaryOperation,
-		IntegerUnaryOperator, NumberBinaryOperation, NumberBinaryOperator, NumberCompareOperation,
-		NumberCompareOperator, NumberType, NumberUnaryOperation, NumberUnaryOperator,
-	},
+	operation::{ExtendType, IntegerSignExtend, integer, number},
+	region::Import,
 };
 
 #[must_use]
@@ -102,22 +97,22 @@ fn write_integer_sign_extend(node: IntegerSignExtend, out: &mut dyn Write) -> Re
 	write!(out, "Sign Extend {}", extend_type_name(node.kind))
 }
 
-const fn integer_type_name(kind: IntegerType) -> &'static str {
+const fn integer_type_name(kind: integer::Type) -> &'static str {
 	match kind {
-		IntegerType::I32 => "I32",
-		IntegerType::I64 => "I64",
+		integer::Type::I32 => "I32",
+		integer::Type::I64 => "I64",
 	}
 }
 
-const fn integer_unary_operator_name(operator: IntegerUnaryOperator) -> &'static str {
+const fn integer_unary_operator_name(operator: integer::UnaryOperator) -> &'static str {
 	match operator {
-		IntegerUnaryOperator::CountOnes => "Count Ones",
-		IntegerUnaryOperator::LeadingZeroes => "Leading Zeroes",
-		IntegerUnaryOperator::TrailingZeroes => "Trailing Zeroes",
+		integer::UnaryOperator::CountOnes => "Count Ones",
+		integer::UnaryOperator::LeadingZeroes => "Leading Zeroes",
+		integer::UnaryOperator::TrailingZeroes => "Trailing Zeroes",
 	}
 }
 
-fn write_integer_unary_operation(node: IntegerUnaryOperation, out: &mut dyn Write) -> Result<()> {
+fn write_integer_unary_operation(node: integer::UnaryOperation, out: &mut dyn Write) -> Result<()> {
 	write!(
 		out,
 		"{} {}",
@@ -126,27 +121,30 @@ fn write_integer_unary_operation(node: IntegerUnaryOperation, out: &mut dyn Writ
 	)
 }
 
-const fn integer_binary_operator_name(operator: IntegerBinaryOperator) -> &'static str {
+const fn integer_binary_operator_name(operator: integer::BinaryOperator) -> &'static str {
 	match operator {
-		IntegerBinaryOperator::Add => "+",
-		IntegerBinaryOperator::Subtract => "-",
-		IntegerBinaryOperator::Multiply => "*",
-		IntegerBinaryOperator::Divide { signed: false } => "u/",
-		IntegerBinaryOperator::Divide { signed: true } => "s/",
-		IntegerBinaryOperator::Remainder { signed: false } => "u%",
-		IntegerBinaryOperator::Remainder { signed: true } => "s%",
-		IntegerBinaryOperator::And => "&",
-		IntegerBinaryOperator::Or => "|",
-		IntegerBinaryOperator::ExclusiveOr => "^",
-		IntegerBinaryOperator::ShiftLeft => "<<",
-		IntegerBinaryOperator::ShiftRight { signed: false } => "u>>",
-		IntegerBinaryOperator::ShiftRight { signed: true } => "s>>",
-		IntegerBinaryOperator::RotateLeft => "^<<",
-		IntegerBinaryOperator::RotateRight => ">>^",
+		integer::BinaryOperator::Add => "+",
+		integer::BinaryOperator::Subtract => "-",
+		integer::BinaryOperator::Multiply => "*",
+		integer::BinaryOperator::Divide { signed: false } => "u/",
+		integer::BinaryOperator::Divide { signed: true } => "s/",
+		integer::BinaryOperator::Remainder { signed: false } => "u%",
+		integer::BinaryOperator::Remainder { signed: true } => "s%",
+		integer::BinaryOperator::And => "&",
+		integer::BinaryOperator::Or => "|",
+		integer::BinaryOperator::ExclusiveOr => "^",
+		integer::BinaryOperator::ShiftLeft => "<<",
+		integer::BinaryOperator::ShiftRight { signed: false } => "u>>",
+		integer::BinaryOperator::ShiftRight { signed: true } => "s>>",
+		integer::BinaryOperator::RotateLeft => "^<<",
+		integer::BinaryOperator::RotateRight => ">>^",
 	}
 }
 
-fn write_integer_binary_operation(node: IntegerBinaryOperation, out: &mut dyn Write) -> Result<()> {
+fn write_integer_binary_operation(
+	node: integer::BinaryOperation,
+	out: &mut dyn Write,
+) -> Result<()> {
 	write!(
 		out,
 		"{} {}",
@@ -155,23 +153,23 @@ fn write_integer_binary_operation(node: IntegerBinaryOperation, out: &mut dyn Wr
 	)
 }
 
-const fn integer_compare_operator_name(operator: IntegerCompareOperator) -> &'static str {
+const fn integer_compare_operator_name(operator: integer::CompareOperator) -> &'static str {
 	match operator {
-		IntegerCompareOperator::Equal => "==",
-		IntegerCompareOperator::NotEqual => "!=",
-		IntegerCompareOperator::LessThan { signed: false } => "u<",
-		IntegerCompareOperator::LessThan { signed: true } => "s<",
-		IntegerCompareOperator::GreaterThan { signed: false } => "u>",
-		IntegerCompareOperator::GreaterThan { signed: true } => "s>",
-		IntegerCompareOperator::LessThanEqual { signed: false } => "u<=",
-		IntegerCompareOperator::LessThanEqual { signed: true } => "s<=",
-		IntegerCompareOperator::GreaterThanEqual { signed: false } => "u>=",
-		IntegerCompareOperator::GreaterThanEqual { signed: true } => "s>=",
+		integer::CompareOperator::Equal => "==",
+		integer::CompareOperator::NotEqual => "!=",
+		integer::CompareOperator::LessThan { signed: false } => "u<",
+		integer::CompareOperator::LessThan { signed: true } => "s<",
+		integer::CompareOperator::GreaterThan { signed: false } => "u>",
+		integer::CompareOperator::GreaterThan { signed: true } => "s>",
+		integer::CompareOperator::LessThanEqual { signed: false } => "u<=",
+		integer::CompareOperator::LessThanEqual { signed: true } => "s<=",
+		integer::CompareOperator::GreaterThanEqual { signed: false } => "u>=",
+		integer::CompareOperator::GreaterThanEqual { signed: true } => "s>=",
 	}
 }
 
 fn write_integer_compare_operation(
-	node: IntegerCompareOperation,
+	node: integer::CompareOperation,
 	out: &mut dyn Write,
 ) -> Result<()> {
 	write!(
@@ -182,26 +180,26 @@ fn write_integer_compare_operation(
 	)
 }
 
-const fn number_type_name(kind: NumberType) -> &'static str {
+const fn number_type_name(kind: number::Type) -> &'static str {
 	match kind {
-		NumberType::F32 => "F32",
-		NumberType::F64 => "F64",
+		number::Type::F32 => "F32",
+		number::Type::F64 => "F64",
 	}
 }
 
-const fn number_unary_operator_name(operator: NumberUnaryOperator) -> &'static str {
+const fn number_unary_operator_name(operator: number::UnaryOperator) -> &'static str {
 	match operator {
-		NumberUnaryOperator::Absolute => "Absolute",
-		NumberUnaryOperator::Negate => "-",
-		NumberUnaryOperator::SquareRoot => "Square Root",
-		NumberUnaryOperator::RoundUp => "Round Up",
-		NumberUnaryOperator::RoundDown => "Round Down",
-		NumberUnaryOperator::Truncate => "Truncate",
-		NumberUnaryOperator::Nearest => "Nearest",
+		number::UnaryOperator::Absolute => "Absolute",
+		number::UnaryOperator::Negate => "-",
+		number::UnaryOperator::SquareRoot => "Square Root",
+		number::UnaryOperator::RoundUp => "Round Up",
+		number::UnaryOperator::RoundDown => "Round Down",
+		number::UnaryOperator::Truncate => "Truncate",
+		number::UnaryOperator::Nearest => "Nearest",
 	}
 }
 
-fn write_number_unary_operation(node: NumberUnaryOperation, out: &mut dyn Write) -> Result<()> {
+fn write_number_unary_operation(node: number::UnaryOperation, out: &mut dyn Write) -> Result<()> {
 	write!(
 		out,
 		"{} {}",
@@ -210,19 +208,19 @@ fn write_number_unary_operation(node: NumberUnaryOperation, out: &mut dyn Write)
 	)
 }
 
-const fn number_binary_operator_name(operator: NumberBinaryOperator) -> &'static str {
+const fn number_binary_operator_name(operator: number::BinaryOperator) -> &'static str {
 	match operator {
-		NumberBinaryOperator::Add => "+",
-		NumberBinaryOperator::Subtract => "-",
-		NumberBinaryOperator::Multiply => "*",
-		NumberBinaryOperator::Divide => "/",
-		NumberBinaryOperator::Minimum => "Minimum",
-		NumberBinaryOperator::Maximum => "Maximum",
-		NumberBinaryOperator::CopySign => "Copy Sign",
+		number::BinaryOperator::Add => "+",
+		number::BinaryOperator::Subtract => "-",
+		number::BinaryOperator::Multiply => "*",
+		number::BinaryOperator::Divide => "/",
+		number::BinaryOperator::Minimum => "Minimum",
+		number::BinaryOperator::Maximum => "Maximum",
+		number::BinaryOperator::CopySign => "Copy Sign",
 	}
 }
 
-fn write_number_binary_operation(node: NumberBinaryOperation, out: &mut dyn Write) -> Result<()> {
+fn write_number_binary_operation(node: number::BinaryOperation, out: &mut dyn Write) -> Result<()> {
 	write!(
 		out,
 		"{} {}",
@@ -231,18 +229,21 @@ fn write_number_binary_operation(node: NumberBinaryOperation, out: &mut dyn Writ
 	)
 }
 
-const fn number_compare_operator_name(operator: NumberCompareOperator) -> &'static str {
+const fn number_compare_operator_name(operator: number::CompareOperator) -> &'static str {
 	match operator {
-		NumberCompareOperator::Equal => "==",
-		NumberCompareOperator::NotEqual => "!=",
-		NumberCompareOperator::LessThan => "<",
-		NumberCompareOperator::GreaterThan => ">",
-		NumberCompareOperator::LessThanEqual => "<=",
-		NumberCompareOperator::GreaterThanEqual => ">=",
+		number::CompareOperator::Equal => "==",
+		number::CompareOperator::NotEqual => "!=",
+		number::CompareOperator::LessThan => "<",
+		number::CompareOperator::GreaterThan => ">",
+		number::CompareOperator::LessThanEqual => "<=",
+		number::CompareOperator::GreaterThanEqual => ">=",
 	}
 }
 
-fn write_number_compare_operation(node: NumberCompareOperation, out: &mut dyn Write) -> Result<()> {
+fn write_number_compare_operation(
+	node: number::CompareOperation,
+	out: &mut dyn Write,
+) -> Result<()> {
 	write!(
 		out,
 		"{} {}",

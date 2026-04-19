@@ -14,15 +14,14 @@ use web_assembly_graph::{
 	BasicBlock, ControlFlowGraph,
 	instruction::{
 		Call, DataDrop, ElementsDrop, ExtendType, F32Constant, F64Constant, GlobalGet, GlobalSet,
-		I32Constant, I64Constant, Instruction, IntegerBinaryOperation, IntegerBinaryOperator,
-		IntegerCompareOperation, IntegerCompareOperator, IntegerConvertToNumber, IntegerExtend,
-		IntegerNarrow, IntegerTransmuteToNumber, IntegerType, IntegerUnaryOperation,
-		IntegerUnaryOperator, IntegerWiden, LoadType, LocalBranch, LocalSet, Location, MemoryCopy,
+		I32Constant, I64Constant, Instruction, IntegerBinaryOperation, IntegerCompareOperation,
+		IntegerConvertToNumber, IntegerExtend, IntegerNarrow, IntegerTransmuteToNumber,
+		IntegerUnaryOperation, IntegerWiden, LoadType, LocalBranch, LocalSet, Location, MemoryCopy,
 		MemoryFill, MemoryGrow, MemoryInit, MemoryLoad, MemorySize, MemoryStore,
-		NumberBinaryOperation, NumberBinaryOperator, NumberCompareOperation, NumberCompareOperator,
-		NumberNarrow, NumberTransmuteToInteger, NumberTruncateToInteger, NumberType,
-		NumberUnaryOperation, NumberUnaryOperator, NumberWiden, RefFunction, RefIsNull, RefNull,
-		StoreType, TableCopy, TableFill, TableGet, TableGrow, TableInit, TableSet, TableSize,
+		NumberBinaryOperation, NumberCompareOperation, NumberNarrow, NumberTransmuteToInteger,
+		NumberTruncateToInteger, NumberUnaryOperation, NumberWiden, RefFunction, RefIsNull,
+		RefNull, StoreType, TableCopy, TableFill, TableGet, TableGrow, TableInit, TableSet,
+		TableSize, integer, number,
 	},
 };
 
@@ -232,8 +231,8 @@ impl CodeBuilder {
 		&mut self,
 		destination: u16,
 		source: u16,
-		kind: IntegerType,
-		operator: IntegerUnaryOperator,
+		kind: integer::Type,
+		operator: integer::UnaryOperator,
 	) {
 		let instruction = Instruction::IntegerUnaryOperation(IntegerUnaryOperation {
 			destination,
@@ -250,8 +249,8 @@ impl CodeBuilder {
 		destination: u16,
 		lhs: u16,
 		rhs: u16,
-		kind: IntegerType,
-		operator: IntegerBinaryOperator,
+		kind: integer::Type,
+		operator: integer::BinaryOperator,
 	) {
 		let instruction = Instruction::IntegerBinaryOperation(IntegerBinaryOperation {
 			destination,
@@ -269,8 +268,8 @@ impl CodeBuilder {
 		destination: u16,
 		lhs: u16,
 		rhs: u16,
-		kind: IntegerType,
-		operator: IntegerCompareOperator,
+		kind: integer::Type,
+		operator: integer::CompareOperator,
 	) {
 		let instruction = Instruction::IntegerCompareOperation(IntegerCompareOperation {
 			destination,
@@ -288,14 +287,14 @@ impl CodeBuilder {
 		destination: u16,
 		lhs: u16,
 		rhs: i32,
-		operator: IntegerCompareOperator,
+		operator: integer::CompareOperator,
 	) {
 		self.add_i32_constant(SHARED_LOCAL, rhs);
 		self.add_integer_compare_operation(
 			destination,
 			lhs,
 			SHARED_LOCAL,
-			IntegerType::I32,
+			integer::Type::I32,
 			operator,
 		);
 	}
@@ -333,8 +332,8 @@ impl CodeBuilder {
 		destination: u16,
 		source: u16,
 		signed: bool,
-		to: NumberType,
-		from: IntegerType,
+		to: number::Type,
+		from: integer::Type,
 	) {
 		let instruction = Instruction::IntegerConvertToNumber(IntegerConvertToNumber {
 			destination,
@@ -351,7 +350,7 @@ impl CodeBuilder {
 		&mut self,
 		destination: u16,
 		source: u16,
-		from: IntegerType,
+		from: integer::Type,
 	) {
 		let instruction = Instruction::IntegerTransmuteToNumber(IntegerTransmuteToNumber {
 			destination,
@@ -366,8 +365,8 @@ impl CodeBuilder {
 		&mut self,
 		destination: u16,
 		source: u16,
-		kind: NumberType,
-		operator: NumberUnaryOperator,
+		kind: number::Type,
+		operator: number::UnaryOperator,
 	) {
 		let instruction = Instruction::NumberUnaryOperation(NumberUnaryOperation {
 			destination,
@@ -384,8 +383,8 @@ impl CodeBuilder {
 		destination: u16,
 		lhs: u16,
 		rhs: u16,
-		kind: NumberType,
-		operator: NumberBinaryOperator,
+		kind: number::Type,
+		operator: number::BinaryOperator,
 	) {
 		let instruction = Instruction::NumberBinaryOperation(NumberBinaryOperation {
 			destination,
@@ -403,8 +402,8 @@ impl CodeBuilder {
 		destination: u16,
 		lhs: u16,
 		rhs: u16,
-		kind: NumberType,
-		operator: NumberCompareOperator,
+		kind: number::Type,
+		operator: number::CompareOperator,
 	) {
 		let instruction = Instruction::NumberCompareOperation(NumberCompareOperation {
 			destination,
@@ -441,8 +440,8 @@ impl CodeBuilder {
 		source: u16,
 		signed: bool,
 		saturate: bool,
-		to: IntegerType,
-		from: NumberType,
+		to: integer::Type,
+		from: number::Type,
 	) {
 		let instruction = Instruction::NumberTruncateToInteger(NumberTruncateToInteger {
 			destination,
@@ -460,7 +459,7 @@ impl CodeBuilder {
 		&mut self,
 		destination: u16,
 		source: u16,
-		from: NumberType,
+		from: number::Type,
 	) {
 		let instruction = Instruction::NumberTransmuteToInteger(NumberTransmuteToInteger {
 			destination,
@@ -573,8 +572,8 @@ impl CodeBuilder {
 			destination,
 			destination,
 			SHARED_LOCAL,
-			IntegerType::I32,
-			IntegerBinaryOperator::Add,
+			integer::Type::I32,
+			integer::BinaryOperator::Add,
 		);
 	}
 
@@ -605,10 +604,10 @@ impl CodeBuilder {
 		destination: u16,
 		lhs: u16,
 		rhs: u16,
-		operator: IntegerBinaryOperator,
+		operator: integer::BinaryOperator,
 	) {
 		self.add_i32_constant(rhs, MemorySize::PAGE_SIZE.try_into().unwrap());
-		self.add_integer_binary_operation(destination, lhs, rhs, IntegerType::I32, operator);
+		self.add_integer_binary_operation(destination, lhs, rhs, integer::Type::I32, operator);
 	}
 
 	fn add_memory_size(&mut self, destination: u16, memory: u16) {
@@ -626,7 +625,7 @@ impl CodeBuilder {
 			destination,
 			destination,
 			SHARED_LOCAL,
-			IntegerBinaryOperator::Divide { signed: false },
+			integer::BinaryOperator::Divide { signed: false },
 		);
 	}
 
@@ -645,11 +644,16 @@ impl CodeBuilder {
 			SHARED_LOCAL,
 			size,
 			SHARED_LOCAL,
-			IntegerBinaryOperator::Multiply,
+			integer::BinaryOperator::Multiply,
 		);
 
 		self.add_memory_grow(destination, memory, SHARED_LOCAL);
-		self.add_i32_compare_constant(SHARED_LOCAL, destination, -1, IntegerCompareOperator::Equal);
+		self.add_i32_compare_constant(
+			SHARED_LOCAL,
+			destination,
+			-1,
+			integer::CompareOperator::Equal,
+		);
 
 		self.add_if(
 			SHARED_LOCAL,
@@ -658,7 +662,7 @@ impl CodeBuilder {
 					destination,
 					destination,
 					SHARED_LOCAL,
-					IntegerBinaryOperator::Divide { signed: false },
+					integer::BinaryOperator::Divide { signed: false },
 				);
 			},
 			|_| {},
@@ -672,7 +676,7 @@ impl CodeBuilder {
 			SHARED_LOCAL,
 			size,
 			page_limit,
-			IntegerCompareOperator::LessThanEqual { signed: false },
+			integer::CompareOperator::LessThanEqual { signed: false },
 		);
 
 		self.add_if(

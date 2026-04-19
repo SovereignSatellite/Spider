@@ -2,7 +2,7 @@
 
 use core::mem;
 
-use ir_graph::{Link, Node, Region, list, simple::Identity};
+use ir_graph::{Link, Node, Region, list, operation::Identity};
 
 fn route_to_source(nodes: &[Node], from: &mut Link) {
 	let id = usize::try_from(from.0).unwrap();

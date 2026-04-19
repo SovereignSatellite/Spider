@@ -9,13 +9,11 @@ use luajit_tree::{
 	LuaJITTree,
 	expression::{
 		Expression, ExtendType, GlobalGet, GlobalNew, IntegerBinaryOperation,
-		IntegerBinaryOperator, IntegerCompareOperation, IntegerCompareOperator,
-		IntegerConvertToNumber, IntegerExtend, IntegerNarrow, IntegerTransmuteToNumber,
-		IntegerType, IntegerUnaryOperation, IntegerUnaryOperator, IntegerWiden, LoadType,
-		MemoryGrow, MemoryLoad, MemoryNew, MemorySize, NumberBinaryOperation, NumberBinaryOperator,
-		NumberCompareOperation, NumberCompareOperator, NumberNarrow, NumberTransmuteToInteger,
-		NumberTruncateToInteger, NumberType, NumberUnaryOperation, NumberUnaryOperator,
-		NumberWiden, TableGet, TableGrow, TableNew, TableSize,
+		IntegerCompareOperation, IntegerConvertToNumber, IntegerExtend, IntegerNarrow,
+		IntegerTransmuteToNumber, IntegerUnaryOperation, IntegerWiden, LoadType, MemoryGrow,
+		MemoryLoad, MemoryNew, MemorySize, NumberBinaryOperation, NumberCompareOperation,
+		NumberNarrow, NumberTransmuteToInteger, NumberTruncateToInteger, NumberUnaryOperation,
+		NumberWiden, TableGet, TableGrow, TableNew, TableSize, integer, number,
 	},
 	statement::{
 		GlobalSet, MemoryCopy, MemoryDrop, MemoryFill, MemoryStore, Statement, StoreType,
@@ -59,12 +57,12 @@ impl NeedsName for IntegerUnaryOperation {
 		let Self { kind, operator, .. } = *self;
 
 		match (kind, operator) {
-			(IntegerType::I32, IntegerUnaryOperator::CountOnes) => "count_ones_i32",
-			(IntegerType::I32, IntegerUnaryOperator::LeadingZeroes) => "leading_zeroes_i32",
-			(IntegerType::I32, IntegerUnaryOperator::TrailingZeroes) => "trailing_zeroes_i32",
-			(IntegerType::I64, IntegerUnaryOperator::CountOnes) => "count_ones_i64",
-			(IntegerType::I64, IntegerUnaryOperator::LeadingZeroes) => "leading_zeroes_i64",
-			(IntegerType::I64, IntegerUnaryOperator::TrailingZeroes) => "trailing_zeroes_i64",
+			(integer::Type::I32, integer::UnaryOperator::CountOnes) => "count_ones_i32",
+			(integer::Type::I32, integer::UnaryOperator::LeadingZeroes) => "leading_zeroes_i32",
+			(integer::Type::I32, integer::UnaryOperator::TrailingZeroes) => "trailing_zeroes_i32",
+			(integer::Type::I64, integer::UnaryOperator::CountOnes) => "count_ones_i64",
+			(integer::Type::I64, integer::UnaryOperator::LeadingZeroes) => "leading_zeroes_i64",
+			(integer::Type::I64, integer::UnaryOperator::TrailingZeroes) => "trailing_zeroes_i64",
 		}
 	}
 }
@@ -74,52 +72,52 @@ impl NeedsName for IntegerBinaryOperation {
 		let Self { kind, operator, .. } = *self;
 
 		match (kind, operator) {
-			(IntegerType::I32, IntegerBinaryOperator::Add) => "add_i32",
-			(IntegerType::I32, IntegerBinaryOperator::Subtract) => "subtract_i32",
-			(IntegerType::I32, IntegerBinaryOperator::Multiply) => "multiply_i32",
-			(IntegerType::I32, IntegerBinaryOperator::Divide { signed: true }) => "divide_s32",
-			(IntegerType::I32, IntegerBinaryOperator::Divide { signed: false }) => "divide_u32",
-			(IntegerType::I32, IntegerBinaryOperator::Remainder { signed: true }) => {
+			(integer::Type::I32, integer::BinaryOperator::Add) => "add_i32",
+			(integer::Type::I32, integer::BinaryOperator::Subtract) => "subtract_i32",
+			(integer::Type::I32, integer::BinaryOperator::Multiply) => "multiply_i32",
+			(integer::Type::I32, integer::BinaryOperator::Divide { signed: true }) => "divide_s32",
+			(integer::Type::I32, integer::BinaryOperator::Divide { signed: false }) => "divide_u32",
+			(integer::Type::I32, integer::BinaryOperator::Remainder { signed: true }) => {
 				"remainder_s32"
 			}
-			(IntegerType::I32, IntegerBinaryOperator::Remainder { signed: false }) => {
+			(integer::Type::I32, integer::BinaryOperator::Remainder { signed: false }) => {
 				"remainder_u32"
 			}
-			(IntegerType::I32, IntegerBinaryOperator::And) => "and_i32",
-			(IntegerType::I32, IntegerBinaryOperator::Or) => "or_i32",
-			(IntegerType::I32, IntegerBinaryOperator::ExclusiveOr) => "exclusive_or_i32",
-			(IntegerType::I32, IntegerBinaryOperator::ShiftLeft) => "shift_left_i32",
-			(IntegerType::I32, IntegerBinaryOperator::ShiftRight { signed: true }) => {
+			(integer::Type::I32, integer::BinaryOperator::And) => "and_i32",
+			(integer::Type::I32, integer::BinaryOperator::Or) => "or_i32",
+			(integer::Type::I32, integer::BinaryOperator::ExclusiveOr) => "exclusive_or_i32",
+			(integer::Type::I32, integer::BinaryOperator::ShiftLeft) => "shift_left_i32",
+			(integer::Type::I32, integer::BinaryOperator::ShiftRight { signed: true }) => {
 				"shift_right_s32"
 			}
-			(IntegerType::I32, IntegerBinaryOperator::ShiftRight { signed: false }) => {
+			(integer::Type::I32, integer::BinaryOperator::ShiftRight { signed: false }) => {
 				"shift_right_u32"
 			}
-			(IntegerType::I32, IntegerBinaryOperator::RotateLeft) => "rotate_left_i32",
-			(IntegerType::I32, IntegerBinaryOperator::RotateRight) => "rotate_right_i32",
-			(IntegerType::I64, IntegerBinaryOperator::Add) => "add_i64",
-			(IntegerType::I64, IntegerBinaryOperator::Subtract) => "subtract_i64",
-			(IntegerType::I64, IntegerBinaryOperator::Multiply) => "multiply_i64",
-			(IntegerType::I64, IntegerBinaryOperator::Divide { signed: true }) => "divide_s64",
-			(IntegerType::I64, IntegerBinaryOperator::Divide { signed: false }) => "divide_u64",
-			(IntegerType::I64, IntegerBinaryOperator::Remainder { signed: true }) => {
+			(integer::Type::I32, integer::BinaryOperator::RotateLeft) => "rotate_left_i32",
+			(integer::Type::I32, integer::BinaryOperator::RotateRight) => "rotate_right_i32",
+			(integer::Type::I64, integer::BinaryOperator::Add) => "add_i64",
+			(integer::Type::I64, integer::BinaryOperator::Subtract) => "subtract_i64",
+			(integer::Type::I64, integer::BinaryOperator::Multiply) => "multiply_i64",
+			(integer::Type::I64, integer::BinaryOperator::Divide { signed: true }) => "divide_s64",
+			(integer::Type::I64, integer::BinaryOperator::Divide { signed: false }) => "divide_u64",
+			(integer::Type::I64, integer::BinaryOperator::Remainder { signed: true }) => {
 				"remainder_s64"
 			}
-			(IntegerType::I64, IntegerBinaryOperator::Remainder { signed: false }) => {
+			(integer::Type::I64, integer::BinaryOperator::Remainder { signed: false }) => {
 				"remainder_u64"
 			}
-			(IntegerType::I64, IntegerBinaryOperator::And) => "and_i64",
-			(IntegerType::I64, IntegerBinaryOperator::Or) => "or_i64",
-			(IntegerType::I64, IntegerBinaryOperator::ExclusiveOr) => "exclusive_or_i64",
-			(IntegerType::I64, IntegerBinaryOperator::ShiftLeft) => "shift_left_i64",
-			(IntegerType::I64, IntegerBinaryOperator::ShiftRight { signed: true }) => {
+			(integer::Type::I64, integer::BinaryOperator::And) => "and_i64",
+			(integer::Type::I64, integer::BinaryOperator::Or) => "or_i64",
+			(integer::Type::I64, integer::BinaryOperator::ExclusiveOr) => "exclusive_or_i64",
+			(integer::Type::I64, integer::BinaryOperator::ShiftLeft) => "shift_left_i64",
+			(integer::Type::I64, integer::BinaryOperator::ShiftRight { signed: true }) => {
 				"shift_right_s64"
 			}
-			(IntegerType::I64, IntegerBinaryOperator::ShiftRight { signed: false }) => {
+			(integer::Type::I64, integer::BinaryOperator::ShiftRight { signed: false }) => {
 				"shift_right_u64"
 			}
-			(IntegerType::I64, IntegerBinaryOperator::RotateLeft) => "rotate_left_i64",
-			(IntegerType::I64, IntegerBinaryOperator::RotateRight) => "rotate_right_i64",
+			(integer::Type::I64, integer::BinaryOperator::RotateLeft) => "rotate_left_i64",
+			(integer::Type::I64, integer::BinaryOperator::RotateRight) => "rotate_right_i64",
 		}
 	}
 }
@@ -129,56 +127,56 @@ impl NeedsName for IntegerCompareOperation {
 		let Self { kind, operator, .. } = *self;
 
 		match (kind, operator) {
-			(IntegerType::I32, IntegerCompareOperator::Equal) => "equal_i32",
-			(IntegerType::I32, IntegerCompareOperator::NotEqual) => "not_equal_i32",
-			(IntegerType::I32, IntegerCompareOperator::LessThan { signed: true }) => {
+			(integer::Type::I32, integer::CompareOperator::Equal) => "equal_i32",
+			(integer::Type::I32, integer::CompareOperator::NotEqual) => "not_equal_i32",
+			(integer::Type::I32, integer::CompareOperator::LessThan { signed: true }) => {
 				"less_than_s32"
 			}
-			(IntegerType::I32, IntegerCompareOperator::LessThan { signed: false }) => {
+			(integer::Type::I32, integer::CompareOperator::LessThan { signed: false }) => {
 				"less_than_u32"
 			}
-			(IntegerType::I32, IntegerCompareOperator::GreaterThan { signed: true }) => {
+			(integer::Type::I32, integer::CompareOperator::GreaterThan { signed: true }) => {
 				"greater_than_s32"
 			}
-			(IntegerType::I32, IntegerCompareOperator::GreaterThan { signed: false }) => {
+			(integer::Type::I32, integer::CompareOperator::GreaterThan { signed: false }) => {
 				"greater_than_u32"
 			}
-			(IntegerType::I32, IntegerCompareOperator::LessThanEqual { signed: true }) => {
+			(integer::Type::I32, integer::CompareOperator::LessThanEqual { signed: true }) => {
 				"less_than_equal_s32"
 			}
-			(IntegerType::I32, IntegerCompareOperator::LessThanEqual { signed: false }) => {
+			(integer::Type::I32, integer::CompareOperator::LessThanEqual { signed: false }) => {
 				"less_than_equal_u32"
 			}
-			(IntegerType::I32, IntegerCompareOperator::GreaterThanEqual { signed: true }) => {
+			(integer::Type::I32, integer::CompareOperator::GreaterThanEqual { signed: true }) => {
 				"greater_than_equal_s32"
 			}
-			(IntegerType::I32, IntegerCompareOperator::GreaterThanEqual { signed: false }) => {
+			(integer::Type::I32, integer::CompareOperator::GreaterThanEqual { signed: false }) => {
 				"greater_than_equal_u32"
 			}
-			(IntegerType::I64, IntegerCompareOperator::Equal) => "equal_i64",
-			(IntegerType::I64, IntegerCompareOperator::NotEqual) => "not_equal_i64",
-			(IntegerType::I64, IntegerCompareOperator::LessThan { signed: true }) => {
+			(integer::Type::I64, integer::CompareOperator::Equal) => "equal_i64",
+			(integer::Type::I64, integer::CompareOperator::NotEqual) => "not_equal_i64",
+			(integer::Type::I64, integer::CompareOperator::LessThan { signed: true }) => {
 				"less_than_s64"
 			}
-			(IntegerType::I64, IntegerCompareOperator::LessThan { signed: false }) => {
+			(integer::Type::I64, integer::CompareOperator::LessThan { signed: false }) => {
 				"less_than_u64"
 			}
-			(IntegerType::I64, IntegerCompareOperator::GreaterThan { signed: true }) => {
+			(integer::Type::I64, integer::CompareOperator::GreaterThan { signed: true }) => {
 				"greater_than_s64"
 			}
-			(IntegerType::I64, IntegerCompareOperator::GreaterThan { signed: false }) => {
+			(integer::Type::I64, integer::CompareOperator::GreaterThan { signed: false }) => {
 				"greater_than_u64"
 			}
-			(IntegerType::I64, IntegerCompareOperator::LessThanEqual { signed: true }) => {
+			(integer::Type::I64, integer::CompareOperator::LessThanEqual { signed: true }) => {
 				"less_than_equal_s64"
 			}
-			(IntegerType::I64, IntegerCompareOperator::LessThanEqual { signed: false }) => {
+			(integer::Type::I64, integer::CompareOperator::LessThanEqual { signed: false }) => {
 				"less_than_equal_u64"
 			}
-			(IntegerType::I64, IntegerCompareOperator::GreaterThanEqual { signed: true }) => {
+			(integer::Type::I64, integer::CompareOperator::GreaterThanEqual { signed: true }) => {
 				"greater_than_equal_s64"
 			}
-			(IntegerType::I64, IntegerCompareOperator::GreaterThanEqual { signed: false }) => {
+			(integer::Type::I64, integer::CompareOperator::GreaterThanEqual { signed: false }) => {
 				"greater_than_equal_u64"
 			}
 		}
@@ -218,14 +216,14 @@ impl NeedsName for IntegerConvertToNumber {
 		} = *self;
 
 		match (from, to, signed) {
-			(IntegerType::I32, NumberType::F32, true) => "convert_s32_to_f32",
-			(IntegerType::I32, NumberType::F32, false) => "convert_u32_to_f32",
-			(IntegerType::I32, NumberType::F64, true) => "convert_s32_to_f64",
-			(IntegerType::I32, NumberType::F64, false) => "convert_u32_to_f64",
-			(IntegerType::I64, NumberType::F32, true) => "convert_s64_to_f32",
-			(IntegerType::I64, NumberType::F32, false) => "convert_u64_to_f32",
-			(IntegerType::I64, NumberType::F64, true) => "convert_s64_to_f64",
-			(IntegerType::I64, NumberType::F64, false) => "convert_u64_to_f64",
+			(integer::Type::I32, number::Type::F32, true) => "convert_s32_to_f32",
+			(integer::Type::I32, number::Type::F32, false) => "convert_u32_to_f32",
+			(integer::Type::I32, number::Type::F64, true) => "convert_s32_to_f64",
+			(integer::Type::I32, number::Type::F64, false) => "convert_u32_to_f64",
+			(integer::Type::I64, number::Type::F32, true) => "convert_s64_to_f32",
+			(integer::Type::I64, number::Type::F32, false) => "convert_u64_to_f32",
+			(integer::Type::I64, number::Type::F64, true) => "convert_s64_to_f64",
+			(integer::Type::I64, number::Type::F64, false) => "convert_u64_to_f64",
 		}
 	}
 }
@@ -235,8 +233,8 @@ impl NeedsName for IntegerTransmuteToNumber {
 		let Self { from, .. } = *self;
 
 		match from {
-			IntegerType::I32 => "transmute_i32_to_f32",
-			IntegerType::I64 => "transmute_i64_to_f64",
+			integer::Type::I32 => "transmute_i32_to_f32",
+			integer::Type::I64 => "transmute_i64_to_f64",
 		}
 	}
 }
@@ -246,20 +244,20 @@ impl NeedsName for NumberUnaryOperation {
 		let Self { kind, operator, .. } = *self;
 
 		match (kind, operator) {
-			(NumberType::F32, NumberUnaryOperator::Absolute) => "absolute_f32",
-			(NumberType::F32, NumberUnaryOperator::Negate) => "negate_f32",
-			(NumberType::F32, NumberUnaryOperator::SquareRoot) => "square_root_f32",
-			(NumberType::F32, NumberUnaryOperator::RoundUp) => "round_up_f32",
-			(NumberType::F32, NumberUnaryOperator::RoundDown) => "round_down_f32",
-			(NumberType::F32, NumberUnaryOperator::Truncate) => "truncate_f32",
-			(NumberType::F32, NumberUnaryOperator::Nearest) => "nearest_f32",
-			(NumberType::F64, NumberUnaryOperator::Absolute) => "absolute_f64",
-			(NumberType::F64, NumberUnaryOperator::Negate) => "negate_f64",
-			(NumberType::F64, NumberUnaryOperator::SquareRoot) => "square_root_f64",
-			(NumberType::F64, NumberUnaryOperator::RoundUp) => "round_up_f64",
-			(NumberType::F64, NumberUnaryOperator::RoundDown) => "round_down_f64",
-			(NumberType::F64, NumberUnaryOperator::Truncate) => "truncate_f64",
-			(NumberType::F64, NumberUnaryOperator::Nearest) => "nearest_f64",
+			(number::Type::F32, number::UnaryOperator::Absolute) => "absolute_f32",
+			(number::Type::F32, number::UnaryOperator::Negate) => "negate_f32",
+			(number::Type::F32, number::UnaryOperator::SquareRoot) => "square_root_f32",
+			(number::Type::F32, number::UnaryOperator::RoundUp) => "round_up_f32",
+			(number::Type::F32, number::UnaryOperator::RoundDown) => "round_down_f32",
+			(number::Type::F32, number::UnaryOperator::Truncate) => "truncate_f32",
+			(number::Type::F32, number::UnaryOperator::Nearest) => "nearest_f32",
+			(number::Type::F64, number::UnaryOperator::Absolute) => "absolute_f64",
+			(number::Type::F64, number::UnaryOperator::Negate) => "negate_f64",
+			(number::Type::F64, number::UnaryOperator::SquareRoot) => "square_root_f64",
+			(number::Type::F64, number::UnaryOperator::RoundUp) => "round_up_f64",
+			(number::Type::F64, number::UnaryOperator::RoundDown) => "round_down_f64",
+			(number::Type::F64, number::UnaryOperator::Truncate) => "truncate_f64",
+			(number::Type::F64, number::UnaryOperator::Nearest) => "nearest_f64",
 		}
 	}
 }
@@ -269,20 +267,20 @@ impl NeedsName for NumberBinaryOperation {
 		let Self { kind, operator, .. } = *self;
 
 		match (kind, operator) {
-			(NumberType::F32, NumberBinaryOperator::Add) => "add_f32",
-			(NumberType::F32, NumberBinaryOperator::Subtract) => "subtract_f32",
-			(NumberType::F32, NumberBinaryOperator::Multiply) => "multiply_f32",
-			(NumberType::F32, NumberBinaryOperator::Divide) => "divide_f32",
-			(NumberType::F32, NumberBinaryOperator::Minimum) => "minimum_f32",
-			(NumberType::F32, NumberBinaryOperator::Maximum) => "maximum_f32",
-			(NumberType::F32, NumberBinaryOperator::CopySign) => "copy_sign_f32",
-			(NumberType::F64, NumberBinaryOperator::Add) => "add_f64",
-			(NumberType::F64, NumberBinaryOperator::Subtract) => "subtract_f64",
-			(NumberType::F64, NumberBinaryOperator::Multiply) => "multiply_f64",
-			(NumberType::F64, NumberBinaryOperator::Divide) => "divide_f64",
-			(NumberType::F64, NumberBinaryOperator::Minimum) => "minimum_f64",
-			(NumberType::F64, NumberBinaryOperator::Maximum) => "maximum_f64",
-			(NumberType::F64, NumberBinaryOperator::CopySign) => "copy_sign_f64",
+			(number::Type::F32, number::BinaryOperator::Add) => "add_f32",
+			(number::Type::F32, number::BinaryOperator::Subtract) => "subtract_f32",
+			(number::Type::F32, number::BinaryOperator::Multiply) => "multiply_f32",
+			(number::Type::F32, number::BinaryOperator::Divide) => "divide_f32",
+			(number::Type::F32, number::BinaryOperator::Minimum) => "minimum_f32",
+			(number::Type::F32, number::BinaryOperator::Maximum) => "maximum_f32",
+			(number::Type::F32, number::BinaryOperator::CopySign) => "copy_sign_f32",
+			(number::Type::F64, number::BinaryOperator::Add) => "add_f64",
+			(number::Type::F64, number::BinaryOperator::Subtract) => "subtract_f64",
+			(number::Type::F64, number::BinaryOperator::Multiply) => "multiply_f64",
+			(number::Type::F64, number::BinaryOperator::Divide) => "divide_f64",
+			(number::Type::F64, number::BinaryOperator::Minimum) => "minimum_f64",
+			(number::Type::F64, number::BinaryOperator::Maximum) => "maximum_f64",
+			(number::Type::F64, number::BinaryOperator::CopySign) => "copy_sign_f64",
 		}
 	}
 }
@@ -292,18 +290,22 @@ impl NeedsName for NumberCompareOperation {
 		let Self { kind, operator, .. } = *self;
 
 		match (kind, operator) {
-			(NumberType::F32, NumberCompareOperator::Equal) => "equal_f32",
-			(NumberType::F32, NumberCompareOperator::NotEqual) => "not_equal_f32",
-			(NumberType::F32, NumberCompareOperator::LessThan) => "less_than_f32",
-			(NumberType::F32, NumberCompareOperator::GreaterThan) => "greater_than_f32",
-			(NumberType::F32, NumberCompareOperator::LessThanEqual) => "less_than_equal_f32",
-			(NumberType::F32, NumberCompareOperator::GreaterThanEqual) => "greater_than_equal_f32",
-			(NumberType::F64, NumberCompareOperator::Equal) => "equal_f64",
-			(NumberType::F64, NumberCompareOperator::NotEqual) => "not_equal_f64",
-			(NumberType::F64, NumberCompareOperator::LessThan) => "less_than_f64",
-			(NumberType::F64, NumberCompareOperator::GreaterThan) => "greater_than_f64",
-			(NumberType::F64, NumberCompareOperator::LessThanEqual) => "less_than_equal_f64",
-			(NumberType::F64, NumberCompareOperator::GreaterThanEqual) => "greater_than_equal_f64",
+			(number::Type::F32, number::CompareOperator::Equal) => "equal_f32",
+			(number::Type::F32, number::CompareOperator::NotEqual) => "not_equal_f32",
+			(number::Type::F32, number::CompareOperator::LessThan) => "less_than_f32",
+			(number::Type::F32, number::CompareOperator::GreaterThan) => "greater_than_f32",
+			(number::Type::F32, number::CompareOperator::LessThanEqual) => "less_than_equal_f32",
+			(number::Type::F32, number::CompareOperator::GreaterThanEqual) => {
+				"greater_than_equal_f32"
+			}
+			(number::Type::F64, number::CompareOperator::Equal) => "equal_f64",
+			(number::Type::F64, number::CompareOperator::NotEqual) => "not_equal_f64",
+			(number::Type::F64, number::CompareOperator::LessThan) => "less_than_f64",
+			(number::Type::F64, number::CompareOperator::GreaterThan) => "greater_than_f64",
+			(number::Type::F64, number::CompareOperator::LessThanEqual) => "less_than_equal_f64",
+			(number::Type::F64, number::CompareOperator::GreaterThanEqual) => {
+				"greater_than_equal_f64"
+			}
 		}
 	}
 }
@@ -331,22 +333,22 @@ impl NeedsName for NumberTruncateToInteger {
 		} = *self;
 
 		match (from, to, signed, saturate) {
-			(NumberType::F32, IntegerType::I32, true, true) => "saturate_f32_to_s32",
-			(NumberType::F32, IntegerType::I32, true, false) => "truncate_f32_to_s32",
-			(NumberType::F32, IntegerType::I32, false, true) => "saturate_f32_to_u32",
-			(NumberType::F32, IntegerType::I32, false, false) => "truncate_f32_to_u32",
-			(NumberType::F32, IntegerType::I64, true, true) => "saturate_f32_to_s64",
-			(NumberType::F32, IntegerType::I64, true, false) => "truncate_f32_to_s64",
-			(NumberType::F32, IntegerType::I64, false, true) => "saturate_f32_to_u64",
-			(NumberType::F32, IntegerType::I64, false, false) => "truncate_f32_to_u64",
-			(NumberType::F64, IntegerType::I32, true, true) => "saturate_f64_to_s32",
-			(NumberType::F64, IntegerType::I32, true, false) => "truncate_f64_to_s32",
-			(NumberType::F64, IntegerType::I32, false, true) => "saturate_f64_to_u32",
-			(NumberType::F64, IntegerType::I32, false, false) => "truncate_f64_to_u32",
-			(NumberType::F64, IntegerType::I64, true, true) => "saturate_f64_to_s64",
-			(NumberType::F64, IntegerType::I64, true, false) => "truncate_f64_to_s64",
-			(NumberType::F64, IntegerType::I64, false, true) => "saturate_f64_to_u64",
-			(NumberType::F64, IntegerType::I64, false, false) => "truncate_f64_to_u64",
+			(number::Type::F32, integer::Type::I32, true, true) => "saturate_f32_to_s32",
+			(number::Type::F32, integer::Type::I32, true, false) => "truncate_f32_to_s32",
+			(number::Type::F32, integer::Type::I32, false, true) => "saturate_f32_to_u32",
+			(number::Type::F32, integer::Type::I32, false, false) => "truncate_f32_to_u32",
+			(number::Type::F32, integer::Type::I64, true, true) => "saturate_f32_to_s64",
+			(number::Type::F32, integer::Type::I64, true, false) => "truncate_f32_to_s64",
+			(number::Type::F32, integer::Type::I64, false, true) => "saturate_f32_to_u64",
+			(number::Type::F32, integer::Type::I64, false, false) => "truncate_f32_to_u64",
+			(number::Type::F64, integer::Type::I32, true, true) => "saturate_f64_to_s32",
+			(number::Type::F64, integer::Type::I32, true, false) => "truncate_f64_to_s32",
+			(number::Type::F64, integer::Type::I32, false, true) => "saturate_f64_to_u32",
+			(number::Type::F64, integer::Type::I32, false, false) => "truncate_f64_to_u32",
+			(number::Type::F64, integer::Type::I64, true, true) => "saturate_f64_to_s64",
+			(number::Type::F64, integer::Type::I64, true, false) => "truncate_f64_to_s64",
+			(number::Type::F64, integer::Type::I64, false, true) => "saturate_f64_to_u64",
+			(number::Type::F64, integer::Type::I64, false, false) => "truncate_f64_to_u64",
 		}
 	}
 }
@@ -356,8 +358,8 @@ impl NeedsName for NumberTransmuteToInteger {
 		let Self { from, .. } = *self;
 
 		match from {
-			NumberType::F32 => "transmute_f32_to_i32",
-			NumberType::F64 => "transmute_f64_to_i64",
+			number::Type::F32 => "transmute_f32_to_i32",
+			number::Type::F64 => "transmute_f64_to_i64",
 		}
 	}
 }

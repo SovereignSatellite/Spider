@@ -9,7 +9,7 @@ workspace = true
 [dev-dependencies]
 web-assembly-lifter = { path = "../Sources/WebAssembly/Lifter" }
 ir-graph = { path = "../IR/Graph" }
-ir-visitor = { path = "../IR/Visitor" }
+ir-pipeline = { path = "../IR/Pipeline" }
 
 luau-builder = { path = "../Targets/Luau/Builder" }
 luau-printer = { path = "../Targets/Luau/Printer" }

@@ -5,7 +5,7 @@ use parking_lot::Mutex;
 
 use ir_graph::{
 	Link, Node,
-	control::{Function, Match, Repeat},
+	region::{Function, Match, Repeat},
 };
 use luajit_tree::expression::Local;
 

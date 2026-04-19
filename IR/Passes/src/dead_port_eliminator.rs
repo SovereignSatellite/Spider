@@ -8,7 +8,7 @@ use set::Set;
 
 use ir_graph::{
 	Link, Node,
-	control::{Branch, Function, Match, Repeat},
+	region::{Branch, Function, Match, Repeat},
 };
 
 /// Eliminates unused ports from control flow region nodes.

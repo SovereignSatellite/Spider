@@ -1,8 +1,4 @@
-pub use ir_graph::simple::{
-	ExtendType, IntegerBinaryOperator, IntegerCompareOperator, IntegerType, IntegerUnaryOperator,
-	LoadType, NumberBinaryOperator, NumberCompareOperator, NumberType, NumberUnaryOperator,
-	StoreType,
-};
+pub use ir_graph::operation::{ExtendType, LoadType, StoreType, integer, number};
 
 /// Local variable names used as branch conditions.
 #[derive(PartialEq, Eq, Clone, Copy)]
@@ -123,9 +119,9 @@ pub struct IntegerUnaryOperation {
 	pub source: u16,
 
 	/// The integer type.
-	pub kind: IntegerType,
+	pub kind: integer::Type,
 	/// The operator.
-	pub operator: IntegerUnaryOperator,
+	pub operator: integer::UnaryOperator,
 }
 
 /// An integer binary operation instruction.
@@ -139,9 +135,9 @@ pub struct IntegerBinaryOperation {
 	pub rhs: u16,
 
 	/// The integer type.
-	pub kind: IntegerType,
+	pub kind: integer::Type,
 	/// The operator.
-	pub operator: IntegerBinaryOperator,
+	pub operator: integer::BinaryOperator,
 }
 
 /// An integer comparison instruction.
@@ -155,9 +151,9 @@ pub struct IntegerCompareOperation {
 	pub rhs: u16,
 
 	/// The integer type.
-	pub kind: IntegerType,
+	pub kind: integer::Type,
 	/// The comparison operator.
-	pub operator: IntegerCompareOperator,
+	pub operator: integer::CompareOperator,
 }
 
 /// An integer narrowing instruction from 64-bit to 32-bit.
@@ -201,9 +197,9 @@ pub struct IntegerConvertToNumber {
 	/// Whether the source integer is signed.
 	pub signed: bool,
 	/// The target floating-point type.
-	pub to: NumberType,
+	pub to: number::Type,
 	/// The source integer type.
-	pub from: IntegerType,
+	pub from: integer::Type,
 }
 
 /// An integer-to-floating-point bit reinterpretation instruction.
@@ -215,7 +211,7 @@ pub struct IntegerTransmuteToNumber {
 	pub source: u16,
 
 	/// The source integer type.
-	pub from: IntegerType,
+	pub from: integer::Type,
 }
 
 /// A floating-point unary operation instruction.
@@ -227,9 +223,9 @@ pub struct NumberUnaryOperation {
 	pub source: u16,
 
 	/// The floating-point type.
-	pub kind: NumberType,
+	pub kind: number::Type,
 	/// The operator.
-	pub operator: NumberUnaryOperator,
+	pub operator: number::UnaryOperator,
 }
 
 /// A floating-point binary operation instruction.
@@ -243,9 +239,9 @@ pub struct NumberBinaryOperation {
 	pub rhs: u16,
 
 	/// The floating-point type.
-	pub kind: NumberType,
+	pub kind: number::Type,
 	/// The operator.
-	pub operator: NumberBinaryOperator,
+	pub operator: number::BinaryOperator,
 }
 
 /// A floating-point comparison instruction.
@@ -259,9 +255,9 @@ pub struct NumberCompareOperation {
 	pub rhs: u16,
 
 	/// The floating-point type.
-	pub kind: NumberType,
+	pub kind: number::Type,
 	/// The comparison operator.
-	pub operator: NumberCompareOperator,
+	pub operator: number::CompareOperator,
 }
 
 /// A floating-point-to-integer truncation instruction.
@@ -277,9 +273,9 @@ pub struct NumberTruncateToInteger {
 	/// Whether to use saturating semantics.
 	pub saturate: bool,
 	/// The target integer type.
-	pub to: IntegerType,
+	pub to: integer::Type,
 	/// The source floating-point type.
-	pub from: NumberType,
+	pub from: number::Type,
 }
 
 /// A floating-point-to-integer bit reinterpretation instruction.
@@ -291,7 +287,7 @@ pub struct NumberTransmuteToInteger {
 	pub source: u16,
 
 	/// The source floating-point type.
-	pub from: NumberType,
+	pub from: number::Type,
 }
 
 /// A floating-point narrowing instruction from 64-bit to 32-bit.

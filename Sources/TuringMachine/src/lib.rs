@@ -8,13 +8,11 @@ use parking_lot::Mutex;
 
 use ir_graph::{
 	Link, Node,
-	control::{Branch, Import, Match, Module, ModuleArguments, Repeat},
 	list::resizable::Resizable,
-	simple::{
-		Apply, Fence, IntegerBinaryOperation, IntegerBinaryOperator, IntegerCompareOperation,
-		IntegerCompareOperator, IntegerType, LoadType, Location, MemoryLoad, MemoryNew,
-		MemoryStore, StoreType,
+	operation::{
+		Apply, Fence, LoadType, Location, MemoryLoad, MemoryNew, MemoryStore, StoreType, integer,
 	},
+	region::{Branch, Import, Match, Module, Repeat, module},
 };
 
 const CELL_SIZE: u32 = 4;
@@ -90,10 +88,10 @@ impl TuringMachineLifter {
 	}
 
 	fn create_io(&mut self, nodes: &mut Vec<Node>, arguments: u32) {
-		let environment = Link(arguments, ModuleArguments::ENVIRONMENT_PORT);
+		let environment = Link(arguments, module::Arguments::ENVIRONMENT_PORT);
 		let namespace = Arc::<str>::from("turing");
 
-		self.io = Link(arguments, ModuleArguments::STATE_PORT);
+		self.io = Link(arguments, module::Arguments::STATE_PORT);
 		self.ask = Import::add_into(nodes, environment, Arc::clone(&namespace), "ask".into());
 		self.tell = Import::add_into(nodes, environment, namespace, "tell".into());
 	}
@@ -135,26 +133,40 @@ impl TuringMachineLifter {
 		let lhs = self.do_load(nodes);
 		let rhs = Node::add_i32_into(nodes, 0);
 
-		IntegerCompareOperation::add_into(
+		integer::CompareOperation::add_into(
 			nodes,
 			lhs,
 			rhs,
-			IntegerType::I32,
-			IntegerCompareOperator::NotEqual,
+			integer::Type::I32,
+			integer::CompareOperator::NotEqual,
 		)
 	}
 
-	fn handle_offset_operation(&mut self, nodes: &mut Vec<Node>, operator: IntegerBinaryOperator) {
+	fn handle_offset_operation(
+		&mut self,
+		nodes: &mut Vec<Node>,
+		operator: integer::BinaryOperator,
+	) {
 		let rhs = Node::add_i32_into(nodes, CELL_SIZE.try_into().unwrap());
 
-		self.offset =
-			IntegerBinaryOperation::add_into(nodes, self.offset, rhs, IntegerType::I32, operator);
+		self.offset = integer::BinaryOperation::add_into(
+			nodes,
+			self.offset,
+			rhs,
+			integer::Type::I32,
+			operator,
+		);
 	}
 
-	fn handle_memory_operation(&mut self, nodes: &mut Vec<Node>, operator: IntegerBinaryOperator) {
+	fn handle_memory_operation(
+		&mut self,
+		nodes: &mut Vec<Node>,
+		operator: integer::BinaryOperator,
+	) {
 		let lhs = self.do_load(nodes);
 		let rhs = Node::add_i32_into(nodes, 1);
-		let source = IntegerBinaryOperation::add_into(nodes, lhs, rhs, IntegerType::I32, operator);
+		let source =
+			integer::BinaryOperation::add_into(nodes, lhs, rhs, integer::Type::I32, operator);
 
 		self.do_store(nodes, source);
 	}
@@ -241,17 +253,17 @@ impl TuringMachineLifter {
 		while let Some(operator) = self.operators.pop() {
 			match operator {
 				Operator::OffsetAdd => {
-					self.handle_offset_operation(nodes, IntegerBinaryOperator::Add);
+					self.handle_offset_operation(nodes, integer::BinaryOperator::Add);
 				}
 				Operator::OffsetSubtract => {
-					self.handle_offset_operation(nodes, IntegerBinaryOperator::Subtract);
+					self.handle_offset_operation(nodes, integer::BinaryOperator::Subtract);
 				}
 
 				Operator::MemoryAdd => {
-					self.handle_memory_operation(nodes, IntegerBinaryOperator::Add);
+					self.handle_memory_operation(nodes, integer::BinaryOperator::Add);
 				}
 				Operator::MemorySubtract => {
-					self.handle_memory_operation(nodes, IntegerBinaryOperator::Subtract);
+					self.handle_memory_operation(nodes, integer::BinaryOperator::Subtract);
 				}
 
 				Operator::Ask => self.handle_ask(nodes),

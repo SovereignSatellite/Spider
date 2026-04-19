@@ -1,6 +1,6 @@
 use hashbrown::HashMap;
 
-use ir_graph::{Link, simple};
+use ir_graph::{Link, operation};
 use luajit_tree::{
 	expression::{Expression, Local},
 	statement::{
@@ -149,7 +149,7 @@ impl CodeHandler {
 		});
 	}
 
-	pub fn do_call(&mut self, node: &simple::Apply, id: u32, data_handler: &mut DataHandler) {
+	pub fn do_call(&mut self, node: &operation::Apply, id: u32, data_handler: &mut DataHandler) {
 		let function = data_handler.load(node.function);
 		let arguments = data_handler.load_all(&node.arguments);
 		let results = data_handler.load_local_assignments(id, node.results);
@@ -166,7 +166,7 @@ impl CodeHandler {
 		self.push_statement(statement);
 	}
 
-	pub fn do_mutable_set(&mut self, node: simple::MutableSet, data_handler: &mut DataHandler) {
+	pub fn do_mutable_set(&mut self, node: operation::MutableSet, data_handler: &mut DataHandler) {
 		let destination = data_handler.load(node.destination);
 		let source = data_handler.load(node.source);
 
@@ -181,7 +181,7 @@ impl CodeHandler {
 		self.push_statement(statement);
 	}
 
-	pub fn do_table_set(&mut self, node: simple::TableSet, data_handler: &mut DataHandler) {
+	pub fn do_table_set(&mut self, node: operation::TableSet, data_handler: &mut DataHandler) {
 		let destination = data_handler.load_location(node.destination);
 		let source = data_handler.load(node.source);
 
@@ -196,7 +196,7 @@ impl CodeHandler {
 		self.push_statement(statement);
 	}
 
-	pub fn do_table_fill(&mut self, node: simple::TableFill, data_handler: &mut DataHandler) {
+	pub fn do_table_fill(&mut self, node: operation::TableFill, data_handler: &mut DataHandler) {
 		let destination = data_handler.load_location(node.destination);
 		let source = data_handler.load(node.source);
 		let size = data_handler.load(node.size);
@@ -213,7 +213,7 @@ impl CodeHandler {
 		self.push_statement(statement);
 	}
 
-	pub fn do_table_copy(&mut self, node: simple::TableCopy, data_handler: &mut DataHandler) {
+	pub fn do_table_copy(&mut self, node: operation::TableCopy, data_handler: &mut DataHandler) {
 		let destination = data_handler.load_location(node.destination);
 		let source = data_handler.load_location(node.source);
 		let size = data_handler.load(node.size);
@@ -230,7 +230,7 @@ impl CodeHandler {
 		self.push_statement(statement);
 	}
 
-	pub fn do_table_drop(&mut self, node: simple::TableDrop, data_handler: &mut DataHandler) {
+	pub fn do_table_drop(&mut self, node: operation::TableDrop, data_handler: &mut DataHandler) {
 		let statement = Statement::TableDrop(
 			TableDrop {
 				source: data_handler.load(node.source),
@@ -241,7 +241,11 @@ impl CodeHandler {
 		self.push_statement(statement);
 	}
 
-	pub fn do_memory_store(&mut self, node: simple::MemoryStore, data_handler: &mut DataHandler) {
+	pub fn do_memory_store(
+		&mut self,
+		node: operation::MemoryStore,
+		data_handler: &mut DataHandler,
+	) {
 		let destination = data_handler.load_location(node.destination);
 		let source = data_handler.load(node.source);
 
@@ -257,7 +261,7 @@ impl CodeHandler {
 		self.push_statement(statement);
 	}
 
-	pub fn do_memory_fill(&mut self, node: simple::MemoryFill, data_handler: &mut DataHandler) {
+	pub fn do_memory_fill(&mut self, node: operation::MemoryFill, data_handler: &mut DataHandler) {
 		let destination = data_handler.load_location(node.destination);
 		let byte = data_handler.load(node.byte);
 		let size = data_handler.load(node.size);
@@ -274,7 +278,7 @@ impl CodeHandler {
 		self.push_statement(statement);
 	}
 
-	pub fn do_memory_copy(&mut self, node: simple::MemoryCopy, data_handler: &mut DataHandler) {
+	pub fn do_memory_copy(&mut self, node: operation::MemoryCopy, data_handler: &mut DataHandler) {
 		let destination = data_handler.load_location(node.destination);
 		let source = data_handler.load_location(node.source);
 		let size = data_handler.load(node.size);
@@ -291,7 +295,7 @@ impl CodeHandler {
 		self.push_statement(statement);
 	}
 
-	pub fn do_memory_drop(&mut self, node: simple::MemoryDrop, data_handler: &mut DataHandler) {
+	pub fn do_memory_drop(&mut self, node: operation::MemoryDrop, data_handler: &mut DataHandler) {
 		let statement = Statement::MemoryDrop(
 			MemoryDrop {
 				source: data_handler.load(node.source),

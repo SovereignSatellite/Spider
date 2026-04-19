@@ -18,7 +18,10 @@
 use ir_graph::{
 	Link,
 	list::{self, fixed::Fixed},
-	simple::{IntegerBinaryOperator, IntegerType, LoadType, StoreType},
+	operation::{
+		LoadType, StoreType,
+		integer::{BinaryOperator as IntegerBinaryOperator, Type as IntegerType},
+	},
 };
 
 include!(concat!(env!("OUT_DIR"), "/isle.rs"));

@@ -1,5 +1,5 @@
 [package]
-name = "json-target"
+name = "ir-pipeline"
 version = "1.0.0"
 edition = "2024"
 
@@ -7,7 +7,7 @@ edition = "2024"
 workspace = true
 
 [dependencies]
-ir-graph = { path = "../../IR/Graph" }
+ir-graph = { path = "../Graph" }
+ir-passes = { path = "../Passes" }
 
-hashbrown.workspace = true
 parking_lot.workspace = true

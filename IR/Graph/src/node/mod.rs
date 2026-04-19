@@ -1,31 +1,32 @@
+//! The `Node` enum and its crate-wide dispatch.
+
 use alloc::sync::Arc;
 
 use parking_lot::Mutex;
 
+#[macro_use]
+mod macros;
+
+pub mod foreign;
+pub mod operation;
+pub mod region;
+
 use self::{
-	control::{
-		BranchArguments, BranchResults, Function, FunctionArguments, FunctionCaptures,
-		FunctionResults, Import, Match, ModuleArguments, ModuleResults, Repeat, RepeatArguments,
-		RepeatResults,
-	},
-	simple::{
-		Apply, Fence, Foreign, Identity, IntegerBinaryOperation, IntegerCompareOperation,
-		IntegerConvertToNumber, IntegerNarrow, IntegerSignExtend, IntegerTransmuteToNumber,
-		IntegerUnaryOperation, IntegerWiden, MemoryCopy, MemoryDrop, MemoryFill, MemoryGrow,
+	foreign::Foreign,
+	operation::{
+		Apply, Fence, Identity, IntegerConvertToNumber, IntegerNarrow, IntegerSignExtend,
+		IntegerTransmuteToNumber, IntegerWiden, MemoryCopy, MemoryDrop, MemoryFill, MemoryGrow,
 		MemoryLoad, MemoryNew, MemorySize, MemoryStore, MutableGet, MutableNew, MutableSet,
-		NumberBinaryOperation, NumberCompareOperation, NumberNarrow, NumberTransmuteToInteger,
-		NumberTruncateToInteger, NumberUnaryOperation, NumberWiden, RefIsNull, TableCopy,
-		TableDrop, TableFill, TableGet, TableGrow, TableNew, TableSet, TableSize,
+		NumberNarrow, NumberTransmuteToInteger, NumberTruncateToInteger, NumberWiden, RefIsNull,
+		TableCopy, TableDrop, TableFill, TableGet, TableGrow, TableNew, TableSet, TableSize,
+		integer, number,
 	},
+	region::{Function, Import, Match, Repeat, branch, function, module, repeat},
 };
 
-pub use self::control::Region;
+pub use self::region::Region;
 
-mod sinks;
-mod sources;
-
-pub mod control;
-pub mod simple;
+use crate::Link;
 
 /// A node in the data flow graph.
 #[derive(Default)]
@@ -38,23 +39,23 @@ pub enum Node {
 	Repeat(Arc<Mutex<Repeat>>),
 
 	/// The boundary arguments of a module region.
-	ModuleArguments(ModuleArguments),
+	ModuleArguments(module::Arguments),
 	/// The boundary results of a module region.
-	ModuleResults(ModuleResults),
+	ModuleResults(module::Results),
 	/// The boundary captures of a function region.
-	FunctionCaptures(FunctionCaptures),
+	FunctionCaptures(function::Captures),
 	/// The boundary arguments of a function region.
-	FunctionArguments(FunctionArguments),
+	FunctionArguments(function::Arguments),
 	/// The boundary results of a function region.
-	FunctionResults(FunctionResults),
+	FunctionResults(function::Results),
 	/// The boundary arguments of a branch region.
-	BranchArguments(BranchArguments),
+	BranchArguments(branch::Arguments),
 	/// The boundary results of a branch region.
-	BranchResults(BranchResults),
+	BranchResults(branch::Results),
 	/// The boundary arguments of a repeat region.
-	RepeatArguments(RepeatArguments),
+	RepeatArguments(repeat::Arguments),
 	/// The boundary results of a repeat region.
-	RepeatResults(RepeatResults),
+	RepeatResults(repeat::Results),
 
 	/// An external import.
 	Import(Box<Import>),
@@ -87,11 +88,11 @@ pub enum Node {
 	RefIsNull(RefIsNull),
 
 	/// An integer unary operation.
-	IntegerUnaryOperation(IntegerUnaryOperation),
+	IntegerUnaryOperation(integer::UnaryOperation),
 	/// An integer binary operation.
-	IntegerBinaryOperation(IntegerBinaryOperation),
+	IntegerBinaryOperation(integer::BinaryOperation),
 	/// An integer comparison.
-	IntegerCompareOperation(IntegerCompareOperation),
+	IntegerCompareOperation(integer::CompareOperation),
 	/// An integer narrowing from 64-bit to 32-bit.
 	IntegerNarrow(IntegerNarrow),
 	/// An integer widening from 32-bit to 64-bit.
@@ -104,11 +105,11 @@ pub enum Node {
 	IntegerTransmuteToNumber(IntegerTransmuteToNumber),
 
 	/// A floating-point unary operation.
-	NumberUnaryOperation(NumberUnaryOperation),
+	NumberUnaryOperation(number::UnaryOperation),
 	/// A floating-point binary operation.
-	NumberBinaryOperation(NumberBinaryOperation),
+	NumberBinaryOperation(number::BinaryOperation),
 	/// A floating-point comparison.
-	NumberCompareOperation(NumberCompareOperation),
+	NumberCompareOperation(number::CompareOperation),
 	/// A floating-point narrowing from 64-bit to 32-bit.
 	NumberNarrow(NumberNarrow),
 	/// A floating-point widening from 32-bit to 64-bit.
@@ -158,4 +159,220 @@ pub enum Node {
 	MemoryCopy(MemoryCopy),
 	/// A memory drop.
 	MemoryDrop(MemoryDrop),
+}
+
+macro_rules! for_each_visit {
+	($self:ident, $visit:ident, $handler:ident) => {
+		match $self {
+			Self::Function(arc) => arc.lock().$visit($handler),
+			Self::Match(arc) => arc.lock().$visit($handler),
+			Self::Repeat(arc) => arc.lock().$visit($handler),
+
+			Self::ModuleArguments(_)
+			| Self::FunctionCaptures(_)
+			| Self::FunctionArguments(_)
+			| Self::BranchArguments(_)
+			| Self::RepeatArguments(_)
+			| Self::Trap
+			| Self::Null
+			| Self::I32(_)
+			| Self::I64(_)
+			| Self::F32(_)
+			| Self::F64(_) => {}
+
+			Self::ModuleResults(node) => node.$visit($handler),
+			Self::FunctionResults(node) => node.$visit($handler),
+			Self::BranchResults(node) => node.$visit($handler),
+			Self::RepeatResults(node) => node.$visit($handler),
+
+			Self::Import(node) => node.$visit($handler),
+			Self::Foreign(foreign) => foreign.$visit(&mut $handler),
+
+			Self::Identity(node) => node.$visit($handler),
+			Self::Fence(node) => node.$visit($handler),
+			Self::Apply(node) => node.$visit($handler),
+			Self::RefIsNull(node) => node.$visit($handler),
+			Self::IntegerUnaryOperation(node) => node.$visit($handler),
+			Self::IntegerBinaryOperation(node) => node.$visit($handler),
+			Self::IntegerCompareOperation(node) => node.$visit($handler),
+			Self::IntegerNarrow(node) => node.$visit($handler),
+			Self::IntegerWiden(node) => node.$visit($handler),
+			Self::IntegerSignExtend(node) => node.$visit($handler),
+			Self::IntegerConvertToNumber(node) => node.$visit($handler),
+			Self::IntegerTransmuteToNumber(node) => node.$visit($handler),
+			Self::NumberUnaryOperation(node) => node.$visit($handler),
+			Self::NumberBinaryOperation(node) => node.$visit($handler),
+			Self::NumberCompareOperation(node) => node.$visit($handler),
+			Self::NumberNarrow(node) => node.$visit($handler),
+			Self::NumberWiden(node) => node.$visit($handler),
+			Self::NumberTruncateToInteger(node) => node.$visit($handler),
+			Self::NumberTransmuteToInteger(node) => node.$visit($handler),
+			Self::MutableNew(node) => node.$visit($handler),
+			Self::MutableGet(node) => node.$visit($handler),
+			Self::MutableSet(node) => node.$visit($handler),
+			Self::TableNew(node) => node.$visit($handler),
+			Self::TableGet(node) => node.$visit($handler),
+			Self::TableSet(node) => node.$visit($handler),
+			Self::TableSize(node) => node.$visit($handler),
+			Self::TableGrow(node) => node.$visit($handler),
+			Self::TableFill(node) => node.$visit($handler),
+			Self::TableCopy(node) => node.$visit($handler),
+			Self::TableDrop(node) => node.$visit($handler),
+			Self::MemoryNew(node) => node.$visit($handler),
+			Self::MemoryLoad(node) => node.$visit($handler),
+			Self::MemoryStore(node) => node.$visit($handler),
+			Self::MemorySize(node) => node.$visit($handler),
+			Self::MemoryGrow(node) => node.$visit($handler),
+			Self::MemoryFill(node) => node.$visit($handler),
+			Self::MemoryCopy(node) => node.$visit($handler),
+			Self::MemoryDrop(node) => node.$visit($handler),
+		}
+	};
+}
+
+impl Node {
+	/// Adds a trap node to the graph.
+	pub fn add_trap_into(nodes: &mut Vec<Self>) -> Link {
+		let id = nodes.len().try_into().unwrap_or_else(|_| unreachable!());
+
+		nodes.push(Self::Trap);
+
+		Link(id, 0)
+	}
+
+	/// Adds a null reference constant node to the graph.
+	pub fn add_null_into(nodes: &mut Vec<Self>) -> Link {
+		let id = nodes.len().try_into().unwrap_or_else(|_| unreachable!());
+
+		nodes.push(Self::Null);
+
+		Link(id, 0)
+	}
+
+	/// Adds a 32-bit integer constant node to the graph.
+	pub fn add_i32_into(nodes: &mut Vec<Self>, source: i32) -> Link {
+		let id = nodes.len().try_into().unwrap_or_else(|_| unreachable!());
+		let node = Self::I32(source);
+
+		nodes.push(node);
+
+		Link(id, 0)
+	}
+
+	/// Adds a 64-bit integer constant node to the graph.
+	pub fn add_i64_into(nodes: &mut Vec<Self>, source: i64) -> Link {
+		let id = nodes.len().try_into().unwrap_or_else(|_| unreachable!());
+		let node = Self::I64(source);
+
+		nodes.push(node);
+
+		Link(id, 0)
+	}
+
+	/// Adds a 32-bit float constant node to the graph.
+	pub fn add_f32_into(nodes: &mut Vec<Self>, source: f32) -> Link {
+		let id = nodes.len().try_into().unwrap_or_else(|_| unreachable!());
+		let node = Self::F32(source);
+
+		nodes.push(node);
+
+		Link(id, 0)
+	}
+
+	/// Adds a 64-bit float constant node to the graph.
+	pub fn add_f64_into(nodes: &mut Vec<Self>, source: f64) -> Link {
+		let id = nodes.len().try_into().unwrap_or_else(|_| unreachable!());
+		let node = Self::F64(source);
+
+		nodes.push(node);
+
+		Link(id, 0)
+	}
+
+	/// Returns the number of output ports for this node.
+	#[must_use]
+	#[expect(clippy::too_many_lines, reason = "exhaustive match over node variants")]
+	pub fn result_count(&self) -> u16 {
+		match self {
+			Self::Function(_)
+			| Self::Import(_)
+			| Self::Trap
+			| Self::Null
+			| Self::I32(_)
+			| Self::I64(_)
+			| Self::F32(_)
+			| Self::F64(_)
+			| Self::RefIsNull(_)
+			| Self::IntegerUnaryOperation(_)
+			| Self::IntegerBinaryOperation(_)
+			| Self::IntegerCompareOperation(_)
+			| Self::IntegerNarrow(_)
+			| Self::IntegerWiden(_)
+			| Self::IntegerSignExtend(_)
+			| Self::IntegerConvertToNumber(_)
+			| Self::IntegerTransmuteToNumber(_)
+			| Self::NumberUnaryOperation(_)
+			| Self::NumberBinaryOperation(_)
+			| Self::NumberCompareOperation(_)
+			| Self::NumberNarrow(_)
+			| Self::NumberWiden(_)
+			| Self::NumberTruncateToInteger(_)
+			| Self::NumberTransmuteToInteger(_)
+			| Self::MutableNew(_)
+			| Self::TableNew(_)
+			| Self::MemoryNew(_) => 1,
+
+			Self::Match(arc) => arc.lock().result_count(),
+			Self::Repeat(arc) => arc.lock().result_count(),
+
+			Self::ModuleArguments(_) => module::Arguments::RESULT_COUNT,
+
+			Self::ModuleResults(_)
+			| Self::FunctionResults(_)
+			| Self::BranchResults(_)
+			| Self::RepeatResults(_) => 0,
+
+			Self::FunctionCaptures(node) => node.result_count(),
+			Self::FunctionArguments(node) => node.result_count(),
+
+			Self::BranchArguments(node) => node.result_count(),
+
+			Self::RepeatArguments(node) => node.result_count(),
+
+			Self::Foreign(foreign) => foreign.result_count(),
+
+			Self::Identity(node) => node.result_count(),
+			Self::Fence(node) => node.result_count(),
+			Self::Apply(node) => node.result_count(),
+
+			Self::MutableGet(_) => MutableGet::RESULT_COUNT,
+			Self::MutableSet(_) => MutableSet::RESULT_COUNT,
+
+			Self::TableGet(_) => TableGet::RESULT_COUNT,
+			Self::TableSet(_) => TableSet::RESULT_COUNT,
+			Self::TableSize(_) => TableSize::RESULT_COUNT,
+			Self::TableGrow(_) => TableGrow::RESULT_COUNT,
+			Self::TableFill(_) => TableFill::RESULT_COUNT,
+			Self::TableCopy(_) => TableCopy::RESULT_COUNT,
+			Self::TableDrop(_) => TableDrop::RESULT_COUNT,
+
+			Self::MemoryLoad(_) => MemoryLoad::RESULT_COUNT,
+			Self::MemoryStore(_) => MemoryStore::RESULT_COUNT,
+			Self::MemorySize(_) => MemorySize::RESULT_COUNT,
+			Self::MemoryGrow(_) => MemoryGrow::RESULT_COUNT,
+			Self::MemoryFill(_) => MemoryFill::RESULT_COUNT,
+			Self::MemoryCopy(_) => MemoryCopy::RESULT_COUNT,
+			Self::MemoryDrop(_) => MemoryDrop::RESULT_COUNT,
+		}
+	}
+
+	/// Visits each outer link (arguments from the parent region's perspective).
+	pub fn for_each_outer<H: FnMut(Link)>(&self, mut handler: H) {
+		for_each_visit!(self, for_each_outer, handler);
+	}
+
+	/// Mutably visits each outer link (arguments from the parent region's perspective).
+	pub fn for_each_mut_outer<H: FnMut(&mut Link)>(&mut self, mut handler: H) {
+		for_each_visit!(self, for_each_mut_outer, handler);
+	}
 }

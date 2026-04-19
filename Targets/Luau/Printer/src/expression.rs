@@ -5,9 +5,9 @@ use luau_tree::expression::{
 	IntegerBinaryOperation, IntegerCompareOperation, IntegerConvertToNumber, IntegerExtend,
 	IntegerNarrow, IntegerTransmuteToNumber, IntegerUnaryOperation, IntegerWiden, Local, Location,
 	Match, MemoryGrow, MemoryLoad, MemoryNew, MemorySize, Name, NumberBinaryOperation,
-	NumberBinaryOperator, NumberCompareOperation, NumberCompareOperator, NumberNarrow,
-	NumberTransmuteToInteger, NumberTruncateToInteger, NumberType, NumberUnaryOperation,
-	NumberUnaryOperator, NumberWiden, RefIsNull, Scoped, TableGet, TableGrow, TableNew, TableSize,
+	NumberCompareOperation, NumberNarrow, NumberTransmuteToInteger, NumberTruncateToInteger,
+	NumberUnaryOperation, NumberWiden, RefIsNull, Scoped, TableGet, TableGrow, TableNew, TableSize,
+	number,
 };
 
 use super::{LuauPrinter, library::NeedsName as _, print::Print};
@@ -508,7 +508,7 @@ impl Print for NumberUnaryOperation {
 			operator,
 		} = self;
 
-		if *kind == NumberType::F64 && *operator == NumberUnaryOperator::Negate {
+		if *kind == number::Type::F64 && *operator == number::UnaryOperator::Negate {
 			write!(out, "-(")?;
 
 			source.print(printer, out)?;
@@ -536,15 +536,15 @@ impl Print for NumberBinaryOperation {
 		} = self;
 
 		if let Some(operator) = match operator {
-			NumberBinaryOperator::Add => Some("+"),
-			NumberBinaryOperator::Subtract => Some("-"),
-			NumberBinaryOperator::Multiply => Some("*"),
-			NumberBinaryOperator::Divide => Some("/"),
+			number::BinaryOperator::Add => Some("+"),
+			number::BinaryOperator::Subtract => Some("-"),
+			number::BinaryOperator::Multiply => Some("*"),
+			number::BinaryOperator::Divide => Some("/"),
 
-			NumberBinaryOperator::Minimum
-			| NumberBinaryOperator::Maximum
-			| NumberBinaryOperator::CopySign => None,
-		} && *kind == NumberType::F64
+			number::BinaryOperator::Minimum
+			| number::BinaryOperator::Maximum
+			| number::BinaryOperator::CopySign => None,
+		} && *kind == number::Type::F64
 		{
 			return fmt_infix_operator(lhs, rhs, operator, printer, out);
 		}
@@ -572,14 +572,14 @@ impl Print for NumberCompareOperation {
 			operator,
 		} = self;
 
-		if *kind == NumberType::F64 {
+		if *kind == number::Type::F64 {
 			let operator = match operator {
-				NumberCompareOperator::Equal => "==",
-				NumberCompareOperator::NotEqual => "~=",
-				NumberCompareOperator::LessThan => "<",
-				NumberCompareOperator::GreaterThan => ">",
-				NumberCompareOperator::LessThanEqual => "<=",
-				NumberCompareOperator::GreaterThanEqual => ">=",
+				number::CompareOperator::Equal => "==",
+				number::CompareOperator::NotEqual => "~=",
+				number::CompareOperator::LessThan => "<",
+				number::CompareOperator::GreaterThan => ">",
+				number::CompareOperator::LessThanEqual => "<=",
+				number::CompareOperator::GreaterThanEqual => ">=",
 			};
 
 			return fmt_infix_operator(lhs, rhs, operator, printer, out);
