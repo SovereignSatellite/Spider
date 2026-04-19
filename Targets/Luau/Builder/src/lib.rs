@@ -8,16 +8,16 @@ use parking_lot::Mutex;
 
 use ir_graph::{
 	Link, Node,
-	control::{Branch, Function, Import, Match, Module, ModuleArguments, Repeat, RepeatResults},
-	simple::{
-		Apply, Fence, Foreign, Identity, IntegerBinaryOperation, IntegerCompareOperation,
-		IntegerConvertToNumber, IntegerNarrow, IntegerSignExtend, IntegerTransmuteToNumber,
-		IntegerUnaryOperation, IntegerWiden, MemoryCopy, MemoryDrop, MemoryFill, MemoryGrow,
+	foreign::Foreign,
+	operation::{
+		Apply, Fence, Identity, IntegerConvertToNumber, IntegerNarrow, IntegerSignExtend,
+		IntegerTransmuteToNumber, IntegerWiden, MemoryCopy, MemoryDrop, MemoryFill, MemoryGrow,
 		MemoryLoad, MemoryNew, MemorySize, MemoryStore, MutableGet, MutableNew, MutableSet,
-		NumberBinaryOperation, NumberCompareOperation, NumberNarrow, NumberTransmuteToInteger,
-		NumberTruncateToInteger, NumberUnaryOperation, NumberWiden, RefIsNull, TableCopy,
-		TableDrop, TableFill, TableGet, TableGrow, TableNew, TableSet, TableSize,
+		NumberNarrow, NumberTransmuteToInteger, NumberTruncateToInteger, NumberWiden, RefIsNull,
+		TableCopy, TableDrop, TableFill, TableGet, TableGrow, TableNew, TableSet, TableSize,
+		integer, number,
 	},
+	region::{Branch, Function, Import, Match, Module, Repeat, module, repeat},
 };
 use luau_tree::{
 	LuauTree,
@@ -236,7 +236,7 @@ impl LuauBuilder {
 		self.data_handler.set_scope(parent_scope);
 	}
 
-	fn handle_repeat_results(&mut self, node: &RepeatResults) {
+	fn handle_repeat_results(&mut self, node: &repeat::Results) {
 		let scope = self.data_handler.scope();
 
 		self.code_handler
@@ -251,7 +251,7 @@ impl LuauBuilder {
 		self.code_handler.push_scope();
 
 		let environment = Name { id: 0 };
-		let environment_port = Link(0, ModuleArguments::ENVIRONMENT_PORT);
+		let environment_port = Link(0, module::Arguments::ENVIRONMENT_PORT);
 
 		if let Some(destination) = self.data_handler.get_local(environment_port) {
 			self.code_handler.do_assign(
@@ -358,19 +358,19 @@ impl LuauBuilder {
 		self.do_assignment(id, expression);
 	}
 
-	fn handle_integer_unary_operation(&mut self, id: u32, node: IntegerUnaryOperation) {
+	fn handle_integer_unary_operation(&mut self, id: u32, node: integer::UnaryOperation) {
 		let expression = self.data_handler.load_integer_unary_operation(node);
 
 		self.do_assignment(id, expression);
 	}
 
-	fn handle_integer_binary_operation(&mut self, id: u32, node: IntegerBinaryOperation) {
+	fn handle_integer_binary_operation(&mut self, id: u32, node: integer::BinaryOperation) {
 		let expression = self.data_handler.load_integer_binary_operation(node);
 
 		self.do_assignment(id, expression);
 	}
 
-	fn handle_integer_compare_operation(&mut self, id: u32, node: IntegerCompareOperation) {
+	fn handle_integer_compare_operation(&mut self, id: u32, node: integer::CompareOperation) {
 		let expression = self.data_handler.load_integer_compare_operation(node);
 
 		self.do_assignment(id, expression);
@@ -406,19 +406,19 @@ impl LuauBuilder {
 		self.do_assignment(id, expression);
 	}
 
-	fn handle_number_unary_operation(&mut self, id: u32, node: NumberUnaryOperation) {
+	fn handle_number_unary_operation(&mut self, id: u32, node: number::UnaryOperation) {
 		let expression = self.data_handler.load_number_unary_operation(node);
 
 		self.do_assignment(id, expression);
 	}
 
-	fn handle_number_binary_operation(&mut self, id: u32, node: NumberBinaryOperation) {
+	fn handle_number_binary_operation(&mut self, id: u32, node: number::BinaryOperation) {
 		let expression = self.data_handler.load_number_binary_operation(node);
 
 		self.do_assignment(id, expression);
 	}
 
-	fn handle_number_compare_operation(&mut self, id: u32, node: NumberCompareOperation) {
+	fn handle_number_compare_operation(&mut self, id: u32, node: number::CompareOperation) {
 		let expression = self.data_handler.load_number_compare_operation(node);
 
 		self.do_assignment(id, expression);

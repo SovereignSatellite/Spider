@@ -4,11 +4,7 @@ use alloc::{boxed::Box, sync::Arc, vec::Vec};
 
 use super::statement::Sequence;
 
-pub use ir_graph::simple::{
-	ExtendType, IntegerBinaryOperator, IntegerCompareOperator, IntegerType, IntegerUnaryOperator,
-	LoadType, MemoryNew, NumberBinaryOperator, NumberCompareOperator, NumberType,
-	NumberUnaryOperator,
-};
+pub use ir_graph::operation::{ExtendType, LoadType, MemoryNew, integer, number};
 
 /// A function definition.
 pub struct Function {
@@ -105,14 +101,14 @@ pub struct IntegerUnaryOperation {
 	/// The source expression.
 	pub source: Expression,
 	/// The integer type.
-	pub kind: IntegerType,
+	pub kind: integer::Type,
 	/// The operator.
-	pub operator: IntegerUnaryOperator,
+	pub operator: integer::UnaryOperator,
 }
 
 impl IntegerUnaryOperation {
 	const fn should_be_boolean(&self) -> bool {
-		matches!(self.kind, IntegerType::I32)
+		matches!(self.kind, integer::Type::I32)
 	}
 }
 
@@ -123,14 +119,14 @@ pub struct IntegerBinaryOperation {
 	/// The right-hand operand.
 	pub rhs: Expression,
 	/// The integer type.
-	pub kind: IntegerType,
+	pub kind: integer::Type,
 	/// The operator.
-	pub operator: IntegerBinaryOperator,
+	pub operator: integer::BinaryOperator,
 }
 
 impl IntegerBinaryOperation {
 	const fn should_be_boolean(&self) -> bool {
-		matches!(self.kind, IntegerType::I32)
+		matches!(self.kind, integer::Type::I32)
 	}
 }
 
@@ -141,9 +137,9 @@ pub struct IntegerCompareOperation {
 	/// The right-hand operand.
 	pub rhs: Expression,
 	/// The integer type.
-	pub kind: IntegerType,
+	pub kind: integer::Type,
 	/// The comparison operator.
-	pub operator: IntegerCompareOperator,
+	pub operator: integer::CompareOperator,
 }
 
 /// An integer narrowing.
@@ -179,9 +175,9 @@ pub struct IntegerConvertToNumber {
 	/// Whether the source integer is signed.
 	pub signed: bool,
 	/// The target floating-point type.
-	pub to: NumberType,
+	pub to: number::Type,
 	/// The source integer type.
-	pub from: IntegerType,
+	pub from: integer::Type,
 }
 
 /// An integer-to-floating-point reinterpretation.
@@ -189,7 +185,7 @@ pub struct IntegerTransmuteToNumber {
 	/// The source expression.
 	pub source: Expression,
 	/// The source integer type.
-	pub from: IntegerType,
+	pub from: integer::Type,
 }
 
 /// A floating-point unary operation.
@@ -197,9 +193,9 @@ pub struct NumberUnaryOperation {
 	/// The source expression.
 	pub source: Expression,
 	/// The floating-point type.
-	pub kind: NumberType,
+	pub kind: number::Type,
 	/// The operator.
-	pub operator: NumberUnaryOperator,
+	pub operator: number::UnaryOperator,
 }
 
 /// A floating-point binary operation.
@@ -209,9 +205,9 @@ pub struct NumberBinaryOperation {
 	/// The right-hand operand.
 	pub rhs: Expression,
 	/// The floating-point type.
-	pub kind: NumberType,
+	pub kind: number::Type,
 	/// The operator.
-	pub operator: NumberBinaryOperator,
+	pub operator: number::BinaryOperator,
 }
 
 /// A floating-point comparison.
@@ -221,9 +217,9 @@ pub struct NumberCompareOperation {
 	/// The right-hand operand.
 	pub rhs: Expression,
 	/// The floating-point type.
-	pub kind: NumberType,
+	pub kind: number::Type,
 	/// The comparison operator.
-	pub operator: NumberCompareOperator,
+	pub operator: number::CompareOperator,
 }
 
 /// A floating-point narrowing.
@@ -247,14 +243,14 @@ pub struct NumberTruncateToInteger {
 	/// Whether to use saturating semantics.
 	pub saturate: bool,
 	/// The target integer type.
-	pub to: IntegerType,
+	pub to: integer::Type,
 	/// The source floating-point type.
-	pub from: NumberType,
+	pub from: number::Type,
 }
 
 impl NumberTruncateToInteger {
 	const fn should_be_boolean(&self) -> bool {
-		matches!(self.to, IntegerType::I32)
+		matches!(self.to, integer::Type::I32)
 	}
 }
 
@@ -263,12 +259,12 @@ pub struct NumberTransmuteToInteger {
 	/// The source expression.
 	pub source: Expression,
 	/// The source floating-point type.
-	pub from: NumberType,
+	pub from: number::Type,
 }
 
 impl NumberTransmuteToInteger {
 	const fn should_be_boolean(&self) -> bool {
-		matches!(self.from, NumberType::F32)
+		matches!(self.from, number::Type::F32)
 	}
 }
 
@@ -468,8 +464,8 @@ impl Expression {
 		let operation = IntegerCompareOperation {
 			lhs: self,
 			rhs: Self::I32(0),
-			kind: IntegerType::I32,
-			operator: IntegerCompareOperator::NotEqual,
+			kind: integer::Type::I32,
+			operator: integer::CompareOperator::NotEqual,
 		};
 
 		Self::IntegerCompareOperation(operation.into())

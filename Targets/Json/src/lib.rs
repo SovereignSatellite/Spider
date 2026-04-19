@@ -10,7 +10,7 @@ use parking_lot::Mutex;
 
 use ir_graph::{
 	Node,
-	control::{Function, Match, Module, Repeat},
+	region::{Function, Match, Module, Repeat},
 };
 
 use self::{color::Color, interner::Interner, names::Names};

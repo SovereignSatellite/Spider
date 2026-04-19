@@ -4,7 +4,7 @@ use alloc::{boxed::Box, sync::Arc, vec::Vec};
 
 use super::expression::{Expression, Local, Location};
 
-pub use ir_graph::simple::StoreType;
+pub use ir_graph::operation::StoreType;
 
 /// A sequence of statements.
 pub struct Sequence {
