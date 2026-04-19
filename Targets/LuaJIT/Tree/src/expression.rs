@@ -60,22 +60,6 @@ pub enum Local {
 	},
 }
 
-impl Local {
-	/// Returns the inner variable name.
-	///
-	/// # Panics
-	///
-	/// Panics if this is not a `Fast` local; if this happens, it is a bug.
-	#[must_use]
-	pub const fn into_name(self) -> Name {
-		if let Self::Fast { name } = self {
-			name
-		} else {
-			unreachable!()
-		}
-	}
-}
-
 /// A function call.
 pub struct Call {
 	/// The function expression.
@@ -446,20 +430,6 @@ pub enum Expression {
 }
 
 impl Expression {
-	/// Returns the inner local variable reference.
-	///
-	/// # Panics
-	///
-	/// Panics if this is not a `Local` expression; if this happens, it is a bug.
-	#[must_use]
-	pub const fn into_local(&self) -> Local {
-		if let Self::Local(local) = *self {
-			local
-		} else {
-			unreachable!()
-		}
-	}
-
 	fn into_boolean_unchecked(self) -> Self {
 		let operation = IntegerCompareOperation {
 			lhs: self,

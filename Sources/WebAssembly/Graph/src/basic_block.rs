@@ -26,12 +26,6 @@ impl BasicBlock {
 		}
 	}
 
-	/// Returns whether this block is a source (has no predecessors).
-	#[must_use]
-	pub const fn is_source(&self) -> bool {
-		self.predecessors.is_empty()
-	}
-
 	/// Returns the instruction index range.
 	///
 	/// # Panics
