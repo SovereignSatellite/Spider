@@ -14,11 +14,7 @@ pub mod module;
 pub mod repeat;
 
 pub use self::{
-	branch::Branch,
-	function::{Function, ValueType},
-	matcher::Match,
-	module::Module,
-	repeat::Repeat,
+	branch::Branch, function::Function, matcher::Match, module::Module, repeat::Repeat,
 };
 
 /// A locked reference to a concrete region type.

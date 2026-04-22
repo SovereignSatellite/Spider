@@ -1,13 +1,8 @@
 use core::iter;
 
-use list::resizable::Resizable;
 use wasmparser::{BlockType, FunctionBody, LocalsReader, OperatorsReader, ValType};
 
-use ir_graph::{
-	Link, Node,
-	operation::Apply,
-	region::{Function, ValueType},
-};
+use ir_graph::{Link, Node, operation::Apply, region::Function};
 use web_assembly_builder::{ControlFlowBuilder, Types};
 use web_assembly_graph::ControlFlowGraph;
 use web_assembly_liveness::{
@@ -17,48 +12,49 @@ use web_assembly_liveness::{
 
 use super::{control_flow::ControlFlowLifter, global_state::GlobalState};
 
-fn web_type_to_data_type(kind: ValType) -> ValueType {
+/// A lifter-local value kind used only for tracking local-variable layout.
+#[derive(Clone, Copy)]
+pub enum LocalKind {
+	/// A 32-bit integer local.
+	I32,
+	/// A 64-bit integer local.
+	I64,
+	/// A 32-bit floating-point local.
+	F32,
+	/// A 64-bit floating-point local.
+	F64,
+	/// A reference local.
+	Reference,
+}
+
+fn classify(kind: ValType) -> LocalKind {
 	match kind {
-		ValType::I32 => ValueType::I32,
-		ValType::I64 => ValueType::I64,
-		ValType::F32 => ValueType::F32,
-		ValType::F64 => ValueType::F64,
-		ValType::Ref(_) => ValueType::Reference,
+		ValType::I32 => LocalKind::I32,
+		ValType::I64 => LocalKind::I64,
+		ValType::F32 => LocalKind::F32,
+		ValType::F64 => LocalKind::F64,
+		ValType::Ref(_) => LocalKind::Reference,
 
 		ValType::V128 => unimplemented!("`V128` types"),
 	}
 }
 
-fn load_type_from_function(
-	function: u32,
-	types: &Types,
-) -> (Resizable<ValueType, 15>, Resizable<ValueType, 15>) {
-	fn load_types(types: &[ValType]) -> Resizable<ValueType, 15> {
-		types.iter().copied().map(web_type_to_data_type).collect()
-	}
-
+fn function_arity(function: u32, types: &Types) -> (u16, u16) {
 	let function = types.get_type(function).unwrap_func();
+	let arguments = u16::try_from(function.params().len()).unwrap();
+	let results = u16::try_from(function.results().len()).unwrap();
 
-	(
-		load_types(function.params()),
-		load_types(function.results()),
-	)
+	(arguments, results)
 }
 
-fn load_type_from_result(result: ValType) -> (Resizable<ValueType, 15>, Resizable<ValueType, 15>) {
-	let result = web_type_to_data_type(result);
-
-	(Resizable::new(), list::resizable![result])
-}
-
-fn read_local_types_into(local_types: &mut Vec<ValueType>, reader: LocalsReader<'_>) {
-	local_types.clear();
+fn read_local_kinds_into(local_kinds: &mut Vec<LocalKind>, reader: LocalsReader<'_>) {
+	local_kinds.clear();
 
 	for (count, val_type) in reader.into_iter().map(Result::unwrap) {
-		let val_type = web_type_to_data_type(val_type);
+		let kind = classify(val_type);
 		let count = count.try_into().unwrap();
 
-		local_types.extend(iter::repeat_n(val_type, count));
+		local_kinds.extend(iter::repeat_n(kind, count));
 	}
 }
 
@@ -71,7 +67,7 @@ pub struct FunctionLifter {
 
 	dependencies: Vec<Reference>,
 	locals: Locals,
-	local_types: Vec<ValueType>,
+	local_kinds: Vec<LocalKind>,
 }
 
 impl FunctionLifter {
@@ -85,51 +81,47 @@ impl FunctionLifter {
 
 			dependencies: Vec::new(),
 			locals: Locals::new(),
-			local_types: Vec::new(),
+			local_kinds: Vec::new(),
 		}
 	}
 
 	pub fn build_data_flow(
 		&mut self,
 		nodes: &mut Vec<Node>,
-		mut argument_types: Resizable<ValueType, 15>,
-		mut result_types: Resizable<ValueType, 15>,
+		argument_count: u16,
+		result_count: u16,
 		global_state: &GlobalState,
 	) -> Link {
 		references::track(&mut self.dependencies, &self.graph.instructions);
 
 		let captures = global_state.get_dependencies(&self.dependencies);
-		let stack_size = self.local_tracker.run(
-			&mut self.locals,
-			&self.graph,
-			result_types.len().try_into().unwrap(),
-		);
-
-		let argument_count = argument_types.len();
-		let result_count = result_types.len();
-
-		// We add a "trap state" as part of the function signature
-		argument_types.push(ValueType::Reference);
-		result_types.push(ValueType::Reference);
+		let total_result_count = result_count
+			.checked_add(1)
+			.unwrap_or_else(|| unreachable!());
+		let stack_size = self
+			.local_tracker
+			.run(&mut self.locals, &self.graph, total_result_count);
+		let total_argument_count = argument_count
+			.checked_add(1)
+			.unwrap_or_else(|| unreachable!());
 
 		Function::add_into(
 			nodes,
-			argument_types,
-			result_types,
+			total_argument_count,
 			captures,
 			|inner_nodes, captures, arguments| {
 				self.lifter.set_function_data(
 					inner_nodes,
 					captures,
 					arguments,
-					argument_count,
+					argument_count.into(),
 					stack_size,
-					&self.local_types,
+					&self.local_kinds,
 					&self.dependencies,
 				);
 
 				self.lifter
-					.run(inner_nodes, &self.graph, result_count, &self.locals)
+					.run(inner_nodes, &self.graph, result_count.into(), &self.locals)
 			},
 		)
 	}
@@ -148,19 +140,19 @@ impl FunctionLifter {
 	) -> Link {
 		let function = types.get_function_index(function);
 
-		read_local_types_into(&mut self.local_types, body.get_locals_reader().unwrap());
+		read_local_kinds_into(&mut self.local_kinds, body.get_locals_reader().unwrap());
 
 		self.builder.run(
 			&mut self.graph,
 			types,
 			BlockType::FuncType(function),
-			self.local_types.len().try_into().unwrap(),
+			self.local_kinds.len().try_into().unwrap(),
 			body.get_operators_reader().unwrap(),
 		);
 
-		let (argument_types, result_types) = load_type_from_function(function, types);
+		let (argument_count, result_count) = function_arity(function, types);
 
-		self.build_data_flow(nodes, argument_types, result_types, global_state)
+		self.build_data_flow(nodes, argument_count, result_count, global_state)
 	}
 
 	#[expect(
@@ -183,10 +175,9 @@ impl FunctionLifter {
 			operators,
 		);
 
-		self.local_types.clear();
+		self.local_kinds.clear();
 
-		let (argument_types, result_types) = load_type_from_result(result);
-		let function = self.build_data_flow(nodes, argument_types, result_types, global_state);
+		let function = self.build_data_flow(nodes, 0, 1, global_state);
 		let apply = Apply::add_into(nodes, function, Vec::new(), 1);
 
 		Link(apply, 0)

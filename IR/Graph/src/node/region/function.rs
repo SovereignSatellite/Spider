@@ -7,33 +7,14 @@
 
 use alloc::sync::{Arc, Weak};
 
-use list::resizable::Resizable;
 use parking_lot::Mutex;
 
 use crate::{Link, Node};
 
-/// Value types for function signatures.
-#[derive(Clone, Copy)]
-pub enum ValueType {
-	/// A 32-bit integer.
-	I32,
-	/// A 64-bit integer.
-	I64,
-	/// A 32-bit float.
-	F32,
-	/// A 64-bit float.
-	F64,
-
-	/// A reference.
-	Reference,
-}
-
 /// A function region.
 pub struct Function {
-	/// The argument types.
-	pub argument_types: Resizable<ValueType, 15>,
-	/// The result types.
-	pub result_types: Resizable<ValueType, 15>,
+	/// The number of argument ports exposed by the body's [`Arguments`] node.
+	pub argument_count: u16,
 	/// The closure captures.
 	pub captures: Vec<Link>,
 	/// The nodes in this region.
@@ -47,12 +28,7 @@ impl Function {
 	pub const ARGUMENTS_ID: u32 = 1;
 
 	/// Creates a new function region.
-	pub fn create<F>(
-		argument_types: Resizable<ValueType, 15>,
-		result_types: Resizable<ValueType, 15>,
-		captures: Vec<Link>,
-		initializer: F,
-	) -> Arc<Mutex<Self>>
+	pub fn create<F>(argument_count: u16, captures: Vec<Link>, initializer: F) -> Arc<Mutex<Self>>
 	where
 		F: FnOnce(&mut Vec<Node>, u32, u32) -> Vec<Link>,
 	{
@@ -66,8 +42,7 @@ impl Function {
 			Results::add_into(&mut nodes, Weak::clone(weak), sources);
 
 			Mutex::new(Self {
-				argument_types,
-				result_types,
+				argument_count,
 				captures,
 				nodes,
 			})
@@ -79,8 +54,7 @@ impl Function {
 	/// Adds a function region node to the graph.
 	pub fn add_into<F>(
 		nodes: &mut Vec<Node>,
-		argument_types: Resizable<ValueType, 15>,
-		result_types: Resizable<ValueType, 15>,
+		argument_count: u16,
 		captures: Vec<Link>,
 		initializer: F,
 	) -> Link
@@ -88,12 +62,7 @@ impl Function {
 		F: FnOnce(&mut Vec<Node>, u32, u32) -> Vec<Link>,
 	{
 		let id = nodes.len().try_into().unwrap_or_else(|_| unreachable!());
-		let node = Node::Function(Self::create(
-			argument_types,
-			result_types,
-			captures,
-			initializer,
-		));
+		let node = Node::Function(Self::create(argument_count, captures, initializer));
 
 		nodes.push(node);
 
@@ -104,15 +73,6 @@ impl Function {
 	#[must_use]
 	pub fn capture_count(&self) -> u16 {
 		self.captures
-			.len()
-			.try_into()
-			.unwrap_or_else(|_| unreachable!())
-	}
-
-	/// Returns the number of arguments.
-	#[must_use]
-	pub fn argument_count(&self) -> u16 {
-		self.argument_types
 			.len()
 			.try_into()
 			.unwrap_or_else(|_| unreachable!())
@@ -218,8 +178,9 @@ impl Arguments {
 	#[must_use]
 	pub fn result_count(&self) -> u16 {
 		let function = self.parent.upgrade().unwrap_or_else(|| unreachable!());
+		let guard = function.lock();
 
-		function.lock().argument_count()
+		guard.argument_count
 	}
 }
 

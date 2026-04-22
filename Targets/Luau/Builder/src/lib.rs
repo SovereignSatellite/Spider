@@ -100,7 +100,7 @@ impl LuauBuilder {
 		let parent_scope = self.data_handler.scope();
 
 		let capture_count = u32::from(function.capture_count());
-		let argument_count = u32::from(function.argument_count());
+		let argument_count = u32::from(function.argument_count);
 
 		let capture_names: Vec<Name> = (0..capture_count)
 			.map(|offset| Name { id: offset })
