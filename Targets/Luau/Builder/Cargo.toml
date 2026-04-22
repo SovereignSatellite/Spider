@@ -9,6 +9,8 @@ workspace = true
 [dependencies]
 ir-graph = { path = "../../../IR/Graph" }
 luau-tree = { path = "../Tree" }
+turing-machine-source = { path = "../../../Sources/TuringMachine" }
+web-assembly-lifter = { path = "../../../Sources/WebAssembly/Lifter" }
 
 hashbrown.workspace = true
 parking_lot.workspace = true

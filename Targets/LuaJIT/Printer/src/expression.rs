@@ -1,12 +1,13 @@
+use alloc::sync::Arc;
 use std::io::{Result, Write};
 
 use luajit_tree::expression::{
-	BooleanToInteger, Call, Expression, Function, GlobalGet, GlobalNew, Import,
-	IntegerBinaryOperation, IntegerCompareOperation, IntegerConvertToNumber, IntegerExtend,
-	IntegerNarrow, IntegerTransmuteToNumber, IntegerUnaryOperation, IntegerWiden, Local, Location,
-	MemoryGrow, MemoryLoad, MemoryNew, MemorySize, Name, NumberBinaryOperation,
-	NumberCompareOperation, NumberNarrow, NumberTransmuteToInteger, NumberTruncateToInteger,
-	NumberUnaryOperation, NumberWiden, RefIsNull, Scoped, TableGet, TableGrow, TableNew, TableSize,
+	BooleanToInteger, Call, Expression, Function, GlobalGet, GlobalNew, IntegerBinaryOperation,
+	IntegerCompareOperation, IntegerConvertToNumber, IntegerExtend, IntegerNarrow,
+	IntegerTransmuteToNumber, IntegerUnaryOperation, IntegerWiden, Local, Location, MemoryGrow,
+	MemoryLoad, MemoryNew, MemorySize, Name, NumberBinaryOperation, NumberCompareOperation,
+	NumberNarrow, NumberTransmuteToInteger, NumberTruncateToInteger, NumberUnaryOperation,
+	NumberWiden, RefIsNull, RuntimeCall, Scoped, TableGet, TableGrow, TableNew, TableSize,
 };
 
 use super::{LuaJITPrinter, library::NeedsName as _, print::Print};
@@ -28,6 +29,19 @@ where
 	} else {
 		Ok(())
 	}
+}
+
+pub fn fmt_runtime_call(
+	name: &str,
+	arguments: &[Expression],
+	printer: &mut LuaJITPrinter,
+	out: &mut dyn Write,
+) -> Result<()> {
+	write!(out, "rt_{name}(")?;
+
+	fmt_delimited(arguments, printer, out)?;
+
+	write!(out, ")")
 }
 
 pub fn fmt_stack_enter(size: u16, printer: &LuaJITPrinter, out: &mut dyn Write) -> Result<()> {
@@ -161,25 +175,11 @@ impl Print for Scoped {
 	}
 }
 
-impl Print for Import {
+impl Print for RuntimeCall {
 	fn print(&self, printer: &mut LuaJITPrinter, out: &mut dyn Write) -> Result<()> {
-		let Self {
-			environment,
-			namespace,
-			identifier,
-		} = self;
+		let Self { name, arguments } = self;
 
-		write!(out, "assert(")?;
-
-		environment.print(printer, out)?;
-
-		let escaped_namespace = namespace.as_bytes().escape_ascii();
-		let escaped_identifier = identifier.as_bytes().escape_ascii();
-
-		write!(
-			out,
-			"[\"{escaped_namespace}\"][\"{escaped_identifier}\"], '`{escaped_namespace}.{escaped_identifier}` should be present')"
-		)
+		fmt_runtime_call(name, arguments, printer, out)
 	}
 }
 
@@ -200,6 +200,14 @@ impl Print for f32 {
 		let bits = i32::from_ne_bytes(self.to_ne_bytes());
 
 		write!(out, "{bits} --[[ {self}_f32 ]]")
+	}
+}
+
+impl Print for Arc<str> {
+	fn print(&self, _printer: &mut LuaJITPrinter, out: &mut dyn Write) -> Result<()> {
+		let escaped = self.as_bytes().escape_ascii();
+
+		write!(out, "\"{escaped}\"")
 	}
 }
 
@@ -661,7 +669,6 @@ impl Print for Expression {
 		match self {
 			Self::Function(function) => function.print(printer, out),
 			Self::Scoped(scoped) => scoped.print(printer, out),
-			Self::Import(import) => import.print(printer, out),
 			Self::Trap => write!(out, "error('unreachable code')"),
 			Self::Null => write!(out, "nil"),
 			Self::Local(local) => local.print(printer, out),
@@ -669,7 +676,9 @@ impl Print for Expression {
 			Self::I64(i64) => i64.print(printer, out),
 			Self::F32(f32) => f32.print(printer, out),
 			Self::F64(f64) => f64.print(printer, out),
+			Self::String(string) => string.print(printer, out),
 			Self::Call(call) => call.print(printer, out),
+			Self::RuntimeCall(runtime_call) => runtime_call.print(printer, out),
 			Self::BooleanToInteger(boolean_to_integer) => boolean_to_integer.print(printer, out),
 			Self::RefIsNull(ref_is_null) => ref_is_null.print(printer, out),
 			Self::IntegerUnaryOperation(integer_unary_operation) => {

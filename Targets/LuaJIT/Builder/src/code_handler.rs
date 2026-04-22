@@ -5,7 +5,7 @@ use luajit_tree::{
 	expression::{Expression, Local},
 	statement::{
 		Assign, Call, GlobalSet, Match, MemoryCopy, MemoryDrop, MemoryFill, MemoryStore, Repeat,
-		Sequence, Statement, SwapAll, TableCopy, TableDrop, TableFill, TableSet,
+		RuntimeCall, Sequence, Statement, SwapAll, TableCopy, TableDrop, TableFill, TableSet,
 	},
 };
 
@@ -162,6 +162,12 @@ impl CodeHandler {
 			}
 			.into(),
 		);
+
+		self.push_statement(statement);
+	}
+
+	pub fn do_runtime_call(&mut self, name: &'static str, arguments: Vec<Expression>) {
+		let statement = Statement::RuntimeCall(RuntimeCall { name, arguments }.into());
 
 		self.push_statement(statement);
 	}

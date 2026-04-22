@@ -2,8 +2,6 @@
 //!
 //! Each region kind lives in its own module:
 //! [`module`] / [`function`] / [`matcher`] + [`branch`] / [`repeat`].
-//! [`import`] carries the external-import node that currently lives next
-//! to regions; it will move to a `Foreign` type in a future migration.
 
 use parking_lot::{ArcMutexGuard, RawMutex};
 
@@ -11,7 +9,6 @@ use crate::Node;
 
 pub mod branch;
 pub mod function;
-pub mod import;
 pub mod matcher;
 pub mod module;
 pub mod repeat;
@@ -19,9 +16,8 @@ pub mod repeat;
 pub use self::{
 	branch::Branch,
 	function::{Function, ValueType},
-	import::Import,
 	matcher::Match,
-	module::{Export, Module},
+	module::Module,
 	repeat::Repeat,
 };
 

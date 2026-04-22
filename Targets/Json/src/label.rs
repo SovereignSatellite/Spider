@@ -3,7 +3,6 @@ use std::io::{Error, Result, Write};
 use ir_graph::{
 	Node,
 	operation::{ExtendType, IntegerSignExtend, integer, number},
-	region::Import,
 };
 
 #[must_use]
@@ -24,8 +23,7 @@ pub fn get_static(node: &Node) -> Option<&'static str> {
 		Node::RepeatArguments(_) => "Repeat Arguments",
 		Node::RepeatResults(_) => "Repeat Results",
 
-		Node::Import(_)
-		| Node::I32(_)
+		Node::I32(_)
 		| Node::I64(_)
 		| Node::F32(_)
 		| Node::F64(_)
@@ -74,13 +72,6 @@ pub fn get_static(node: &Node) -> Option<&'static str> {
 	};
 
 	Some(name)
-}
-
-fn write_import(node: &Import, out: &mut dyn Write) -> Result<()> {
-	let namespace = node.namespace.as_bytes().escape_ascii();
-	let identifier = node.identifier.as_bytes().escape_ascii();
-
-	write!(out, "Import \"{namespace}\" \"{identifier}\"")
 }
 
 const fn extend_type_name(kind: ExtendType) -> &'static str {
@@ -302,7 +293,6 @@ pub fn write(node: &Node, out: &mut dyn Write) -> Result<()> {
 		| Node::MemoryCopy(_)
 		| Node::MemoryDrop(_) => Err(Error::other("node does not have a dynamic name")),
 
-		Node::Import(ref node) => write_import(node, out),
 		Node::I32(i32) => write!(out, "{i32}_i32"),
 		Node::I64(i64) => write!(out, "{i64}_i64"),
 		Node::F32(f32) => write!(out, "{f32:e}_f32"),

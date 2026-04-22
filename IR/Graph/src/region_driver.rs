@@ -88,7 +88,6 @@ where
 		| Node::BranchResults(_)
 		| Node::RepeatArguments(_)
 		| Node::RepeatResults(_)
-		| Node::Import(_)
 		| Node::Foreign(_)
 		| Node::Trap
 		| Node::Null

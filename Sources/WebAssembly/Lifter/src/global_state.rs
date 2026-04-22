@@ -1,6 +1,4 @@
-use wasmparser::{ExternalKind, TypeRef};
-
-use ir_graph::Link;
+use ir_graph::{Link, Node, operation::MutableGet};
 use web_assembly_liveness::references::{Reference, ReferenceType};
 
 pub struct GlobalState {
@@ -46,17 +44,23 @@ impl GlobalState {
 		results.extend_from_slice(&self.datas);
 	}
 
-	fn get_dependency(&self, reference: Reference) -> Link {
-		let list = match reference.kind {
-			ReferenceType::Function => &self.functions,
-			ReferenceType::Global => &self.globals,
-			ReferenceType::Table => &self.tables,
-			ReferenceType::Elements => &self.elements,
-			ReferenceType::Memory => &self.memories,
-			ReferenceType::Data => &self.datas,
-		};
+	pub fn emit_function_reference(&self, nodes: &mut Vec<Node>, index: u32) -> Link {
+		let index = usize::try_from(index).unwrap_or_else(|_| unreachable!());
 
-		list[usize::from(reference.id)]
+		MutableGet::add_into(nodes, self.functions[index]).0
+	}
+
+	fn get_dependency(&self, reference: Reference) -> Link {
+		let id = usize::from(reference.id);
+
+		match reference.kind {
+			ReferenceType::Function => self.functions[id],
+			ReferenceType::Global => self.globals[id],
+			ReferenceType::Table => self.tables[id],
+			ReferenceType::Elements => self.elements[id],
+			ReferenceType::Memory => self.memories[id],
+			ReferenceType::Data => self.datas[id],
+		}
 	}
 
 	pub fn get_dependencies(&self, references: &[Reference]) -> Vec<Link> {
@@ -64,25 +68,5 @@ impl GlobalState {
 			.iter()
 			.map(|&dependency| self.get_dependency(dependency))
 			.collect()
-	}
-
-	pub fn get_external_kind(&self, external_kind: ExternalKind) -> &[Link] {
-		match external_kind {
-			ExternalKind::Func => &self.functions,
-			ExternalKind::Table => &self.tables,
-			ExternalKind::Memory => &self.memories,
-			ExternalKind::Global => &self.globals,
-			ExternalKind::Tag => unimplemented!("`Tag`"),
-		}
-	}
-
-	pub fn get_mut_type_ref(&mut self, type_ref: TypeRef) -> &mut Vec<Link> {
-		match type_ref {
-			TypeRef::Func(_) => &mut self.functions,
-			TypeRef::Table(_) => &mut self.tables,
-			TypeRef::Memory(_) => &mut self.memories,
-			TypeRef::Global(_) => &mut self.globals,
-			TypeRef::Tag(_) => unimplemented!("`Tag`"),
-		}
 	}
 }

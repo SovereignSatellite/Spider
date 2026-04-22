@@ -446,13 +446,15 @@ impl NeedsName for Expression {
 		match self {
 			Self::Function(_)
 			| Self::Scoped(_)
-			| Self::Import(_)
 			| Self::Trap
 			| Self::Null
 			| Self::Local(_)
+			| Self::String(_)
 			| Self::Call(_)
 			| Self::BooleanToInteger(_)
 			| Self::RefIsNull(_) => "",
+
+			Self::RuntimeCall(runtime_call) => runtime_call.name,
 
 			Self::I32(i32) => i32.needs_name(),
 			Self::I64(i64) => i64.needs_name(),
@@ -582,6 +584,8 @@ impl NeedsName for Statement {
 			| Self::Assign(_)
 			| Self::SwapAll(_)
 			| Self::Call(_) => "",
+
+			Self::RuntimeCall(runtime_call) => runtime_call.name,
 
 			Self::GlobalSet(global_set) => global_set.needs_name(),
 			Self::TableSet(table_set) => table_set.needs_name(),

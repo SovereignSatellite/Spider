@@ -198,7 +198,7 @@ impl LocalAllocator {
 		assignments: &mut HashMap<ScopedLink, Local>,
 		module_nodes: &[Node],
 		module_scope: usize,
-		module_state: Link,
+		module_results: &[Link],
 	) {
 		self.preferences.clear();
 		self.functions.clear();
@@ -213,7 +213,7 @@ impl LocalAllocator {
 			assignments,
 			module_nodes,
 			module_scope,
-			&[module_state],
+			module_results,
 			0,
 			0,
 		);
