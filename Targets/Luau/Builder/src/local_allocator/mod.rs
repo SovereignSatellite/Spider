@@ -229,7 +229,7 @@ impl LocalAllocator {
 				scope,
 				&function.results().sources,
 				function.capture_count(),
-				function.argument_count(),
+				function.argument_count,
 			);
 		}
 	}

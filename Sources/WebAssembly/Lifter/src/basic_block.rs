@@ -2,7 +2,7 @@ use core::iter;
 
 use list::resizable::Resizable;
 
-use ir_graph::{Link, Node, operation, region::ValueType};
+use ir_graph::{Link, Node, operation};
 use web_assembly_graph::instruction::{
 	Call, DataDrop, ElementsDrop, F32Constant, F64Constant, GlobalGet, GlobalSet, I32Constant,
 	I64Constant, Instruction, IntegerBinaryOperation, IntegerCompareOperation,
@@ -15,7 +15,7 @@ use web_assembly_graph::instruction::{
 };
 use web_assembly_liveness::references::{Reference, ReferenceType};
 
-use super::dependencies::DependencyMap;
+use super::{dependencies::DependencyMap, function::LocalKind};
 
 const LOCAL_BASE: usize = Name::COUNT as usize;
 
@@ -87,13 +87,13 @@ impl BasicBlockLifter {
 		self.trap = arguments.next().unwrap();
 	}
 
-	pub fn set_local_types(&mut self, nodes: &mut Vec<Node>, types: &[ValueType]) {
-		self.locals.extend(types.iter().map(|&local| match local {
-			ValueType::I32 => Node::add_i32_into(nodes, 0),
-			ValueType::I64 => Node::add_i64_into(nodes, 0),
-			ValueType::F32 => Node::add_f32_into(nodes, 0.0),
-			ValueType::F64 => Node::add_f64_into(nodes, 0.0),
-			ValueType::Reference => Node::add_null_into(nodes),
+	pub fn set_local_types(&mut self, nodes: &mut Vec<Node>, kinds: &[LocalKind]) {
+		self.locals.extend(kinds.iter().map(|&local| match local {
+			LocalKind::I32 => Node::add_i32_into(nodes, 0),
+			LocalKind::I64 => Node::add_i64_into(nodes, 0),
+			LocalKind::F32 => Node::add_f32_into(nodes, 0.0),
+			LocalKind::F64 => Node::add_f64_into(nodes, 0.0),
+			LocalKind::Reference => Node::add_null_into(nodes),
 		}));
 	}
 

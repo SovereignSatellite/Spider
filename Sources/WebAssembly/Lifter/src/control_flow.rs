@@ -5,12 +5,12 @@ use parking_lot::Mutex;
 
 use ir_graph::{
 	Link, Node,
-	region::{Branch, Match, Repeat, ValueType},
+	region::{Branch, Match, Repeat},
 };
 use web_assembly_graph::ControlFlowGraph;
 use web_assembly_liveness::{locals::Locals, references::Reference};
 
-use super::basic_block::BasicBlockLifter;
+use super::{basic_block::BasicBlockLifter, function::LocalKind};
 
 pub struct ControlFlowLifter {
 	basic_block_lifter: BasicBlockLifter,
@@ -213,7 +213,7 @@ impl ControlFlowLifter {
 		arguments: u32,
 		argument_count: usize,
 		stack_size: u16,
-		local_types: &[ValueType],
+		local_kinds: &[LocalKind],
 		dependencies: &[Reference],
 	) {
 		self.basic_block_lifter.set_function_inputs(
@@ -223,7 +223,7 @@ impl ControlFlowLifter {
 			dependencies,
 		);
 
-		self.basic_block_lifter.set_local_types(nodes, local_types);
+		self.basic_block_lifter.set_local_types(nodes, local_kinds);
 
 		self.basic_block_lifter.set_stack_size(nodes, stack_size);
 	}
