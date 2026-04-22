@@ -8,7 +8,7 @@ use core::ops::ControlFlow;
 use luajit_tree::{
 	LuaJITTree,
 	expression::{
-		Expression, ExtendType, GlobalGet, GlobalNew, IntegerBinaryOperation,
+		Aggregate, Expression, ExtendType, Extract, GlobalGet, GlobalNew, IntegerBinaryOperation,
 		IntegerCompareOperation, IntegerConvertToNumber, IntegerExtend, IntegerNarrow,
 		IntegerTransmuteToNumber, IntegerUnaryOperation, IntegerWiden, LoadType, MemoryGrow,
 		MemoryLoad, MemoryNew, MemorySize, NumberBinaryOperation, NumberCompareOperation,
@@ -376,6 +376,18 @@ impl NeedsName for GlobalGet {
 	}
 }
 
+impl NeedsName for Aggregate {
+	fn needs_name(&self) -> &'static str {
+		""
+	}
+}
+
+impl NeedsName for Extract {
+	fn needs_name(&self) -> &'static str {
+		""
+	}
+}
+
 impl NeedsName for TableNew {
 	fn needs_name(&self) -> &'static str {
 		"table_new"
@@ -445,7 +457,6 @@ impl NeedsName for Expression {
 	fn needs_name(&self) -> &'static str {
 		match self {
 			Self::Function(_)
-			| Self::Scoped(_)
 			| Self::Trap
 			| Self::Null
 			| Self::Local(_)
@@ -498,6 +509,8 @@ impl NeedsName for Expression {
 			}
 			Self::GlobalNew(global_new) => global_new.needs_name(),
 			Self::GlobalGet(global_get) => global_get.needs_name(),
+			Self::Aggregate(aggregate) => aggregate.needs_name(),
+			Self::Extract(extract) => extract.needs_name(),
 			Self::TableNew(table_new) => table_new.needs_name(),
 			Self::TableGet(table_get) => table_get.needs_name(),
 			Self::TableSize(table_size) => table_size.needs_name(),

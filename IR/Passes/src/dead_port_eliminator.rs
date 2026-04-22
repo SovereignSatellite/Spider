@@ -8,7 +8,7 @@ use set::Set;
 
 use ir_graph::{
 	Link, Node,
-	region::{Branch, Function, Match, Repeat},
+	region::{Branch, Match, Repeat},
 };
 
 /// Eliminates unused ports from control flow region nodes.
@@ -163,20 +163,6 @@ impl DeadPortEliminator {
 		self.record_outer_remap(id);
 	}
 
-	fn find_function(&mut self, arc: &Arc<Mutex<Function>>) {
-		let mut guard = arc.lock();
-
-		self.live.clear();
-		self.mark_nodes(&guard.nodes, 0);
-
-		if !self.build_remap(guard.capture_count()) {
-			return;
-		}
-
-		self.remap_nodes(&mut guard.nodes, 0);
-		self.trim_slots(&mut guard.captures);
-	}
-
 	#[expect(clippy::too_many_lines, reason = "exhaustive match over node variants")]
 	fn find_all(&mut self, nodes: &[Node]) {
 		self.map.clear();
@@ -185,13 +171,12 @@ impl DeadPortEliminator {
 			let id = u32::try_from(index).unwrap();
 
 			match node {
-				Node::Function(arc) => self.find_function(arc),
 				Node::Match(arc) => self.find_match(id, arc, nodes),
 				Node::Repeat(arc) => self.find_repeat(id, arc, nodes),
 
-				Node::ModuleArguments(_)
+				Node::Function(_)
+				| Node::ModuleArguments(_)
 				| Node::ModuleResults(_)
-				| Node::FunctionCaptures(_)
 				| Node::FunctionArguments(_)
 				| Node::FunctionResults(_)
 				| Node::BranchArguments(_)
@@ -227,6 +212,8 @@ impl DeadPortEliminator {
 				| Node::MutableNew(_)
 				| Node::MutableGet(_)
 				| Node::MutableSet(_)
+				| Node::Aggregate(_)
+				| Node::Extract(_)
 				| Node::TableNew(_)
 				| Node::TableGet(_)
 				| Node::TableSet(_)

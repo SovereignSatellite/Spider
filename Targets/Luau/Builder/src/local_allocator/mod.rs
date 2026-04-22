@@ -154,32 +154,30 @@ impl LocalAllocator {
 		}
 	}
 
-	fn register_boundary_preferences(&mut self, scope: usize, boundary_id: u32, port_count: u16) {
-		for port in 0..port_count {
+	fn register_argument_preferences(&mut self, scope: usize, count: u16) {
+		for port in 0..count {
 			let _ = self
 				.preferences
-				.try_insert((Link(boundary_id, port), scope), (Link::DANGLING, 0));
+				.try_insert((Link(0, port), scope), (Link::DANGLING, 0));
 		}
 	}
 
 	#[expect(
 		clippy::too_many_arguments,
-		reason = "private function with inherently distinct parameters"
+		reason = "per-scope setup requires all allocation state"
 	)]
-	fn handle_function(
+	fn handle_scope(
 		&mut self,
 		stack_sizes: &mut HashMap<usize, u16>,
 		assignments: &mut HashMap<ScopedLink, Local>,
 		nodes: &[Node],
 		scope: usize,
 		roots: &[Link],
-		capture_count: u16,
 		argument_count: u16,
 	) {
 		self.run_finders(nodes, scope, roots);
 
-		self.register_boundary_preferences(scope, 0, capture_count);
-		self.register_boundary_preferences(scope, 1, argument_count);
+		self.register_argument_preferences(scope, argument_count);
 
 		self.next_offset = 0;
 
@@ -208,13 +206,12 @@ impl LocalAllocator {
 		stack_sizes.clear();
 		assignments.clear();
 
-		self.handle_function(
+		self.handle_scope(
 			stack_sizes,
 			assignments,
 			module_nodes,
 			module_scope,
 			module_results,
-			0,
 			0,
 		);
 
@@ -222,13 +219,12 @@ impl LocalAllocator {
 			let function = arc.lock();
 			let scope = Arc::as_ptr(&arc) as usize;
 
-			self.handle_function(
+			self.handle_scope(
 				stack_sizes,
 				assignments,
 				&function.nodes,
 				scope,
 				&function.results().sources,
-				function.capture_count(),
 				function.argument_count,
 			);
 		}

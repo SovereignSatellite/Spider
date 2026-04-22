@@ -13,10 +13,7 @@ impl Color {
 	#[expect(clippy::too_many_lines, reason = "exhaustive match over node variants")]
 	pub const fn from_reference(node: &Node) -> Self {
 		match node {
-			Node::Function(_)
-			| Node::FunctionCaptures(_)
-			| Node::FunctionArguments(_)
-			| Node::FunctionResults(_) => Self::Blue,
+			Node::Function(_) | Node::FunctionArguments(_) | Node::FunctionResults(_) => Self::Blue,
 			Node::Match(_) | Node::BranchArguments(_) | Node::BranchResults(_) => Self::Green,
 			Node::Repeat(_) | Node::RepeatArguments(_) | Node::RepeatResults(_) => Self::Red,
 			Node::ModuleArguments(_) | Node::ModuleResults(_) => Self::Brown,
@@ -50,6 +47,8 @@ impl Color {
 			| Node::MutableNew(_)
 			| Node::MutableGet(_)
 			| Node::MutableSet(_)
+			| Node::Aggregate(_)
+			| Node::Extract(_)
 			| Node::TableNew(_)
 			| Node::TableGet(_)
 			| Node::TableSet(_)

@@ -11,12 +11,12 @@ use ir_graph::{
 	Link, Node,
 	foreign::Foreign,
 	operation::{
-		Apply, Fence, Identity, IntegerConvertToNumber, IntegerNarrow, IntegerSignExtend,
-		IntegerTransmuteToNumber, IntegerWiden, MemoryCopy, MemoryDrop, MemoryFill, MemoryGrow,
-		MemoryLoad, MemoryNew, MemorySize, MemoryStore, MutableGet, MutableNew, MutableSet,
-		NumberNarrow, NumberTransmuteToInteger, NumberTruncateToInteger, NumberWiden, RefIsNull,
-		TableCopy, TableDrop, TableFill, TableGet, TableGrow, TableNew, TableSet, TableSize,
-		integer, number,
+		Aggregate, Apply, Extract, Fence, Identity, IntegerConvertToNumber, IntegerNarrow,
+		IntegerSignExtend, IntegerTransmuteToNumber, IntegerWiden, MemoryCopy, MemoryDrop,
+		MemoryFill, MemoryGrow, MemoryLoad, MemoryNew, MemorySize, MemoryStore, MutableGet,
+		MutableNew, MutableSet, NumberNarrow, NumberTransmuteToInteger, NumberTruncateToInteger,
+		NumberWiden, RefIsNull, TableCopy, TableDrop, TableFill, TableGet, TableGrow, TableNew,
+		TableSet, TableSize, integer, number,
 	},
 	region::{Branch, Function, Match, Module, Repeat, repeat},
 };
@@ -66,11 +66,12 @@ impl LuauBuilder {
 		}
 	}
 
-	fn bridge_boundary_names(&mut self, boundary: u32, names: &[Name]) {
+	fn bridge_argument_names(&mut self, names: &[Name]) {
 		for (port, &name) in names.iter().enumerate() {
 			let port = port.try_into().unwrap();
+			let link = Link(Function::ARGUMENTS_ID, port);
 
-			let Some(destination) = self.data_handler.get_local(Link(boundary, port)) else {
+			let Some(destination) = self.data_handler.get_local(link) else {
 				continue;
 			};
 
@@ -94,60 +95,47 @@ impl LuauBuilder {
 			.collect()
 	}
 
+	fn emit_function_body(
+		&mut self,
+		function: &Function,
+		argument_names: Vec<Name>,
+		function_scope: usize,
+	) -> expression::Function {
+		self.data_handler.set_scope(function_scope);
+		self.code_handler.push_scope();
+
+		self.bridge_argument_names(&argument_names);
+		self.handle_nodes(&function.nodes, function_scope);
+
+		let stack = self.data_handler.get_stack_size(function_scope);
+		let code = self.code_handler.pop_scope();
+		let returns = self.load_function_returns(&function.results().sources, function_scope);
+
+		expression::Function {
+			arguments: argument_names,
+			locals: Vec::new(),
+			stack,
+			code,
+			returns,
+		}
+	}
+
 	fn handle_function(&mut self, id: u32, arc: &Arc<Mutex<Function>>) {
 		let function = arc.lock();
 		let function_scope = Arc::as_ptr(arc) as usize;
 		let parent_scope = self.data_handler.scope();
 
-		let capture_count = u32::from(function.capture_count());
 		let argument_count = u32::from(function.argument_count);
-
-		let capture_names: Vec<Name> = (0..capture_count)
+		let argument_names: Vec<Name> = (0..argument_count)
 			.map(|offset| Name { id: offset })
 			.collect();
-		let argument_names: Vec<Name> = (0..argument_count)
-			.map(|offset| Name {
-				id: capture_count + offset,
-			})
-			.collect();
 
-		self.data_handler.set_scope(function_scope);
-		self.code_handler.push_scope();
-
-		self.bridge_boundary_names(0, &capture_names);
-		self.bridge_boundary_names(1, &argument_names);
-
-		self.handle_nodes(&function.nodes, function_scope);
-
-		self.data_handler.set_scope(parent_scope);
-		let capture_values: Vec<_> = function
-			.captures
-			.iter()
-			.map(|&link| self.data_handler.load(link))
-			.collect();
-		self.data_handler.set_scope(function_scope);
-
-		let dependencies = capture_names.into_iter().zip(capture_values).collect();
-		let stack = self.data_handler.get_stack_size(function_scope);
-		let code = self.code_handler.pop_scope();
-		let returns = self.load_function_returns(&function.results().sources, function_scope);
+		let inner = self.emit_function_body(&function, argument_names, function_scope);
 
 		drop(function);
 
-		let expression = DataHandler::load_scoped(
-			dependencies,
-			expression::Function {
-				arguments: argument_names,
-				locals: Vec::new(),
-				stack,
-				code,
-				returns,
-			},
-		);
-
 		self.data_handler.set_scope(parent_scope);
-
-		self.do_assignment(id, expression);
+		self.do_assignment(id, Expression::Function(inner.into()));
 	}
 
 	fn load_match_result_locals(&self, id: u32, scope: usize, result_count: u16) -> Vec<Local> {
@@ -505,6 +493,18 @@ impl LuauBuilder {
 		);
 	}
 
+	fn handle_aggregate(&mut self, id: u32, node: &Aggregate) {
+		let expression = self.data_handler.load_aggregate(node);
+
+		self.do_assignment(id, expression);
+	}
+
+	fn handle_extract(&mut self, id: u32, node: Extract) {
+		let expression = self.data_handler.load_extract(&node);
+
+		self.do_assignment(id, expression);
+	}
+
 	fn handle_table_new(&mut self, id: u32, node: &TableNew) {
 		let expression = self.data_handler.load_table_new(node);
 
@@ -697,7 +697,6 @@ impl LuauBuilder {
 
 			Node::ModuleArguments(_)
 			| Node::ModuleResults(_)
-			| Node::FunctionCaptures(_)
 			| Node::FunctionArguments(_)
 			| Node::FunctionResults(_)
 			| Node::BranchArguments(_)
@@ -742,6 +741,8 @@ impl LuauBuilder {
 			Node::MutableNew(node) => self.handle_mutable_new(id, node),
 			Node::MutableGet(node) => self.handle_mutable_get(id, node),
 			Node::MutableSet(node) => self.handle_mutable_set(id, node),
+			Node::Aggregate(ref node) => self.handle_aggregate(id, node),
+			Node::Extract(node) => self.handle_extract(id, node),
 			Node::TableNew(ref node) => self.handle_table_new(id, node),
 			Node::TableGet(node) => self.handle_table_get(id, node),
 			Node::TableSet(node) => self.handle_table_set(id, node),

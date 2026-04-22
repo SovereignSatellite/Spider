@@ -14,12 +14,12 @@ pub mod region;
 use self::{
 	foreign::Foreign,
 	operation::{
-		Apply, Fence, Identity, IntegerConvertToNumber, IntegerNarrow, IntegerSignExtend,
-		IntegerTransmuteToNumber, IntegerWiden, MemoryCopy, MemoryDrop, MemoryFill, MemoryGrow,
-		MemoryLoad, MemoryNew, MemorySize, MemoryStore, MutableGet, MutableNew, MutableSet,
-		NumberNarrow, NumberTransmuteToInteger, NumberTruncateToInteger, NumberWiden, RefIsNull,
-		TableCopy, TableDrop, TableFill, TableGet, TableGrow, TableNew, TableSet, TableSize,
-		integer, number,
+		Aggregate, Apply, Extract, Fence, Identity, IntegerConvertToNumber, IntegerNarrow,
+		IntegerSignExtend, IntegerTransmuteToNumber, IntegerWiden, MemoryCopy, MemoryDrop,
+		MemoryFill, MemoryGrow, MemoryLoad, MemoryNew, MemorySize, MemoryStore, MutableGet,
+		MutableNew, MutableSet, NumberNarrow, NumberTransmuteToInteger, NumberTruncateToInteger,
+		NumberWiden, RefIsNull, TableCopy, TableDrop, TableFill, TableGet, TableGrow, TableNew,
+		TableSet, TableSize, integer, number,
 	},
 	region::{Function, Match, Repeat, branch, function, module, repeat},
 };
@@ -42,8 +42,6 @@ pub enum Node {
 	ModuleArguments(module::Arguments),
 	/// The boundary results of a module region.
 	ModuleResults(module::Results),
-	/// The boundary captures of a function region.
-	FunctionCaptures(function::Captures),
 	/// The boundary arguments of a function region.
 	FunctionArguments(function::Arguments),
 	/// The boundary results of a function region.
@@ -124,6 +122,11 @@ pub enum Node {
 	/// A mutable-cell write.
 	MutableSet(MutableSet),
 
+	/// A structured aggregate composed of field links.
+	Aggregate(Aggregate),
+	/// A field extraction from an aggregate source.
+	Extract(Extract),
+
 	/// A table creation.
 	TableNew(TableNew),
 	/// A table element read.
@@ -162,12 +165,8 @@ pub enum Node {
 macro_rules! for_each_visit {
 	($self:ident, $visit:ident, $handler:ident) => {
 		match $self {
-			Self::Function(arc) => arc.lock().$visit($handler),
-			Self::Match(arc) => arc.lock().$visit($handler),
-			Self::Repeat(arc) => arc.lock().$visit($handler),
-
-			Self::ModuleArguments(_)
-			| Self::FunctionCaptures(_)
+			Self::Function(_)
+			| Self::ModuleArguments(_)
 			| Self::FunctionArguments(_)
 			| Self::BranchArguments(_)
 			| Self::RepeatArguments(_)
@@ -177,6 +176,9 @@ macro_rules! for_each_visit {
 			| Self::I64(_)
 			| Self::F32(_)
 			| Self::F64(_) => {}
+
+			Self::Match(arc) => arc.lock().$visit($handler),
+			Self::Repeat(arc) => arc.lock().$visit($handler),
 
 			Self::ModuleResults(node) => node.$visit($handler),
 			Self::FunctionResults(node) => node.$visit($handler),
@@ -207,6 +209,8 @@ macro_rules! for_each_visit {
 			Self::MutableNew(node) => node.$visit($handler),
 			Self::MutableGet(node) => node.$visit($handler),
 			Self::MutableSet(node) => node.$visit($handler),
+			Self::Aggregate(node) => node.$visit($handler),
+			Self::Extract(node) => node.$visit($handler),
 			Self::TableNew(node) => node.$visit($handler),
 			Self::TableGet(node) => node.$visit($handler),
 			Self::TableSet(node) => node.$visit($handler),
@@ -315,6 +319,8 @@ impl Node {
 			| Self::NumberTruncateToInteger(_)
 			| Self::NumberTransmuteToInteger(_)
 			| Self::MutableNew(_)
+			| Self::Aggregate(_)
+			| Self::Extract(_)
 			| Self::TableNew(_)
 			| Self::MemoryNew(_) => 1,
 
@@ -328,7 +334,6 @@ impl Node {
 			| Self::BranchResults(_)
 			| Self::RepeatResults(_) => 0,
 
-			Self::FunctionCaptures(node) => node.result_count(),
 			Self::FunctionArguments(node) => node.result_count(),
 
 			Self::BranchArguments(node) => node.result_count(),

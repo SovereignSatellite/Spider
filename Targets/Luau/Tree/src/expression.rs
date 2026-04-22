@@ -20,14 +20,6 @@ pub struct Function {
 	pub returns: Vec<Expression>,
 }
 
-/// A scoped function with captured dependencies.
-pub struct Scoped {
-	/// The captured dependencies.
-	pub dependencies: Vec<(Name, Expression)>,
-	/// The function definition.
-	pub function: Function,
-}
-
 /// A conditional match expression.
 pub struct Match {
 	/// The condition expression.
@@ -278,6 +270,20 @@ pub struct GlobalGet {
 	pub source: Expression,
 }
 
+/// An aggregate construction.
+pub struct Aggregate {
+	/// The field values, in field order.
+	pub fields: Vec<Expression>,
+}
+
+/// An aggregate field projection.
+pub struct Extract {
+	/// The source aggregate.
+	pub source: Expression,
+	/// The zero-based field index.
+	pub index: u32,
+}
+
 /// A table creation.
 pub struct TableNew {
 	/// The initial elements and their offsets.
@@ -349,8 +355,6 @@ pub struct MemoryGrow {
 pub enum Expression {
 	/// A function definition.
 	Function(Box<Function>),
-	/// A scoped function with captured dependencies.
-	Scoped(Box<Scoped>),
 	/// A conditional match expression.
 	Match(Box<Match>),
 
@@ -420,6 +424,11 @@ pub enum Expression {
 	/// A global variable read.
 	GlobalGet(Box<GlobalGet>),
 
+	/// An aggregate construction.
+	Aggregate(Box<Aggregate>),
+	/// An aggregate field projection.
+	Extract(Box<Extract>),
+
 	/// A table creation.
 	TableNew(Box<TableNew>),
 	/// A table element read.
@@ -471,6 +480,7 @@ impl Expression {
 			| Self::RuntimeCall(_)
 			| Self::IntegerNarrow(_)
 			| Self::GlobalGet(_)
+			| Self::Extract(_)
 			| Self::TableSize(_)
 			| Self::TableGrow(_)
 			| Self::MemorySize(_)
@@ -510,7 +520,6 @@ impl Expression {
 			}
 
 			Self::Function(_)
-			| Self::Scoped(_)
 			| Self::Null
 			| Self::I64(_)
 			| Self::F32(_)
@@ -529,6 +538,7 @@ impl Expression {
 			| Self::NumberTruncateToInteger(_)
 			| Self::NumberTransmuteToInteger(_)
 			| Self::GlobalNew(_)
+			| Self::Aggregate(_)
 			| Self::TableNew(_)
 			| Self::TableGet(_)
 			| Self::MemoryNew(_)

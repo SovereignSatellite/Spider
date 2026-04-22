@@ -12,8 +12,8 @@ use wasmparser::{ConstExpr, ElementItems, FunctionBody, SectionLimited, ValType}
 use ir_graph::{
 	Link, Node,
 	operation::{
-		Apply, Fence, Location, MemoryCopy, MemoryDrop, MemoryNew, MutableNew, MutableSet,
-		TableCopy, TableDrop, TableFill, TableNew, TableSet,
+		Fence, Location, MemoryCopy, MemoryDrop, MemoryNew, MutableNew, MutableSet, TableCopy,
+		TableDrop, TableFill, TableNew, TableSet,
 	},
 	region::{Module, module},
 };
@@ -28,6 +28,7 @@ use self::{
 };
 
 mod basic_block;
+mod closure;
 mod control_flow;
 mod dependencies;
 mod function;
@@ -628,8 +629,8 @@ impl WebAssemblyLifter {
 		let trap = self.create_fence(nodes, trap);
 
 		start.map_or(trap, |start| {
-			let function = self.global_state.emit_function_reference(nodes, start);
-			let apply = Apply::add_into(nodes, function, vec![trap], 1);
+			let closure = self.global_state.emit_function_reference(nodes, start);
+			let apply = closure::apply(nodes, closure, [trap], 1);
 
 			Link(apply, 0)
 		})

@@ -51,13 +51,14 @@ impl Region {
 		}
 	}
 
-	/// Visits each root node index in the region.
-	pub fn for_each_root<H: FnMut(u32)>(&self, handler: H) {
+	/// Returns the ids of the arguments and results boundary nodes.
+	#[must_use]
+	pub fn roots(&self) -> (u32, u32) {
 		match self {
-			Self::Module(region) => region.for_each_root(handler),
-			Self::Function(region) => region.for_each_root(handler),
-			Self::Branch(region) => region.for_each_root(handler),
-			Self::Repeat(region) => region.for_each_root(handler),
+			Self::Module(region) => region.roots(),
+			Self::Function(region) => region.roots(),
+			Self::Branch(region) => region.roots(),
+			Self::Repeat(region) => region.roots(),
 		}
 	}
 }

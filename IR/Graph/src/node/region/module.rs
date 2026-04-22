@@ -65,11 +65,12 @@ impl Module {
 		}
 	}
 
-	pub(super) fn for_each_root<H: FnMut(u32)>(&self, mut handler: H) {
-		let result = u32::try_from(self.results_index()).unwrap_or_else(|_| unreachable!());
+	/// Returns the ids of the arguments and results boundary nodes.
+	#[must_use]
+	pub fn roots(&self) -> (u32, u32) {
+		let results = u32::try_from(self.results_index()).unwrap_or_else(|_| unreachable!());
 
-		handler(Self::ARGUMENTS_ID);
-		handler(result);
+		(Self::ARGUMENTS_ID, results)
 	}
 }
 

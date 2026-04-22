@@ -245,11 +245,17 @@ impl Luau {
 	}
 
 	fn fmt_invoke(&mut self, invoke: WastInvoke<'_>) -> Result<()> {
+		self.references.push("call_closure");
+
+		write!(self.file, "hn_call_closure(")?;
+
 		self.fmt_export(invoke.module, invoke.name)?;
 
-		write!(self.file, "(")?;
+		if !invoke.args.is_empty() {
+			write!(self.file, ", ")?;
 
-		self.fmt_argument_list(invoke.args)?;
+			self.fmt_argument_list(invoke.args)?;
+		}
 
 		write!(self.file, ")")?;
 

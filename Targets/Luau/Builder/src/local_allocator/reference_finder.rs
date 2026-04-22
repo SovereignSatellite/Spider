@@ -429,7 +429,6 @@ fn handle_node(
 	match *node {
 		Node::Function(_)
 		| Node::ModuleResults(_)
-		| Node::FunctionCaptures(_)
 		| Node::FunctionArguments(_)
 		| Node::FunctionResults(_)
 		| Node::BranchArguments(_)
@@ -460,6 +459,8 @@ fn handle_node(
 		| Node::NumberTruncateToInteger(_)
 		| Node::NumberTransmuteToInteger(_)
 		| Node::MutableNew(_)
+		| Node::Aggregate(_)
+		| Node::Extract(_)
 		| Node::TableNew(_)
 		| Node::MemoryNew(_) => {}
 
@@ -511,7 +512,6 @@ pub fn run(assignments: &mut HashMap<ScopedLink, ScopedLink>, nodes: &[Node], sc
 			Node::Function(_)
 			| Node::ModuleArguments(_)
 			| Node::ModuleResults(_)
-			| Node::FunctionCaptures(_)
 			| Node::FunctionArguments(_)
 			| Node::FunctionResults(_)
 			| Node::BranchArguments(_)
@@ -547,6 +547,8 @@ pub fn run(assignments: &mut HashMap<ScopedLink, ScopedLink>, nodes: &[Node], sc
 			| Node::MutableNew(_)
 			| Node::MutableGet(_)
 			| Node::MutableSet(_)
+			| Node::Aggregate(_)
+			| Node::Extract(_)
 			| Node::TableNew(_)
 			| Node::TableGet(_)
 			| Node::TableSet(_)
