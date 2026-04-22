@@ -2,7 +2,7 @@ use core::iter;
 
 use wasmparser::{BlockType, FunctionBody, LocalsReader, OperatorsReader, ValType};
 
-use ir_graph::{Link, Node, operation::Apply, region::Function};
+use ir_graph::{Link, Node, operation::Aggregate, region::Function};
 use web_assembly_builder::{ControlFlowBuilder, Types};
 use web_assembly_graph::ControlFlowGraph;
 use web_assembly_liveness::{
@@ -10,7 +10,7 @@ use web_assembly_liveness::{
 	references::{self, Reference},
 };
 
-use super::{control_flow::ControlFlowLifter, global_state::GlobalState};
+use super::{closure, control_flow::ControlFlowLifter, global_state::GlobalState};
 
 /// A lifter-local value kind used only for tracking local-variable layout.
 #[derive(Clone, Copy)]
@@ -102,28 +102,25 @@ impl FunctionLifter {
 			.local_tracker
 			.run(&mut self.locals, &self.graph, total_result_count);
 		let total_argument_count = argument_count
-			.checked_add(1)
+			.checked_add(2)
 			.unwrap_or_else(|| unreachable!());
 
-		Function::add_into(
-			nodes,
-			total_argument_count,
-			captures,
-			|inner_nodes, captures, arguments| {
-				self.lifter.set_function_data(
-					inner_nodes,
-					captures,
-					arguments,
-					argument_count.into(),
-					stack_size,
-					&self.local_kinds,
-					&self.dependencies,
-				);
+		let state = Aggregate::add_into(nodes, captures);
+		let function = Function::add_into(nodes, total_argument_count, |inner_nodes, arguments| {
+			self.lifter.set_function_data(
+				inner_nodes,
+				arguments,
+				argument_count.into(),
+				stack_size,
+				&self.local_kinds,
+				&self.dependencies,
+			);
 
-				self.lifter
-					.run(inner_nodes, &self.graph, result_count.into(), &self.locals)
-			},
-		)
+			self.lifter
+				.run(inner_nodes, &self.graph, result_count.into(), &self.locals)
+		});
+
+		closure::wrap(nodes, function, state)
 	}
 
 	#[expect(
@@ -177,8 +174,8 @@ impl FunctionLifter {
 
 		self.local_kinds.clear();
 
-		let function = self.build_data_flow(nodes, 0, 1, global_state);
-		let apply = Apply::add_into(nodes, function, Vec::new(), 1);
+		let closure = self.build_data_flow(nodes, 0, 1, global_state);
+		let apply = closure::apply(nodes, closure, [], 1);
 
 		Link(apply, 0)
 	}

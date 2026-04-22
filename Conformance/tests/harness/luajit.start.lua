@@ -19,42 +19,70 @@ do
 		memory = rt_memory_new({}, 65536, 131072),
 	}
 
-	spectest.print = print
+	spectest.print = {
+		function(_state)
+			print()
+		end,
+		{},
+	}
 
-	function spectest.print_i32(argument)
-		print(string.format("I32 `0x%08X`", argument))
-	end
+	spectest.print_i32 = {
+		function(_state, argument)
+			print(string.format("I32 `0x%08X`", argument))
+		end,
+		{},
+	}
 
-	function spectest.print_i64(argument)
-		print(string.format("I64 `0x%016X`", argument))
-	end
+	spectest.print_i64 = {
+		function(_state, argument)
+			print(string.format("I64 `0x%016X`", argument))
+		end,
+		{},
+	}
 
-	function spectest.print_f32(argument)
-		argument = from_bits_f32(argument)
+	spectest.print_f32 = {
+		function(_state, argument)
+			argument = from_bits_f32(argument)
 
-		print(string.format("F32 `%g`", argument))
-	end
+			print(string.format("F32 `%g`", argument))
+		end,
+		{},
+	}
 
-	function spectest.print_f64(argument)
-		argument = from_bits_f64(argument)
+	spectest.print_f64 = {
+		function(_state, argument)
+			argument = from_bits_f64(argument)
 
-		print(string.format("F64 `%g`", argument))
-	end
+			print(string.format("F64 `%g`", argument))
+		end,
+		{},
+	}
 
-	function spectest.print_i32_f32(argument_1, argument_2)
-		argument_2 = from_bits_f32(argument_2)
+	spectest.print_i32_f32 = {
+		function(_state, argument_1, argument_2)
+			argument_2 = from_bits_f32(argument_2)
 
-		print(string.format("I32 `0x%08X`, F32 `%g`", argument_1, argument_2))
-	end
+			print(string.format("I32 `0x%08X`, F32 `%g`", argument_1, argument_2))
+		end,
+		{},
+	}
 
-	function spectest.print_f64_f64(argument_1, argument_2)
-		argument_1 = from_bits_f64(argument_1)
-		argument_2 = from_bits_f64(argument_2)
+	spectest.print_f64_f64 = {
+		function(_state, argument_1, argument_2)
+			argument_1 = from_bits_f64(argument_1)
+			argument_2 = from_bits_f64(argument_2)
 
-		print(string.format("F64 `%g`, F64 `%g`", argument_1, argument_2))
-	end
+			print(string.format("F64 `%g`, F64 `%g`", argument_1, argument_2))
+		end,
+		{},
+	}
 
 	rt_import_map.spectest = spectest
+end
+
+-- SECTION call_closure
+function hn_call_closure(closure, ...)
+	return closure[1](closure[2], ...)
 end
 
 -- SECTION report_failure

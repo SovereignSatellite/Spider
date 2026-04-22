@@ -2,12 +2,13 @@ use alloc::sync::Arc;
 use std::io::{Result, Write};
 
 use luajit_tree::expression::{
-	BooleanToInteger, Call, Expression, Function, GlobalGet, GlobalNew, IntegerBinaryOperation,
-	IntegerCompareOperation, IntegerConvertToNumber, IntegerExtend, IntegerNarrow,
-	IntegerTransmuteToNumber, IntegerUnaryOperation, IntegerWiden, Local, Location, MemoryGrow,
-	MemoryLoad, MemoryNew, MemorySize, Name, NumberBinaryOperation, NumberCompareOperation,
-	NumberNarrow, NumberTransmuteToInteger, NumberTruncateToInteger, NumberUnaryOperation,
-	NumberWiden, RefIsNull, RuntimeCall, Scoped, TableGet, TableGrow, TableNew, TableSize,
+	Aggregate, BooleanToInteger, Call, Expression, Extract, Function, GlobalGet, GlobalNew,
+	IntegerBinaryOperation, IntegerCompareOperation, IntegerConvertToNumber, IntegerExtend,
+	IntegerNarrow, IntegerTransmuteToNumber, IntegerUnaryOperation, IntegerWiden, Local, Location,
+	MemoryGrow, MemoryLoad, MemoryNew, MemorySize, Name, NumberBinaryOperation,
+	NumberCompareOperation, NumberNarrow, NumberTransmuteToInteger, NumberTruncateToInteger,
+	NumberUnaryOperation, NumberWiden, RefIsNull, RuntimeCall, TableGet, TableGrow, TableNew,
+	TableSize,
 };
 
 use super::{LuaJITPrinter, library::NeedsName as _, print::Print};
@@ -136,42 +137,6 @@ impl Print for Function {
 
 		printer.tab(out)?;
 		write!(out, "end)")
-	}
-}
-
-impl Print for Scoped {
-	fn print(&self, printer: &mut LuaJITPrinter, out: &mut dyn Write) -> Result<()> {
-		let Self {
-			dependencies,
-			function,
-		} = self;
-
-		if dependencies.is_empty() {
-			return function.print(printer, out);
-		}
-
-		writeln!(out, "(function()")?;
-
-		printer.indent();
-
-		for (name, source) in dependencies {
-			printer.tab(out)?;
-			write!(out, "local ")?;
-
-			name.print(printer, out)?;
-			write!(out, " = ")?;
-			source.print(printer, out)?;
-			writeln!(out, ";")?;
-		}
-
-		printer.tab(out)?;
-		write!(out, "return ")?;
-		function.print(printer, out)?;
-		writeln!(out)?;
-
-		printer.outdent();
-		printer.tab(out)?;
-		write!(out, "end)()")
 	}
 }
 
@@ -520,6 +485,32 @@ impl Print for GlobalGet {
 	}
 }
 
+impl Print for Aggregate {
+	fn print(&self, printer: &mut LuaJITPrinter, out: &mut dyn Write) -> Result<()> {
+		let Self { fields } = self;
+
+		write!(out, "{{ ")?;
+
+		for field in fields {
+			field.print(printer, out)?;
+
+			write!(out, ", ")?;
+		}
+
+		write!(out, "}}")
+	}
+}
+
+impl Print for Extract {
+	fn print(&self, printer: &mut LuaJITPrinter, out: &mut dyn Write) -> Result<()> {
+		let Self { source, index } = self;
+
+		source.print(printer, out)?;
+
+		write!(out, "[{}]", index + 1)
+	}
+}
+
 impl Print for TableNew {
 	fn print(&self, printer: &mut LuaJITPrinter, out: &mut dyn Write) -> Result<()> {
 		let Self {
@@ -668,7 +659,6 @@ impl Print for Expression {
 	fn print(&self, printer: &mut LuaJITPrinter, out: &mut dyn Write) -> Result<()> {
 		match self {
 			Self::Function(function) => function.print(printer, out),
-			Self::Scoped(scoped) => scoped.print(printer, out),
 			Self::Trap => write!(out, "error('unreachable code')"),
 			Self::Null => write!(out, "nil"),
 			Self::Local(local) => local.print(printer, out),
@@ -718,6 +708,8 @@ impl Print for Expression {
 			}
 			Self::GlobalNew(global_new) => global_new.print(printer, out),
 			Self::GlobalGet(global_get) => global_get.print(printer, out),
+			Self::Aggregate(aggregate) => aggregate.print(printer, out),
+			Self::Extract(extract) => extract.print(printer, out),
 			Self::TableNew(table_new) => table_new.print(printer, out),
 			Self::TableGet(table_get) => table_get.print(printer, out),
 			Self::TableSize(table_size) => table_size.print(printer, out),

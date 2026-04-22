@@ -5,13 +5,13 @@ use core::ops::ControlFlow;
 use super::{
 	LuaJITTree,
 	expression::{
-		BooleanToInteger, Call as ExpressionCall, Expression, Function, GlobalGet, GlobalNew,
-		IntegerBinaryOperation, IntegerCompareOperation, IntegerConvertToNumber, IntegerExtend,
-		IntegerNarrow, IntegerTransmuteToNumber, IntegerUnaryOperation, IntegerWiden, Location,
-		MemoryGrow, MemoryLoad, MemorySize, NumberBinaryOperation, NumberCompareOperation,
-		NumberNarrow, NumberTransmuteToInteger, NumberTruncateToInteger, NumberUnaryOperation,
-		NumberWiden, RefIsNull, RuntimeCall as ExpressionRuntimeCall, Scoped, TableGet, TableGrow,
-		TableNew, TableSize,
+		Aggregate, BooleanToInteger, Call as ExpressionCall, Expression, Extract, Function,
+		GlobalGet, GlobalNew, IntegerBinaryOperation, IntegerCompareOperation,
+		IntegerConvertToNumber, IntegerExtend, IntegerNarrow, IntegerTransmuteToNumber,
+		IntegerUnaryOperation, IntegerWiden, Location, MemoryGrow, MemoryLoad, MemorySize,
+		NumberBinaryOperation, NumberCompareOperation, NumberNarrow, NumberTransmuteToInteger,
+		NumberTruncateToInteger, NumberUnaryOperation, NumberWiden, RefIsNull,
+		RuntimeCall as ExpressionRuntimeCall, TableGet, TableGrow, TableNew, TableSize,
 	},
 	statement::{
 		Assign, Call as StatementCall, GlobalSet, Match, MemoryCopy, MemoryDrop, MemoryFill,
@@ -39,21 +39,6 @@ impl Function {
 		code.accept(visitor)?;
 
 		returns.iter().try_for_each(|inner| inner.accept(visitor))
-	}
-}
-
-impl Scoped {
-	fn accept<T: Visitor>(&self, visitor: &mut T) -> ControlFlow<T::Output> {
-		let Self {
-			dependencies,
-			function,
-		} = self;
-
-		dependencies
-			.iter()
-			.try_for_each(|dependency| dependency.1.accept(visitor))?;
-
-		function.accept(visitor)
 	}
 }
 
@@ -246,6 +231,22 @@ impl GlobalGet {
 	}
 }
 
+impl Aggregate {
+	fn accept<T: Visitor>(&self, visitor: &mut T) -> ControlFlow<T::Output> {
+		let Self { fields } = self;
+
+		fields.iter().try_for_each(|field| field.accept(visitor))
+	}
+}
+
+impl Extract {
+	fn accept<T: Visitor>(&self, visitor: &mut T) -> ControlFlow<T::Output> {
+		let Self { source, .. } = self;
+
+		source.accept(visitor)
+	}
+}
+
 impl TableNew {
 	fn accept<T: Visitor>(&self, visitor: &mut T) -> ControlFlow<T::Output> {
 		let Self { initializer, .. } = self;
@@ -331,7 +332,6 @@ impl Expression {
 			| Self::MemoryNew(_) => ControlFlow::Continue(()),
 
 			Self::Function(function) => function.accept(visitor),
-			Self::Scoped(scoped) => scoped.accept(visitor),
 			Self::Call(call) => call.accept(visitor),
 			Self::RuntimeCall(runtime_call) => runtime_call.accept(visitor),
 			Self::BooleanToInteger(boolean_to_integer) => boolean_to_integer.accept(visitor),
@@ -373,6 +373,8 @@ impl Expression {
 			}
 			Self::GlobalNew(global_new) => global_new.accept(visitor),
 			Self::GlobalGet(global_get) => global_get.accept(visitor),
+			Self::Aggregate(aggregate) => aggregate.accept(visitor),
+			Self::Extract(extract) => extract.accept(visitor),
 			Self::TableNew(table_new) => table_new.accept(visitor),
 			Self::TableGet(table_get) => table_get.accept(visitor),
 			Self::TableSize(table_size) => table_size.accept(visitor),

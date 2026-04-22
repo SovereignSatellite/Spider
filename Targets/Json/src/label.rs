@@ -15,7 +15,6 @@ pub fn get_static(node: &Node) -> Option<&'static str> {
 
 		Node::ModuleArguments(_) => "Module Arguments",
 		Node::ModuleResults(_) => "Module Results",
-		Node::FunctionCaptures(_) => "Function Captures",
 		Node::FunctionArguments(_) => "Function Arguments",
 		Node::FunctionResults(_) => "Function Results",
 		Node::BranchArguments(_) => "Branch Arguments",
@@ -53,6 +52,8 @@ pub fn get_static(node: &Node) -> Option<&'static str> {
 		Node::MutableNew(_) => "Mutable New",
 		Node::MutableGet(_) => "Mutable Get",
 		Node::MutableSet(_) => "Mutable Set",
+		Node::Aggregate(_) => "Aggregate",
+		Node::Extract(_) => "Extract",
 		Node::TableNew(_) => "Table New",
 		Node::TableGet(_) => "Table Get",
 		Node::TableSet(_) => "Table Set",
@@ -251,7 +252,6 @@ pub fn write(node: &Node, out: &mut dyn Write) -> Result<()> {
 		| Node::Repeat(_)
 		| Node::ModuleArguments(_)
 		| Node::ModuleResults(_)
-		| Node::FunctionCaptures(_)
 		| Node::FunctionArguments(_)
 		| Node::FunctionResults(_)
 		| Node::BranchArguments(_)
@@ -276,6 +276,8 @@ pub fn write(node: &Node, out: &mut dyn Write) -> Result<()> {
 		| Node::MutableNew(_)
 		| Node::MutableGet(_)
 		| Node::MutableSet(_)
+		| Node::Aggregate(_)
+		| Node::Extract(_)
 		| Node::TableNew(_)
 		| Node::TableGet(_)
 		| Node::TableSet(_)

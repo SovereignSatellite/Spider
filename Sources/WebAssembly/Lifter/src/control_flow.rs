@@ -209,19 +209,14 @@ impl ControlFlowLifter {
 	pub fn set_function_data(
 		&mut self,
 		nodes: &mut Vec<Node>,
-		captures: u32,
 		arguments: u32,
 		argument_count: usize,
 		stack_size: u16,
 		local_kinds: &[LocalKind],
 		dependencies: &[Reference],
 	) {
-		self.basic_block_lifter.set_function_inputs(
-			captures,
-			arguments,
-			argument_count,
-			dependencies,
-		);
+		self.basic_block_lifter
+			.set_function_inputs(nodes, arguments, argument_count, dependencies);
 
 		self.basic_block_lifter.set_local_types(nodes, local_kinds);
 

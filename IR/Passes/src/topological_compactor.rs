@@ -36,15 +36,14 @@ impl TopologicalCompactor {
 		self.nodes.push(node);
 	}
 
-	fn handle_nodes(&mut self, nodes: &mut Vec<Node>, roots: &[u32]) {
+	fn handle_nodes(&mut self, nodes: &mut Vec<Node>, arguments: u32, results: u32) {
 		self.nodes.clear();
 
 		self.ids.clear();
 		self.ids.resize(nodes.len(), u32::MAX);
 
-		for &root in roots {
-			self.handle_node(nodes, root);
-		}
+		self.handle_node(nodes, arguments);
+		self.handle_node(nodes, results);
 
 		mem::swap(nodes, &mut self.nodes);
 	}
@@ -63,20 +62,13 @@ impl TopologicalCompactor {
 
 	/// Compacts a single region in place.
 	///
-	/// Roots are processed left to right. Boundary nodes appear first
-	/// so they retain their well-known positions.
+	/// The arguments boundary is visited before the results boundary so it
+	/// keeps its well-known position at the start of the region.
 	pub fn run(&mut self, region: &mut Region) {
-		let mut roots = [0_u32; 3];
-		let mut count = 0;
-
-		region.for_each_root(|id| {
-			roots[count] = id;
-			count += 1;
-		});
-
+		let (arguments, results) = region.roots();
 		let nodes = region.nodes_mut();
 
-		self.handle_nodes(nodes, &roots[..count]);
+		self.handle_nodes(nodes, arguments, results);
 		self.handle_edges(nodes);
 	}
 }

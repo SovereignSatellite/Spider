@@ -81,7 +81,6 @@ where
 
 		Node::ModuleArguments(_)
 		| Node::ModuleResults(_)
-		| Node::FunctionCaptures(_)
 		| Node::FunctionArguments(_)
 		| Node::FunctionResults(_)
 		| Node::BranchArguments(_)
@@ -117,6 +116,8 @@ where
 		| Node::MutableNew(_)
 		| Node::MutableGet(_)
 		| Node::MutableSet(_)
+		| Node::Aggregate(_)
+		| Node::Extract(_)
 		| Node::TableNew(_)
 		| Node::TableGet(_)
 		| Node::TableSet(_)

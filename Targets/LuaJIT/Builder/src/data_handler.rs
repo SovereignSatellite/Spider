@@ -4,12 +4,12 @@ use hashbrown::HashMap;
 
 use ir_graph::{Link, operation};
 use luajit_tree::expression::{
-	BooleanToInteger, Call, Expression, Function, GlobalGet, GlobalNew, IntegerBinaryOperation,
-	IntegerCompareOperation, IntegerConvertToNumber, IntegerExtend, IntegerNarrow,
-	IntegerTransmuteToNumber, IntegerUnaryOperation, IntegerWiden, Local, Location, MemoryGrow,
-	MemoryLoad, MemorySize, Name, NumberBinaryOperation, NumberCompareOperation, NumberNarrow,
-	NumberTransmuteToInteger, NumberTruncateToInteger, NumberUnaryOperation, NumberWiden,
-	RefIsNull, RuntimeCall, Scoped, TableGet, TableGrow, TableNew, TableSize,
+	Aggregate, BooleanToInteger, Call, Expression, Extract, GlobalGet, GlobalNew,
+	IntegerBinaryOperation, IntegerCompareOperation, IntegerConvertToNumber, IntegerExtend,
+	IntegerNarrow, IntegerTransmuteToNumber, IntegerUnaryOperation, IntegerWiden, Local, Location,
+	MemoryGrow, MemoryLoad, MemorySize, NumberBinaryOperation, NumberCompareOperation,
+	NumberNarrow, NumberTransmuteToInteger, NumberTruncateToInteger, NumberUnaryOperation,
+	NumberWiden, RefIsNull, RuntimeCall, TableGet, TableGrow, TableNew, TableSize,
 };
 use web_assembly_lifter::foreign::Import as WasmImport;
 
@@ -112,19 +112,6 @@ impl DataHandler {
 			.map(|&link| self.assignments[&(link, source_scope)]);
 
 		destinations.zip(sources).collect()
-	}
-
-	pub fn load_scoped(dependencies: Vec<(Name, Expression)>, function: Function) -> Expression {
-		if dependencies.is_empty() {
-			Expression::Function(function.into())
-		} else {
-			let scoped = Scoped {
-				dependencies,
-				function,
-			};
-
-			Expression::Scoped(scoped.into())
-		}
 	}
 
 	fn load_runtime_call(name: &'static str, arguments: Vec<Expression>) -> Expression {
@@ -368,6 +355,22 @@ impl DataHandler {
 		};
 
 		Expression::GlobalGet(expression.into())
+	}
+
+	pub fn load_aggregate(&mut self, node: &operation::Aggregate) -> Expression {
+		let fields = node.fields.iter().map(|&link| self.load(link)).collect();
+		let expression = Aggregate { fields };
+
+		Expression::Aggregate(expression.into())
+	}
+
+	pub fn load_extract(&mut self, node: &operation::Extract) -> Expression {
+		let expression = Extract {
+			source: self.load(node.source),
+			index: node.index,
+		};
+
+		Expression::Extract(expression.into())
 	}
 
 	pub fn load_location(&mut self, location: operation::Location) -> Location {
