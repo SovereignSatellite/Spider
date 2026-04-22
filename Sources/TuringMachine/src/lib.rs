@@ -10,10 +10,14 @@ use ir_graph::{
 	Link, Node,
 	list::resizable::Resizable,
 	operation::{
-		Apply, Fence, LoadType, Location, MemoryLoad, MemoryNew, MemoryStore, StoreType, integer,
+		Fence, LoadType, Location, MemoryLoad, MemoryNew, MemoryStore, StoreType, integer,
 	},
-	region::{Branch, Import, Match, Module, Repeat, module},
+	region::{Branch, Match, Module, Repeat, module},
 };
+
+use self::foreign::{Ask, Tell};
+
+pub mod foreign;
 
 const CELL_SIZE: u32 = 4;
 const MEMORY_SIZE: u32 = 1_024 * 4 * CELL_SIZE;
@@ -57,8 +61,6 @@ pub struct TuringMachineLifter {
 	offset: Link,
 
 	io: Link,
-	ask: Link,
-	tell: Link,
 
 	operators: Vec<Operator>,
 }
@@ -73,8 +75,6 @@ impl TuringMachineLifter {
 			offset: Link::DANGLING,
 
 			io: Link::DANGLING,
-			ask: Link::DANGLING,
-			tell: Link::DANGLING,
 
 			operators: Vec::new(),
 		}
@@ -85,15 +85,6 @@ impl TuringMachineLifter {
 
 		self.store = MemoryNew::add_into(nodes, Vec::new(), MEMORY_SIZE, MEMORY_SIZE);
 		self.offset = Node::add_i32_into(nodes, 0);
-	}
-
-	fn create_io(&mut self, nodes: &mut Vec<Node>, arguments: u32) {
-		let environment = Link(arguments, module::Arguments::ENVIRONMENT_PORT);
-		let namespace = Arc::<str>::from("turing");
-
-		self.io = Link(arguments, module::Arguments::STATE_PORT);
-		self.ask = Import::add_into(nodes, environment, Arc::clone(&namespace), "ask".into());
-		self.tell = Import::add_into(nodes, environment, namespace, "tell".into());
 	}
 
 	fn reconcile_store(&mut self, nodes: &mut Vec<Node>) -> Link {
@@ -172,36 +163,27 @@ impl TuringMachineLifter {
 	}
 
 	fn handle_ask(&mut self, nodes: &mut Vec<Node>) {
-		let apply = Apply::add_into(nodes, self.ask, vec![self.io], 2);
+		let (character, io) = Ask::add_into(nodes, self.io);
 
-		self.io = Link(apply, 0);
+		self.io = io;
 
-		self.do_store(nodes, Link(apply, 1));
+		self.do_store(nodes, character);
 	}
 
 	fn handle_tell(&mut self, nodes: &mut Vec<Node>) {
 		let source = self.do_load(nodes);
-		let apply = Apply::add_into(nodes, self.tell, vec![self.io, source], 1);
 
-		self.io = Link(apply, 0);
+		self.io = Tell::add_into(nodes, self.io, source);
 	}
 
 	fn pull_all_active(&mut self, nodes: &mut Vec<Node>) -> Vec<Link> {
-		vec![
-			self.reconcile_store(nodes),
-			self.offset,
-			self.io,
-			self.ask,
-			self.tell,
-		]
+		vec![self.reconcile_store(nodes), self.offset, self.io]
 	}
 
 	const fn push_all_active(&mut self, source: u32) {
 		self.store = Link(source, 0);
 		self.offset = Link(source, 1);
 		self.io = Link(source, 2);
-		self.ask = Link(source, 3);
-		self.tell = Link(source, 4);
 	}
 
 	fn create_false_branch(&mut self, parent: &Weak<Mutex<Match>>) -> Arc<Mutex<Branch>> {
@@ -286,11 +268,12 @@ impl TuringMachineLifter {
 		);
 
 		Module::create(|nodes, arguments| {
+			self.io = Link(arguments, module::Arguments::STATE_PORT);
+
 			self.create_memory(nodes);
-			self.create_io(nodes, arguments);
 			self.handle_code(nodes);
 
-			(self.io, Vec::new())
+			vec![self.io]
 		})
 	}
 }

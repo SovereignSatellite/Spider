@@ -6,17 +6,17 @@ use super::{
 	LuauTree,
 	expression::{
 		BooleanToInteger, Call as ExpressionCall, Expression, Function, GlobalGet, GlobalNew,
-		Import, IntegerBinaryOperation, IntegerCompareOperation, IntegerConvertToNumber,
-		IntegerExtend, IntegerNarrow, IntegerTransmuteToNumber, IntegerUnaryOperation,
-		IntegerWiden, Location, Match as ExpressionMatch, MemoryGrow, MemoryLoad, MemorySize,
-		NumberBinaryOperation, NumberCompareOperation, NumberNarrow, NumberTransmuteToInteger,
-		NumberTruncateToInteger, NumberUnaryOperation, NumberWiden, RefIsNull, Scoped, TableGet,
-		TableGrow, TableNew, TableSize,
+		IntegerBinaryOperation, IntegerCompareOperation, IntegerConvertToNumber, IntegerExtend,
+		IntegerNarrow, IntegerTransmuteToNumber, IntegerUnaryOperation, IntegerWiden, Location,
+		Match as ExpressionMatch, MemoryGrow, MemoryLoad, MemorySize, NumberBinaryOperation,
+		NumberCompareOperation, NumberNarrow, NumberTransmuteToInteger, NumberTruncateToInteger,
+		NumberUnaryOperation, NumberWiden, RefIsNull, RuntimeCall as ExpressionRuntimeCall, Scoped,
+		TableGet, TableGrow, TableNew, TableSize,
 	},
 	statement::{
-		Assign, Call as StatementCall, Export, GlobalSet, Match as StatementMatch, MemoryCopy,
-		MemoryDrop, MemoryFill, MemoryStore, Repeat, Sequence, Statement, TableCopy, TableDrop,
-		TableFill, TableSet,
+		Assign, Call as StatementCall, GlobalSet, Match as StatementMatch, MemoryCopy, MemoryDrop,
+		MemoryFill, MemoryStore, Repeat, RuntimeCall as StatementRuntimeCall, Sequence, Statement,
+		TableCopy, TableDrop, TableFill, TableSet,
 	},
 };
 
@@ -71,11 +71,13 @@ impl ExpressionMatch {
 	}
 }
 
-impl Import {
+impl ExpressionRuntimeCall {
 	fn accept<T: Visitor>(&self, visitor: &mut T) -> ControlFlow<T::Output> {
-		let Self { environment, .. } = self;
+		let Self { arguments, .. } = self;
 
-		environment.accept(visitor)
+		arguments
+			.iter()
+			.try_for_each(|argument| argument.accept(visitor))
 	}
 }
 
@@ -339,13 +341,14 @@ impl Expression {
 			| Self::I64(_)
 			| Self::F32(_)
 			| Self::F64(_)
+			| Self::String(_)
 			| Self::MemoryNew(_) => ControlFlow::Continue(()),
 
 			Self::Function(function) => function.accept(visitor),
 			Self::Scoped(scoped) => scoped.accept(visitor),
 			Self::Match(inner) => inner.accept(visitor),
-			Self::Import(import) => import.accept(visitor),
 			Self::Call(call) => call.accept(visitor),
+			Self::RuntimeCall(runtime_call) => runtime_call.accept(visitor),
 			Self::BooleanToInteger(boolean_to_integer) => boolean_to_integer.accept(visitor),
 			Self::RefIsNull(ref_is_null) => ref_is_null.accept(visitor),
 			Self::IntegerUnaryOperation(integer_unary_operation) => {
@@ -446,6 +449,16 @@ impl StatementCall {
 		} = self;
 
 		function.accept(visitor)?;
+		arguments
+			.iter()
+			.try_for_each(|argument| argument.accept(visitor))
+	}
+}
+
+impl StatementRuntimeCall {
+	fn accept<T: Visitor>(&self, visitor: &mut T) -> ControlFlow<T::Output> {
+		let Self { arguments, .. } = self;
+
 		arguments
 			.iter()
 			.try_for_each(|argument| argument.accept(visitor))
@@ -572,6 +585,7 @@ impl Statement {
 			Self::Repeat(repeat) => repeat.accept(visitor),
 			Self::Assign(assign) => assign.accept(visitor),
 			Self::Call(call) => call.accept(visitor),
+			Self::RuntimeCall(runtime_call) => runtime_call.accept(visitor),
 			Self::GlobalSet(global_set) => global_set.accept(visitor),
 			Self::TableSet(table_set) => table_set.accept(visitor),
 			Self::TableFill(table_fill) => table_fill.accept(visitor),
@@ -585,20 +599,11 @@ impl Statement {
 	}
 }
 
-impl Export {
-	fn accept<T: Visitor>(&self, visitor: &mut T) -> ControlFlow<T::Output> {
-		let Self { source, .. } = self;
-
-		source.accept(visitor)
-	}
-}
-
 impl LuauTree {
 	/// Accepts a visitor and traverses the tree.
 	pub fn accept<T: Visitor>(&self, visitor: &mut T) -> ControlFlow<T::Output> {
-		let Self { code, exports, .. } = self;
+		let Self { code, .. } = self;
 
-		code.accept(visitor)?;
-		exports.iter().try_for_each(|export| export.accept(visitor))
+		code.accept(visitor)
 	}
 }

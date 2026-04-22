@@ -101,6 +101,12 @@ impl Sections {
 	/// The memory core source.
 	pub const MEMORY_SOURCE: &str = include_str!("../../runtime/core/memory.luau");
 
+	/// The Turing machine source runtime.
+	pub const TURING_MACHINE_SOURCE: &str =
+		include_str!("../../runtime/source/turing_machine.luau");
+	/// The WebAssembly source runtime.
+	pub const WEB_ASSEMBLY_SOURCE: &str = include_str!("../../runtime/source/web_assembly.luau");
+
 	/// Creates a new section collection with all built-in sources.
 	#[must_use]
 	pub fn with_built_ins() -> Self {
@@ -117,6 +123,9 @@ impl Sections {
 		sections.parse_from(Self::F64_SOURCE);
 		sections.parse_from(Self::TABLE_SOURCE);
 		sections.parse_from(Self::MEMORY_SOURCE);
+
+		sections.parse_from(Self::TURING_MACHINE_SOURCE);
+		sections.parse_from(Self::WEB_ASSEMBLY_SOURCE);
 
 		sections.resolve();
 

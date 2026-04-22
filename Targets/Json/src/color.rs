@@ -21,8 +21,7 @@ impl Color {
 			Node::Repeat(_) | Node::RepeatArguments(_) | Node::RepeatResults(_) => Self::Red,
 			Node::ModuleArguments(_) | Node::ModuleResults(_) => Self::Brown,
 
-			Node::Import(_)
-			| Node::Foreign(_)
+			Node::Foreign(_)
 			| Node::Trap
 			| Node::Null
 			| Node::I32(_)

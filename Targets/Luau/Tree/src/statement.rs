@@ -1,6 +1,6 @@
 //! Statement types for the Luau tree.
 
-use alloc::{boxed::Box, sync::Arc, vec::Vec};
+use alloc::{boxed::Box, vec::Vec};
 
 use super::expression::{Expression, Local, Location};
 
@@ -90,6 +90,14 @@ pub struct Call {
 	/// The result locals.
 	pub results: Vec<Local>,
 	/// The argument expressions.
+	pub arguments: Vec<Expression>,
+}
+
+/// A call to a named runtime function, discarding any return value.
+pub struct RuntimeCall {
+	/// The runtime function name suffix (printed with `rt_` prefix).
+	pub name: &'static str,
+	/// The arguments passed to the function.
 	pub arguments: Vec<Expression>,
 }
 
@@ -185,6 +193,8 @@ pub enum Statement {
 
 	/// A function call.
 	Call(Box<Call>),
+	/// A call to a named runtime function.
+	RuntimeCall(Box<RuntimeCall>),
 
 	/// A global variable write.
 	GlobalSet(Box<GlobalSet>),
@@ -206,12 +216,4 @@ pub enum Statement {
 	MemoryCopy(Box<MemoryCopy>),
 	/// A memory drop.
 	MemoryDrop(Box<MemoryDrop>),
-}
-
-/// An export declaration.
-pub struct Export {
-	/// The export name.
-	pub identifier: Arc<str>,
-	/// The source expression.
-	pub source: Expression,
 }

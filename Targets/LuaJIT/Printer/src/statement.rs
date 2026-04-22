@@ -3,14 +3,14 @@ use std::io::{Result, Write};
 use luajit_tree::{
 	LuaJITTree,
 	statement::{
-		Assign, Call, Export, GlobalSet, Match, MemoryCopy, MemoryDrop, MemoryFill, MemoryStore,
-		Repeat, Sequence, Statement, SwapAll, TableCopy, TableDrop, TableFill, TableSet,
+		Assign, Call, GlobalSet, Match, MemoryCopy, MemoryDrop, MemoryFill, MemoryStore, Repeat,
+		RuntimeCall, Sequence, Statement, SwapAll, TableCopy, TableDrop, TableFill, TableSet,
 	},
 };
 
 use super::{
 	LuaJITPrinter,
-	expression::{fmt_delimited, fmt_stack_enter, fmt_stack_leave},
+	expression::{fmt_delimited, fmt_runtime_call, fmt_stack_enter, fmt_stack_leave},
 	library::NeedsName as _,
 	print::Print,
 };
@@ -309,6 +309,18 @@ impl Print for Call {
 	}
 }
 
+impl Print for RuntimeCall {
+	fn print(&self, printer: &mut LuaJITPrinter, out: &mut dyn Write) -> Result<()> {
+		let Self { name, arguments } = self;
+
+		printer.tab(out)?;
+
+		fmt_runtime_call(name, arguments, printer, out)?;
+
+		writeln!(out)
+	}
+}
+
 impl Print for GlobalSet {
 	fn print(&self, printer: &mut LuaJITPrinter, out: &mut dyn Write) -> Result<()> {
 		let Self {
@@ -518,6 +530,7 @@ impl Print for Statement {
 			Self::Assign(assign) => assign.print(printer, out),
 			Self::SwapAll(swap_all) => swap_all.print(printer, out),
 			Self::Call(call) => call.print(printer, out),
+			Self::RuntimeCall(runtime_call) => runtime_call.print(printer, out),
 			Self::GlobalSet(global_set) => global_set.print(printer, out),
 			Self::TableSet(table_set) => table_set.print(printer, out),
 			Self::TableFill(table_fill) => table_fill.print(printer, out),
@@ -539,54 +552,12 @@ impl Print for Sequence {
 	}
 }
 
-impl Print for Export {
-	fn print(&self, printer: &mut LuaJITPrinter, out: &mut dyn Write) -> Result<()> {
-		let Self { identifier, source } = self;
-
-		write!(out, "[\"{}\"] = ", identifier.as_bytes().escape_ascii())?;
-
-		source.print(printer, out)
-	}
-}
-
-fn fmt_export_list(
-	exports: &[Export],
-	printer: &mut LuaJITPrinter,
-	out: &mut dyn Write,
-) -> Result<()> {
-	printer.tab(out)?;
-	writeln!(out, "local export = {{")?;
-
-	printer.indent();
-
-	exports.iter().try_for_each(|export| {
-		printer.tab(out)?;
-		export.print(printer, out)?;
-
-		writeln!(out, ",")
-	})?;
-
-	printer.outdent();
-
-	printer.tab(out)?;
-	writeln!(out, "}}")
-}
-
 impl Print for LuaJITTree {
 	fn print(&self, printer: &mut LuaJITPrinter, out: &mut dyn Write) -> Result<()> {
-		let Self {
-			environment,
-			stack,
-			code,
-			exports,
-		} = self;
+		let Self { stack, code } = self;
 
 		printer.tab(out)?;
-		write!(out, "local function module(")?;
-
-		environment.print(printer, out)?;
-
-		writeln!(out, ")")?;
+		writeln!(out, "local function module()")?;
 
 		printer.indent();
 
@@ -597,11 +568,7 @@ impl Print for LuaJITTree {
 
 		code.print(printer, out)?;
 
-		fmt_export_list(exports, printer, out)?;
 		fmt_stack_leave(*stack, printer, out)?;
-
-		printer.tab(out)?;
-		writeln!(out, "return export")?;
 
 		printer.outdent();
 

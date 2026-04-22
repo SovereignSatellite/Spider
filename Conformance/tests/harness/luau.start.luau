@@ -1,16 +1,13 @@
--- SECTION environment
-local environment = {}
-local named = {}
-local selected = nil
-
 -- SECTION spectest
--- NEEDS environment
 -- NEEDS from_bits_f32
 -- NEEDS from_bits_i64
+-- NEEDS import_map
 -- NEEDS into_bits_f32
 -- NEEDS into_bits_i64
 -- NEEDS memory_new
 -- NEEDS table_new
+local named = {}
+
 do
 	local spectest = {
 		global_i32 = { 666 },
@@ -54,7 +51,7 @@ do
 		print(string.format("F64 `%g`, F64 `%g`", argument_1, argument_2))
 	end
 
-	environment.spectest = spectest
+	rt_import_map.spectest = spectest
 end
 
 -- SECTION report_failure

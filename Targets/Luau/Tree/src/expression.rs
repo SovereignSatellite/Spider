@@ -36,14 +36,12 @@ pub struct Match {
 	pub branches: Vec<Expression>,
 }
 
-/// An external import.
-pub struct Import {
-	/// The environment expression.
-	pub environment: Expression,
-	/// The import namespace.
-	pub namespace: Arc<str>,
-	/// The import name.
-	pub identifier: Arc<str>,
+/// A call to a named runtime function.
+pub struct RuntimeCall {
+	/// The runtime function name suffix (printed with `rt_` prefix).
+	pub name: &'static str,
+	/// The arguments passed to the function.
+	pub arguments: Vec<Expression>,
 }
 
 /// A variable name identifier.
@@ -355,8 +353,6 @@ pub enum Expression {
 	Scoped(Box<Scoped>),
 	/// A conditional match expression.
 	Match(Box<Match>),
-	/// An external import.
-	Import(Box<Import>),
 
 	/// An unreachable trap.
 	Trap,
@@ -374,9 +370,13 @@ pub enum Expression {
 	F32(f32),
 	/// A 64-bit float constant.
 	F64(f64),
+	/// A string literal.
+	String(Arc<str>),
 
 	/// A function call.
 	Call(Box<Call>),
+	/// A call to a named runtime function.
+	RuntimeCall(Box<RuntimeCall>),
 
 	/// A boolean-to-integer conversion.
 	BooleanToInteger(Box<BooleanToInteger>),
@@ -468,6 +468,7 @@ impl Expression {
 			| Self::Local(_)
 			| Self::I32(_)
 			| Self::Call(_)
+			| Self::RuntimeCall(_)
 			| Self::IntegerNarrow(_)
 			| Self::GlobalGet(_)
 			| Self::TableSize(_)
@@ -510,11 +511,11 @@ impl Expression {
 
 			Self::Function(_)
 			| Self::Scoped(_)
-			| Self::Import(_)
 			| Self::Null
 			| Self::I64(_)
 			| Self::F32(_)
 			| Self::F64(_)
+			| Self::String(_)
 			| Self::IntegerUnaryOperation(_)
 			| Self::IntegerBinaryOperation(_)
 			| Self::IntegerWiden(_)

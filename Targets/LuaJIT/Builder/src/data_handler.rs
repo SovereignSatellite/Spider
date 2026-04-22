@@ -2,19 +2,16 @@ use alloc::sync::Arc;
 
 use hashbrown::HashMap;
 
-use ir_graph::{Link, operation, region};
-use luajit_tree::{
-	expression::{
-		BooleanToInteger, Call, Expression, Function, GlobalGet, GlobalNew, Import,
-		IntegerBinaryOperation, IntegerCompareOperation, IntegerConvertToNumber, IntegerExtend,
-		IntegerNarrow, IntegerTransmuteToNumber, IntegerUnaryOperation, IntegerWiden, Local,
-		Location, MemoryGrow, MemoryLoad, MemorySize, Name, NumberBinaryOperation,
-		NumberCompareOperation, NumberNarrow, NumberTransmuteToInteger, NumberTruncateToInteger,
-		NumberUnaryOperation, NumberWiden, RefIsNull, Scoped, TableGet, TableGrow, TableNew,
-		TableSize,
-	},
-	statement::Export,
+use ir_graph::{Link, operation};
+use luajit_tree::expression::{
+	BooleanToInteger, Call, Expression, Function, GlobalGet, GlobalNew, IntegerBinaryOperation,
+	IntegerCompareOperation, IntegerConvertToNumber, IntegerExtend, IntegerNarrow,
+	IntegerTransmuteToNumber, IntegerUnaryOperation, IntegerWiden, Local, Location, MemoryGrow,
+	MemoryLoad, MemorySize, Name, NumberBinaryOperation, NumberCompareOperation, NumberNarrow,
+	NumberTransmuteToInteger, NumberTruncateToInteger, NumberUnaryOperation, NumberWiden,
+	RefIsNull, RuntimeCall, Scoped, TableGet, TableGrow, TableNew, TableSize,
 };
+use web_assembly_lifter::foreign::Import as WasmImport;
 
 type ScopedLink = (Link, usize);
 type ScopedId = (u32, usize);
@@ -130,32 +127,23 @@ impl DataHandler {
 		}
 	}
 
-	pub fn load_import(&mut self, node: &region::Import) -> Expression {
-		let environment = self.load(node.environment);
+	fn load_runtime_call(name: &'static str, arguments: Vec<Expression>) -> Expression {
+		let expression = RuntimeCall { name, arguments };
 
-		let expression = Import {
-			environment,
-			namespace: Arc::clone(&node.namespace),
-			identifier: Arc::clone(&node.identifier),
-		};
-
-		Expression::Import(expression.into())
+		Expression::RuntimeCall(expression.into())
 	}
 
-	fn load_export(&mut self, node: &region::Export) -> Export {
-		let source = self.load(node.reference);
+	pub fn load_wasm_import(node: &WasmImport) -> Expression {
+		let arguments = vec![
+			Expression::String(Arc::clone(&node.namespace)),
+			Expression::String(Arc::clone(&node.identifier)),
+		];
 
-		Export {
-			identifier: Arc::clone(&node.identifier),
-			source,
-		}
+		Self::load_runtime_call("import", arguments)
 	}
 
-	pub fn load_exports(&mut self, nodes: &[region::Export]) -> Vec<Export> {
-		nodes
-			.iter()
-			.map(|export| self.load_export(export))
-			.collect()
+	pub fn load_turing_ask() -> Expression {
+		Self::load_runtime_call("turing_ask", Vec::new())
 	}
 
 	pub fn load_call(&mut self, node: &operation::Apply) -> Expression {

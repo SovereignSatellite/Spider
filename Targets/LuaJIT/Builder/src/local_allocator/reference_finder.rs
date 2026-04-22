@@ -436,7 +436,6 @@ fn handle_node(
 		| Node::BranchResults(_)
 		| Node::RepeatArguments(_)
 		| Node::RepeatResults(_)
-		| Node::Import(_)
 		| Node::Foreign(_)
 		| Node::Null
 		| Node::I32(_)
@@ -519,7 +518,6 @@ pub fn run(assignments: &mut HashMap<ScopedLink, ScopedLink>, nodes: &[Node], sc
 			| Node::BranchResults(_)
 			| Node::RepeatArguments(_)
 			| Node::RepeatResults(_)
-			| Node::Import(_)
 			| Node::Foreign(_)
 			| Node::Trap
 			| Node::Null

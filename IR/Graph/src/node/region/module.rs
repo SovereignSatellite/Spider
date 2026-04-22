@@ -6,15 +6,6 @@ use parking_lot::Mutex;
 
 use crate::{Link, Node};
 
-/// An exported symbol.
-#[derive(Clone)]
-pub struct Export {
-	/// The export name.
-	pub identifier: Arc<str>,
-	/// The exported value link.
-	pub reference: Link,
-}
-
 /// A module region.
 pub struct Module {
 	/// The nodes in this region.
@@ -28,15 +19,15 @@ impl Module {
 	/// Creates a new module region.
 	pub fn create<F>(initializer: F) -> Arc<Mutex<Self>>
 	where
-		F: FnOnce(&mut Vec<Node>, u32) -> (Link, Vec<Export>),
+		F: FnOnce(&mut Vec<Node>, u32) -> Vec<Link>,
 	{
 		let create = |weak: &Weak<Mutex<Self>>| {
 			let mut nodes = Vec::new();
 
 			let module_arguments = Arguments::add_into(&mut nodes, Weak::clone(weak));
-			let (state, exports) = initializer(&mut nodes, module_arguments);
+			let results = initializer(&mut nodes, module_arguments);
 
-			Results::add_into(&mut nodes, Weak::clone(weak), state, exports);
+			Results::add_into(&mut nodes, Weak::clone(weak), results);
 
 			Mutex::new(Self { nodes })
 		};
@@ -90,11 +81,9 @@ pub struct Arguments {
 
 impl Arguments {
 	/// The number of output ports.
-	pub const RESULT_COUNT: u16 = 2;
-	/// The port index for the environment.
-	pub const ENVIRONMENT_PORT: u16 = 0;
+	pub const RESULT_COUNT: u16 = 1;
 	/// The port index for the state token.
-	pub const STATE_PORT: u16 = 1;
+	pub const STATE_PORT: u16 = 0;
 
 	/// Adds a module arguments boundary node to the region.
 	pub fn add_into(nodes: &mut Vec<Node>, parent: Weak<Mutex<Module>>) -> u32 {
@@ -111,26 +100,15 @@ impl Arguments {
 pub struct Results {
 	/// The parent module.
 	pub parent: Weak<Mutex<Module>>,
-	/// The final state link.
-	pub state: Link,
-	/// The exported symbols.
-	pub exports: Vec<Export>,
+	/// The state edges that must be observed.
+	pub sources: Vec<Link>,
 }
 
 impl Results {
 	/// Adds a module results boundary node to the region.
-	pub fn add_into(
-		nodes: &mut Vec<Node>,
-		parent: Weak<Mutex<Module>>,
-		state: Link,
-		exports: Vec<Export>,
-	) -> u32 {
+	pub fn add_into(nodes: &mut Vec<Node>, parent: Weak<Mutex<Module>>, sources: Vec<Link>) -> u32 {
 		let id = nodes.len().try_into().unwrap_or_else(|_| unreachable!());
-		let node = Node::ModuleResults(Self {
-			parent,
-			state,
-			exports,
-		});
+		let node = Node::ModuleResults(Self { parent, sources });
 
 		nodes.push(node);
 
@@ -138,18 +116,14 @@ impl Results {
 	}
 
 	pub(crate) fn for_each_outer<H: FnMut(Link)>(&self, mut handler: H) {
-		handler(self.state);
-
-		for export in &self.exports {
-			handler(export.reference);
+		for &source in &self.sources {
+			handler(source);
 		}
 	}
 
 	pub(crate) fn for_each_mut_outer<H: FnMut(&mut Link)>(&mut self, mut handler: H) {
-		handler(&mut self.state);
-
-		for export in &mut self.exports {
-			handler(&mut export.reference);
+		for source in &mut self.sources {
+			handler(source);
 		}
 	}
 }

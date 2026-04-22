@@ -21,7 +21,7 @@ use self::{
 		TableCopy, TableDrop, TableFill, TableGet, TableGrow, TableNew, TableSet, TableSize,
 		integer, number,
 	},
-	region::{Function, Import, Match, Repeat, branch, function, module, repeat},
+	region::{Function, Match, Repeat, branch, function, module, repeat},
 };
 
 pub use self::region::Region;
@@ -57,8 +57,6 @@ pub enum Node {
 	/// The boundary results of a repeat region.
 	RepeatResults(repeat::Results),
 
-	/// An external import.
-	Import(Box<Import>),
 	/// An operation outside the core computation universe.
 	Foreign(Box<dyn Foreign>),
 
@@ -185,7 +183,6 @@ macro_rules! for_each_visit {
 			Self::BranchResults(node) => node.$visit($handler),
 			Self::RepeatResults(node) => node.$visit($handler),
 
-			Self::Import(node) => node.$visit($handler),
 			Self::Foreign(foreign) => foreign.$visit(&mut $handler),
 
 			Self::Identity(node) => node.$visit($handler),
@@ -295,7 +292,6 @@ impl Node {
 	pub fn result_count(&self) -> u16 {
 		match self {
 			Self::Function(_)
-			| Self::Import(_)
 			| Self::Trap
 			| Self::Null
 			| Self::I32(_)

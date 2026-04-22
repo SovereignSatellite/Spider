@@ -113,7 +113,7 @@ impl LuaJIT {
 		if let Some(id) = id {
 			self.fmt_name(id)?;
 		} else {
-			write!(self.file, "selected")?;
+			write!(self.file, "rt_export_map")?;
 		}
 
 		Ok(())
@@ -122,12 +122,13 @@ impl LuaJIT {
 	fn fmt_named_source(&mut self, id: Option<Id<'_>>, data: &[u8]) -> Result<()> {
 		self.fmt_source(data)?;
 
-		writeln!(self.file, "\tselected = module(environment)")?;
+		writeln!(self.file, "\trt_export_map = {{}}")?;
+		writeln!(self.file, "\tmodule()")?;
 
 		if let Some(id) = id {
 			self.fmt_name(id)?;
 
-			writeln!(self.file, " = selected")?;
+			writeln!(self.file, " = rt_export_map")?;
 		}
 
 		Ok(())
@@ -238,7 +239,8 @@ impl LuaJIT {
 	fn fmt_wat(&mut self, mut wat: Wat<'_>) -> Result<()> {
 		self.fmt_source(&wat.encode()?)?;
 
-		writeln!(self.file, "module(environment)")?;
+		writeln!(self.file, "rt_export_map = {{}}")?;
+		writeln!(self.file, "module()")?;
 
 		Ok(())
 	}
@@ -435,7 +437,7 @@ impl Visitor for LuaJIT {
 	fn visit_register(&mut self, _span: Span, name: &str, module: Option<Id<'_>>) -> Result<()> {
 		let name = name.as_bytes().escape_ascii();
 
-		write!(self.file, "environment[\"{name}\"] = ")?;
+		write!(self.file, "rt_import_map[\"{name}\"] = ")?;
 
 		self.fmt_optional_name(module)?;
 

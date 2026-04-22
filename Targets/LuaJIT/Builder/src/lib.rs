@@ -3,6 +3,7 @@
 extern crate alloc;
 
 use alloc::sync::Arc;
+use core::any::Any;
 
 use parking_lot::Mutex;
 
@@ -17,12 +18,14 @@ use ir_graph::{
 		TableCopy, TableDrop, TableFill, TableGet, TableGrow, TableNew, TableSet, TableSize,
 		integer, number,
 	},
-	region::{Branch, Function, Import, Match, Module, Repeat, module, repeat},
+	region::{Branch, Function, Match, Module, Repeat, repeat},
 };
 use luajit_tree::{
 	LuaJITTree,
 	expression::{self, Expression, Local, Name},
 };
+use turing_machine_source::foreign::{Ask as TuringAsk, Tell as TuringTell};
+use web_assembly_lifter::foreign::{Export as WasmExport, Import as WasmImport};
 
 use self::{code_handler::CodeHandler, data_handler::DataHandler, local_allocator::LocalAllocator};
 
@@ -249,42 +252,67 @@ impl LuaJITBuilder {
 		self.data_handler.set_scope(scope);
 		self.code_handler.push_scope();
 
-		let environment = Name { id: 0 };
-		let environment_port = Link(0, module::Arguments::ENVIRONMENT_PORT);
-
-		if let Some(destination) = self.data_handler.get_local(environment_port) {
-			self.code_handler.do_assign(
-				destination,
-				Expression::Local(Local::Fast { name: environment }),
-			);
-		}
-
 		self.handle_nodes(&module.nodes, scope);
 
 		let stack = self.data_handler.get_stack_size(scope);
 		let code = self.code_handler.pop_scope();
-		let exports = self.data_handler.load_exports(&module.results().exports);
 
-		self.luajit_tree = Some(LuaJITTree {
-			environment,
-			stack,
-			code,
-			exports,
-		});
+		self.luajit_tree = Some(LuaJITTree { stack, code });
 	}
 
-	fn handle_import(&mut self, id: u32, import: &Import) {
-		let import = self.data_handler.load_import(import);
+	fn handle_wasm_import(&mut self, id: u32, node: &WasmImport) {
+		let expression = DataHandler::load_wasm_import(node);
 
-		self.do_assignment(id, import);
+		self.do_assignment(id, expression);
 	}
 
-	#[expect(
-		clippy::needless_pass_by_ref_mut,
-		reason = "signature matches other handlers"
-	)]
+	fn handle_wasm_export(&mut self, node: &WasmExport) {
+		let value = self.data_handler.load(node.value);
+		let identifier = Expression::String(Arc::clone(&node.identifier));
+
+		self.code_handler
+			.do_runtime_call("export", vec![identifier, value]);
+	}
+
+	fn handle_turing_ask(&mut self, id: u32, node: TuringAsk) {
+		let expression = DataHandler::load_turing_ask();
+
+		self.do_assignment(id, expression);
+
+		self.code_handler.do_rename(
+			Link(id, TuringAsk::STATE_PORT),
+			node.state,
+			&self.data_handler,
+		);
+	}
+
+	fn handle_turing_tell(&mut self, id: u32, node: TuringTell) {
+		let character = self.data_handler.load(node.character);
+
+		self.code_handler
+			.do_runtime_call("turing_tell", vec![character]);
+
+		self.code_handler.do_rename(
+			Link(id, TuringTell::STATE_PORT),
+			node.state,
+			&self.data_handler,
+		);
+	}
+
 	fn handle_foreign(&mut self, id: u32, foreign: &dyn Foreign) {
-		unimplemented!("`{}` at {id}", foreign.identifier());
+		let any: &dyn Any = foreign;
+
+		if let Some(node) = any.downcast_ref::<WasmImport>() {
+			self.handle_wasm_import(id, node);
+		} else if let Some(node) = any.downcast_ref::<WasmExport>() {
+			self.handle_wasm_export(node);
+		} else if let Some(&node) = any.downcast_ref::<TuringAsk>() {
+			self.handle_turing_ask(id, node);
+		} else if let Some(&node) = any.downcast_ref::<TuringTell>() {
+			self.handle_turing_tell(id, node);
+		} else {
+			unimplemented!("`{}` at {id}", foreign.identifier());
+		}
 	}
 
 	fn handle_trap(&mut self, id: u32) {
@@ -677,7 +705,6 @@ impl LuaJITBuilder {
 
 			Node::RepeatResults(ref node) => self.handle_repeat_results(node),
 
-			Node::Import(ref node) => self.handle_import(id, node),
 			Node::Foreign(ref node) => self.handle_foreign(id, node.as_ref()),
 			Node::Trap => self.handle_trap(id),
 			Node::Null => self.handle_null(id),
@@ -762,7 +789,7 @@ impl LuaJITBuilder {
 			assignments,
 			&guard.nodes,
 			scope,
-			guard.results().state,
+			&guard.results().sources,
 		);
 
 		self.handle_module(&guard, scope);

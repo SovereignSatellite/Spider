@@ -12,15 +12,20 @@ use wasmparser::{ConstExpr, ElementItems, FunctionBody, SectionLimited, ValType}
 use ir_graph::{
 	Link, Node,
 	operation::{
-		Apply, Fence, Location, MemoryCopy, MemoryDrop, MemoryNew, MutableGet, MutableNew,
-		MutableSet, TableCopy, TableDrop, TableFill, TableNew, TableSet,
+		Apply, Fence, Location, MemoryCopy, MemoryDrop, MemoryNew, MutableNew, MutableSet,
+		TableCopy, TableDrop, TableFill, TableNew, TableSet,
 	},
-	region::{Export, Import, Module, module},
+	region::{Module, module},
 };
 use web_assembly_builder::Types;
 use web_assembly_graph::instruction::MemorySize;
 
-use self::{function::FunctionLifter, global_state::GlobalState, sections::Sections};
+use self::{
+	foreign::{Export, Import},
+	function::FunctionLifter,
+	global_state::GlobalState,
+	sections::Sections,
+};
 
 mod basic_block;
 mod control_flow;
@@ -28,6 +33,8 @@ mod dependencies;
 mod function;
 mod global_state;
 mod sections;
+
+pub mod foreign;
 
 fn get_element_count(items: &ElementItems<'_>) -> u32 {
 	match items {
@@ -99,24 +106,78 @@ impl WebAssemblyLifter {
 		}
 	}
 
+	fn handle_function_import(
+		&mut self,
+		nodes: &mut Vec<Node>,
+		namespace: Arc<str>,
+		identifier: Arc<str>,
+		function: u32,
+	) {
+		self.types.add_function(function);
+
+		let value = Import::add_into(nodes, namespace, identifier);
+		let slot = MutableNew::add_into(nodes, value);
+
+		self.global_state.functions.push(slot);
+	}
+
+	fn handle_memory_import(
+		&mut self,
+		nodes: &mut Vec<Node>,
+		namespace: Arc<str>,
+		identifier: Arc<str>,
+	) {
+		let value = Import::add_into(nodes, namespace, identifier);
+
+		self.global_state.memories.push(value);
+	}
+
+	fn handle_table_import(
+		&mut self,
+		nodes: &mut Vec<Node>,
+		namespace: Arc<str>,
+		identifier: Arc<str>,
+	) {
+		let value = Import::add_into(nodes, namespace, identifier);
+
+		self.global_state.tables.push(value);
+	}
+
+	fn handle_global_import(
+		&mut self,
+		nodes: &mut Vec<Node>,
+		namespace: Arc<str>,
+		identifier: Arc<str>,
+	) {
+		let value = Import::add_into(nodes, namespace, identifier);
+
+		self.global_state.globals.push(value);
+	}
+
 	fn handle_import_section(
 		&mut self,
 		nodes: &mut Vec<Node>,
-		arguments: u32,
 		section: SectionLimited<'_, wasmparser::Import<'_>>,
 	) {
-		let environment = Link(arguments, module::Arguments::ENVIRONMENT_PORT);
-
 		for wasmparser::Import { module, name, ty } in section.into_iter().map(Result::unwrap) {
-			let mut link = Import::add_into(nodes, environment, module.into(), name.into());
+			let namespace = Arc::<str>::from(module);
+			let identifier = Arc::<str>::from(name);
 
-			if let wasmparser::TypeRef::Func(function) = ty {
-				self.types.add_function(function);
-
-				link = MutableNew::add_into(nodes, link);
+			match ty {
+				wasmparser::TypeRef::Func(function) => {
+					self.handle_function_import(nodes, namespace, identifier, function);
+				}
+				wasmparser::TypeRef::Memory(_) => {
+					self.handle_memory_import(nodes, namespace, identifier);
+				}
+				wasmparser::TypeRef::Table(_) => {
+					self.handle_table_import(nodes, namespace, identifier);
+				}
+				wasmparser::TypeRef::Global(_) => {
+					self.handle_global_import(nodes, namespace, identifier);
+				}
+				wasmparser::TypeRef::Tag(_) => unimplemented!("`Tag` imports"),
 			}
-
-			self.global_state.get_mut_type_ref(ty).push(link);
 		}
 	}
 
@@ -219,11 +280,8 @@ impl WebAssemblyLifter {
 		section: SectionLimited<'_, u32>,
 		mut element: Link,
 	) -> Link {
-		let functions = &self.global_state.functions;
-
 		for (function, offset) in section.into_iter().map(Result::unwrap).zip(0_i32..) {
-			let function = functions[usize::try_from(function).unwrap()];
-			let source = MutableGet::add_into(nodes, function).0;
+			let source = self.global_state.emit_function_reference(nodes, function);
 			let destination = Location {
 				reference: element,
 				offset: Node::add_i32_into(nodes, offset),
@@ -501,49 +559,52 @@ impl WebAssemblyLifter {
 		)
 	}
 
-	fn handle_code_section(
-		&mut self,
-		nodes: &mut Vec<Node>,
-		section: &[FunctionBody<'_>],
-		mut imports: usize,
-	) {
-		for body in section {
-			let function = self.build_function(nodes, body, imports);
-			let functions = &mut self.global_state.functions;
+	fn handle_code_section(&mut self, nodes: &mut Vec<Node>, section: &[FunctionBody<'_>]) {
+		let import_count = self.global_state.functions.len() - section.len();
 
-			functions[imports] = MutableSet::add_into(nodes, functions[imports], function);
+		for (offset, body) in section.iter().enumerate() {
+			let overall_index = import_count + offset;
+			let function = self.build_function(nodes, body, overall_index);
+			let slot = self.global_state.functions[overall_index];
 
-			imports += 1;
+			self.global_state.functions[overall_index] =
+				MutableSet::add_into(nodes, slot, function);
 		}
 	}
 
-	fn load_export_information(
+	fn resolve_export_reference(
 		&self,
 		nodes: &mut Vec<Node>,
-		export: wasmparser::Export<'_>,
-	) -> Export {
+		export: &wasmparser::Export<'_>,
+	) -> Link {
 		let index = usize::try_from(export.index).unwrap();
-		let mut reference = self.global_state.get_external_kind(export.kind)[index];
 
-		if export.kind == wasmparser::ExternalKind::Func {
-			reference = MutableGet::add_into(nodes, reference).0;
+		match export.kind {
+			wasmparser::ExternalKind::Func => self
+				.global_state
+				.emit_function_reference(nodes, export.index),
+			wasmparser::ExternalKind::Memory => self.global_state.memories[index],
+			wasmparser::ExternalKind::Table => self.global_state.tables[index],
+			wasmparser::ExternalKind::Global => self.global_state.globals[index],
+			wasmparser::ExternalKind::Tag => unimplemented!("`Tag`"),
 		}
+	}
 
-		Export {
-			identifier: export.name.into(),
-			reference,
-		}
+	fn emit_export(&self, nodes: &mut Vec<Node>, export: wasmparser::Export<'_>) -> Link {
+		let value = self.resolve_export_reference(nodes, &export);
+
+		Export::add_into(nodes, export.name.into(), value)
 	}
 
 	fn handle_export_section(
 		&self,
 		nodes: &mut Vec<Node>,
 		section: SectionLimited<'_, wasmparser::Export<'_>>,
-	) -> Vec<Export> {
+	) -> Vec<Link> {
 		section
 			.into_iter()
 			.map(Result::unwrap)
-			.map(|export| self.load_export_information(nodes, export))
+			.map(|export| self.emit_export(nodes, export))
 			.collect()
 	}
 
@@ -563,13 +624,12 @@ impl WebAssemblyLifter {
 		arguments: u32,
 		start: Option<u32>,
 	) -> Link {
-		let state = Link(arguments, module::Arguments::STATE_PORT);
-		let state = self.create_fence(nodes, state);
+		let trap = Link(arguments, module::Arguments::STATE_PORT);
+		let trap = self.create_fence(nodes, trap);
 
-		start.map_or(state, |start| {
-			let function = self.global_state.functions[usize::try_from(start).unwrap()];
-			let function = MutableGet::add_into(nodes, function).0;
-			let apply = Apply::add_into(nodes, function, vec![state], 1);
+		start.map_or(trap, |start| {
+			let function = self.global_state.emit_function_reference(nodes, start);
+			let apply = Apply::add_into(nodes, function, vec![trap], 1);
 
 			Link(apply, 0)
 		})
@@ -584,9 +644,7 @@ impl WebAssemblyLifter {
 		self.types.add_sub_types(sections.types);
 
 		Module::create(|nodes, arguments| {
-			self.handle_import_section(nodes, arguments, sections.imports);
-
-			let function_imports = self.global_state.functions.len();
+			self.handle_import_section(nodes, sections.imports);
 
 			self.handle_table_declarations(nodes, sections.tables.clone());
 			self.handle_element_declarations(nodes, sections.elements.clone());
@@ -596,7 +654,7 @@ impl WebAssemblyLifter {
 			self.handle_function_section(nodes, sections.functions);
 			self.handle_memory_section(nodes, sections.memories);
 			self.handle_tag_section(nodes, sections.tags);
-			self.handle_code_section(nodes, &sections.code, function_imports);
+			self.handle_code_section(nodes, &sections.code);
 
 			self.handle_table_initializations(nodes, sections.tables);
 			self.handle_element_initializations(nodes, sections.elements);
@@ -604,9 +662,11 @@ impl WebAssemblyLifter {
 			self.handle_global_initializations(nodes, sections.globals);
 
 			let start = self.handle_start_section(nodes, arguments, sections.start);
-			let exports = self.handle_export_section(nodes, sections.exports);
+			let mut results = self.handle_export_section(nodes, sections.exports);
 
-			(start, exports)
+			results.push(start);
+
+			results
 		})
 	}
 }

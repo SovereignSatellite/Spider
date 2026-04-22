@@ -8,7 +8,6 @@ use ir_graph::{Link, Node};
 pub fn value_port_count_of(node: &Node) -> u16 {
 	match node {
 		Node::Function(_)
-		| Node::Import(_)
 		| Node::Trap
 		| Node::Null
 		| Node::I32(_)
@@ -65,7 +64,7 @@ pub fn value_port_count_of(node: &Node) -> u16 {
 		| Node::MemoryCopy(_)
 		| Node::MemoryDrop(_) => 0,
 
-		Node::Foreign(_node) => 0,
+		Node::Foreign(node) => node.result_count(),
 
 		Node::Identity(node) => node.result_count(),
 
@@ -237,7 +236,6 @@ impl ScalarFinder {
 				| Node::BranchResults(_)
 				| Node::RepeatArguments(_)
 				| Node::RepeatResults(_)
-				| Node::Import(_)
 				| Node::Foreign(_)
 				| Node::Trap
 				| Node::Null
