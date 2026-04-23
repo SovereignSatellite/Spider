@@ -7,9 +7,9 @@ edition = "2024"
 workspace = true
 
 [dependencies]
-web-assembly-graph = { path = "../Graph" }
-web-assembly-structurer = { path = "../Structurer" }
-
 list.workspace = true
 set.workspace = true
 wasmparser.workspace = true
+web-assembly-graph.workspace = true
+
+web-assembly-structurer = { path = "../Structurer" }

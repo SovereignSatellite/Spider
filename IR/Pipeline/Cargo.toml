@@ -7,7 +7,7 @@ edition = "2024"
 workspace = true
 
 [dependencies]
-ir-graph = { path = "../Graph" }
-ir-passes = { path = "../Passes" }
-
+ir-graph.workspace = true
 parking_lot.workspace = true
+
+ir-passes = { path = "../Passes" }

@@ -7,11 +7,10 @@ edition = "2024"
 workspace = true
 
 [dependencies]
-ir-graph = { path = "../Graph" }
-
-set.workspace = true
 hashbrown.workspace = true
+ir-graph.workspace = true
 parking_lot.workspace = true
+set.workspace = true
 
 [build-dependencies]
 cranelift-isle.workspace = true

@@ -4,21 +4,19 @@ version = "1.0.0"
 edition = "2024"
 
 [dependencies]
-turing-machine-lifter = { path = "../Sources/TuringMachine/Lifter" }
-web-assembly-lifter = { path = "../Sources/WebAssembly/Lifter" }
+ir-graph.workspace = true
+parking_lot.workspace = true
 
-ir-graph = { path = "../IR/Graph" }
 ir-pipeline = { path = "../IR/Pipeline" }
-
 json-target = { path = "../Targets/Json" }
-
-luajit-tree = { path = "../Targets/LuaJIT/Tree" }
 luajit-builder = { path = "../Targets/LuaJIT/Builder" }
 luajit-printer = { path = "../Targets/LuaJIT/Printer" }
-
-luau-tree = { path = "../Targets/Luau/Tree" }
+luajit-tree = { path = "../Targets/LuaJIT/Tree" }
 luau-builder = { path = "../Targets/Luau/Builder" }
 luau-printer = { path = "../Targets/Luau/Printer" }
+luau-tree = { path = "../Targets/Luau/Tree" }
+turing-machine-lifter = { path = "../Sources/TuringMachine/Lifter" }
+web-assembly-lifter = { path = "../Sources/WebAssembly/Lifter" }
 
 clap = { version = "4.5.23", default-features = false, features = [
 	"color",
@@ -29,7 +27,5 @@ clap = { version = "4.5.23", default-features = false, features = [
 	"suggestions",
 	"usage",
 ] }
-
-parking_lot.workspace = true
 
 wasmparser = { workspace = true, features = ["validate"] }

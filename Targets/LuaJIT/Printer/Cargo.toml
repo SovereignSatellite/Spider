@@ -7,6 +7,6 @@ edition = "2024"
 workspace = true
 
 [dependencies]
-luajit-tree = { path = "../Tree" }
-
 hashbrown.workspace = true
+
+luajit-tree = { path = "../Tree" }

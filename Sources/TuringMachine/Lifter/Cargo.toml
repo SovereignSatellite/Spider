@@ -7,7 +7,6 @@ edition = "2024"
 workspace = true
 
 [dependencies]
-ir-graph = { path = "../../../IR/Graph" }
-turing-machine-foreign = { path = "../Foreign" }
-
+ir-graph.workspace = true
 parking_lot.workspace = true
+turing-machine-foreign.workspace = true
