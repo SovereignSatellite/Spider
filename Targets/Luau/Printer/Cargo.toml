@@ -7,6 +7,6 @@ edition = "2024"
 workspace = true
 
 [dependencies]
-luau-tree = { path = "../Tree" }
-
 hashbrown.workspace = true
+
+luau-tree = { path = "../Tree" }

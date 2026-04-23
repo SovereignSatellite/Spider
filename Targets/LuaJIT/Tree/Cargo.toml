@@ -7,4 +7,4 @@ edition = "2024"
 workspace = true
 
 [dependencies]
-ir-graph = { path = "../../../IR/Graph" }
+ir-graph.workspace = true

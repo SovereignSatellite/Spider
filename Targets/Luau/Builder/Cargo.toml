@@ -7,10 +7,10 @@ edition = "2024"
 workspace = true
 
 [dependencies]
-ir-graph = { path = "../../../IR/Graph" }
-luau-tree = { path = "../Tree" }
-turing-machine-foreign = { path = "../../../Sources/TuringMachine/Foreign" }
-web-assembly-foreign = { path = "../../../Sources/WebAssembly/Foreign" }
-
 hashbrown.workspace = true
+ir-graph.workspace = true
 parking_lot.workspace = true
+turing-machine-foreign.workspace = true
+web-assembly-foreign.workspace = true
+
+luau-tree = { path = "../Tree" }

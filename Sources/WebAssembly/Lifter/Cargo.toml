@@ -7,12 +7,12 @@ edition = "2024"
 workspace = true
 
 [dependencies]
-ir-graph = { path = "../../../IR/Graph" }
-web-assembly-builder = { path = "../Builder" }
-web-assembly-foreign = { path = "../Foreign" }
-web-assembly-graph = { path = "../Graph" }
-web-assembly-liveness = { path = "../Liveness" }
-
+ir-graph.workspace = true
 list.workspace = true
 parking_lot.workspace = true
 wasmparser.workspace = true
+web-assembly-foreign.workspace = true
+web-assembly-graph.workspace = true
+
+web-assembly-builder = { path = "../Builder" }
+web-assembly-liveness = { path = "../Liveness" }

@@ -7,6 +7,5 @@ edition = "2024"
 workspace = true
 
 [dependencies]
-web-assembly-graph = { path = "../Graph" }
-
 set.workspace = true
+web-assembly-graph.workspace = true

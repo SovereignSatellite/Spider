@@ -12,22 +12,24 @@ members = [
 ]
 
 [workspace.dependencies]
+ir-graph = { path = "IR/Graph" }
+turing-machine-foreign = { path = "Sources/TuringMachine/Foreign" }
+web-assembly-foreign = { path = "Sources/WebAssembly/Foreign" }
+web-assembly-graph = { path = "Sources/WebAssembly/Graph" }
+
 list = { git = "https://github.com/SovereignSatellite/RustListDataStructure.git", rev = "a236bf9" }
 set = { git = "https://github.com/SovereignSatellite/RustSetDataStructure.git", rev = "b82ef8c" }
 
-cranelift-isle = { version = "0.124.1", default-features = false }
-
-hashbrown = { version = "0.16.0", default-features = false, features = [
+cranelift-isle = { version = "=0.131.0", default-features = false }
+hashbrown = { version = "=0.17.0", default-features = false, features = [
 	"default-hasher",
 	"equivalent",
 	"inline-more",
 ] }
-
-parking_lot = { version = "0.12.5", default-features = false, features = [
+parking_lot = { version = "=0.12.5", default-features = false, features = [
 	"arc_lock",
 ] }
-
-wasmparser = { version = "0.235.0", default-features = false }
+wasmparser = { version = "=0.247.0", default-features = false }
 
 [workspace.lints.rust]
 absolute_paths_not_starting_with_crate = "warn"
