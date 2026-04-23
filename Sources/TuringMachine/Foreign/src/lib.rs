@@ -1,5 +1,11 @@
 //! Turing machine tape IO operations as concrete `Foreign` types.
 
+#![no_std]
+
+extern crate alloc;
+
+use alloc::{boxed::Box, vec::Vec};
+
 use ir_graph::{Link, Node, foreign::Foreign};
 
 /// Reads one character from the tape, yielding a new state token and the character.

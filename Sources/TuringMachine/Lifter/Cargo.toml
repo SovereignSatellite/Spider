@@ -1,0 +1,13 @@
+[package]
+name = "turing-machine-lifter"
+version = "1.0.0"
+edition = "2024"
+
+[lints]
+workspace = true
+
+[dependencies]
+ir-graph = { path = "../../../IR/Graph" }
+turing-machine-foreign = { path = "../Foreign" }
+
+parking_lot.workspace = true

@@ -15,7 +15,7 @@ use luau_tree::{
 	},
 	statement::Sequence,
 };
-use web_assembly_lifter::foreign::Import as WasmImport;
+use web_assembly_foreign::Import as WasmImport;
 
 type ScopedLink = (Link, usize);
 type ScopedId = (u32, usize);

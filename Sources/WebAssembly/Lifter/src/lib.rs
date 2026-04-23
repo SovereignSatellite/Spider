@@ -18,14 +18,10 @@ use ir_graph::{
 	region::{Module, module},
 };
 use web_assembly_builder::Types;
+use web_assembly_foreign::{Export, Import};
 use web_assembly_graph::instruction::MemorySize;
 
-use self::{
-	foreign::{Export, Import},
-	function::FunctionLifter,
-	global_state::GlobalState,
-	sections::Sections,
-};
+use self::{function::FunctionLifter, global_state::GlobalState, sections::Sections};
 
 mod basic_block;
 mod closure;
@@ -34,8 +30,6 @@ mod dependencies;
 mod function;
 mod global_state;
 mod sections;
-
-pub mod foreign;
 
 fn get_element_count(items: &ElementItems<'_>) -> u32 {
 	match items {
