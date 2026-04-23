@@ -149,29 +149,46 @@ impl WebAssemblyLifter {
 		self.global_state.globals.push(value);
 	}
 
+	fn handle_import(
+		&mut self,
+		nodes: &mut Vec<Node>,
+		module: &str,
+		name: &str,
+		ty: wasmparser::TypeRef,
+	) {
+		let namespace = Arc::<str>::from(module);
+		let identifier = Arc::<str>::from(name);
+
+		match ty {
+			wasmparser::TypeRef::Func(function) => {
+				self.handle_function_import(nodes, namespace, identifier, function);
+			}
+			wasmparser::TypeRef::Memory(_) => {
+				self.handle_memory_import(nodes, namespace, identifier);
+			}
+			wasmparser::TypeRef::Table(_) => {
+				self.handle_table_import(nodes, namespace, identifier);
+			}
+			wasmparser::TypeRef::Global(_) => {
+				self.handle_global_import(nodes, namespace, identifier);
+			}
+			wasmparser::TypeRef::Tag(_) => unimplemented!("`Tag` imports"),
+			wasmparser::TypeRef::FuncExact(_) => unimplemented!("`FuncExact` imports"),
+		}
+	}
+
 	fn handle_import_section(
 		&mut self,
 		nodes: &mut Vec<Node>,
-		section: SectionLimited<'_, wasmparser::Import<'_>>,
+		section: SectionLimited<'_, wasmparser::Imports<'_>>,
 	) {
-		for wasmparser::Import { module, name, ty } in section.into_iter().map(Result::unwrap) {
-			let namespace = Arc::<str>::from(module);
-			let identifier = Arc::<str>::from(name);
-
-			match ty {
-				wasmparser::TypeRef::Func(function) => {
-					self.handle_function_import(nodes, namespace, identifier, function);
+		for group in section.into_iter().map(Result::unwrap) {
+			match group {
+				wasmparser::Imports::Single(_, import) => {
+					self.handle_import(nodes, import.module, import.name, import.ty);
 				}
-				wasmparser::TypeRef::Memory(_) => {
-					self.handle_memory_import(nodes, namespace, identifier);
-				}
-				wasmparser::TypeRef::Table(_) => {
-					self.handle_table_import(nodes, namespace, identifier);
-				}
-				wasmparser::TypeRef::Global(_) => {
-					self.handle_global_import(nodes, namespace, identifier);
-				}
-				wasmparser::TypeRef::Tag(_) => unimplemented!("`Tag` imports"),
+				wasmparser::Imports::Compact1 { .. } => unimplemented!("`Compact1` imports"),
+				wasmparser::Imports::Compact2 { .. } => unimplemented!("`Compact2` imports"),
 			}
 		}
 	}
@@ -582,6 +599,7 @@ impl WebAssemblyLifter {
 			wasmparser::ExternalKind::Table => self.global_state.tables[index],
 			wasmparser::ExternalKind::Global => self.global_state.globals[index],
 			wasmparser::ExternalKind::Tag => unimplemented!("`Tag`"),
+			wasmparser::ExternalKind::FuncExact => unimplemented!("`FuncExact`"),
 		}
 	}
 

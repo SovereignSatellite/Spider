@@ -86,8 +86,18 @@ pub trait Visitor {
 				span,
 				module,
 				message,
+			}
+			| WastDirective::AssertMalformedCustom {
+				span,
+				module,
+				message,
 			} => self.visit_assert_malformed(span, module, message),
 			WastDirective::AssertInvalid {
+				span,
+				module,
+				message,
+			}
+			| WastDirective::AssertInvalidCustom {
 				span,
 				module,
 				message,

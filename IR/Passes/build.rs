@@ -8,6 +8,9 @@ use cranelift_isle::{codegen::CodegenOptions, compile::from_files};
 static CODE_OPTIONS: CodegenOptions = CodegenOptions {
 	exclude_global_allow_pragmas: true,
 	prefixes: Vec::new(),
+	emit_logging: false,
+	split_match_arms: false,
+	match_arm_split_threshold: None,
 };
 
 fn read_from_files(path: &Path) -> String {

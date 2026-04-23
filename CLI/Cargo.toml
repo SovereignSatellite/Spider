@@ -18,7 +18,7 @@ luau-tree = { path = "../Targets/Luau/Tree" }
 turing-machine-lifter = { path = "../Sources/TuringMachine/Lifter" }
 web-assembly-lifter = { path = "../Sources/WebAssembly/Lifter" }
 
-clap = { version = "4.5.23", default-features = false, features = [
+clap = { version = "=4.6.1", default-features = false, features = [
 	"color",
 	"derive",
 	"error-context",

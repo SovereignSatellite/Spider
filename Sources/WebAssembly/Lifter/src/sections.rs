@@ -1,11 +1,11 @@
 use wasmparser::{
-	BinaryReader, Data, Element, Export, FunctionBody, Global, Import, MemoryType, Parser, Payload,
-	RecGroup, Result, SectionLimited, Table, TagType,
+	BinaryReader, Data, Element, Export, FunctionBody, Global, Imports, MemoryType, Parser,
+	Payload, RecGroup, Result, SectionLimited, Table, TagType,
 };
 
 pub struct Sections<'data> {
 	pub types: SectionLimited<'data, RecGroup>,
-	pub imports: SectionLimited<'data, Import<'data>>,
+	pub imports: SectionLimited<'data, Imports<'data>>,
 
 	pub tables: SectionLimited<'data, Table<'data>>,
 	pub elements: SectionLimited<'data, Element<'data>>,
