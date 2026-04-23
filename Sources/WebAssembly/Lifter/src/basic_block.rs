@@ -261,8 +261,12 @@ impl BasicBlockLifter {
 
 		let arguments = self.handle_pre_call(nodes, state, sources.0, sources.1);
 
-		let call =
-			operation::Apply::add_into(nodes, function, arguments, destinations.1 - destinations.0);
+		let call = operation::Apply::add_into(
+			nodes,
+			function,
+			arguments,
+			destinations.1 - destinations.0 + 1,
+		);
 
 		self.handle_post_call(nodes, call, destinations.0, destinations.1);
 	}
