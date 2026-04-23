@@ -11,7 +11,7 @@ fn poll_until_timeout(child: &mut Child, duration: Duration) -> Result<ExitStatu
 	let now = Instant::now();
 
 	while now.elapsed() < duration {
-		thread::yield_now();
+		thread::sleep(Duration::from_millis(100));
 
 		if let Some(status) = child.try_wait()? {
 			return Ok(status);
