@@ -1,6 +1,10 @@
 //! WebAssembly-specific `Foreign` types.
 
-use alloc::sync::Arc;
+#![no_std]
+
+extern crate alloc;
+
+use alloc::{boxed::Box, sync::Arc, vec::Vec};
 
 use ir_graph::{Link, Node, foreign::Foreign};
 

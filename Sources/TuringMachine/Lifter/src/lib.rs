@@ -14,10 +14,7 @@ use ir_graph::{
 	},
 	region::{Branch, Match, Module, Repeat, module},
 };
-
-use self::foreign::{Ask, Tell};
-
-pub mod foreign;
+use turing_machine_foreign::{Ask, Tell};
 
 const CELL_SIZE: u32 = 4;
 const MEMORY_SIZE: u32 = 1_024 * 4 * CELL_SIZE;

@@ -24,8 +24,8 @@ use luajit_tree::{
 	LuaJITTree,
 	expression::{self, Expression, Local, Name},
 };
-use turing_machine_source::foreign::{Ask as TuringAsk, Tell as TuringTell};
-use web_assembly_lifter::foreign::{Export as WasmExport, Import as WasmImport};
+use turing_machine_foreign::{Ask as TuringAsk, Tell as TuringTell};
+use web_assembly_foreign::{Export as WasmExport, Import as WasmImport};
 
 use self::{code_handler::CodeHandler, data_handler::DataHandler, local_allocator::LocalAllocator};
 
