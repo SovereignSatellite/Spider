@@ -18,6 +18,13 @@ pub struct ControlFlowLifter {
 	block_ids: Range<u16>,
 }
 
+#[derive(Clone, Copy)]
+struct BranchPath<'path> {
+	graph: &'path ControlFlowGraph,
+	locals: &'path Locals,
+	start: u16,
+}
+
 impl ControlFlowLifter {
 	#[must_use]
 	pub const fn new() -> Self {
@@ -79,39 +86,38 @@ impl ControlFlowLifter {
 			.set_active_bindings(repeat, repeat_locals);
 	}
 
-	fn handle_path_start(
-		&mut self,
-		graph: &ControlFlowGraph,
-		locals: &Locals,
-		arguments: u32,
-		start: u16,
-	) {
-		locals.get_union(graph.successors(start), &mut self.successors);
+	fn handle_path_start(&mut self, path: BranchPath<'_>, arguments: u32) {
+		path.locals
+			.get_union(path.graph.successors(path.start), &mut self.successors);
 
 		self.basic_block_lifter
 			.set_active_bindings(arguments, &self.successors);
 	}
 
-	fn handle_path_end(&self, graph: &ControlFlowGraph, locals: &Locals) -> Vec<Link> {
-		// We just finished a path in a branch.
+	fn handle_path_end(&self, path: BranchPath<'_>) -> Vec<Link> {
+		// The next block is the branch merge.
 		let last = self.block_ids.start - 1;
-		let end = graph.find_branch_end(last).unwrap();
+		let end = path.graph.find_branch_end(last).unwrap();
 
-		self.basic_block_lifter.get_active_bindings(locals.get(end))
+		self.basic_block_lifter
+			.get_active_bindings(path.locals.get(end))
 	}
 
 	fn handle_path(
 		&mut self,
 		parent: &Weak<Mutex<Match>>,
-		graph: &ControlFlowGraph,
-		locals: &Locals,
-		start: u16,
+		argument_count: u16,
+		path: BranchPath<'_>,
 	) -> Arc<Mutex<Branch>> {
-		Branch::create(Weak::clone(parent), |path_nodes, arguments| {
-			self.handle_path_start(graph, locals, arguments, start);
-			self.handle_blocks(path_nodes, graph, locals);
-			self.handle_path_end(graph, locals)
-		})
+		Branch::create(
+			Weak::clone(parent),
+			argument_count,
+			|path_nodes, branch_arguments| {
+				self.handle_path_start(path, branch_arguments);
+				self.handle_blocks(path_nodes, path.graph, path.locals);
+				self.handle_path_end(path)
+			},
+		)
 	}
 
 	fn handle_branch_start(
@@ -132,7 +138,7 @@ impl ControlFlowLifter {
 	}
 
 	fn handle_branch_end(&mut self, id: u32, locals: &Locals) {
-		// We just finished a branch region.
+		// The match result becomes the active binding set at the merge block.
 		let merge = self.block_ids.start;
 
 		self.basic_block_lifter
@@ -147,11 +153,16 @@ impl ControlFlowLifter {
 		start: u16,
 	) {
 		let (condition, arguments) = self.handle_branch_start(graph, locals, start);
+		let path = BranchPath {
+			graph,
+			locals,
+			start,
+		};
 
-		let id = Match::add_into(nodes, arguments, condition, |parent| {
+		let id = Match::add_into(nodes, arguments, condition, |parent, argument_count| {
 			graph
 				.successors(start)
-				.map(|_| self.handle_path(parent, graph, locals, start))
+				.map(|_| self.handle_path(parent, argument_count, path))
 				.collect()
 		});
 
@@ -165,7 +176,7 @@ impl ControlFlowLifter {
 		locals: &Locals,
 		id: u16,
 	) -> bool {
-		// We just started a repeat region.
+		// A back-edge predecessor marks a loop header.
 		if graph.find_repeat_end(id).is_some() {
 			self.enter_repeat(nodes, graph, locals, id);
 
@@ -174,19 +185,19 @@ impl ControlFlowLifter {
 
 		self.basic_block_lifter.run(nodes, graph.instructions(id));
 
-		// We just started a branch region.
+		// A multi-successor block starts a match region.
 		if graph.is_branch_start(id) {
 			self.enter_match(nodes, graph, locals, id);
 
 			return true;
 		}
 
-		// We just ended a repeat region.
+		// A back-edge successor ends the current repeat body.
 		if graph.find_repeat_start(id).is_some() {
 			return false;
 		}
 
-		// We just finished a path in a branch.
+		// A branch-end successor stops the current path before its merge block.
 		if graph.find_branch_end(id).is_some() {
 			return false;
 		}

@@ -20,10 +20,15 @@ impl Match {
 	/// Creates a new match region.
 	pub fn create<F>(arguments: Vec<Link>, condition: Link, initializer: F) -> Arc<Mutex<Self>>
 	where
-		F: FnOnce(&Weak<Mutex<Self>>) -> Vec<Arc<Mutex<Branch>>>,
+		F: FnOnce(&Weak<Mutex<Self>>, u16) -> Vec<Arc<Mutex<Branch>>>,
 	{
 		let create = |weak: &Weak<Mutex<Self>>| {
-			let branches = initializer(weak);
+			let argument_count = arguments
+				.len()
+				.try_into()
+				.unwrap_or_else(|_| unreachable!());
+
+			let branches = initializer(weak, argument_count);
 
 			Mutex::new(Self {
 				arguments,
@@ -43,7 +48,7 @@ impl Match {
 		initializer: F,
 	) -> u32
 	where
-		F: FnOnce(&Weak<Mutex<Self>>) -> Vec<Arc<Mutex<Branch>>>,
+		F: FnOnce(&Weak<Mutex<Self>>, u16) -> Vec<Arc<Mutex<Branch>>>,
 	{
 		let id = nodes.len().try_into().unwrap_or_else(|_| unreachable!());
 		let node = Node::Match(Self::create(arguments, condition, initializer));
@@ -64,10 +69,10 @@ impl Match {
 		F: FnOnce(&mut Vec<Node>, u32) -> Vec<Link>,
 		T: FnOnce(&mut Vec<Node>, u32) -> Vec<Link>,
 	{
-		Self::create(arguments, condition, |parent| {
+		Self::create(arguments, condition, |parent, argument_count| {
 			vec![
-				Branch::create(Weak::clone(parent), on_false),
-				Branch::create(Weak::clone(parent), on_true),
+				Branch::create(Weak::clone(parent), argument_count, on_false),
+				Branch::create(Weak::clone(parent), argument_count, on_true),
 			]
 		})
 	}
