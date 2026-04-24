@@ -1,0 +1,12 @@
+[package]
+name = "ir-allocator"
+version = "1.0.0"
+edition = "2024"
+
+[lints]
+workspace = true
+
+[dependencies]
+hashbrown.workspace = true
+ir-graph.workspace = true
+parking_lot.workspace = true
