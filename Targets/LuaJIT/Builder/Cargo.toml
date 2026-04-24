@@ -13,4 +13,5 @@ parking_lot.workspace = true
 turing-machine-foreign.workspace = true
 web-assembly-foreign.workspace = true
 
+ir-allocator = { path = "../../../IR/Allocator" }
 luajit-tree = { path = "../Tree" }

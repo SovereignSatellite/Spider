@@ -8,7 +8,9 @@
 
 extern crate alloc;
 
-use self::statement::Sequence;
+use alloc::vec::Vec;
+
+use self::{expression::Name, statement::Sequence};
 
 pub mod expression;
 pub mod statement;
@@ -16,6 +18,9 @@ pub mod visitor;
 
 /// The root tree node for a `LuaJIT` module.
 pub struct LuaJITTree {
+	/// The declared fast local names.
+	pub locals: Vec<Name>,
+
 	/// The stack size.
 	pub stack: u16,
 
