@@ -25,7 +25,9 @@ impl Ask {
 
 	/// Adds an `Ask` node to the graph and returns (character, state).
 	pub fn add_into(nodes: &mut Vec<Node>, state: Link) -> (Link, Link) {
-		let id = nodes.len().try_into().unwrap_or_else(|_| unreachable!());
+		let Ok(id) = nodes.len().try_into() else {
+			unreachable!()
+		};
 		let node = Node::Foreign(Box::new(Self { state }));
 
 		nodes.push(node);
@@ -69,7 +71,9 @@ impl Tell {
 
 	/// Adds a `Tell` node to the graph and returns the outgoing state token.
 	pub fn add_into(nodes: &mut Vec<Node>, state: Link, character: Link) -> Link {
-		let id = nodes.len().try_into().unwrap_or_else(|_| unreachable!());
+		let Ok(id) = nodes.len().try_into() else {
+			unreachable!()
+		};
 		let node = Node::Foreign(Box::new(Self { state, character }));
 
 		nodes.push(node);

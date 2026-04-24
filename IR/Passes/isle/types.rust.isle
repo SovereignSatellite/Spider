@@ -30,8 +30,8 @@
 (type IntegerUnaryOperator extern
 	(enum
 		(CountOnes)
-		(LeadingZeroes)
-		(TrailingZeroes)
+		(LeadingZeros)
+		(TrailingZeros)
 	)
 )
 

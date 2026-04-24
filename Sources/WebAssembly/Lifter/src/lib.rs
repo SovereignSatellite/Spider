@@ -228,7 +228,7 @@ impl WebAssemblyLifter {
 		);
 	}
 
-	fn load_table_fill(
+	fn emit_table_fill(
 		&mut self,
 		nodes: &mut Vec<Node>,
 		reference: Link,
@@ -258,7 +258,7 @@ impl WebAssemblyLifter {
 
 		let destination = self.global_state.tables[index];
 
-		self.global_state.tables[index] = self.load_table_fill(nodes, destination, code, table.ty);
+		self.global_state.tables[index] = self.emit_table_fill(nodes, destination, code, table.ty);
 	}
 
 	fn handle_table_initializations(
@@ -343,7 +343,7 @@ impl WebAssemblyLifter {
 		clippy::too_many_arguments,
 		reason = "copy operation requires source, destination, reference, offset, and size"
 	)]
-	fn load_table_copy(
+	fn emit_table_copy(
 		&mut self,
 		nodes: &mut Vec<Node>,
 		reference: Link,
@@ -382,7 +382,7 @@ impl WebAssemblyLifter {
 				let reference = self.global_state.tables[index];
 
 				self.global_state.tables[index] =
-					self.load_table_copy(nodes, reference, offset_expr, elements, size);
+					self.emit_table_copy(nodes, reference, offset_expr, elements, size);
 
 				TableDrop::add_into(nodes, elements)
 			}
@@ -425,7 +425,7 @@ impl WebAssemblyLifter {
 		clippy::too_many_arguments,
 		reason = "copy operation requires source, destination, reference, offset, and size"
 	)]
-	fn load_memory_copy(
+	fn emit_memory_copy(
 		&mut self,
 		nodes: &mut Vec<Node>,
 		reference: Link,
@@ -478,7 +478,7 @@ impl WebAssemblyLifter {
 				let reference = self.global_state.memories[index];
 
 				self.global_state.memories[index] =
-					self.load_memory_copy(nodes, reference, offset_expr, data, size);
+					self.emit_memory_copy(nodes, reference, offset_expr, data, size);
 
 				MemoryDrop::add_into(nodes, data)
 			}

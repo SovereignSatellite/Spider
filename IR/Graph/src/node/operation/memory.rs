@@ -45,7 +45,9 @@ impl MemoryNew {
 		minimum: u32,
 		maximum: u32,
 	) -> Link {
-		let id = nodes.len().try_into().unwrap_or_else(|_| unreachable!());
+		let Ok(id) = nodes.len().try_into() else {
+			unreachable!()
+		};
 		let node = Node::MemoryNew(Self {
 			initializer,
 			minimum,
@@ -102,7 +104,7 @@ pub enum LoadType {
 /// A memory load node.
 #[derive(Clone, Copy)]
 pub struct MemoryLoad {
-	/// The source location to load from.
+	/// The source location.
 	pub source: Location,
 	/// The load type.
 	pub kind: LoadType,
@@ -118,7 +120,9 @@ impl MemoryLoad {
 
 	/// Adds a memory load node to the graph.
 	pub fn add_into(nodes: &mut Vec<Node>, source: Location, kind: LoadType) -> (Link, Link) {
-		let id = nodes.len().try_into().unwrap_or_else(|_| unreachable!());
+		let Ok(id) = nodes.len().try_into() else {
+			unreachable!()
+		};
 		let node = Node::MemoryLoad(Self { source, kind });
 
 		nodes.push(node);
@@ -163,7 +167,7 @@ pub enum StoreType {
 pub struct MemoryStore {
 	/// The destination location.
 	pub destination: Location,
-	/// The link to the value being stored.
+	/// The value being stored.
 	pub source: Link,
 	/// The store type.
 	pub kind: StoreType,
@@ -182,7 +186,9 @@ impl MemoryStore {
 		source: Link,
 		kind: StoreType,
 	) -> Link {
-		let id = nodes.len().try_into().unwrap_or_else(|_| unreachable!());
+		let Ok(id) = nodes.len().try_into() else {
+			unreachable!()
+		};
 		let node = Node::MemoryStore(Self {
 			destination,
 			source,
@@ -200,7 +206,7 @@ impl MemoryStore {
 /// A memory size query node.
 #[derive(Clone, Copy)]
 pub struct MemorySize {
-	/// The link to the memory being queried.
+	/// The memory being queried.
 	pub source: Link,
 }
 
@@ -214,7 +220,9 @@ impl MemorySize {
 
 	/// Adds a memory size query node to the graph.
 	pub fn add_into(nodes: &mut Vec<Node>, source: Link) -> (Link, Link) {
-		let id = nodes.len().try_into().unwrap_or_else(|_| unreachable!());
+		let Ok(id) = nodes.len().try_into() else {
+			unreachable!()
+		};
 		let node = Node::MemorySize(Self { source });
 
 		nodes.push(node);
@@ -228,7 +236,7 @@ impl MemorySize {
 /// A memory grow node.
 #[derive(Clone, Copy)]
 pub struct MemoryGrow {
-	/// The link to the memory being grown.
+	/// The memory being grown.
 	pub destination: Link,
 	/// The number of pages to grow by.
 	pub size: Link,
@@ -244,7 +252,9 @@ impl MemoryGrow {
 
 	/// Adds a memory grow node to the graph.
 	pub fn add_into(nodes: &mut Vec<Node>, destination: Link, size: Link) -> (Link, Link) {
-		let id = nodes.len().try_into().unwrap_or_else(|_| unreachable!());
+		let Ok(id) = nodes.len().try_into() else {
+			unreachable!()
+		};
 		let node = Node::MemoryGrow(Self { destination, size });
 
 		nodes.push(node);
@@ -274,7 +284,9 @@ impl MemoryFill {
 
 	/// Adds a memory fill node to the graph.
 	pub fn add_into(nodes: &mut Vec<Node>, destination: Location, byte: Link, size: Link) -> Link {
-		let id = nodes.len().try_into().unwrap_or_else(|_| unreachable!());
+		let Ok(id) = nodes.len().try_into() else {
+			unreachable!()
+		};
 		let node = Node::MemoryFill(Self {
 			destination,
 			byte,
@@ -315,7 +327,9 @@ impl MemoryCopy {
 		source: Location,
 		size: Link,
 	) -> (Link, Link) {
-		let id = nodes.len().try_into().unwrap_or_else(|_| unreachable!());
+		let Ok(id) = nodes.len().try_into() else {
+			unreachable!()
+		};
 		let node = Node::MemoryCopy(Self {
 			destination,
 			source,
@@ -336,7 +350,7 @@ impl MemoryCopy {
 /// A memory drop node.
 #[derive(Clone, Copy)]
 pub struct MemoryDrop {
-	/// The link to the memory being dropped.
+	/// The memory being dropped.
 	pub source: Link,
 }
 
@@ -348,7 +362,9 @@ impl MemoryDrop {
 
 	/// Adds a memory drop node to the graph.
 	pub fn add_into(nodes: &mut Vec<Node>, source: Link) -> Link {
-		let id = nodes.len().try_into().unwrap_or_else(|_| unreachable!());
+		let Ok(id) = nodes.len().try_into() else {
+			unreachable!()
+		};
 		let node = Node::MemoryDrop(Self { source });
 
 		nodes.push(node);

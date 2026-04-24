@@ -36,14 +36,16 @@ impl Locals {
 
 	#[must_use]
 	/// Returns the live locals for the given basic block.
-	///
-	/// # Panics
-	///
-	/// Panics if the range bounds overflow a `usize`; if this happens, it is a bug.
 	pub fn get(&self, id: u16) -> &[u16] {
 		let (start, end) = self.ranges[usize::from(id)];
+		let Ok(start) = start.try_into() else {
+			unreachable!()
+		};
+		let Ok(end) = end.try_into() else {
+			unreachable!()
+		};
 
-		&self.locals[start.try_into().unwrap()..end.try_into().unwrap()]
+		&self.locals[start..end]
 	}
 
 	/// Computes the union of live locals across multiple basic blocks.

@@ -62,11 +62,11 @@ impl NeedsName for IntegerUnaryOperation {
 
 		match (kind, operator) {
 			(integer::Type::I32, integer::UnaryOperator::CountOnes) => "count_ones_i32",
-			(integer::Type::I32, integer::UnaryOperator::LeadingZeroes) => "leading_zeroes_i32",
-			(integer::Type::I32, integer::UnaryOperator::TrailingZeroes) => "trailing_zeroes_i32",
+			(integer::Type::I32, integer::UnaryOperator::LeadingZeros) => "leading_zeros_i32",
+			(integer::Type::I32, integer::UnaryOperator::TrailingZeros) => "trailing_zeros_i32",
 			(integer::Type::I64, integer::UnaryOperator::CountOnes) => "count_ones_i64",
-			(integer::Type::I64, integer::UnaryOperator::LeadingZeroes) => "leading_zeroes_i64",
-			(integer::Type::I64, integer::UnaryOperator::TrailingZeroes) => "trailing_zeroes_i64",
+			(integer::Type::I64, integer::UnaryOperator::LeadingZeros) => "leading_zeros_i64",
+			(integer::Type::I64, integer::UnaryOperator::TrailingZeros) => "trailing_zeros_i64",
 		}
 	}
 }
@@ -79,22 +79,26 @@ impl NeedsName for IntegerBinaryOperation {
 			(integer::Type::I32, integer::BinaryOperator::Add) => "add_i32",
 			(integer::Type::I32, integer::BinaryOperator::Subtract) => "subtract_i32",
 			(integer::Type::I32, integer::BinaryOperator::Multiply) => "multiply_i32",
-			(integer::Type::I32, integer::BinaryOperator::Divide { signed: true }) => "divide_s32",
-			(integer::Type::I32, integer::BinaryOperator::Divide { signed: false }) => "divide_u32",
-			(integer::Type::I32, integer::BinaryOperator::Remainder { signed: true }) => {
+			(integer::Type::I32, integer::BinaryOperator::Divide { is_signed: true }) => {
+				"divide_s32"
+			}
+			(integer::Type::I32, integer::BinaryOperator::Divide { is_signed: false }) => {
+				"divide_u32"
+			}
+			(integer::Type::I32, integer::BinaryOperator::Remainder { is_signed: true }) => {
 				"remainder_s32"
 			}
-			(integer::Type::I32, integer::BinaryOperator::Remainder { signed: false }) => {
+			(integer::Type::I32, integer::BinaryOperator::Remainder { is_signed: false }) => {
 				"remainder_u32"
 			}
 			(integer::Type::I32, integer::BinaryOperator::And) => "and_i32",
 			(integer::Type::I32, integer::BinaryOperator::Or) => "or_i32",
 			(integer::Type::I32, integer::BinaryOperator::ExclusiveOr) => "exclusive_or_i32",
 			(integer::Type::I32, integer::BinaryOperator::ShiftLeft) => "shift_left_i32",
-			(integer::Type::I32, integer::BinaryOperator::ShiftRight { signed: true }) => {
+			(integer::Type::I32, integer::BinaryOperator::ShiftRight { is_signed: true }) => {
 				"shift_right_s32"
 			}
-			(integer::Type::I32, integer::BinaryOperator::ShiftRight { signed: false }) => {
+			(integer::Type::I32, integer::BinaryOperator::ShiftRight { is_signed: false }) => {
 				"shift_right_u32"
 			}
 			(integer::Type::I32, integer::BinaryOperator::RotateLeft) => "rotate_left_i32",
@@ -102,22 +106,26 @@ impl NeedsName for IntegerBinaryOperation {
 			(integer::Type::I64, integer::BinaryOperator::Add) => "add_i64",
 			(integer::Type::I64, integer::BinaryOperator::Subtract) => "subtract_i64",
 			(integer::Type::I64, integer::BinaryOperator::Multiply) => "multiply_i64",
-			(integer::Type::I64, integer::BinaryOperator::Divide { signed: true }) => "divide_s64",
-			(integer::Type::I64, integer::BinaryOperator::Divide { signed: false }) => "divide_u64",
-			(integer::Type::I64, integer::BinaryOperator::Remainder { signed: true }) => {
+			(integer::Type::I64, integer::BinaryOperator::Divide { is_signed: true }) => {
+				"divide_s64"
+			}
+			(integer::Type::I64, integer::BinaryOperator::Divide { is_signed: false }) => {
+				"divide_u64"
+			}
+			(integer::Type::I64, integer::BinaryOperator::Remainder { is_signed: true }) => {
 				"remainder_s64"
 			}
-			(integer::Type::I64, integer::BinaryOperator::Remainder { signed: false }) => {
+			(integer::Type::I64, integer::BinaryOperator::Remainder { is_signed: false }) => {
 				"remainder_u64"
 			}
 			(integer::Type::I64, integer::BinaryOperator::And) => "and_i64",
 			(integer::Type::I64, integer::BinaryOperator::Or) => "or_i64",
 			(integer::Type::I64, integer::BinaryOperator::ExclusiveOr) => "exclusive_or_i64",
 			(integer::Type::I64, integer::BinaryOperator::ShiftLeft) => "shift_left_i64",
-			(integer::Type::I64, integer::BinaryOperator::ShiftRight { signed: true }) => {
+			(integer::Type::I64, integer::BinaryOperator::ShiftRight { is_signed: true }) => {
 				"shift_right_s64"
 			}
-			(integer::Type::I64, integer::BinaryOperator::ShiftRight { signed: false }) => {
+			(integer::Type::I64, integer::BinaryOperator::ShiftRight { is_signed: false }) => {
 				"shift_right_u64"
 			}
 			(integer::Type::I64, integer::BinaryOperator::RotateLeft) => "rotate_left_i64",
@@ -133,56 +141,60 @@ impl NeedsName for IntegerCompareOperation {
 		match (kind, operator) {
 			(integer::Type::I32, integer::CompareOperator::Equal) => "equal_i32",
 			(integer::Type::I32, integer::CompareOperator::NotEqual) => "not_equal_i32",
-			(integer::Type::I32, integer::CompareOperator::LessThan { signed: true }) => {
+			(integer::Type::I32, integer::CompareOperator::LessThan { is_signed: true }) => {
 				"less_than_s32"
 			}
-			(integer::Type::I32, integer::CompareOperator::LessThan { signed: false }) => {
+			(integer::Type::I32, integer::CompareOperator::LessThan { is_signed: false }) => {
 				"less_than_u32"
 			}
-			(integer::Type::I32, integer::CompareOperator::GreaterThan { signed: true }) => {
+			(integer::Type::I32, integer::CompareOperator::GreaterThan { is_signed: true }) => {
 				"greater_than_s32"
 			}
-			(integer::Type::I32, integer::CompareOperator::GreaterThan { signed: false }) => {
+			(integer::Type::I32, integer::CompareOperator::GreaterThan { is_signed: false }) => {
 				"greater_than_u32"
 			}
-			(integer::Type::I32, integer::CompareOperator::LessThanEqual { signed: true }) => {
+			(integer::Type::I32, integer::CompareOperator::LessThanEqual { is_signed: true }) => {
 				"less_than_equal_s32"
 			}
-			(integer::Type::I32, integer::CompareOperator::LessThanEqual { signed: false }) => {
+			(integer::Type::I32, integer::CompareOperator::LessThanEqual { is_signed: false }) => {
 				"less_than_equal_u32"
 			}
-			(integer::Type::I32, integer::CompareOperator::GreaterThanEqual { signed: true }) => {
-				"greater_than_equal_s32"
-			}
-			(integer::Type::I32, integer::CompareOperator::GreaterThanEqual { signed: false }) => {
-				"greater_than_equal_u32"
-			}
+			(
+				integer::Type::I32,
+				integer::CompareOperator::GreaterThanEqual { is_signed: true },
+			) => "greater_than_equal_s32",
+			(
+				integer::Type::I32,
+				integer::CompareOperator::GreaterThanEqual { is_signed: false },
+			) => "greater_than_equal_u32",
 			(integer::Type::I64, integer::CompareOperator::Equal) => "equal_i64",
 			(integer::Type::I64, integer::CompareOperator::NotEqual) => "not_equal_i64",
-			(integer::Type::I64, integer::CompareOperator::LessThan { signed: true }) => {
+			(integer::Type::I64, integer::CompareOperator::LessThan { is_signed: true }) => {
 				"less_than_s64"
 			}
-			(integer::Type::I64, integer::CompareOperator::LessThan { signed: false }) => {
+			(integer::Type::I64, integer::CompareOperator::LessThan { is_signed: false }) => {
 				"less_than_u64"
 			}
-			(integer::Type::I64, integer::CompareOperator::GreaterThan { signed: true }) => {
+			(integer::Type::I64, integer::CompareOperator::GreaterThan { is_signed: true }) => {
 				"greater_than_s64"
 			}
-			(integer::Type::I64, integer::CompareOperator::GreaterThan { signed: false }) => {
+			(integer::Type::I64, integer::CompareOperator::GreaterThan { is_signed: false }) => {
 				"greater_than_u64"
 			}
-			(integer::Type::I64, integer::CompareOperator::LessThanEqual { signed: true }) => {
+			(integer::Type::I64, integer::CompareOperator::LessThanEqual { is_signed: true }) => {
 				"less_than_equal_s64"
 			}
-			(integer::Type::I64, integer::CompareOperator::LessThanEqual { signed: false }) => {
+			(integer::Type::I64, integer::CompareOperator::LessThanEqual { is_signed: false }) => {
 				"less_than_equal_u64"
 			}
-			(integer::Type::I64, integer::CompareOperator::GreaterThanEqual { signed: true }) => {
-				"greater_than_equal_s64"
-			}
-			(integer::Type::I64, integer::CompareOperator::GreaterThanEqual { signed: false }) => {
-				"greater_than_equal_u64"
-			}
+			(
+				integer::Type::I64,
+				integer::CompareOperator::GreaterThanEqual { is_signed: true },
+			) => "greater_than_equal_s64",
+			(
+				integer::Type::I64,
+				integer::CompareOperator::GreaterThanEqual { is_signed: false },
+			) => "greater_than_equal_u64",
 		}
 	}
 }
@@ -216,10 +228,13 @@ impl NeedsName for IntegerExtend {
 impl NeedsName for IntegerConvertToNumber {
 	fn needs_name(&self) -> &'static str {
 		let Self {
-			signed, to, from, ..
+			is_signed,
+			to,
+			from,
+			..
 		} = *self;
 
-		match (from, to, signed) {
+		match (from, to, is_signed) {
 			(integer::Type::I32, number::Type::F32, true) => "convert_s32_to_f32",
 			(integer::Type::I32, number::Type::F32, false) => "convert_u32_to_f32",
 			(integer::Type::I32, number::Type::F64, true) => "convert_s32_to_f64",
@@ -329,14 +344,14 @@ impl NeedsName for NumberWiden {
 impl NeedsName for NumberTruncateToInteger {
 	fn needs_name(&self) -> &'static str {
 		let Self {
-			signed,
-			saturate,
+			is_signed,
+			is_saturating,
 			to,
 			from,
 			..
 		} = *self;
 
-		match (from, to, signed, saturate) {
+		match (from, to, is_signed, is_saturating) {
 			(number::Type::F32, integer::Type::I32, true, true) => "saturate_f32_to_s32",
 			(number::Type::F32, integer::Type::I32, true, false) => "truncate_f32_to_s32",
 			(number::Type::F32, integer::Type::I32, false, true) => "saturate_f32_to_u32",
@@ -609,11 +624,11 @@ impl NeedsName for Statement {
 			Self::TableSet(table_set) => table_set.needs_name(),
 			Self::TableFill(table_fill) => table_fill.needs_name(),
 			Self::TableCopy(table_copy) => table_copy.needs_name(),
-			Self::TableDrop(elements_drop) => elements_drop.needs_name(),
+			Self::TableDrop(table_drop) => table_drop.needs_name(),
 			Self::MemoryStore(memory_store) => memory_store.needs_name(),
 			Self::MemoryFill(memory_fill) => memory_fill.needs_name(),
 			Self::MemoryCopy(memory_copy) => memory_copy.needs_name(),
-			Self::MemoryDrop(data_drop) => data_drop.needs_name(),
+			Self::MemoryDrop(memory_drop) => memory_drop.needs_name(),
 		}
 	}
 }
@@ -630,14 +645,10 @@ impl<'names> NamesFinder<'names> {
 	}
 
 	/// Collects all needed names from the tree.
-	///
-	/// # Panics
-	///
-	/// Panics if the visitor traversal fails; if this happens, it is a bug.
 	pub fn run(&mut self, tree: &LuauTree) {
 		tree.accept(self)
 			.continue_value()
-			.expect("names finder must not fail");
+			.unwrap_or_else(|| unreachable!("names finder must not fail"));
 	}
 }
 

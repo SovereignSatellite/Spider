@@ -50,14 +50,14 @@ impl ControlFlowStructurer {
 
 	/// Disables repeat edges in the graph.
 	pub fn disable_repeats(&self, graph: &mut ControlFlowGraph) {
-		for &(entry, latch) in self.repeat.infos() {
+		for &(entry, latch) in self.repeat.regions() {
 			graph.replace_edge(latch, entry, latch);
 		}
 	}
 
 	/// Enables repeat edges in the graph.
 	pub fn enable_repeats(&self, graph: &mut ControlFlowGraph) {
-		for &(entry, latch) in self.repeat.infos() {
+		for &(entry, latch) in self.repeat.regions() {
 			graph.replace_edge(latch, latch, entry);
 		}
 	}

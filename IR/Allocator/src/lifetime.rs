@@ -1,3 +1,5 @@
+//! Lifetime interval computation for register allocation.
+
 use alloc::vec::Vec;
 use core::cmp::Reverse;
 
@@ -42,9 +44,9 @@ impl Lifetimes {
 	}
 
 	fn push_repeat_arguments(&mut self, nodes: &[Node], results_id: u32) {
-		let arguments = nodes
-			.first()
-			.unwrap_or_else(|| unreachable!("repeat body must have arguments"));
+		let Some(arguments) = nodes.first() else {
+			unreachable!("repeat body must have arguments")
+		};
 
 		for port in 0..arguments.result_count() {
 			self.intervals.push(Interval {

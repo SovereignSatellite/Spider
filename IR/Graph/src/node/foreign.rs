@@ -11,7 +11,7 @@ use crate::Link;
 /// The core optimizer treats unrecognized `Foreign` nodes as black boxes;
 /// specialized passes downcast via `TypeId` to match on concrete types.
 pub trait Foreign: Any {
-	/// Returns the name of this node type.
+	/// Returns the identifier string for this node type.
 	fn identifier(&self) -> &'static str;
 
 	/// Returns the number of output ports.

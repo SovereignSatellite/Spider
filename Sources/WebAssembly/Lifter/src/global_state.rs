@@ -45,7 +45,9 @@ impl GlobalState {
 	}
 
 	pub fn emit_function_reference(&self, nodes: &mut Vec<Node>, index: u32) -> Link {
-		let index = usize::try_from(index).unwrap_or_else(|_| unreachable!());
+		let Ok(index) = usize::try_from(index) else {
+			unreachable!()
+		};
 
 		MutableGet::add_into(nodes, self.functions[index]).0
 	}

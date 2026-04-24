@@ -37,7 +37,7 @@ impl Single {
 
 			if graph
 				.predecessors(node_id)
-				.any(|pred_id| !self.region.contains(pred_id.into()))
+				.any(|predecessor_id| !self.region.contains(predecessor_id.into()))
 			{
 				self.entries.push(node_id);
 			}
@@ -45,7 +45,7 @@ impl Single {
 			self.exits.extend(
 				graph
 					.successors(node_id)
-					.filter(|&succ_id| !self.region.contains(succ_id.into())),
+					.filter(|&successor_id| !self.region.contains(successor_id.into())),
 			);
 		}
 
@@ -113,31 +113,31 @@ impl Single {
 		}
 	}
 
-	fn in_region(graph: &ControlFlowGraph, region: Slice<'_>, target: u16) -> bool {
+	fn is_in_region(graph: &ControlFlowGraph, region: Slice<'_>, target: u16) -> bool {
 		region.contains(target.into())
 			|| graph
 				.predecessors(target)
 				.any(|id| region.contains(id.into()))
 	}
 
-	fn in_region_acyclic(
+	fn is_in_region_acyclic(
 		graph: &ControlFlowGraph,
 		region: Slice<'_>,
 		target: u16,
 		exit: u16,
 	) -> bool {
-		target != exit && Self::in_region(graph, region, target)
+		target != exit && Self::is_in_region(graph, region, target)
 	}
 
 	fn find_latch(&self, graph: &ControlFlowGraph, entry: u16, exit: u16) -> Option<u16> {
 		let mut repetitions = graph
 			.predecessors(entry)
-			.filter(|&id| Self::in_region(graph, self.region.as_slice(), id));
+			.filter(|&id| Self::is_in_region(graph, self.region.as_slice(), id));
 
 		if let Some(repetition) = repetitions.next() {
 			let mut escapes = graph
 				.predecessors(exit)
-				.filter(|&id| Self::in_region_acyclic(graph, self.region.as_slice(), id, exit));
+				.filter(|&id| Self::is_in_region_acyclic(graph, self.region.as_slice(), id, exit));
 
 			if let Some(escape) = escapes.next()
 				&& repetition == escape
@@ -157,11 +157,10 @@ impl Single {
 
 	fn set_break(&mut self, graph: &mut ControlFlowGraph, latch: u16, selection: u16) {
 		self.temporary.clear();
-		self.temporary.extend(
-			graph.predecessors(selection).filter(|&id| {
-				Self::in_region_acyclic(graph, self.region.as_slice(), id, selection)
-			}),
-		);
+		self.temporary
+			.extend(graph.predecessors(selection).filter(|&id| {
+				Self::is_in_region_acyclic(graph, self.region.as_slice(), id, selection)
+			}));
 
 		for &exit in &self.temporary {
 			let assignment = graph.add_assignment(Name::B, 0);
@@ -176,7 +175,7 @@ impl Single {
 		self.temporary.extend(
 			graph
 				.predecessors(selection)
-				.filter(|&id| Self::in_region(graph, self.region.as_slice(), id)),
+				.filter(|&id| Self::is_in_region(graph, self.region.as_slice(), id)),
 		);
 
 		for &entry in &self.temporary {

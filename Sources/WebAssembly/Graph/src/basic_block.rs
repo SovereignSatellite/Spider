@@ -27,16 +27,19 @@ impl BasicBlock {
 	}
 
 	/// Returns the instruction index range.
-	///
-	/// # Panics
-	///
-	/// Panics if the indices cannot be converted; if this happens, it is a bug.
 	#[must_use]
 	pub fn range(&self) -> Range<usize> {
-		self.start.try_into().unwrap()..self.end.try_into().unwrap()
+		let Ok(start) = self.start.try_into() else {
+			unreachable!()
+		};
+		let Ok(end) = self.end.try_into() else {
+			unreachable!()
+		};
+
+		start..end
 	}
 
-	/// Replaces block IDs using the given mapping function.
+	/// Remaps both neighbour lists via the mapping function and drops predecessors whose remapped id is `u16::MAX`.
 	pub fn replace_ids<M: Fn(u16) -> u16>(&mut self, map: M) {
 		for id in &mut self.predecessors {
 			*id = map(*id);

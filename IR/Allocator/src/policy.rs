@@ -1,3 +1,5 @@
+//! The Policy trait separating allocator mechanism from target conventions.
+
 use ir_graph::Link;
 
 /// Target-specific allocation policy.

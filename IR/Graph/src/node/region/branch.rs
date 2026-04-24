@@ -54,8 +54,8 @@ impl Branch {
 	}
 
 	/// Updates the argument boundary arity.
-	pub fn set_argument_count(&mut self, result_count: u16) {
-		self.arguments_mut().result_count = result_count;
+	pub fn set_argument_count(&mut self, argument_count: u16) {
+		self.arguments_mut().result_count = argument_count;
 	}
 
 	/// Returns the number of output ports.
@@ -116,7 +116,9 @@ impl Branch {
 	/// Returns the ids of the arguments and results boundary nodes.
 	#[must_use]
 	pub fn roots(&self) -> (u32, u32) {
-		let results = u32::try_from(self.results_index()).unwrap_or_else(|_| unreachable!());
+		let Ok(results) = u32::try_from(self.results_index()) else {
+			unreachable!()
+		};
 
 		(Self::ARGUMENTS_ID, results)
 	}
@@ -133,7 +135,9 @@ pub struct Arguments {
 impl Arguments {
 	/// Adds a branch arguments boundary node to the region.
 	pub fn add_into(nodes: &mut Vec<Node>, parent: Weak<Mutex<Branch>>, result_count: u16) -> u32 {
-		let id = nodes.len().try_into().unwrap_or_else(|_| unreachable!());
+		let Ok(id) = nodes.len().try_into() else {
+			unreachable!()
+		};
 		let node = Node::BranchArguments(Self {
 			parent,
 			result_count,
@@ -162,7 +166,9 @@ pub struct Results {
 impl Results {
 	/// Adds a branch results boundary node to the region.
 	pub fn add_into(nodes: &mut Vec<Node>, parent: Weak<Mutex<Branch>>, sources: Vec<Link>) -> u32 {
-		let id = nodes.len().try_into().unwrap_or_else(|_| unreachable!());
+		let Ok(id) = nodes.len().try_into() else {
+			unreachable!()
+		};
 		let node = Node::BranchResults(Self { parent, sources });
 
 		nodes.push(node);

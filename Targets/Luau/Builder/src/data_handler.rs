@@ -39,13 +39,13 @@ fn reg_to_local(reg: u32) -> Local {
 	}
 }
 
-fn load_runtime_call(name: &'static str, arguments: Vec<Expression>) -> Expression {
+fn build_runtime_call(name: &'static str, arguments: Vec<Expression>) -> Expression {
 	let expression = RuntimeCall { name, arguments };
 
 	Expression::RuntimeCall(expression.into())
 }
 
-pub fn load_match_expression(condition: Expression, branches: Vec<Sequence>) -> Expression {
+pub fn build_match_expression(condition: Expression, branches: Vec<Sequence>) -> Expression {
 	let branches = branches
 		.into_iter()
 		.map(Sequence::into_assign_source)
@@ -60,32 +60,32 @@ pub fn load_match_expression(condition: Expression, branches: Vec<Sequence>) -> 
 	)
 }
 
-pub fn load_wasm_import(node: &WasmImport) -> Expression {
+pub fn build_wasm_import(node: &WasmImport) -> Expression {
 	let arguments = vec![
 		Expression::String(Arc::clone(&node.namespace)),
 		Expression::String(Arc::clone(&node.identifier)),
 	];
 
-	load_runtime_call("import", arguments)
+	build_runtime_call("import", arguments)
 }
 
-pub fn load_turing_ask() -> Expression {
-	load_runtime_call("turing_ask", Vec::new())
+pub fn build_turing_ask() -> Expression {
+	build_runtime_call("turing_ask", Vec::new())
 }
 
-pub fn load_mutable_get(source: Expression) -> Expression {
+pub fn build_mutable_get(source: Expression) -> Expression {
 	Expression::GlobalGet(GlobalGet { source }.into())
 }
 
-pub fn load_table_get(source: Location) -> Expression {
+pub fn build_table_get(source: Location) -> Expression {
 	Expression::TableGet(TableGet { source }.into())
 }
 
-pub fn load_table_size(source: Expression) -> Expression {
+pub fn build_table_size(source: Expression) -> Expression {
 	Expression::TableSize(TableSize { source }.into())
 }
 
-pub fn load_table_grow(
+pub fn build_table_grow(
 	destination: Expression,
 	initializer: Expression,
 	size: Expression,
@@ -100,15 +100,15 @@ pub fn load_table_grow(
 	)
 }
 
-pub fn load_memory_load(source: Location, kind: operation::LoadType) -> Expression {
+pub fn build_memory_load(source: Location, kind: operation::LoadType) -> Expression {
 	Expression::MemoryLoad(MemoryLoad { source, kind }.into())
 }
 
-pub fn load_memory_size(source: Expression) -> Expression {
+pub fn build_memory_size(source: Expression) -> Expression {
 	Expression::MemorySize(MemorySize { source }.into())
 }
 
-pub fn load_memory_grow(destination: Expression, size: Expression) -> Expression {
+pub fn build_memory_grow(destination: Expression, size: Expression) -> Expression {
 	Expression::MemoryGrow(MemoryGrow { destination, size }.into())
 }
 
@@ -151,8 +151,8 @@ impl DataHandler {
 		sources.iter().map(|&link| self.load(scope, link)).collect()
 	}
 
-	pub fn load_result_locals(&self, scope: usize, id: u32, ports: u16) -> Vec<Local> {
-		(0..ports)
+	pub fn load_result_locals(&self, scope: usize, id: u32, result_count: u16) -> Vec<Local> {
+		(0..result_count)
 			.map(|port| {
 				let key = (Link(id, port), scope);
 
@@ -183,7 +183,7 @@ impl DataHandler {
 			.collect()
 	}
 
-	pub fn load_call(&mut self, scope: usize, node: &operation::Apply) -> Expression {
+	pub fn build_call(&mut self, scope: usize, node: &operation::Apply) -> Expression {
 		let function = self.load(scope, node.function);
 		let arguments = self.load_all(scope, &node.arguments);
 
@@ -195,7 +195,7 @@ impl DataHandler {
 		Expression::Call(call.into())
 	}
 
-	pub fn load_ref_is_null(&mut self, scope: usize, node: operation::RefIsNull) -> Expression {
+	pub fn build_ref_is_null(&mut self, scope: usize, node: operation::RefIsNull) -> Expression {
 		let expression = RefIsNull {
 			source: self.load(scope, node.source),
 		};
@@ -207,7 +207,7 @@ impl DataHandler {
 		Expression::BooleanToInteger(boolean.into())
 	}
 
-	pub fn load_integer_unary_operation(
+	pub fn build_integer_unary_operation(
 		&mut self,
 		scope: usize,
 		node: operation::integer::UnaryOperation,
@@ -221,7 +221,7 @@ impl DataHandler {
 		Expression::IntegerUnaryOperation(expression.into())
 	}
 
-	pub fn load_integer_binary_operation(
+	pub fn build_integer_binary_operation(
 		&mut self,
 		scope: usize,
 		node: operation::integer::BinaryOperation,
@@ -236,7 +236,7 @@ impl DataHandler {
 		Expression::IntegerBinaryOperation(expression.into())
 	}
 
-	pub fn load_integer_compare_operation(
+	pub fn build_integer_compare_operation(
 		&mut self,
 		scope: usize,
 		node: operation::integer::CompareOperation,
@@ -255,7 +255,7 @@ impl DataHandler {
 		Expression::BooleanToInteger(boolean.into())
 	}
 
-	pub fn load_integer_narrow(
+	pub fn build_integer_narrow(
 		&mut self,
 		scope: usize,
 		node: operation::IntegerNarrow,
@@ -267,7 +267,7 @@ impl DataHandler {
 		Expression::IntegerNarrow(expression.into())
 	}
 
-	pub fn load_integer_widen(
+	pub fn build_integer_widen(
 		&mut self,
 		scope: usize,
 		node: operation::IntegerWiden,
@@ -279,7 +279,7 @@ impl DataHandler {
 		Expression::IntegerWiden(expression.into())
 	}
 
-	pub fn load_integer_sign_extend(
+	pub fn build_integer_sign_extend(
 		&mut self,
 		scope: usize,
 		node: operation::IntegerSignExtend,
@@ -292,14 +292,14 @@ impl DataHandler {
 		Expression::IntegerExtend(expression.into())
 	}
 
-	pub fn load_integer_convert_to_number(
+	pub fn build_integer_convert_to_number(
 		&mut self,
 		scope: usize,
 		node: operation::IntegerConvertToNumber,
 	) -> Expression {
 		let expression = IntegerConvertToNumber {
 			source: self.load(scope, node.source),
-			signed: node.signed,
+			is_signed: node.is_signed,
 			to: node.to,
 			from: node.from,
 		};
@@ -307,7 +307,7 @@ impl DataHandler {
 		Expression::IntegerConvertToNumber(expression.into())
 	}
 
-	pub fn load_integer_transmute_to_number(
+	pub fn build_integer_transmute_to_number(
 		&mut self,
 		scope: usize,
 		node: operation::IntegerTransmuteToNumber,
@@ -320,7 +320,7 @@ impl DataHandler {
 		Expression::IntegerTransmuteToNumber(expression.into())
 	}
 
-	pub fn load_number_unary_operation(
+	pub fn build_number_unary_operation(
 		&mut self,
 		scope: usize,
 		node: operation::number::UnaryOperation,
@@ -334,7 +334,7 @@ impl DataHandler {
 		Expression::NumberUnaryOperation(expression.into())
 	}
 
-	pub fn load_number_binary_operation(
+	pub fn build_number_binary_operation(
 		&mut self,
 		scope: usize,
 		node: operation::number::BinaryOperation,
@@ -349,7 +349,7 @@ impl DataHandler {
 		Expression::NumberBinaryOperation(expression.into())
 	}
 
-	pub fn load_number_compare_operation(
+	pub fn build_number_compare_operation(
 		&mut self,
 		scope: usize,
 		node: operation::number::CompareOperation,
@@ -368,7 +368,7 @@ impl DataHandler {
 		Expression::BooleanToInteger(boolean.into())
 	}
 
-	pub fn load_number_narrow(
+	pub fn build_number_narrow(
 		&mut self,
 		scope: usize,
 		node: operation::NumberNarrow,
@@ -380,7 +380,7 @@ impl DataHandler {
 		Expression::NumberNarrow(expression.into())
 	}
 
-	pub fn load_number_widen(&mut self, scope: usize, node: operation::NumberWiden) -> Expression {
+	pub fn build_number_widen(&mut self, scope: usize, node: operation::NumberWiden) -> Expression {
 		let expression = NumberWiden {
 			source: self.load(scope, node.source),
 		};
@@ -388,15 +388,15 @@ impl DataHandler {
 		Expression::NumberWiden(expression.into())
 	}
 
-	pub fn load_number_truncate_to_integer(
+	pub fn build_number_truncate_to_integer(
 		&mut self,
 		scope: usize,
 		node: operation::NumberTruncateToInteger,
 	) -> Expression {
 		let expression = NumberTruncateToInteger {
 			source: self.load(scope, node.source),
-			signed: node.signed,
-			saturate: node.saturate,
+			is_signed: node.is_signed,
+			is_saturating: node.is_saturating,
 			to: node.to,
 			from: node.from,
 		};
@@ -404,7 +404,7 @@ impl DataHandler {
 		Expression::NumberTruncateToInteger(expression.into())
 	}
 
-	pub fn load_number_transmute_to_integer(
+	pub fn build_number_transmute_to_integer(
 		&mut self,
 		scope: usize,
 		node: operation::NumberTransmuteToInteger,
@@ -417,7 +417,7 @@ impl DataHandler {
 		Expression::NumberTransmuteToInteger(expression.into())
 	}
 
-	pub fn load_mutable_new(&mut self, scope: usize, node: operation::MutableNew) -> Expression {
+	pub fn build_mutable_new(&mut self, scope: usize, node: operation::MutableNew) -> Expression {
 		let expression = GlobalNew {
 			initializer: self.load(scope, node.initializer),
 		};
@@ -425,7 +425,7 @@ impl DataHandler {
 		Expression::GlobalNew(expression.into())
 	}
 
-	pub fn load_aggregate(&mut self, scope: usize, node: &operation::Aggregate) -> Expression {
+	pub fn build_aggregate(&mut self, scope: usize, node: &operation::Aggregate) -> Expression {
 		let fields = node
 			.fields
 			.iter()
@@ -436,7 +436,7 @@ impl DataHandler {
 		Expression::Aggregate(expression.into())
 	}
 
-	pub fn load_extract(&mut self, scope: usize, node: &operation::Extract) -> Expression {
+	pub fn build_extract(&mut self, scope: usize, node: &operation::Extract) -> Expression {
 		let expression = Extract {
 			source: self.load(scope, node.source),
 			index: node.index,
@@ -445,7 +445,7 @@ impl DataHandler {
 		Expression::Extract(expression.into())
 	}
 
-	pub fn load_table_new(&mut self, scope: usize, node: &operation::TableNew) -> Expression {
+	pub fn build_table_new(&mut self, scope: usize, node: &operation::TableNew) -> Expression {
 		let initializer = node
 			.initializer
 			.iter()

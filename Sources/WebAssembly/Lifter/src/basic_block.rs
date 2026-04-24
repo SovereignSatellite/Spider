@@ -67,7 +67,9 @@ impl BasicBlockLifter {
 
 	fn seed_dependencies_from_state(&mut self, nodes: &mut Vec<Node>, state: Link, count: usize) {
 		let extracts = (0..count).map(|index| {
-			let port = u32::try_from(index).unwrap_or_else(|_| unreachable!());
+			let Ok(port) = u32::try_from(index) else {
+				unreachable!()
+			};
 
 			operation::Extract::add_into(nodes, state, port)
 		});
@@ -374,7 +376,7 @@ impl BasicBlockLifter {
 		let IntegerConvertToNumber {
 			destination,
 			source,
-			signed,
+			is_signed,
 			to,
 			from,
 		} = instruction;
@@ -382,7 +384,7 @@ impl BasicBlockLifter {
 		self.locals[usize::from(destination)] = operation::IntegerConvertToNumber::add_into(
 			nodes,
 			self.locals[usize::from(source)],
-			signed,
+			is_signed,
 			to,
 			from,
 		);
@@ -498,8 +500,8 @@ impl BasicBlockLifter {
 		let NumberTruncateToInteger {
 			destination,
 			source,
-			signed,
-			saturate,
+			is_signed,
+			is_saturating,
 			to,
 			from,
 		} = instruction;
@@ -507,8 +509,8 @@ impl BasicBlockLifter {
 		self.locals[usize::from(destination)] = operation::NumberTruncateToInteger::add_into(
 			nodes,
 			self.locals[usize::from(source)],
-			signed,
-			saturate,
+			is_signed,
+			is_saturating,
 			to,
 			from,
 		);

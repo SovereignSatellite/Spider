@@ -99,8 +99,8 @@ const fn integer_type_name(kind: integer::Type) -> &'static str {
 const fn integer_unary_operator_name(operator: integer::UnaryOperator) -> &'static str {
 	match operator {
 		integer::UnaryOperator::CountOnes => "Count Ones",
-		integer::UnaryOperator::LeadingZeroes => "Leading Zeroes",
-		integer::UnaryOperator::TrailingZeroes => "Trailing Zeroes",
+		integer::UnaryOperator::LeadingZeros => "Leading Zeros",
+		integer::UnaryOperator::TrailingZeros => "Trailing Zeros",
 	}
 }
 
@@ -118,16 +118,16 @@ const fn integer_binary_operator_name(operator: integer::BinaryOperator) -> &'st
 		integer::BinaryOperator::Add => "+",
 		integer::BinaryOperator::Subtract => "-",
 		integer::BinaryOperator::Multiply => "*",
-		integer::BinaryOperator::Divide { signed: false } => "u/",
-		integer::BinaryOperator::Divide { signed: true } => "s/",
-		integer::BinaryOperator::Remainder { signed: false } => "u%",
-		integer::BinaryOperator::Remainder { signed: true } => "s%",
+		integer::BinaryOperator::Divide { is_signed: false } => "u/",
+		integer::BinaryOperator::Divide { is_signed: true } => "s/",
+		integer::BinaryOperator::Remainder { is_signed: false } => "u%",
+		integer::BinaryOperator::Remainder { is_signed: true } => "s%",
 		integer::BinaryOperator::And => "&",
 		integer::BinaryOperator::Or => "|",
 		integer::BinaryOperator::ExclusiveOr => "^",
 		integer::BinaryOperator::ShiftLeft => "<<",
-		integer::BinaryOperator::ShiftRight { signed: false } => "u>>",
-		integer::BinaryOperator::ShiftRight { signed: true } => "s>>",
+		integer::BinaryOperator::ShiftRight { is_signed: false } => "u>>",
+		integer::BinaryOperator::ShiftRight { is_signed: true } => "s>>",
 		integer::BinaryOperator::RotateLeft => "^<<",
 		integer::BinaryOperator::RotateRight => ">>^",
 	}
@@ -149,14 +149,14 @@ const fn integer_compare_operator_name(operator: integer::CompareOperator) -> &'
 	match operator {
 		integer::CompareOperator::Equal => "==",
 		integer::CompareOperator::NotEqual => "!=",
-		integer::CompareOperator::LessThan { signed: false } => "u<",
-		integer::CompareOperator::LessThan { signed: true } => "s<",
-		integer::CompareOperator::GreaterThan { signed: false } => "u>",
-		integer::CompareOperator::GreaterThan { signed: true } => "s>",
-		integer::CompareOperator::LessThanEqual { signed: false } => "u<=",
-		integer::CompareOperator::LessThanEqual { signed: true } => "s<=",
-		integer::CompareOperator::GreaterThanEqual { signed: false } => "u>=",
-		integer::CompareOperator::GreaterThanEqual { signed: true } => "s>=",
+		integer::CompareOperator::LessThan { is_signed: false } => "u<",
+		integer::CompareOperator::LessThan { is_signed: true } => "s<",
+		integer::CompareOperator::GreaterThan { is_signed: false } => "u>",
+		integer::CompareOperator::GreaterThan { is_signed: true } => "s>",
+		integer::CompareOperator::LessThanEqual { is_signed: false } => "u<=",
+		integer::CompareOperator::LessThanEqual { is_signed: true } => "s<=",
+		integer::CompareOperator::GreaterThanEqual { is_signed: false } => "u>=",
+		integer::CompareOperator::GreaterThanEqual { is_signed: true } => "s>=",
 	}
 }
 

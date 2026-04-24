@@ -99,7 +99,7 @@ impl JsonPrinter {
 
 	fn record_module(&mut self, id: u32) {
 		let name = self.interner.resolve("Module");
-		let color = self.interner.resolve(Color::Brown.as_string());
+		let color = self.interner.resolve(Color::Brown.as_css_color());
 
 		self.nodes.push(id);
 		self.nodes.push(name);
@@ -108,9 +108,7 @@ impl JsonPrinter {
 
 	fn record_node(&mut self, node: &Node, id: u32) {
 		let name = self.get_node_label(node);
-		let color = self
-			.interner
-			.resolve(Color::from_reference(node).as_string());
+		let color = self.interner.resolve(Color::from_node(node).as_css_color());
 
 		self.nodes.push(id);
 		self.nodes.push(name);
@@ -232,7 +230,7 @@ impl JsonPrinter {
 		}
 	}
 
-	fn find_nodes(&mut self, nodes: &[Node]) {
+	fn record_nodes(&mut self, nodes: &[Node]) {
 		for (local, node) in nodes.iter().enumerate() {
 			let global = self.names.resolve(local);
 
@@ -240,7 +238,7 @@ impl JsonPrinter {
 		}
 	}
 
-	fn find_edges(&mut self, nodes: &[Node]) {
+	fn record_edges(&mut self, nodes: &[Node]) {
 		for (local, node) in nodes.iter().enumerate() {
 			let global = self.names.resolve(local);
 			let mut port = 0_u32;
@@ -265,8 +263,8 @@ impl JsonPrinter {
 		let entry = self.names.entry();
 		let exit = self.names.exit();
 
-		self.find_nodes(nodes);
-		self.find_edges(nodes);
+		self.record_nodes(nodes);
+		self.record_edges(nodes);
 		self.names.leave_scope();
 
 		(entry, exit)
@@ -280,11 +278,11 @@ impl JsonPrinter {
 		write!(out, r#"],"edges":["#)?;
 		write_integers(&self.edges, out)?;
 		write!(out, r#"],"strings":["#)?;
-		write_strings(self.interner.list(), out)?;
+		write_strings(self.interner.strings(), out)?;
 		write!(out, "]}}")
 	}
 
-	/// Prints the module as JSON to the given writer.
+	/// Prints the module as JSON.
 	///
 	/// # Errors
 	///

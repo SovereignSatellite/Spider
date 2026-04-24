@@ -39,7 +39,7 @@ impl LuauPrinter {
 	/// # Errors
 	///
 	/// Returns any IO errors that the `out` produces during the process.
-	pub fn tab(&self, out: &mut dyn Write) -> Result<()> {
+	pub fn write_indent(&self, out: &mut dyn Write) -> Result<()> {
 		(0..self.depth).try_for_each(|_| write!(out, "\t"))
 	}
 

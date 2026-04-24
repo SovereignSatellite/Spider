@@ -16,7 +16,9 @@ pub struct Aggregate {
 impl Aggregate {
 	/// Adds an aggregate node to the graph.
 	pub fn add_into(nodes: &mut Vec<Node>, fields: Vec<Link>) -> Link {
-		let id = nodes.len().try_into().unwrap_or_else(|_| unreachable!());
+		let Ok(id) = nodes.len().try_into() else {
+			unreachable!()
+		};
 		let node = Node::Aggregate(Self { fields });
 
 		nodes.push(node);
@@ -30,7 +32,7 @@ impl Aggregate {
 /// A field extraction from an aggregate source.
 #[derive(Clone, Copy)]
 pub struct Extract {
-	/// The link to the aggregate source value.
+	/// The aggregate source value.
 	pub source: Link,
 	/// The zero-based field index.
 	pub index: u32,
@@ -39,7 +41,9 @@ pub struct Extract {
 impl Extract {
 	/// Adds an extract node to the graph.
 	pub fn add_into(nodes: &mut Vec<Node>, source: Link, index: u32) -> Link {
-		let id = nodes.len().try_into().unwrap_or_else(|_| unreachable!());
+		let Ok(id) = nodes.len().try_into() else {
+			unreachable!()
+		};
 		let node = Node::Extract(Self { source, index });
 
 		nodes.push(node);

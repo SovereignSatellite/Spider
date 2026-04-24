@@ -8,8 +8,8 @@ pub use ir_graph::operation::StoreType;
 
 /// A sequence of statements.
 pub struct Sequence {
-	/// The statement list.
-	pub list: Vec<Statement>,
+	/// The statements in execution order.
+	pub statements: Vec<Statement>,
 }
 
 /// A conditional match statement.

@@ -190,29 +190,29 @@ impl ExpressionBuilder {
 		self.code_builder.add_global_set(destination, source);
 	}
 
-	fn handle_load(&mut self, info: MemArg, kind: LoadType) {
+	fn handle_load(&mut self, memory_argument: MemArg, kind: LoadType) {
 		let source = Location {
-			reference: info.memory.try_into().unwrap(),
+			reference: memory_argument.memory.try_into().unwrap(),
 			offset: self.stack_builder.pull_local(),
 		};
 
 		self.code_builder
-			.apply_memory_offset(source.offset, info.offset);
+			.apply_memory_offset(source.offset, memory_argument.offset);
 
 		let destination = self.stack_builder.push_local();
 
 		self.code_builder.add_memory_load(destination, source, kind);
 	}
 
-	fn handle_store(&mut self, info: MemArg, kind: StoreType) {
+	fn handle_store(&mut self, memory_argument: MemArg, kind: StoreType) {
 		let source = self.stack_builder.pull_local();
 		let destination = Location {
-			reference: info.memory.try_into().unwrap(),
+			reference: memory_argument.memory.try_into().unwrap(),
 			offset: self.stack_builder.pull_local(),
 		};
 
 		self.code_builder
-			.apply_memory_offset(destination.offset, info.offset);
+			.apply_memory_offset(destination.offset, memory_argument.offset);
 
 		self.code_builder
 			.add_memory_store(destination, source, kind);
@@ -417,8 +417,8 @@ impl ExpressionBuilder {
 
 	fn handle_number_truncate(
 		&mut self,
-		signed: bool,
-		saturate: bool,
+		is_signed: bool,
+		is_saturating: bool,
 		to: integer::Type,
 		from: number::Type,
 	) {
@@ -428,28 +428,28 @@ impl ExpressionBuilder {
 		self.code_builder.add_number_truncate_to_integer(
 			destination,
 			source,
-			signed,
-			saturate,
+			is_signed,
+			is_saturating,
 			to,
 			from,
 		);
 	}
 
-	fn handle_f32_truncate(&mut self, signed: bool, to: integer::Type) {
-		self.handle_number_truncate(signed, false, to, number::Type::F32);
+	fn handle_f32_truncate(&mut self, is_signed: bool, to: integer::Type) {
+		self.handle_number_truncate(is_signed, false, to, number::Type::F32);
 	}
 
-	fn handle_f64_truncate(&mut self, signed: bool, to: integer::Type) {
-		self.handle_number_truncate(signed, false, to, number::Type::F64);
+	fn handle_f64_truncate(&mut self, is_signed: bool, to: integer::Type) {
+		self.handle_number_truncate(is_signed, false, to, number::Type::F64);
 	}
 
-	fn handle_integer_widen(&mut self, signed: bool) {
+	fn handle_integer_widen(&mut self, is_signed: bool) {
 		let source = self.stack_builder.pull_local();
 		let destination = self.stack_builder.push_local();
 
 		self.code_builder.add_integer_widen(destination, source);
 
-		if signed {
+		if is_signed {
 			self.code_builder
 				.add_integer_extend(destination, destination, ExtendType::I64_S32);
 		}
@@ -457,7 +457,7 @@ impl ExpressionBuilder {
 
 	fn handle_integer_convert_to_number(
 		&mut self,
-		signed: bool,
+		is_signed: bool,
 		to: number::Type,
 		from: integer::Type,
 	) {
@@ -465,15 +465,15 @@ impl ExpressionBuilder {
 		let destination = self.stack_builder.push_local();
 
 		self.code_builder
-			.add_integer_convert_to_number(destination, source, signed, to, from);
+			.add_integer_convert_to_number(destination, source, is_signed, to, from);
 	}
 
-	fn handle_i32_convert_to_number(&mut self, signed: bool, to: number::Type) {
-		self.handle_integer_convert_to_number(signed, to, integer::Type::I32);
+	fn handle_i32_convert_to_number(&mut self, is_signed: bool, to: number::Type) {
+		self.handle_integer_convert_to_number(is_signed, to, integer::Type::I32);
 	}
 
-	fn handle_i64_convert_to_number(&mut self, signed: bool, to: number::Type) {
-		self.handle_integer_convert_to_number(signed, to, integer::Type::I64);
+	fn handle_i64_convert_to_number(&mut self, is_signed: bool, to: number::Type) {
+		self.handle_integer_convert_to_number(is_signed, to, integer::Type::I64);
 	}
 
 	fn handle_number_narrow(&mut self) {
@@ -514,12 +514,12 @@ impl ExpressionBuilder {
 			.add_integer_extend(destination, source, kind);
 	}
 
-	fn handle_f32_saturate(&mut self, signed: bool, to: integer::Type) {
-		self.handle_number_truncate(signed, true, to, number::Type::F32);
+	fn handle_f32_saturate(&mut self, is_signed: bool, to: integer::Type) {
+		self.handle_number_truncate(is_signed, true, to, number::Type::F32);
 	}
 
-	fn handle_f64_saturate(&mut self, signed: bool, to: integer::Type) {
-		self.handle_number_truncate(signed, true, to, number::Type::F64);
+	fn handle_f64_saturate(&mut self, is_signed: bool, to: integer::Type) {
+		self.handle_number_truncate(is_signed, true, to, number::Type::F64);
 	}
 
 	fn handle_memory_init(&mut self, memory: u32, data: u32) {
@@ -542,19 +542,19 @@ impl ExpressionBuilder {
 		self.code_builder.add_data_drop(data);
 	}
 
-	fn handle_memory_copy(&mut self, dest_mem: u32, src_mem: u32) {
+	fn handle_memory_copy(&mut self, destination_memory: u32, source_memory: u32) {
 		let size = self.stack_builder.pull_local();
 		let source_location: Location = Location {
-			reference: src_mem.try_into().unwrap(),
+			reference: source_memory.try_into().unwrap(),
 			offset: self.stack_builder.pull_local(),
 		};
-		let dest_location = Location {
-			reference: dest_mem.try_into().unwrap(),
+		let destination_location = Location {
+			reference: destination_memory.try_into().unwrap(),
 			offset: self.stack_builder.pull_local(),
 		};
 
 		self.code_builder
-			.add_memory_copy(dest_location, source_location, size);
+			.add_memory_copy(destination_location, source_location, size);
 	}
 
 	fn handle_memory_fill(&mut self, memory: u32) {
@@ -588,19 +588,19 @@ impl ExpressionBuilder {
 		self.code_builder.add_elements_drop(elements);
 	}
 
-	fn handle_table_copy(&mut self, dest_table: u32, src_table: u32) {
+	fn handle_table_copy(&mut self, destination_table: u32, source_table: u32) {
 		let size = self.stack_builder.pull_local();
 		let source_location: Location = Location {
-			reference: src_table.try_into().unwrap(),
+			reference: source_table.try_into().unwrap(),
 			offset: self.stack_builder.pull_local(),
 		};
-		let dest_location = Location {
-			reference: dest_table.try_into().unwrap(),
+		let destination_location = Location {
+			reference: destination_table.try_into().unwrap(),
 			offset: self.stack_builder.pull_local(),
 		};
 
 		self.code_builder
-			.add_table_copy(dest_location, source_location, size);
+			.add_table_copy(destination_location, source_location, size);
 	}
 
 	fn handle_ref_null(&mut self) {
@@ -735,62 +735,70 @@ impl ExpressionBuilder {
 			Operator::I32Eq => self.handle_i32_compare(integer::CompareOperator::Equal),
 			Operator::I32Ne => self.handle_i32_compare(integer::CompareOperator::NotEqual),
 			Operator::I32LtS => {
-				self.handle_i32_compare(integer::CompareOperator::LessThan { signed: true });
+				self.handle_i32_compare(integer::CompareOperator::LessThan { is_signed: true });
 			}
 			Operator::I32LtU => {
-				self.handle_i32_compare(integer::CompareOperator::LessThan { signed: false });
+				self.handle_i32_compare(integer::CompareOperator::LessThan { is_signed: false });
 			}
 			Operator::I32GtS => {
-				self.handle_i32_compare(integer::CompareOperator::GreaterThan { signed: true });
+				self.handle_i32_compare(integer::CompareOperator::GreaterThan { is_signed: true });
 			}
 			Operator::I32GtU => {
-				self.handle_i32_compare(integer::CompareOperator::GreaterThan { signed: false });
+				self.handle_i32_compare(integer::CompareOperator::GreaterThan { is_signed: false });
 			}
 			Operator::I32LeS => {
-				self.handle_i32_compare(integer::CompareOperator::LessThanEqual { signed: true });
+				self.handle_i32_compare(integer::CompareOperator::LessThanEqual {
+					is_signed: true,
+				});
 			}
 			Operator::I32LeU => {
-				self.handle_i32_compare(integer::CompareOperator::LessThanEqual { signed: false });
+				self.handle_i32_compare(integer::CompareOperator::LessThanEqual {
+					is_signed: false,
+				});
 			}
 			Operator::I32GeS => {
 				self.handle_i32_compare(integer::CompareOperator::GreaterThanEqual {
-					signed: true,
+					is_signed: true,
 				});
 			}
 			Operator::I32GeU => {
 				self.handle_i32_compare(integer::CompareOperator::GreaterThanEqual {
-					signed: false,
+					is_signed: false,
 				});
 			}
 			Operator::I64Eqz => self.handle_i64_equals_zero(),
 			Operator::I64Eq => self.handle_i64_compare(integer::CompareOperator::Equal),
 			Operator::I64Ne => self.handle_i64_compare(integer::CompareOperator::NotEqual),
 			Operator::I64LtS => {
-				self.handle_i64_compare(integer::CompareOperator::LessThan { signed: true });
+				self.handle_i64_compare(integer::CompareOperator::LessThan { is_signed: true });
 			}
 			Operator::I64LtU => {
-				self.handle_i64_compare(integer::CompareOperator::LessThan { signed: false });
+				self.handle_i64_compare(integer::CompareOperator::LessThan { is_signed: false });
 			}
 			Operator::I64GtS => {
-				self.handle_i64_compare(integer::CompareOperator::GreaterThan { signed: true });
+				self.handle_i64_compare(integer::CompareOperator::GreaterThan { is_signed: true });
 			}
 			Operator::I64GtU => {
-				self.handle_i64_compare(integer::CompareOperator::GreaterThan { signed: false });
+				self.handle_i64_compare(integer::CompareOperator::GreaterThan { is_signed: false });
 			}
 			Operator::I64LeS => {
-				self.handle_i64_compare(integer::CompareOperator::LessThanEqual { signed: true });
+				self.handle_i64_compare(integer::CompareOperator::LessThanEqual {
+					is_signed: true,
+				});
 			}
 			Operator::I64LeU => {
-				self.handle_i64_compare(integer::CompareOperator::LessThanEqual { signed: false });
+				self.handle_i64_compare(integer::CompareOperator::LessThanEqual {
+					is_signed: false,
+				});
 			}
 			Operator::I64GeS => {
 				self.handle_i64_compare(integer::CompareOperator::GreaterThanEqual {
-					signed: true,
+					is_signed: true,
 				});
 			}
 			Operator::I64GeU => {
 				self.handle_i64_compare(integer::CompareOperator::GreaterThanEqual {
-					signed: false,
+					is_signed: false,
 				});
 			}
 			Operator::F32Eq => self.handle_f32_compare(number::CompareOperator::Equal),
@@ -805,63 +813,63 @@ impl ExpressionBuilder {
 			Operator::F64Gt => self.handle_f64_compare(number::CompareOperator::GreaterThan),
 			Operator::F64Le => self.handle_f64_compare(number::CompareOperator::LessThanEqual),
 			Operator::F64Ge => self.handle_f64_compare(number::CompareOperator::GreaterThanEqual),
-			Operator::I32Clz => self.handle_i32_unary(integer::UnaryOperator::LeadingZeroes),
-			Operator::I32Ctz => self.handle_i32_unary(integer::UnaryOperator::TrailingZeroes),
+			Operator::I32Clz => self.handle_i32_unary(integer::UnaryOperator::LeadingZeros),
+			Operator::I32Ctz => self.handle_i32_unary(integer::UnaryOperator::TrailingZeros),
 			Operator::I32Popcnt => self.handle_i32_unary(integer::UnaryOperator::CountOnes),
 			Operator::I32Add => self.handle_i32_binary(integer::BinaryOperator::Add),
 			Operator::I32Sub => self.handle_i32_binary(integer::BinaryOperator::Subtract),
 			Operator::I32Mul => self.handle_i32_binary(integer::BinaryOperator::Multiply),
 			Operator::I32DivS => {
-				self.handle_i32_binary(integer::BinaryOperator::Divide { signed: true });
+				self.handle_i32_binary(integer::BinaryOperator::Divide { is_signed: true });
 			}
 			Operator::I32DivU => {
-				self.handle_i32_binary(integer::BinaryOperator::Divide { signed: false });
+				self.handle_i32_binary(integer::BinaryOperator::Divide { is_signed: false });
 			}
 			Operator::I32RemS => {
-				self.handle_i32_binary(integer::BinaryOperator::Remainder { signed: true });
+				self.handle_i32_binary(integer::BinaryOperator::Remainder { is_signed: true });
 			}
 			Operator::I32RemU => {
-				self.handle_i32_binary(integer::BinaryOperator::Remainder { signed: false });
+				self.handle_i32_binary(integer::BinaryOperator::Remainder { is_signed: false });
 			}
 			Operator::I32And => self.handle_i32_binary(integer::BinaryOperator::And),
 			Operator::I32Or => self.handle_i32_binary(integer::BinaryOperator::Or),
 			Operator::I32Xor => self.handle_i32_binary(integer::BinaryOperator::ExclusiveOr),
 			Operator::I32Shl => self.handle_i32_binary(integer::BinaryOperator::ShiftLeft),
 			Operator::I32ShrS => {
-				self.handle_i32_binary(integer::BinaryOperator::ShiftRight { signed: true });
+				self.handle_i32_binary(integer::BinaryOperator::ShiftRight { is_signed: true });
 			}
 			Operator::I32ShrU => {
-				self.handle_i32_binary(integer::BinaryOperator::ShiftRight { signed: false });
+				self.handle_i32_binary(integer::BinaryOperator::ShiftRight { is_signed: false });
 			}
 			Operator::I32Rotl => self.handle_i32_binary(integer::BinaryOperator::RotateLeft),
 			Operator::I32Rotr => self.handle_i32_binary(integer::BinaryOperator::RotateRight),
-			Operator::I64Clz => self.handle_i64_unary(integer::UnaryOperator::LeadingZeroes),
-			Operator::I64Ctz => self.handle_i64_unary(integer::UnaryOperator::TrailingZeroes),
+			Operator::I64Clz => self.handle_i64_unary(integer::UnaryOperator::LeadingZeros),
+			Operator::I64Ctz => self.handle_i64_unary(integer::UnaryOperator::TrailingZeros),
 			Operator::I64Popcnt => self.handle_i64_unary(integer::UnaryOperator::CountOnes),
 			Operator::I64Add => self.handle_i64_binary(integer::BinaryOperator::Add),
 			Operator::I64Sub => self.handle_i64_binary(integer::BinaryOperator::Subtract),
 			Operator::I64Mul => self.handle_i64_binary(integer::BinaryOperator::Multiply),
 			Operator::I64DivS => {
-				self.handle_i64_binary(integer::BinaryOperator::Divide { signed: true });
+				self.handle_i64_binary(integer::BinaryOperator::Divide { is_signed: true });
 			}
 			Operator::I64DivU => {
-				self.handle_i64_binary(integer::BinaryOperator::Divide { signed: false });
+				self.handle_i64_binary(integer::BinaryOperator::Divide { is_signed: false });
 			}
 			Operator::I64RemS => {
-				self.handle_i64_binary(integer::BinaryOperator::Remainder { signed: true });
+				self.handle_i64_binary(integer::BinaryOperator::Remainder { is_signed: true });
 			}
 			Operator::I64RemU => {
-				self.handle_i64_binary(integer::BinaryOperator::Remainder { signed: false });
+				self.handle_i64_binary(integer::BinaryOperator::Remainder { is_signed: false });
 			}
 			Operator::I64And => self.handle_i64_binary(integer::BinaryOperator::And),
 			Operator::I64Or => self.handle_i64_binary(integer::BinaryOperator::Or),
 			Operator::I64Xor => self.handle_i64_binary(integer::BinaryOperator::ExclusiveOr),
 			Operator::I64Shl => self.handle_i64_binary(integer::BinaryOperator::ShiftLeft),
 			Operator::I64ShrS => {
-				self.handle_i64_binary(integer::BinaryOperator::ShiftRight { signed: true });
+				self.handle_i64_binary(integer::BinaryOperator::ShiftRight { is_signed: true });
 			}
 			Operator::I64ShrU => {
-				self.handle_i64_binary(integer::BinaryOperator::ShiftRight { signed: false });
+				self.handle_i64_binary(integer::BinaryOperator::ShiftRight { is_signed: false });
 			}
 			Operator::I64Rotl => self.handle_i64_binary(integer::BinaryOperator::RotateLeft),
 			Operator::I64Rotr => self.handle_i64_binary(integer::BinaryOperator::RotateRight),
@@ -933,14 +941,17 @@ impl ExpressionBuilder {
 			Operator::I64TruncSatF64U => self.handle_f64_saturate(false, integer::Type::I64),
 			Operator::MemoryInit { data_index, mem } => self.handle_memory_init(mem, data_index),
 			Operator::DataDrop { data_index } => self.handle_data_drop(data_index),
-			Operator::MemoryCopy { dst_mem, src_mem } => self.handle_memory_copy(dst_mem, src_mem),
+			Operator::MemoryCopy {
+				dst_mem: destination_memory,
+				src_mem: source_memory,
+			} => self.handle_memory_copy(destination_memory, source_memory),
 			Operator::MemoryFill { mem } => self.handle_memory_fill(mem),
 			Operator::TableInit { elem_index, table } => self.handle_table_init(table, elem_index),
 			Operator::ElemDrop { elem_index } => self.handle_elements_drop(elem_index),
 			Operator::TableCopy {
-				dst_table,
-				src_table,
-			} => self.handle_table_copy(dst_table, src_table),
+				dst_table: destination_table,
+				src_table: source_table,
+			} => self.handle_table_copy(destination_table, source_table),
 			Operator::RefNull { .. } => self.handle_ref_null(),
 			Operator::RefIsNull => self.handle_ref_is_null(),
 			Operator::RefFunc { function_index } => self.handle_ref_function(function_index),

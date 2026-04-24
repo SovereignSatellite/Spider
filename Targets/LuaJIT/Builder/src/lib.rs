@@ -33,12 +33,7 @@ impl LuaJITBuilder {
 		}
 	}
 
-	/// Builds a `LuaJIT` tree from the given module.
-	///
-	/// # Panics
-	///
-	/// Panics if the module does not contain valid structure;
-	/// if this happens, it is a bug.
+	/// Builds a `LuaJIT` tree.
 	pub fn run(&mut self, module: &Arc<Mutex<Module>>) -> LuaJITTree {
 		let guard = module.lock();
 		let scope = Arc::as_ptr(module) as usize;

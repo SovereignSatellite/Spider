@@ -63,11 +63,11 @@ local function flip_most_significant(source: number): number
 	return source
 end
 
--- SECTION is_all_zeroes
+-- SECTION is_all_zeros
 -- NEEDS buffer_read_u32
 -- NEEDS buffer_write_f64
 -- NEEDS transmute_n64
-local function is_all_zeroes(source: number): boolean
+local function is_all_zeros(source: number): boolean
 	buffer_write_f64(TRANSMUTE_N64, 0, source)
 
 	return buffer_read_u32(TRANSMUTE_N64, 0) == 0 and buffer_read_u32(TRANSMUTE_N64, 4) == 0

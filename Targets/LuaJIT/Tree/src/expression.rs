@@ -147,7 +147,7 @@ pub struct IntegerConvertToNumber {
 	/// The source expression.
 	pub source: Expression,
 	/// Whether the source integer is signed.
-	pub signed: bool,
+	pub is_signed: bool,
 	/// The target floating-point type.
 	pub to: number::Type,
 	/// The source integer type.
@@ -213,9 +213,9 @@ pub struct NumberTruncateToInteger {
 	/// The source expression.
 	pub source: Expression,
 	/// Whether the target integer is signed.
-	pub signed: bool,
-	/// Whether to use saturating semantics.
-	pub saturate: bool,
+	pub is_signed: bool,
+	/// True for saturating conversion; false for trapping on out-of-range.
+	pub is_saturating: bool,
 	/// The target integer type.
 	pub to: integer::Type,
 	/// The source floating-point type.
@@ -451,11 +451,6 @@ impl Expression {
 	}
 
 	/// Converts this expression into a boolean.
-	///
-	/// # Panics
-	///
-	/// Panics if the expression cannot be converted to a boolean;
-	/// if this happens, it is a bug.
 	#[must_use]
 	#[expect(
 		clippy::too_many_lines,

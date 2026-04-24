@@ -35,7 +35,7 @@ mod conditional {
 		let has_maximum = range.end != center + 1;
 
 		if has_minimum {
-			printer.tab(out)?;
+			printer.write_indent(out)?;
 			write!(out, "if (")?;
 
 			condition.print(printer, out)?;
@@ -46,7 +46,7 @@ mod conditional {
 			print_recursive(branches, condition, range.start..center, printer, out)?;
 			printer.outdent();
 
-			printer.tab(out)?;
+			printer.write_indent(out)?;
 			write!(out, "else")?;
 
 			if has_maximum {
@@ -60,7 +60,7 @@ mod conditional {
 				print_recursive(branches, condition, (center + 1)..range.end, printer, out)?;
 				printer.outdent();
 
-				printer.tab(out)?;
+				printer.write_indent(out)?;
 				write!(out, "else")?;
 			}
 
@@ -74,7 +74,7 @@ mod conditional {
 		if has_minimum {
 			printer.outdent();
 
-			printer.tab(out)?;
+			printer.write_indent(out)?;
 			writeln!(out, "end")
 		} else {
 			Ok(())
@@ -89,7 +89,7 @@ mod conditional {
 	) -> Result<()> {
 		let len = branches.len() - 1;
 
-		printer.tab(out)?;
+		printer.write_indent(out)?;
 		write!(out, "if (")?;
 
 		condition.print(printer, out)?;
@@ -104,14 +104,14 @@ mod conditional {
 		print_recursive(branches, condition, 0..len, printer, out)?;
 		printer.outdent();
 
-		printer.tab(out)?;
+		printer.write_indent(out)?;
 		writeln!(out, "else")?;
 
 		printer.indent();
 		branches.last().unwrap().print(printer, out)?;
 		printer.outdent();
 
-		printer.tab(out)?;
+		printer.write_indent(out)?;
 		writeln!(out, "end")
 	}
 
@@ -121,7 +121,7 @@ mod conditional {
 		printer: &mut LuaJITPrinter,
 		out: &mut dyn Write,
 	) -> Result<()> {
-		printer.tab(out)?;
+		printer.write_indent(out)?;
 		write!(out, "if ")?;
 
 		condition.print(printer, out)?;
@@ -132,7 +132,7 @@ mod conditional {
 		code.print(printer, out)?;
 		printer.outdent();
 
-		printer.tab(out)?;
+		printer.write_indent(out)?;
 		writeln!(out, "end")
 	}
 
@@ -142,7 +142,7 @@ mod conditional {
 		printer: &mut LuaJITPrinter,
 		out: &mut dyn Write,
 	) -> Result<()> {
-		printer.tab(out)?;
+		printer.write_indent(out)?;
 		write!(out, "if not (")?;
 
 		condition.print(printer, out)?;
@@ -153,7 +153,7 @@ mod conditional {
 		code.print(printer, out)?;
 		printer.outdent();
 
-		printer.tab(out)?;
+		printer.write_indent(out)?;
 		writeln!(out, "end")
 	}
 
@@ -164,7 +164,7 @@ mod conditional {
 		printer: &mut LuaJITPrinter,
 		out: &mut dyn Write,
 	) -> Result<()> {
-		printer.tab(out)?;
+		printer.write_indent(out)?;
 		write!(out, "if ")?;
 
 		condition.print(printer, out)?;
@@ -175,14 +175,14 @@ mod conditional {
 		on_true.print(printer, out)?;
 		printer.outdent();
 
-		printer.tab(out)?;
+		printer.write_indent(out)?;
 		writeln!(out, "else")?;
 
 		printer.indent();
 		on_false.print(printer, out)?;
 		printer.outdent();
 
-		printer.tab(out)?;
+		printer.write_indent(out)?;
 		writeln!(out, "end")
 	}
 
@@ -193,8 +193,8 @@ mod conditional {
 		printer: &mut LuaJITPrinter,
 		out: &mut dyn Write,
 	) -> Result<()> {
-		let false_empty = on_false.list.is_empty();
-		let true_empty = on_true.list.is_empty();
+		let false_empty = on_false.statements.is_empty();
+		let true_empty = on_true.statements.is_empty();
 
 		match (false_empty, true_empty) {
 			(true, true | false) => print_if_true(on_true, condition, printer, out),
@@ -223,14 +223,14 @@ impl Print for Repeat {
 	fn print(&self, printer: &mut LuaJITPrinter, out: &mut dyn Write) -> Result<()> {
 		let Self { code, condition } = self;
 
-		printer.tab(out)?;
+		printer.write_indent(out)?;
 		writeln!(out, "repeat")?;
 
 		printer.indent();
 		code.print(printer, out)?;
 		printer.outdent();
 
-		printer.tab(out)?;
+		printer.write_indent(out)?;
 		write!(out, "until (")?;
 		condition.print(printer, out)?;
 		writeln!(out, ") == 0")
@@ -244,7 +244,7 @@ impl Print for Assign {
 			source,
 		} = self;
 
-		printer.tab(out)?;
+		printer.write_indent(out)?;
 		destination.print(printer, out)?;
 
 		write!(out, " = ")?;
@@ -260,7 +260,7 @@ impl Print for SwapAll {
 		let Self { locals } = self;
 
 		for pair in locals.windows(2) {
-			printer.tab(out)?;
+			printer.write_indent(out)?;
 
 			pair[0].print(printer, out)?;
 
@@ -291,7 +291,7 @@ impl Print for Call {
 			arguments,
 		} = self;
 
-		printer.tab(out)?;
+		printer.write_indent(out)?;
 
 		if !results.is_empty() {
 			fmt_delimited(results, printer, out)?;
@@ -313,7 +313,7 @@ impl Print for RuntimeCall {
 	fn print(&self, printer: &mut LuaJITPrinter, out: &mut dyn Write) -> Result<()> {
 		let Self { name, arguments } = self;
 
-		printer.tab(out)?;
+		printer.write_indent(out)?;
 
 		fmt_runtime_call(name, arguments, printer, out)?;
 
@@ -328,7 +328,7 @@ impl Print for GlobalSet {
 			source,
 		} = self;
 
-		printer.tab(out)?;
+		printer.write_indent(out)?;
 		destination.print(printer, out)?;
 
 		write!(out, "[1] = ")?;
@@ -348,7 +348,7 @@ impl Print for TableSet {
 
 		let intrinsic = self.needs_name();
 
-		printer.tab(out)?;
+		printer.write_indent(out)?;
 		write!(out, "rt_{intrinsic}(")?;
 
 		destination.print(printer, out)?;
@@ -371,7 +371,7 @@ impl Print for TableFill {
 
 		let intrinsic = self.needs_name();
 
-		printer.tab(out)?;
+		printer.write_indent(out)?;
 		write!(out, "rt_{intrinsic}(")?;
 
 		destination.print(printer, out)?;
@@ -398,7 +398,7 @@ impl Print for TableCopy {
 
 		let intrinsic = self.needs_name();
 
-		printer.tab(out)?;
+		printer.write_indent(out)?;
 		write!(out, "rt_{intrinsic}(")?;
 
 		destination.print(printer, out)?;
@@ -421,7 +421,7 @@ impl Print for TableDrop {
 
 		let intrinsic = self.needs_name();
 
-		printer.tab(out)?;
+		printer.write_indent(out)?;
 		write!(out, "rt_{intrinsic}(")?;
 
 		source.print(printer, out)?;
@@ -440,7 +440,7 @@ impl Print for MemoryStore {
 
 		let intrinsic = self.needs_name();
 
-		printer.tab(out)?;
+		printer.write_indent(out)?;
 		write!(out, "rt_{intrinsic}(")?;
 
 		destination.print(printer, out)?;
@@ -463,7 +463,7 @@ impl Print for MemoryFill {
 
 		let intrinsic = self.needs_name();
 
-		printer.tab(out)?;
+		printer.write_indent(out)?;
 		write!(out, "rt_{intrinsic}(")?;
 
 		destination.print(printer, out)?;
@@ -490,7 +490,7 @@ impl Print for MemoryCopy {
 
 		let intrinsic = self.needs_name();
 
-		printer.tab(out)?;
+		printer.write_indent(out)?;
 		write!(out, "rt_{intrinsic}(")?;
 
 		destination.print(printer, out)?;
@@ -513,7 +513,7 @@ impl Print for MemoryDrop {
 
 		let intrinsic = self.needs_name();
 
-		printer.tab(out)?;
+		printer.write_indent(out)?;
 		write!(out, "rt_{intrinsic}(")?;
 
 		source.print(printer, out)?;
@@ -535,18 +535,18 @@ impl Print for Statement {
 			Self::TableSet(table_set) => table_set.print(printer, out),
 			Self::TableFill(table_fill) => table_fill.print(printer, out),
 			Self::TableCopy(table_copy) => table_copy.print(printer, out),
-			Self::TableDrop(elements_drop) => elements_drop.print(printer, out),
+			Self::TableDrop(table_drop) => table_drop.print(printer, out),
 			Self::MemoryStore(memory_store) => memory_store.print(printer, out),
 			Self::MemoryFill(memory_fill) => memory_fill.print(printer, out),
 			Self::MemoryCopy(memory_copy) => memory_copy.print(printer, out),
-			Self::MemoryDrop(data_drop) => data_drop.print(printer, out),
+			Self::MemoryDrop(memory_drop) => memory_drop.print(printer, out),
 		}
 	}
 }
 
 impl Print for Sequence {
 	fn print(&self, printer: &mut LuaJITPrinter, out: &mut dyn Write) -> Result<()> {
-		self.list
+		self.statements
 			.iter()
 			.try_for_each(|statement| statement.print(printer, out))
 	}
@@ -560,12 +560,12 @@ impl Print for LuaJITTree {
 			code,
 		} = self;
 
-		printer.tab(out)?;
+		printer.write_indent(out)?;
 		writeln!(out, "local function module()")?;
 
 		printer.indent();
 
-		printer.tab(out)?;
+		printer.write_indent(out)?;
 		writeln!(out, "local excess_stack = {{ top = 0 }}")?;
 
 		fmt_stack_enter(*stack, printer, out)?;
@@ -577,7 +577,7 @@ impl Print for LuaJITTree {
 
 		printer.outdent();
 
-		printer.tab(out)?;
+		printer.write_indent(out)?;
 		writeln!(out, "end")
 	}
 }

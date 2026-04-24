@@ -31,10 +31,9 @@ impl Repeat {
 		let create = |weak: &Weak<Mutex<Self>>| {
 			let mut nodes = Vec::new();
 
-			let argument_count = arguments
-				.len()
-				.try_into()
-				.unwrap_or_else(|_| unreachable!());
+			let Ok(argument_count) = arguments.len().try_into() else {
+				unreachable!()
+			};
 
 			let repeat_arguments =
 				Arguments::add_into(&mut nodes, Weak::clone(weak), argument_count);
@@ -53,7 +52,9 @@ impl Repeat {
 	where
 		F: FnOnce(&mut Vec<Node>, u32) -> (Vec<Link>, Link),
 	{
-		let id = nodes.len().try_into().unwrap_or_else(|_| unreachable!());
+		let Ok(id) = nodes.len().try_into() else {
+			unreachable!()
+		};
 		let node = Node::Repeat(Self::create(arguments, initializer));
 
 		nodes.push(node);
@@ -71,8 +72,8 @@ impl Repeat {
 	}
 
 	/// Updates the argument boundary arity.
-	pub fn set_argument_count(&mut self, result_count: u16) {
-		self.arguments_mut().result_count = result_count;
+	pub fn set_argument_count(&mut self, argument_count: u16) {
+		self.arguments_mut().result_count = argument_count;
 	}
 
 	/// Returns the number of output ports.
@@ -97,7 +98,7 @@ impl Repeat {
 
 	/// Returns a reference to the arguments boundary node.
 	#[must_use]
-	pub fn arguments_node(&self) -> &Arguments {
+	pub fn arguments(&self) -> &Arguments {
 		if let Node::RepeatArguments(arguments) = &self.nodes[Self::ARGUMENTS_ID as usize] {
 			arguments
 		} else {
@@ -147,7 +148,9 @@ impl Repeat {
 	/// Returns the ids of the arguments and results boundary nodes.
 	#[must_use]
 	pub fn roots(&self) -> (u32, u32) {
-		let results = u32::try_from(self.results_index()).unwrap_or_else(|_| unreachable!());
+		let Ok(results) = u32::try_from(self.results_index()) else {
+			unreachable!()
+		};
 
 		(Self::ARGUMENTS_ID, results)
 	}
@@ -164,7 +167,9 @@ pub struct Arguments {
 impl Arguments {
 	/// Adds a repeat arguments boundary node to the region.
 	pub fn add_into(nodes: &mut Vec<Node>, parent: Weak<Mutex<Repeat>>, result_count: u16) -> u32 {
-		let id = nodes.len().try_into().unwrap_or_else(|_| unreachable!());
+		let Ok(id) = nodes.len().try_into() else {
+			unreachable!()
+		};
 		let node = Node::RepeatArguments(Self {
 			parent,
 			result_count,
@@ -200,7 +205,9 @@ impl Results {
 		sources: Vec<Link>,
 		condition: Link,
 	) -> u32 {
-		let id = nodes.len().try_into().unwrap_or_else(|_| unreachable!());
+		let Ok(id) = nodes.len().try_into() else {
+			unreachable!()
+		};
 		let node = Node::RepeatResults(Self {
 			parent,
 			sources,

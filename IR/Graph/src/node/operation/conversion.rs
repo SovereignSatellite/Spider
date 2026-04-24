@@ -16,14 +16,16 @@ use super::{integer, number};
 /// An integer narrowing node from 64-bit to 32-bit.
 #[derive(Clone, Copy)]
 pub struct IntegerNarrow {
-	/// The link to the source value.
+	/// The source value.
 	pub source: Link,
 }
 
 impl IntegerNarrow {
 	/// Adds an integer narrowing node to the graph.
 	pub fn add_into(nodes: &mut Vec<Node>, source: Link) -> Link {
-		let id = nodes.len().try_into().unwrap_or_else(|_| unreachable!());
+		let Ok(id) = nodes.len().try_into() else {
+			unreachable!()
+		};
 		let node = Node::IntegerNarrow(Self { source });
 
 		nodes.push(node);
@@ -37,14 +39,16 @@ impl IntegerNarrow {
 /// An integer widening node from 32-bit to 64-bit.
 #[derive(Clone, Copy)]
 pub struct IntegerWiden {
-	/// The link to the source value.
+	/// The source value.
 	pub source: Link,
 }
 
 impl IntegerWiden {
 	/// Adds an integer widening node to the graph.
 	pub fn add_into(nodes: &mut Vec<Node>, source: Link) -> Link {
-		let id = nodes.len().try_into().unwrap_or_else(|_| unreachable!());
+		let Ok(id) = nodes.len().try_into() else {
+			unreachable!()
+		};
 		let node = Node::IntegerWiden(Self { source });
 
 		nodes.push(node);
@@ -78,7 +82,7 @@ pub enum ExtendType {
 /// An integer sign-extension node.
 #[derive(Clone, Copy)]
 pub struct IntegerSignExtend {
-	/// The link to the source value.
+	/// The source value.
 	pub source: Link,
 	/// The extension type pair.
 	pub kind: ExtendType,
@@ -87,7 +91,9 @@ pub struct IntegerSignExtend {
 impl IntegerSignExtend {
 	/// Adds an integer sign-extension node to the graph.
 	pub fn add_into(nodes: &mut Vec<Node>, source: Link, kind: ExtendType) -> Link {
-		let id = nodes.len().try_into().unwrap_or_else(|_| unreachable!());
+		let Ok(id) = nodes.len().try_into() else {
+			unreachable!()
+		};
 		let node = Node::IntegerSignExtend(Self { source, kind });
 
 		nodes.push(node);
@@ -101,10 +107,10 @@ impl IntegerSignExtend {
 /// An integer-to-floating-point conversion node.
 #[derive(Clone, Copy)]
 pub struct IntegerConvertToNumber {
-	/// The link to the source value.
+	/// The source value.
 	pub source: Link,
 	/// Whether the source integer is signed.
-	pub signed: bool,
+	pub is_signed: bool,
 	/// The target floating-point type.
 	pub to: number::Type,
 	/// The source integer type.
@@ -116,14 +122,16 @@ impl IntegerConvertToNumber {
 	pub fn add_into(
 		nodes: &mut Vec<Node>,
 		source: Link,
-		signed: bool,
+		is_signed: bool,
 		to: number::Type,
 		from: integer::Type,
 	) -> Link {
-		let id = nodes.len().try_into().unwrap_or_else(|_| unreachable!());
+		let Ok(id) = nodes.len().try_into() else {
+			unreachable!()
+		};
 		let node = Node::IntegerConvertToNumber(Self {
 			source,
-			signed,
+			is_signed,
 			to,
 			from,
 		});
@@ -135,7 +143,7 @@ impl IntegerConvertToNumber {
 
 	handle_sources!(
 		(source, link),
-		(signed, ignore),
+		(is_signed, ignore),
 		(to, ignore),
 		(from, ignore)
 	);
@@ -144,7 +152,7 @@ impl IntegerConvertToNumber {
 /// An integer-to-floating-point bit reinterpretation node.
 #[derive(Clone, Copy)]
 pub struct IntegerTransmuteToNumber {
-	/// The link to the source value.
+	/// The source value.
 	pub source: Link,
 	/// The source integer type.
 	pub from: integer::Type,
@@ -153,7 +161,9 @@ pub struct IntegerTransmuteToNumber {
 impl IntegerTransmuteToNumber {
 	/// Adds an integer-to-floating-point reinterpretation node to the graph.
 	pub fn add_into(nodes: &mut Vec<Node>, source: Link, from: integer::Type) -> Link {
-		let id = nodes.len().try_into().unwrap_or_else(|_| unreachable!());
+		let Ok(id) = nodes.len().try_into() else {
+			unreachable!()
+		};
 		let node = Node::IntegerTransmuteToNumber(Self { source, from });
 
 		nodes.push(node);
@@ -167,14 +177,16 @@ impl IntegerTransmuteToNumber {
 /// A floating-point narrowing node from 64-bit to 32-bit.
 #[derive(Clone, Copy)]
 pub struct NumberNarrow {
-	/// The link to the source value.
+	/// The source value.
 	pub source: Link,
 }
 
 impl NumberNarrow {
 	/// Adds a floating-point narrowing node to the graph.
 	pub fn add_into(nodes: &mut Vec<Node>, source: Link) -> Link {
-		let id = nodes.len().try_into().unwrap_or_else(|_| unreachable!());
+		let Ok(id) = nodes.len().try_into() else {
+			unreachable!()
+		};
 		let node = Node::NumberNarrow(Self { source });
 
 		nodes.push(node);
@@ -188,14 +200,16 @@ impl NumberNarrow {
 /// A floating-point widening node from 32-bit to 64-bit.
 #[derive(Clone, Copy)]
 pub struct NumberWiden {
-	/// The link to the source value.
+	/// The source value.
 	pub source: Link,
 }
 
 impl NumberWiden {
 	/// Adds a floating-point widening node to the graph.
 	pub fn add_into(nodes: &mut Vec<Node>, source: Link) -> Link {
-		let id = nodes.len().try_into().unwrap_or_else(|_| unreachable!());
+		let Ok(id) = nodes.len().try_into() else {
+			unreachable!()
+		};
 		let node = Node::NumberWiden(Self { source });
 
 		nodes.push(node);
@@ -209,12 +223,12 @@ impl NumberWiden {
 /// A floating-point-to-integer truncation node.
 #[derive(Clone, Copy)]
 pub struct NumberTruncateToInteger {
-	/// The link to the source value.
+	/// The source value.
 	pub source: Link,
 	/// Whether the target integer is signed.
-	pub signed: bool,
-	/// Whether to use saturating semantics.
-	pub saturate: bool,
+	pub is_signed: bool,
+	/// True for saturating conversion; false for trapping on out-of-range.
+	pub is_saturating: bool,
 	/// The target integer type.
 	pub to: integer::Type,
 	/// The source floating-point type.
@@ -230,16 +244,18 @@ impl NumberTruncateToInteger {
 	pub fn add_into(
 		nodes: &mut Vec<Node>,
 		source: Link,
-		signed: bool,
-		saturate: bool,
+		is_signed: bool,
+		is_saturating: bool,
 		to: integer::Type,
 		from: number::Type,
 	) -> Link {
-		let id = nodes.len().try_into().unwrap_or_else(|_| unreachable!());
+		let Ok(id) = nodes.len().try_into() else {
+			unreachable!()
+		};
 		let node = Node::NumberTruncateToInteger(Self {
 			source,
-			signed,
-			saturate,
+			is_signed,
+			is_saturating,
 			to,
 			from,
 		});
@@ -251,8 +267,8 @@ impl NumberTruncateToInteger {
 
 	handle_sources!(
 		(source, link),
-		(signed, ignore),
-		(saturate, ignore),
+		(is_signed, ignore),
+		(is_saturating, ignore),
 		(to, ignore),
 		(from, ignore)
 	);
@@ -261,7 +277,7 @@ impl NumberTruncateToInteger {
 /// A floating-point-to-integer bit reinterpretation node.
 #[derive(Clone, Copy)]
 pub struct NumberTransmuteToInteger {
-	/// The link to the source value.
+	/// The source value.
 	pub source: Link,
 	/// The source floating-point type.
 	pub from: number::Type,
@@ -270,7 +286,9 @@ pub struct NumberTransmuteToInteger {
 impl NumberTransmuteToInteger {
 	/// Adds a floating-point-to-integer reinterpretation node to the graph.
 	pub fn add_into(nodes: &mut Vec<Node>, source: Link, from: number::Type) -> Link {
-		let id = nodes.len().try_into().unwrap_or_else(|_| unreachable!());
+		let Ok(id) = nodes.len().try_into() else {
+			unreachable!()
+		};
 		let node = Node::NumberTransmuteToInteger(Self { source, from });
 
 		nodes.push(node);

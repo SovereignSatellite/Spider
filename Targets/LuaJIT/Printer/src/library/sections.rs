@@ -47,20 +47,15 @@ impl Section {
 	}
 
 	/// Tries to parse a section from the given source.
-	///
-	/// # Panics
-	///
-	/// Panics if the parsed references are not sorted.
 	#[must_use]
 	pub fn try_parse(source: &'static str) -> Option<(Self, &'static str)> {
 		let (name, source) = Self::try_parse_header(source, Self::SECTION_HEADER)?;
 		let (references, source) = Self::parse_references(source);
 		let (contents, source) = Self::parse_contents(source);
 
-		assert!(
-			references.is_sorted(),
-			"references for `{name}` should be sorted"
-		);
+		if !references.is_sorted() {
+			unreachable!("references for `{name}` should be sorted")
+		}
 
 		Some((
 			Self {
@@ -75,7 +70,7 @@ impl Section {
 
 /// A collection of runtime library sections.
 pub struct Sections {
-	list: Vec<Section>,
+	entries: Vec<Section>,
 }
 
 impl Sections {
@@ -110,7 +105,9 @@ impl Sections {
 	/// Creates a new section collection with all built-in sources.
 	#[must_use]
 	pub fn with_built_ins() -> Self {
-		let mut sections = Self { list: Vec::new() };
+		let mut sections = Self {
+			entries: Vec::new(),
+		};
 
 		sections.parse_from(Self::BIT_SOURCE);
 		sections.parse_from(Self::FFI_SOURCE);
@@ -134,50 +131,43 @@ impl Sections {
 	}
 
 	/// Parses sections from a source string.
-	///
-	/// # Panics
-	///
-	/// Panics if there is trailing unparsed data.
 	pub fn parse_from(&mut self, mut source: &'static str) {
 		while let Some((section, next)) = Section::try_parse(source) {
-			self.list.push(section);
+			self.entries.push(section);
 
 			source = next;
 		}
 
-		assert!(source.is_empty(), "trailing data in source\n{source}");
+		if !source.is_empty() {
+			unreachable!("trailing data in source\n{source}")
+		}
 	}
 
 	/// Sorts and validates sections, checking for duplicates.
-	///
-	/// # Panics
-	///
-	/// Panics if duplicate section names are found.
 	pub fn resolve(&mut self) {
-		self.list.sort_unstable_by_key(|&Section { name, .. }| name);
+		self.entries
+			.sort_unstable_by_key(|&Section { name, .. }| name);
 
-		for window in self.list.windows(2) {
+		for window in self.entries.windows(2) {
 			let Section { name: lhs, .. } = window[0];
 			let Section { name: rhs, .. } = window[1];
 
-			assert_ne!(lhs, rhs, "`{lhs}` section was duplicated");
+			if lhs == rhs {
+				unreachable!("`{lhs}` section was duplicated")
+			}
 		}
 	}
 
 	/// Finds a section by name.
-	///
-	/// # Panics
-	///
-	/// Panics if the section is not found.
 	#[must_use]
 	pub fn find(&self, name: &'static str) -> &Section {
 		let Ok(position) = self
-			.list
+			.entries
 			.binary_search_by_key(&name, |&Section { name, .. }| name)
 		else {
 			unreachable!("`{name}` is not a section")
 		};
 
-		&self.list[position]
+		&self.entries[position]
 	}
 }
