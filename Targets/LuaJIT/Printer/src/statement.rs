@@ -10,7 +10,7 @@ use luajit_tree::{
 
 use super::{
 	LuaJITPrinter,
-	expression::{fmt_delimited, fmt_runtime_call, fmt_stack_enter, fmt_stack_leave},
+	expression::{fmt_delimited, fmt_locals, fmt_runtime_call, fmt_stack_enter, fmt_stack_leave},
 	library::NeedsName as _,
 	print::Print,
 };
@@ -554,7 +554,11 @@ impl Print for Sequence {
 
 impl Print for LuaJITTree {
 	fn print(&self, printer: &mut LuaJITPrinter, out: &mut dyn Write) -> Result<()> {
-		let Self { stack, code } = self;
+		let Self {
+			locals,
+			stack,
+			code,
+		} = self;
 
 		printer.tab(out)?;
 		writeln!(out, "local function module()")?;
@@ -565,6 +569,7 @@ impl Print for LuaJITTree {
 		writeln!(out, "local excess_stack = {{ top = 0 }}")?;
 
 		fmt_stack_enter(*stack, printer, out)?;
+		fmt_locals(locals, printer, out)?;
 
 		code.print(printer, out)?;
 
