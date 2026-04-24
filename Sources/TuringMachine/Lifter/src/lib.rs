@@ -183,9 +183,14 @@ impl TuringMachineLifter {
 		self.io = Link(source, 2);
 	}
 
-	fn create_false_branch(&mut self, parent: &Weak<Mutex<Match>>) -> Arc<Mutex<Branch>> {
-		Branch::create(Weak::clone(parent), |nodes, arguments| {
+	fn create_false_branch(
+		&mut self,
+		parent: &Weak<Mutex<Match>>,
+		argument_count: u16,
+	) -> Arc<Mutex<Branch>> {
+		Branch::create(Weak::clone(parent), argument_count, |nodes, arguments| {
 			self.push_all_active(arguments);
+
 			self.pull_all_active(nodes)
 		})
 	}
@@ -206,10 +211,15 @@ impl TuringMachineLifter {
 		self.push_all_active(repeat);
 	}
 
-	fn create_true_branch(&mut self, parent: &Weak<Mutex<Match>>) -> Arc<Mutex<Branch>> {
-		Branch::create(Weak::clone(parent), |nodes, arguments| {
+	fn create_true_branch(
+		&mut self,
+		parent: &Weak<Mutex<Match>>,
+		argument_count: u16,
+	) -> Arc<Mutex<Branch>> {
+		Branch::create(Weak::clone(parent), argument_count, |nodes, arguments| {
 			self.push_all_active(arguments);
 			self.create_repeat(nodes);
+
 			self.pull_all_active(nodes)
 		})
 	}
@@ -218,9 +228,9 @@ impl TuringMachineLifter {
 		let condition = self.do_condition(nodes);
 		let arguments = self.pull_all_active(nodes);
 
-		let match_id = Match::add_into(nodes, arguments, condition, |parent| {
-			let false_branch = self.create_false_branch(parent);
-			let true_branch = self.create_true_branch(parent);
+		let match_id = Match::add_into(nodes, arguments, condition, |parent, argument_count| {
+			let false_branch = self.create_false_branch(parent, argument_count);
+			let true_branch = self.create_true_branch(parent, argument_count);
 
 			vec![false_branch, true_branch]
 		});

@@ -18,6 +18,12 @@ pub struct DeadPortEliminator {
 	remap: Vec<u16>,
 }
 
+fn set_branch_argument_counts(branches: &[Arc<Mutex<Branch>>], argument_count: u16) {
+	for branch in branches {
+		branch.lock().set_argument_count(argument_count);
+	}
+}
+
 impl DeadPortEliminator {
 	/// Creates a new dead port eliminator.
 	#[must_use]
@@ -118,6 +124,20 @@ impl DeadPortEliminator {
 		self.record_outer_remap(id);
 	}
 
+	fn remap_branch_inputs(&self, branches: &[Arc<Mutex<Branch>>]) {
+		for branch in branches {
+			let mut guard = branch.lock();
+
+			self.remap_nodes(&mut guard.nodes, 0);
+		}
+	}
+
+	fn trim_match_arguments(&self, matcher: &mut Match) {
+		self.trim_slots(&mut matcher.arguments);
+
+		set_branch_argument_counts(&matcher.branches, matcher.argument_count());
+	}
+
 	fn find_match_inputs(&mut self, matcher: &mut Match) {
 		self.mark_branches(&matcher.branches);
 
@@ -125,13 +145,8 @@ impl DeadPortEliminator {
 			return;
 		}
 
-		for branch in &matcher.branches {
-			let mut guard = branch.lock();
-
-			self.remap_nodes(&mut guard.nodes, 0);
-		}
-
-		self.trim_slots(&mut matcher.arguments);
+		self.remap_branch_inputs(&matcher.branches);
+		self.trim_match_arguments(matcher);
 	}
 
 	fn find_match(&mut self, id: u32, arc: &Arc<Mutex<Match>>, nodes: &[Node]) {
@@ -141,6 +156,13 @@ impl DeadPortEliminator {
 
 		self.find_match_outputs(id, &guard);
 		self.find_match_inputs(&mut guard);
+	}
+
+	fn trim_repeat_ports(&self, repeat: &mut Repeat) {
+		self.trim_slots(&mut repeat.arguments);
+		repeat.set_argument_count(repeat.argument_count());
+
+		self.trim_slots(&mut repeat.results_mut().sources);
 	}
 
 	fn find_repeat(&mut self, id: u32, arc: &Arc<Mutex<Repeat>>, nodes: &[Node]) {
@@ -155,8 +177,7 @@ impl DeadPortEliminator {
 		}
 
 		self.remap_nodes(&mut guard.nodes, 0);
-		self.trim_slots(&mut guard.arguments);
-		self.trim_slots(&mut guard.results_mut().sources);
+		self.trim_repeat_ports(&mut guard);
 
 		drop(guard);
 

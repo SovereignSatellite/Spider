@@ -31,7 +31,8 @@ impl Function {
 		let create = |weak: &Weak<Mutex<Self>>| {
 			let mut nodes = Vec::new();
 
-			let function_arguments = Arguments::add_into(&mut nodes, Weak::clone(weak));
+			let function_arguments =
+				Arguments::add_into(&mut nodes, Weak::clone(weak), argument_count);
 			let sources = initializer(&mut nodes, function_arguments);
 
 			Results::add_into(&mut nodes, Weak::clone(weak), sources);
@@ -101,13 +102,22 @@ impl Function {
 pub struct Arguments {
 	/// The parent function.
 	pub parent: Weak<Mutex<Function>>,
+	/// The number of output ports.
+	pub result_count: u16,
 }
 
 impl Arguments {
 	/// Adds a function arguments boundary node to the region.
-	pub fn add_into(nodes: &mut Vec<Node>, parent: Weak<Mutex<Function>>) -> u32 {
+	pub fn add_into(
+		nodes: &mut Vec<Node>,
+		parent: Weak<Mutex<Function>>,
+		result_count: u16,
+	) -> u32 {
 		let id = nodes.len().try_into().unwrap_or_else(|_| unreachable!());
-		let node = Node::FunctionArguments(Self { parent });
+		let node = Node::FunctionArguments(Self {
+			parent,
+			result_count,
+		});
 
 		nodes.push(node);
 
@@ -116,11 +126,8 @@ impl Arguments {
 
 	/// Returns the number of output ports.
 	#[must_use]
-	pub fn result_count(&self) -> u16 {
-		let function = self.parent.upgrade().unwrap_or_else(|| unreachable!());
-		let guard = function.lock();
-
-		guard.argument_count
+	pub const fn result_count(&self) -> u16 {
+		self.result_count
 	}
 }
 

@@ -31,7 +31,13 @@ impl Repeat {
 		let create = |weak: &Weak<Mutex<Self>>| {
 			let mut nodes = Vec::new();
 
-			let repeat_arguments = Arguments::add_into(&mut nodes, Weak::clone(weak));
+			let argument_count = arguments
+				.len()
+				.try_into()
+				.unwrap_or_else(|_| unreachable!());
+
+			let repeat_arguments =
+				Arguments::add_into(&mut nodes, Weak::clone(weak), argument_count);
 			let (sources, condition) = initializer(&mut nodes, repeat_arguments);
 
 			Results::add_into(&mut nodes, Weak::clone(weak), sources, condition);
@@ -64,6 +70,11 @@ impl Repeat {
 			.unwrap_or_else(|_| unreachable!())
 	}
 
+	/// Updates the argument boundary arity.
+	pub fn set_argument_count(&mut self, result_count: u16) {
+		self.arguments_mut().result_count = result_count;
+	}
+
 	/// Returns the number of output ports.
 	#[must_use]
 	pub fn result_count(&self) -> u16 {
@@ -81,6 +92,25 @@ impl Repeat {
 	pub fn for_each_mut_outer<H: FnMut(&mut Link)>(&mut self, mut handler: H) {
 		for link in &mut self.arguments {
 			handler(link);
+		}
+	}
+
+	/// Returns a reference to the arguments boundary node.
+	#[must_use]
+	pub fn arguments_node(&self) -> &Arguments {
+		if let Node::RepeatArguments(arguments) = &self.nodes[Self::ARGUMENTS_ID as usize] {
+			arguments
+		} else {
+			unreachable!()
+		}
+	}
+
+	/// Returns a mutable reference to the arguments boundary node.
+	pub fn arguments_mut(&mut self) -> &mut Arguments {
+		if let Node::RepeatArguments(arguments) = &mut self.nodes[Self::ARGUMENTS_ID as usize] {
+			arguments
+		} else {
+			unreachable!()
 		}
 	}
 
@@ -127,13 +157,18 @@ impl Repeat {
 pub struct Arguments {
 	/// The parent repeat.
 	pub parent: Weak<Mutex<Repeat>>,
+	/// The number of output ports.
+	pub result_count: u16,
 }
 
 impl Arguments {
 	/// Adds a repeat arguments boundary node to the region.
-	pub fn add_into(nodes: &mut Vec<Node>, parent: Weak<Mutex<Repeat>>) -> u32 {
+	pub fn add_into(nodes: &mut Vec<Node>, parent: Weak<Mutex<Repeat>>, result_count: u16) -> u32 {
 		let id = nodes.len().try_into().unwrap_or_else(|_| unreachable!());
-		let node = Node::RepeatArguments(Self { parent });
+		let node = Node::RepeatArguments(Self {
+			parent,
+			result_count,
+		});
 
 		nodes.push(node);
 
@@ -142,10 +177,8 @@ impl Arguments {
 
 	/// Returns the number of output ports.
 	#[must_use]
-	pub fn result_count(&self) -> u16 {
-		let repeat = self.parent.upgrade().unwrap_or_else(|| unreachable!());
-
-		repeat.lock().argument_count()
+	pub const fn result_count(&self) -> u16 {
+		self.result_count
 	}
 }
 
