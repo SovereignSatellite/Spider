@@ -42,13 +42,13 @@ impl ControlFlowGraph {
 	}
 
 	/// Returns a range of all basic block identifiers.
-	///
-	/// # Panics
-	///
-	/// Panics if the number of basic blocks exceeds `u16::MAX`.
 	#[must_use]
 	pub fn block_ids(&self) -> Range<u16> {
-		0..self.basic_blocks.len().try_into().unwrap()
+		let Ok(end) = self.basic_blocks.len().try_into() else {
+			unreachable!()
+		};
+
+		0..end
 	}
 
 	/// Returns the instruction offset range for the given basic block.
@@ -75,7 +75,7 @@ impl ControlFlowGraph {
 
 	/// Returns an iterator over the acyclic predecessor block identifiers.
 	pub fn predecessors_acyclic(&self, id: u16) -> impl Iterator<Item = u16> + '_ {
-		self.predecessors(id).filter(move |&id_2| id > id_2)
+		self.predecessors(id).filter(move |&other| id > other)
 	}
 
 	/// Returns an iterator over the successor block identifiers.
@@ -88,7 +88,7 @@ impl ControlFlowGraph {
 
 	/// Returns an iterator over the acyclic successor block identifiers.
 	pub fn successors_acyclic(&self, id: u16) -> impl Iterator<Item = u16> + '_ {
-		self.successors(id).filter(move |&id_2| id < id_2)
+		self.successors(id).filter(move |&other| id < other)
 	}
 
 	/// Returns `true` if the given block is the start of a branch (diamond).
@@ -111,26 +111,26 @@ impl ControlFlowGraph {
 	#[must_use]
 	pub fn find_branch_start(&self, id: u16) -> Option<u16> {
 		self.predecessors_acyclic(id)
-			.find(|&id_2| self.is_branch_start(id_2))
+			.find(|&other| self.is_branch_start(other))
 	}
 
 	/// Finds the end of a branch (diamond) containing the given block.
 	#[must_use]
 	pub fn find_branch_end(&self, id: u16) -> Option<u16> {
 		self.successors_acyclic(id)
-			.find(|&id_2| self.is_branch_end(id_2))
+			.find(|&other| self.is_branch_end(other))
 	}
 
 	/// Finds the start of a repeat (loop) containing the given block.
 	#[must_use]
 	pub fn find_repeat_start(&self, id: u16) -> Option<u16> {
-		self.successors(id).find(|&id_2| id >= id_2)
+		self.successors(id).find(|&other| id >= other)
 	}
 
 	/// Finds the end of a repeat (loop) containing the given block.
 	#[must_use]
 	pub fn find_repeat_end(&self, id: u16) -> Option<u16> {
-		self.predecessors(id).find(|&id_2| id <= id_2)
+		self.predecessors(id).find(|&other| id <= other)
 	}
 
 	/// Returns `true` if the graph contains any repeat (loop) edges.
@@ -150,21 +150,21 @@ impl ControlFlowGraph {
 	}
 
 	/// Replaces an edge from one block to another with a new target.
-	///
-	/// # Panics
-	///
-	/// Panics if the edge from `from` to `to` does not exist.
 	pub fn replace_edge(&mut self, from: u16, to: u16, new: u16) {
 		let from_usize = usize::from(from);
 		let to_usize = usize::from(to);
 		let new_usize = usize::from(new);
 
-		let successor = self.successors(from).position(|id| id == to).unwrap();
+		let Some(successor) = self.successors(from).position(|id| id == to) else {
+			unreachable!()
+		};
 
 		self.basic_blocks[from_usize].successors[successor] = new;
 		self.basic_blocks[new_usize].predecessors.push(from);
 
-		let predecessor = self.predecessors(to).position(|id| id == from).unwrap();
+		let Some(predecessor) = self.predecessors(to).position(|id| id == from) else {
+			unreachable!()
+		};
 
 		let _removed = self.basic_blocks[to_usize].predecessors.remove(predecessor);
 	}
@@ -188,13 +188,13 @@ impl ControlFlowGraph {
 	}
 
 	/// Adds a no-operation basic block and returns its block identifier.
-	///
-	/// # Panics
-	///
-	/// Panics if the number of basic blocks exceeds `u16::MAX`.
 	pub fn add_no_operation(&mut self) -> u16 {
-		let id = self.basic_blocks.len().try_into().unwrap();
-		let position = self.instructions.len().try_into().unwrap();
+		let Ok(id) = self.basic_blocks.len().try_into() else {
+			unreachable!()
+		};
+		let Ok(position) = self.instructions.len().try_into() else {
+			unreachable!()
+		};
 
 		self.basic_blocks
 			.push(BasicBlock::from_range(position, position));
@@ -203,10 +203,6 @@ impl ControlFlowGraph {
 	}
 
 	/// Adds a selection (branch) instruction and returns its block identifier.
-	///
-	/// # Panics
-	///
-	/// Panics if the number of basic blocks or instructions exceeds `u16::MAX`.
 	pub fn add_selection(&mut self, name: Name) -> u16 {
 		let local_branch = Instruction::LocalBranch(LocalBranch {
 			source: name as u16,
@@ -216,10 +212,6 @@ impl ControlFlowGraph {
 	}
 
 	/// Adds an assignment instruction and returns its block identifier.
-	///
-	/// # Panics
-	///
-	/// Panics if the number of basic blocks or instructions exceeds `u16::MAX`.
 	pub fn add_assignment(&mut self, name: Name, value: u16) -> u16 {
 		let i32_constant = Instruction::I32Constant(I32Constant {
 			destination: name as u16,

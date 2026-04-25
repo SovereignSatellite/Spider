@@ -2,20 +2,20 @@
 
 use ir_graph::{Link, Node};
 
-/// A bidirectional link between two nodes.
+/// A directed edge from a producer port to a consumer node.
 #[derive(PartialEq, Eq, PartialOrd, Ord, Clone, Copy)]
-pub struct BiLink {
-	/// The source node ID.
+pub struct Successor {
+	/// The producer node id.
 	pub from: u32,
-	/// The source port index.
+	/// The producer port index.
 	pub port: u16,
-	/// The destination node ID.
+	/// The consumer node id.
 	pub to: u32,
 }
 
 /// Finds successor relationships in a data flow graph.
 pub struct SuccessorFinder {
-	successors: Vec<BiLink>,
+	successors: Vec<Successor>,
 }
 
 impl SuccessorFinder {
@@ -27,36 +27,36 @@ impl SuccessorFinder {
 		}
 	}
 
-	/// Returns the successors of a node by its ID.
+	/// Returns the successors of a node by its id.
 	#[must_use]
-	pub fn by_id(&self, id: u32) -> &[BiLink] {
-		let start = self.successors.partition_point(|bi| bi.from < id);
-		let end = self.successors.partition_point(|bi| bi.from <= id);
+	pub fn by_id(&self, id: u32) -> &[Successor] {
+		let start = self.successors.partition_point(|entry| entry.from < id);
+		let end = self.successors.partition_point(|entry| entry.from <= id);
 
 		&self.successors[start..end]
 	}
 
-	/// Returns the successors of a node by its link.
+	/// Returns the successors reachable from a specific producer port.
 	#[must_use]
-	pub fn by_link(&self, link: Link) -> &[BiLink] {
+	pub fn by_link(&self, link: Link) -> &[Successor] {
 		let start = self
 			.successors
-			.partition_point(|bi| Link(bi.from, bi.port) < link);
+			.partition_point(|entry| Link(entry.from, entry.port) < link);
 
 		let end = self
 			.successors
-			.partition_point(|bi| Link(bi.from, bi.port) <= link);
+			.partition_point(|entry| Link(entry.from, entry.port) <= link);
 
 		&self.successors[start..end]
 	}
 
-	/// Computes all successor relationships in the region.
+	/// Recomputes the successor table from the current region's nodes.
 	pub fn run(&mut self, nodes: &[Node]) {
 		self.successors.clear();
 
 		for (node, to) in nodes.iter().zip(0..) {
 			node.for_each_outer(|Link(from, port)| {
-				self.successors.push(BiLink { from, port, to });
+				self.successors.push(Successor { from, port, to });
 			});
 		}
 

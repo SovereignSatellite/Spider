@@ -1,4 +1,4 @@
-//! Bottom-up recursive driver for region-local passes.
+//! Recursive, post-order region traversal driver.
 
 use alloc::sync::Arc;
 
@@ -20,7 +20,7 @@ where
 	handler(region);
 }
 
-/// Applies `handle` to every region in the module, deepest first.
+/// Visits every region in the module, deepest first.
 pub fn run_module<H>(module: &Arc<Mutex<Module>>, handler: &mut H)
 where
 	H: FnMut(Region),
@@ -68,7 +68,7 @@ where
 	run_region(Region::Repeat(guard), handler);
 }
 
-/// Recursively applies `handle` to any region nested inside `node`.
+/// Visits every region reachable from `node`, deepest first.
 #[expect(clippy::too_many_lines, reason = "exhaustive match over node variants")]
 pub fn run_node<H>(node: &Node, handler: &mut H)
 where

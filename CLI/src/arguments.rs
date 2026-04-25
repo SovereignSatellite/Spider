@@ -29,5 +29,5 @@ pub struct Arguments {
 
 	/// Run all optimization passes
 	#[arg(long, short)]
-	pub optimize: bool,
+	pub should_optimize: bool,
 }

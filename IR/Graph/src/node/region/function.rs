@@ -51,7 +51,9 @@ impl Function {
 	where
 		F: FnOnce(&mut Vec<Node>, u32) -> Vec<Link>,
 	{
-		let id = nodes.len().try_into().unwrap_or_else(|_| unreachable!());
+		let Ok(id) = nodes.len().try_into() else {
+			unreachable!()
+		};
 		let node = Node::Function(Self::create(argument_count, initializer));
 
 		nodes.push(node);
@@ -92,7 +94,9 @@ impl Function {
 	/// Returns the ids of the arguments and results boundary nodes.
 	#[must_use]
 	pub fn roots(&self) -> (u32, u32) {
-		let results = u32::try_from(self.results_index()).unwrap_or_else(|_| unreachable!());
+		let Ok(results) = u32::try_from(self.results_index()) else {
+			unreachable!()
+		};
 
 		(Self::ARGUMENTS_ID, results)
 	}
@@ -113,7 +117,9 @@ impl Arguments {
 		parent: Weak<Mutex<Function>>,
 		result_count: u16,
 	) -> u32 {
-		let id = nodes.len().try_into().unwrap_or_else(|_| unreachable!());
+		let Ok(id) = nodes.len().try_into() else {
+			unreachable!()
+		};
 		let node = Node::FunctionArguments(Self {
 			parent,
 			result_count,
@@ -146,7 +152,9 @@ impl Results {
 		parent: Weak<Mutex<Function>>,
 		sources: Vec<Link>,
 	) -> u32 {
-		let id = nodes.len().try_into().unwrap_or_else(|_| unreachable!());
+		let Ok(id) = nodes.len().try_into() else {
+			unreachable!()
+		};
 		let node = Node::FunctionResults(Self { parent, sources });
 
 		nodes.push(node);

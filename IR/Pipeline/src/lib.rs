@@ -67,9 +67,9 @@ impl Optimizer {
 	}
 
 	/// Runs the optimization pipeline over every region in the module.
-	pub fn run(&mut self, module: &Arc<Mutex<Module>>, optimize: bool) {
+	pub fn run(&mut self, module: &Arc<Mutex<Module>>, should_optimize: bool) {
 		region_driver::run_module(module, &mut |mut region| {
-			if optimize {
+			if should_optimize {
 				self.apply(&mut region);
 			}
 

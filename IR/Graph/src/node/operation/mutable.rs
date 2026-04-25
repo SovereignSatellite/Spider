@@ -5,14 +5,16 @@ use crate::{Link, Node};
 /// A mutable-cell creation node.
 #[derive(Clone, Copy)]
 pub struct MutableNew {
-	/// The link to the initial value.
+	/// The initial value.
 	pub initializer: Link,
 }
 
 impl MutableNew {
 	/// Adds a mutable-cell creation node to the graph.
 	pub fn add_into(nodes: &mut Vec<Node>, initializer: Link) -> Link {
-		let id = nodes.len().try_into().unwrap_or_else(|_| unreachable!());
+		let Ok(id) = nodes.len().try_into() else {
+			unreachable!()
+		};
 		let node = Node::MutableNew(Self { initializer });
 
 		nodes.push(node);
@@ -26,7 +28,7 @@ impl MutableNew {
 /// A mutable-cell read node.
 #[derive(Clone, Copy)]
 pub struct MutableGet {
-	/// The link to the mutable cell.
+	/// The mutable cell.
 	pub source: Link,
 }
 
@@ -40,7 +42,9 @@ impl MutableGet {
 
 	/// Adds a mutable-cell read node to the graph.
 	pub fn add_into(nodes: &mut Vec<Node>, source: Link) -> (Link, Link) {
-		let id = nodes.len().try_into().unwrap_or_else(|_| unreachable!());
+		let Ok(id) = nodes.len().try_into() else {
+			unreachable!()
+		};
 		let node = Node::MutableGet(Self { source });
 
 		nodes.push(node);
@@ -54,9 +58,9 @@ impl MutableGet {
 /// A mutable-cell write node.
 #[derive(Clone, Copy)]
 pub struct MutableSet {
-	/// The link to the mutable cell.
+	/// The mutable cell.
 	pub destination: Link,
-	/// The link to the value being stored.
+	/// The value being stored.
 	pub source: Link,
 }
 
@@ -68,7 +72,9 @@ impl MutableSet {
 
 	/// Adds a mutable-cell write node to the graph.
 	pub fn add_into(nodes: &mut Vec<Node>, destination: Link, source: Link) -> Link {
-		let id = nodes.len().try_into().unwrap_or_else(|_| unreachable!());
+		let Ok(id) = nodes.len().try_into() else {
+			unreachable!()
+		};
 		let node = Node::MutableSet(Self {
 			destination,
 			source,

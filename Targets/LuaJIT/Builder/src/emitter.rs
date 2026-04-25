@@ -66,12 +66,12 @@ impl<'allocator, 'policy> Emitter<'allocator, 'policy> {
 		}
 	}
 
-	fn do_assignment(&mut self, destination: u32, source: Expression) {
+	fn emit_assignment(&mut self, destination: u32, source: Expression) {
 		if let Some(local) = self
 			.data_handler
 			.get_local(self.scope, Link(destination, 0))
 		{
-			self.code_handler.do_assign(local, source);
+			self.code_handler.emit_assign(local, source);
 		} else {
 			self.data_handler
 				.store_expression(self.scope, destination, source);
@@ -81,7 +81,7 @@ impl<'allocator, 'policy> Emitter<'allocator, 'policy> {
 	fn bridge_state(&mut self, state_link: Link, expression: Expression) {
 		let local = self.data_handler.get_local(self.scope, state_link).unwrap();
 
-		self.code_handler.do_assign(local, expression);
+		self.code_handler.emit_assign(local, expression);
 	}
 
 	fn bridge_link(&mut self, state_link: Link, source_link: Link) -> Expression {
@@ -112,7 +112,7 @@ impl<'allocator, 'policy> Emitter<'allocator, 'policy> {
 			})
 			.collect();
 
-		self.code_handler.do_local_moves(pairs);
+		self.code_handler.emit_local_moves(pairs);
 	}
 
 	fn load_function_returns(&mut self, results: &[Link], scope: usize) -> Vec<Expression> {
@@ -177,7 +177,7 @@ impl<'allocator, 'policy> Emitter<'allocator, 'policy> {
 
 		drop(function);
 
-		self.do_assignment(id, Expression::Function(inner.into()));
+		self.emit_assignment(id, Expression::Function(inner.into()));
 	}
 
 	fn load_match_result_locals(&self, id: u32, scope: usize, result_count: u16) -> Vec<Local> {
@@ -200,7 +200,7 @@ impl<'allocator, 'policy> Emitter<'allocator, 'policy> {
 		self.code_handler.push_scope();
 
 		self.code_handler
-			.do_local_moves(self.data_handler.load_local_moves(
+			.emit_local_moves(self.data_handler.load_local_moves(
 				branch_scope,
 				0,
 				&matcher.arguments,
@@ -221,7 +221,7 @@ impl<'allocator, 'policy> Emitter<'allocator, 'policy> {
 			})
 			.collect();
 
-		self.code_handler.do_local_moves(pairs);
+		self.code_handler.emit_local_moves(pairs);
 
 		drop(branch);
 
@@ -245,7 +245,7 @@ impl<'allocator, 'policy> Emitter<'allocator, 'policy> {
 
 		self.scope = parent_scope;
 
-		self.code_handler.do_match(
+		self.code_handler.emit_match(
 			branches,
 			matcher.condition,
 			parent_scope,
@@ -261,7 +261,7 @@ impl<'allocator, 'policy> Emitter<'allocator, 'policy> {
 
 		self.scope = repeat_scope;
 		self.code_handler
-			.do_local_moves(self.data_handler.load_local_moves(
+			.emit_local_moves(self.data_handler.load_local_moves(
 				repeat_scope,
 				0,
 				&repeat.arguments,
@@ -294,20 +294,20 @@ impl<'allocator, 'policy> Emitter<'allocator, 'policy> {
 			})
 			.collect();
 
-		self.code_handler.do_local_moves(pairs);
+		self.code_handler.emit_local_moves(pairs);
 	}
 
 	fn handle_repeat_results(&mut self, node: &repeat::Results) {
 		let scope = self.scope;
 
 		self.code_handler
-			.do_local_moves(
+			.emit_local_moves(
 				self.data_handler
 					.load_local_moves(scope, 0, &node.sources, scope),
 			);
 
 		self.code_handler
-			.do_repeat(node.condition, scope, &mut self.data_handler);
+			.emit_repeat(node.condition, scope, &mut self.data_handler);
 	}
 
 	pub fn emit_module(&mut self, module: &Module, scope: usize) -> LuaJITTree {
@@ -335,9 +335,9 @@ impl<'allocator, 'policy> Emitter<'allocator, 'policy> {
 	}
 
 	fn handle_wasm_import(&mut self, id: u32, node: &WasmImport) {
-		let expression = data_handler::load_wasm_import(node);
+		let expression = data_handler::build_wasm_import(node);
 
-		self.do_assignment(id, expression);
+		self.emit_assignment(id, expression);
 	}
 
 	fn handle_wasm_export(&mut self, node: &WasmExport) {
@@ -345,7 +345,7 @@ impl<'allocator, 'policy> Emitter<'allocator, 'policy> {
 		let identifier = Expression::String(Arc::clone(&node.identifier));
 
 		self.code_handler
-			.do_runtime_call("export", vec![identifier, value]);
+			.emit_runtime_call("export", vec![identifier, value]);
 	}
 
 	fn handle_turing_ask(&mut self, id: u32, node: TuringAsk) {
@@ -353,9 +353,9 @@ impl<'allocator, 'policy> Emitter<'allocator, 'policy> {
 
 		self.bridge_state(Link(id, TuringAsk::STATE_PORT), state);
 
-		let expression = data_handler::load_turing_ask();
+		let expression = data_handler::build_turing_ask();
 
-		self.do_assignment(id, expression);
+		self.emit_assignment(id, expression);
 	}
 
 	fn handle_turing_tell(&mut self, id: u32, node: TuringTell) {
@@ -366,7 +366,7 @@ impl<'allocator, 'policy> Emitter<'allocator, 'policy> {
 		let character = self.data_handler.load(self.scope, node.character);
 
 		self.code_handler
-			.do_runtime_call("turing_tell", vec![character]);
+			.emit_runtime_call("turing_tell", vec![character]);
 	}
 
 	fn handle_foreign(&mut self, id: u32, foreign: &dyn Foreign) {
@@ -386,33 +386,33 @@ impl<'allocator, 'policy> Emitter<'allocator, 'policy> {
 	}
 
 	fn handle_trap(&mut self, id: u32) {
-		self.do_assignment(id, Expression::Trap);
+		self.emit_assignment(id, Expression::Trap);
 	}
 
 	fn handle_null(&mut self, id: u32) {
-		self.do_assignment(id, Expression::Null);
+		self.emit_assignment(id, Expression::Null);
 	}
 
 	fn handle_i32_const(&mut self, id: u32, value: i32) {
-		self.do_assignment(id, Expression::I32(value));
+		self.emit_assignment(id, Expression::I32(value));
 	}
 
 	fn handle_i64_const(&mut self, id: u32, value: i64) {
-		self.do_assignment(id, Expression::I64(value));
+		self.emit_assignment(id, Expression::I64(value));
 	}
 
 	fn handle_f32_const(&mut self, id: u32, value: f32) {
-		self.do_assignment(id, Expression::F32(value));
+		self.emit_assignment(id, Expression::F32(value));
 	}
 
 	fn handle_f64_const(&mut self, id: u32, value: f64) {
-		self.do_assignment(id, Expression::F64(value));
+		self.emit_assignment(id, Expression::F64(value));
 	}
 
 	fn handle_identity(&mut self, id: u32, node: &Identity) {
 		let Identity { sources } = node;
 
-		self.code_handler.do_local_moves(
+		self.code_handler.emit_local_moves(
 			self.data_handler
 				.load_local_moves(self.scope, id, sources, self.scope),
 		);
@@ -421,7 +421,7 @@ impl<'allocator, 'policy> Emitter<'allocator, 'policy> {
 	fn handle_fence(&mut self, id: u32, node: &Fence) {
 		let Fence { sources } = node;
 
-		self.code_handler.do_local_moves(
+		self.code_handler.emit_local_moves(
 			self.data_handler
 				.load_local_moves(self.scope, id, sources, self.scope),
 		);
@@ -429,17 +429,17 @@ impl<'allocator, 'policy> Emitter<'allocator, 'policy> {
 
 	fn handle_call_statement(&mut self, id: u32, node: &Apply) {
 		self.code_handler
-			.do_call(self.scope, node, id, &mut self.data_handler);
+			.emit_call(self.scope, node, id, &mut self.data_handler);
 	}
 
 	fn handle_call_expression(&mut self, id: u32, node: &Apply) {
-		let expression = self.data_handler.load_call(self.scope, node);
+		let expression = self.data_handler.build_call(self.scope, node);
 
-		self.do_assignment(id, expression);
+		self.emit_assignment(id, expression);
 	}
 
 	fn handle_call(&mut self, id: u32, node: &Apply) {
-		if node.results == 0
+		if node.result_count == 0
 			|| self
 				.data_handler
 				.get_local(self.scope, Link(id, 0))
@@ -452,187 +452,189 @@ impl<'allocator, 'policy> Emitter<'allocator, 'policy> {
 	}
 
 	fn handle_ref_is_null(&mut self, id: u32, node: RefIsNull) {
-		let expression = self.data_handler.load_ref_is_null(self.scope, node);
+		let expression = self.data_handler.build_ref_is_null(self.scope, node);
 
-		self.do_assignment(id, expression);
+		self.emit_assignment(id, expression);
 	}
 
 	fn handle_integer_unary_operation(&mut self, id: u32, node: integer::UnaryOperation) {
 		let expression = self
 			.data_handler
-			.load_integer_unary_operation(self.scope, node);
+			.build_integer_unary_operation(self.scope, node);
 
-		self.do_assignment(id, expression);
+		self.emit_assignment(id, expression);
 	}
 
 	fn handle_integer_binary_operation(&mut self, id: u32, node: integer::BinaryOperation) {
 		let expression = self
 			.data_handler
-			.load_integer_binary_operation(self.scope, node);
+			.build_integer_binary_operation(self.scope, node);
 
-		self.do_assignment(id, expression);
+		self.emit_assignment(id, expression);
 	}
 
 	fn handle_integer_compare_operation(&mut self, id: u32, node: integer::CompareOperation) {
 		let expression = self
 			.data_handler
-			.load_integer_compare_operation(self.scope, node);
+			.build_integer_compare_operation(self.scope, node);
 
-		self.do_assignment(id, expression);
+		self.emit_assignment(id, expression);
 	}
 
 	fn handle_integer_narrow(&mut self, id: u32, node: IntegerNarrow) {
-		let expression = self.data_handler.load_integer_narrow(self.scope, node);
+		let expression = self.data_handler.build_integer_narrow(self.scope, node);
 
-		self.do_assignment(id, expression);
+		self.emit_assignment(id, expression);
 	}
 
 	fn handle_integer_widen(&mut self, id: u32, node: IntegerWiden) {
-		let expression = self.data_handler.load_integer_widen(self.scope, node);
+		let expression = self.data_handler.build_integer_widen(self.scope, node);
 
-		self.do_assignment(id, expression);
+		self.emit_assignment(id, expression);
 	}
 
 	fn handle_integer_sign_extend(&mut self, id: u32, node: IntegerSignExtend) {
-		let expression = self.data_handler.load_integer_sign_extend(self.scope, node);
+		let expression = self
+			.data_handler
+			.build_integer_sign_extend(self.scope, node);
 
-		self.do_assignment(id, expression);
+		self.emit_assignment(id, expression);
 	}
 
 	fn handle_integer_convert_to_number(&mut self, id: u32, node: IntegerConvertToNumber) {
 		let expression = self
 			.data_handler
-			.load_integer_convert_to_number(self.scope, node);
+			.build_integer_convert_to_number(self.scope, node);
 
-		self.do_assignment(id, expression);
+		self.emit_assignment(id, expression);
 	}
 
 	fn handle_integer_transmute_to_number(&mut self, id: u32, node: IntegerTransmuteToNumber) {
 		let expression = self
 			.data_handler
-			.load_integer_transmute_to_number(self.scope, node);
+			.build_integer_transmute_to_number(self.scope, node);
 
-		self.do_assignment(id, expression);
+		self.emit_assignment(id, expression);
 	}
 
 	fn handle_number_unary_operation(&mut self, id: u32, node: number::UnaryOperation) {
 		let expression = self
 			.data_handler
-			.load_number_unary_operation(self.scope, node);
+			.build_number_unary_operation(self.scope, node);
 
-		self.do_assignment(id, expression);
+		self.emit_assignment(id, expression);
 	}
 
 	fn handle_number_binary_operation(&mut self, id: u32, node: number::BinaryOperation) {
 		let expression = self
 			.data_handler
-			.load_number_binary_operation(self.scope, node);
+			.build_number_binary_operation(self.scope, node);
 
-		self.do_assignment(id, expression);
+		self.emit_assignment(id, expression);
 	}
 
 	fn handle_number_compare_operation(&mut self, id: u32, node: number::CompareOperation) {
 		let expression = self
 			.data_handler
-			.load_number_compare_operation(self.scope, node);
+			.build_number_compare_operation(self.scope, node);
 
-		self.do_assignment(id, expression);
+		self.emit_assignment(id, expression);
 	}
 
 	fn handle_number_narrow(&mut self, id: u32, node: NumberNarrow) {
-		let expression = self.data_handler.load_number_narrow(self.scope, node);
+		let expression = self.data_handler.build_number_narrow(self.scope, node);
 
-		self.do_assignment(id, expression);
+		self.emit_assignment(id, expression);
 	}
 
 	fn handle_number_widen(&mut self, id: u32, node: NumberWiden) {
-		let expression = self.data_handler.load_number_widen(self.scope, node);
+		let expression = self.data_handler.build_number_widen(self.scope, node);
 
-		self.do_assignment(id, expression);
+		self.emit_assignment(id, expression);
 	}
 
 	fn handle_number_truncate_to_integer(&mut self, id: u32, node: NumberTruncateToInteger) {
 		let expression = self
 			.data_handler
-			.load_number_truncate_to_integer(self.scope, node);
+			.build_number_truncate_to_integer(self.scope, node);
 
-		self.do_assignment(id, expression);
+		self.emit_assignment(id, expression);
 	}
 
 	fn handle_number_transmute_to_integer(&mut self, id: u32, node: NumberTransmuteToInteger) {
 		let expression = self
 			.data_handler
-			.load_number_transmute_to_integer(self.scope, node);
+			.build_number_transmute_to_integer(self.scope, node);
 
-		self.do_assignment(id, expression);
+		self.emit_assignment(id, expression);
 	}
 
 	fn handle_mutable_new(&mut self, id: u32, node: MutableNew) {
-		let expression = self.data_handler.load_mutable_new(self.scope, node);
+		let expression = self.data_handler.build_mutable_new(self.scope, node);
 
-		self.do_assignment(id, expression);
+		self.emit_assignment(id, expression);
 	}
 
 	fn handle_mutable_get(&mut self, id: u32, node: MutableGet) {
 		let source = self.bridge_link(Link(id, MutableGet::STATE_PORT), node.source);
-		let expression = data_handler::load_mutable_get(source);
+		let expression = data_handler::build_mutable_get(source);
 
-		self.do_assignment(id, expression);
+		self.emit_assignment(id, expression);
 	}
 
 	fn handle_mutable_set(&mut self, id: u32, node: MutableSet) {
 		let destination = self.bridge_link(Link(id, MutableSet::STATE_PORT), node.destination);
 		let source = self.data_handler.load(self.scope, node.source);
 
-		self.code_handler.do_mutable_set(destination, source);
+		self.code_handler.emit_mutable_set(destination, source);
 	}
 
 	fn handle_aggregate(&mut self, id: u32, node: &Aggregate) {
-		let expression = self.data_handler.load_aggregate(self.scope, node);
+		let expression = self.data_handler.build_aggregate(self.scope, node);
 
-		self.do_assignment(id, expression);
+		self.emit_assignment(id, expression);
 	}
 
 	fn handle_extract(&mut self, id: u32, node: Extract) {
-		let expression = self.data_handler.load_extract(self.scope, &node);
+		let expression = self.data_handler.build_extract(self.scope, &node);
 
-		self.do_assignment(id, expression);
+		self.emit_assignment(id, expression);
 	}
 
 	fn handle_table_new(&mut self, id: u32, node: &TableNew) {
-		let expression = self.data_handler.load_table_new(self.scope, node);
+		let expression = self.data_handler.build_table_new(self.scope, node);
 
-		self.do_assignment(id, expression);
+		self.emit_assignment(id, expression);
 	}
 
 	fn handle_table_get(&mut self, id: u32, node: TableGet) {
 		let source = self.bridge_location(Link(id, TableGet::STATE_PORT), node.source);
-		let expression = data_handler::load_table_get(source);
+		let expression = data_handler::build_table_get(source);
 
-		self.do_assignment(id, expression);
+		self.emit_assignment(id, expression);
 	}
 
 	fn handle_table_set(&mut self, id: u32, node: TableSet) {
 		let destination = self.bridge_location(Link(id, TableSet::STATE_PORT), node.destination);
 		let source = self.data_handler.load(self.scope, node.source);
 
-		self.code_handler.do_table_set(destination, source);
+		self.code_handler.emit_table_set(destination, source);
 	}
 
 	fn handle_table_size(&mut self, id: u32, node: TableSize) {
 		let source = self.bridge_link(Link(id, TableSize::STATE_PORT), node.source);
-		let expression = data_handler::load_table_size(source);
+		let expression = data_handler::build_table_size(source);
 
-		self.do_assignment(id, expression);
+		self.emit_assignment(id, expression);
 	}
 
 	fn handle_table_grow(&mut self, id: u32, node: TableGrow) {
 		let destination = self.bridge_link(Link(id, TableGrow::STATE_PORT), node.destination);
 		let initializer = self.data_handler.load(self.scope, node.initializer);
 		let size = self.data_handler.load(self.scope, node.size);
-		let expression = data_handler::load_table_grow(destination, initializer, size);
+		let expression = data_handler::build_table_grow(destination, initializer, size);
 
-		self.do_assignment(id, expression);
+		self.emit_assignment(id, expression);
 	}
 
 	fn handle_table_fill(&mut self, id: u32, node: TableFill) {
@@ -640,7 +642,7 @@ impl<'allocator, 'policy> Emitter<'allocator, 'policy> {
 		let source = self.data_handler.load(self.scope, node.source);
 		let size = self.data_handler.load(self.scope, node.size);
 
-		self.code_handler.do_table_fill(destination, source, size);
+		self.code_handler.emit_table_fill(destination, source, size);
 	}
 
 	fn handle_table_copy(&mut self, id: u32, node: TableCopy) {
@@ -651,26 +653,26 @@ impl<'allocator, 'policy> Emitter<'allocator, 'policy> {
 		let source = self.bridge_location(Link(id, TableCopy::SOURCE_STATE_PORT), node.source);
 		let size = self.data_handler.load(self.scope, node.size);
 
-		self.code_handler.do_table_copy(destination, source, size);
+		self.code_handler.emit_table_copy(destination, source, size);
 	}
 
 	fn handle_table_drop(&mut self, id: u32, node: TableDrop) {
 		let source = self.bridge_link(Link(id, TableDrop::STATE_PORT), node.source);
 
-		self.code_handler.do_table_drop(source);
+		self.code_handler.emit_table_drop(source);
 	}
 
 	fn handle_memory_new(&mut self, id: u32, node: &MemoryNew) {
 		let expression = Expression::MemoryNew(node.clone());
 
-		self.do_assignment(id, expression);
+		self.emit_assignment(id, expression);
 	}
 
 	fn handle_memory_load(&mut self, id: u32, node: MemoryLoad) {
 		let source = self.bridge_location(Link(id, MemoryLoad::STATE_PORT), node.source);
-		let expression = data_handler::load_memory_load(source, node.kind);
+		let expression = data_handler::build_memory_load(source, node.kind);
 
-		self.do_assignment(id, expression);
+		self.emit_assignment(id, expression);
 	}
 
 	fn handle_memory_store(&mut self, id: u32, node: MemoryStore) {
@@ -678,22 +680,22 @@ impl<'allocator, 'policy> Emitter<'allocator, 'policy> {
 		let source = self.data_handler.load(self.scope, node.source);
 
 		self.code_handler
-			.do_memory_store(destination, source, node.kind);
+			.emit_memory_store(destination, source, node.kind);
 	}
 
 	fn handle_memory_size(&mut self, id: u32, node: MemorySize) {
 		let source = self.bridge_link(Link(id, MemorySize::STATE_PORT), node.source);
-		let expression = data_handler::load_memory_size(source);
+		let expression = data_handler::build_memory_size(source);
 
-		self.do_assignment(id, expression);
+		self.emit_assignment(id, expression);
 	}
 
 	fn handle_memory_grow(&mut self, id: u32, node: MemoryGrow) {
 		let destination = self.bridge_link(Link(id, MemoryGrow::STATE_PORT), node.destination);
 		let size = self.data_handler.load(self.scope, node.size);
-		let expression = data_handler::load_memory_grow(destination, size);
+		let expression = data_handler::build_memory_grow(destination, size);
 
-		self.do_assignment(id, expression);
+		self.emit_assignment(id, expression);
 	}
 
 	fn handle_memory_fill(&mut self, id: u32, node: MemoryFill) {
@@ -701,7 +703,7 @@ impl<'allocator, 'policy> Emitter<'allocator, 'policy> {
 		let byte = self.data_handler.load(self.scope, node.byte);
 		let size = self.data_handler.load(self.scope, node.size);
 
-		self.code_handler.do_memory_fill(destination, byte, size);
+		self.code_handler.emit_memory_fill(destination, byte, size);
 	}
 
 	fn handle_memory_copy(&mut self, id: u32, node: MemoryCopy) {
@@ -712,13 +714,14 @@ impl<'allocator, 'policy> Emitter<'allocator, 'policy> {
 		let source = self.bridge_location(Link(id, MemoryCopy::SOURCE_STATE_PORT), node.source);
 		let size = self.data_handler.load(self.scope, node.size);
 
-		self.code_handler.do_memory_copy(destination, source, size);
+		self.code_handler
+			.emit_memory_copy(destination, source, size);
 	}
 
 	fn handle_memory_drop(&mut self, id: u32, node: MemoryDrop) {
 		let source = self.bridge_link(Link(id, MemoryDrop::STATE_PORT), node.source);
 
-		self.code_handler.do_memory_drop(source);
+		self.code_handler.emit_memory_drop(source);
 	}
 
 	#[expect(clippy::too_many_lines, reason = "exhaustive match over node variants")]

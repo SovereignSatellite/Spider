@@ -13,7 +13,7 @@ use ir_graph::{
 
 /// Eliminates unused ports from control flow region nodes.
 pub struct DeadPortEliminator {
-	map: HashMap<Link, Link>,
+	replacements: HashMap<Link, Link>,
 	live: Set,
 	remap: Vec<u16>,
 }
@@ -29,7 +29,7 @@ impl DeadPortEliminator {
 	#[must_use]
 	pub fn new() -> Self {
 		Self {
-			map: HashMap::new(),
+			replacements: HashMap::new(),
 			live: Set::new(),
 			remap: Vec::new(),
 		}
@@ -105,12 +105,12 @@ impl DeadPortEliminator {
 			let old = u16::try_from(old).unwrap();
 
 			if new != u16::MAX && new != old {
-				self.map.insert(Link(id, old), Link(id, new));
+				self.replacements.insert(Link(id, old), Link(id, new));
 			}
 		}
 	}
 
-	fn find_match_outputs(&mut self, id: u32, matcher: &Match) {
+	fn process_match_outputs(&mut self, id: u32, matcher: &Match) {
 		if !self.build_remap(matcher.result_count()) {
 			return;
 		}
@@ -138,7 +138,7 @@ impl DeadPortEliminator {
 		set_branch_argument_counts(&matcher.branches, matcher.argument_count());
 	}
 
-	fn find_match_inputs(&mut self, matcher: &mut Match) {
+	fn process_match_inputs(&mut self, matcher: &mut Match) {
 		self.mark_branches(&matcher.branches);
 
 		if !self.build_remap(matcher.argument_count()) {
@@ -149,13 +149,13 @@ impl DeadPortEliminator {
 		self.trim_match_arguments(matcher);
 	}
 
-	fn find_match(&mut self, id: u32, arc: &Arc<Mutex<Match>>, nodes: &[Node]) {
+	fn process_match(&mut self, id: u32, arc: &Arc<Mutex<Match>>, nodes: &[Node]) {
 		self.mark_external(id, nodes);
 
 		let mut guard = arc.lock();
 
-		self.find_match_outputs(id, &guard);
-		self.find_match_inputs(&mut guard);
+		self.process_match_outputs(id, &guard);
+		self.process_match_inputs(&mut guard);
 	}
 
 	fn trim_repeat_ports(&self, repeat: &mut Repeat) {
@@ -165,7 +165,7 @@ impl DeadPortEliminator {
 		self.trim_slots(&mut repeat.results_mut().sources);
 	}
 
-	fn find_repeat(&mut self, id: u32, arc: &Arc<Mutex<Repeat>>, nodes: &[Node]) {
+	fn process_repeat(&mut self, id: u32, arc: &Arc<Mutex<Repeat>>, nodes: &[Node]) {
 		self.mark_external(id, nodes);
 
 		let mut guard = arc.lock();
@@ -185,15 +185,15 @@ impl DeadPortEliminator {
 	}
 
 	#[expect(clippy::too_many_lines, reason = "exhaustive match over node variants")]
-	fn find_all(&mut self, nodes: &[Node]) {
-		self.map.clear();
+	fn process_all(&mut self, nodes: &[Node]) {
+		self.replacements.clear();
 
 		for (index, node) in nodes.iter().enumerate() {
 			let id = u32::try_from(index).unwrap();
 
 			match node {
-				Node::Match(arc) => self.find_match(id, arc, nodes),
-				Node::Repeat(arc) => self.find_repeat(id, arc, nodes),
+				Node::Match(arc) => self.process_match(id, arc, nodes),
+				Node::Repeat(arc) => self.process_repeat(id, arc, nodes),
 
 				Node::Function(_)
 				| Node::ModuleArguments(_)
@@ -255,22 +255,22 @@ impl DeadPortEliminator {
 		}
 	}
 
-	fn assign_single(&self, link: &mut Link) {
-		if let Some(&new) = self.map.get(link) {
+	fn apply_single(&self, link: &mut Link) {
+		if let Some(&new) = self.replacements.get(link) {
 			*link = new;
 		}
 	}
 
-	fn assign_all(&self, nodes: &mut [Node]) {
+	fn apply_all(&self, nodes: &mut [Node]) {
 		for node in nodes.iter_mut() {
-			node.for_each_mut_outer(|link| self.assign_single(link));
+			node.for_each_mut_outer(|link| self.apply_single(link));
 		}
 	}
 
 	/// Runs the dead port elimination pass on the region.
 	pub fn run(&mut self, nodes: &mut [Node]) {
-		self.find_all(nodes);
-		self.assign_all(nodes);
+		self.process_all(nodes);
+		self.apply_all(nodes);
 	}
 }
 

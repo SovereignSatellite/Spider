@@ -12,7 +12,7 @@ use luau_tree::{
 
 use super::{
 	assignment_simplifier::AssignmentSimplifier,
-	data_handler::{DataHandler, load_match_expression},
+	data_handler::{DataHandler, build_match_expression},
 };
 
 pub struct CodeHandler {
@@ -25,9 +25,9 @@ impl CodeHandler {
 	}
 
 	pub fn pop_scope(&mut self) -> Sequence {
-		let list = self.scopes.pop().unwrap();
+		let statements = self.scopes.pop().unwrap();
 
-		Sequence { list }
+		Sequence { statements }
 	}
 
 	pub fn push_scope(&mut self) {
@@ -38,7 +38,7 @@ impl CodeHandler {
 		self.scopes.last_mut().unwrap().push(statement);
 	}
 
-	fn do_match_statement(&mut self, condition: Expression, branches: Vec<Sequence>) {
+	fn emit_match_statement(&mut self, condition: Expression, branches: Vec<Sequence>) {
 		let statement = Statement::Match(
 			Match {
 				branches,
@@ -50,7 +50,7 @@ impl CodeHandler {
 		self.push_statement(statement);
 	}
 
-	pub fn do_match(
+	pub fn emit_match(
 		&mut self,
 		branches: Vec<Sequence>,
 		condition: Link,
@@ -65,16 +65,16 @@ impl CodeHandler {
 		};
 
 		if let Some(destination) = Sequence::as_branch_destination(&branches) {
-			let source = load_match_expression(condition, branches);
+			let source = build_match_expression(condition, branches);
 
-			self.do_assign(destination, source);
+			self.emit_assign(destination, source);
 			return;
 		}
 
-		self.do_match_statement(condition, branches);
+		self.emit_match_statement(condition, branches);
 	}
 
-	pub fn do_repeat(&mut self, condition: Link, scope: usize, data_handler: &mut DataHandler) {
+	pub fn emit_repeat(&mut self, condition: Link, scope: usize, data_handler: &mut DataHandler) {
 		let condition = data_handler.load(scope, condition);
 		let code = self.pop_scope();
 
@@ -83,7 +83,7 @@ impl CodeHandler {
 		self.push_statement(statement);
 	}
 
-	pub fn do_assign(&mut self, destination: Local, source: Expression) {
+	pub fn emit_assign(&mut self, destination: Local, source: Expression) {
 		if let Expression::Local(source) = source
 			&& destination == source
 		{
@@ -101,7 +101,7 @@ impl CodeHandler {
 		self.push_statement(statement);
 	}
 
-	pub fn do_local_moves(&mut self, pairs: Vec<(Local, Local)>) {
+	pub fn emit_local_moves(&mut self, pairs: Vec<(Local, Local)>) {
 		let scope = self.scopes.last_mut().unwrap();
 
 		let mut handler = AssignmentSimplifier::new(pairs);
@@ -131,7 +131,7 @@ impl CodeHandler {
 		});
 	}
 
-	pub fn do_call(
+	pub fn emit_call(
 		&mut self,
 		scope: usize,
 		node: &operation::Apply,
@@ -140,7 +140,7 @@ impl CodeHandler {
 	) {
 		let function = data_handler.load(scope, node.function);
 		let arguments = data_handler.load_all(scope, &node.arguments);
-		let results = data_handler.load_result_locals(scope, id, node.results);
+		let results = data_handler.load_result_locals(scope, id, node.result_count);
 
 		let statement = Statement::Call(
 			Call {
@@ -154,13 +154,13 @@ impl CodeHandler {
 		self.push_statement(statement);
 	}
 
-	pub fn do_runtime_call(&mut self, name: &'static str, arguments: Vec<Expression>) {
+	pub fn emit_runtime_call(&mut self, name: &'static str, arguments: Vec<Expression>) {
 		let statement = Statement::RuntimeCall(RuntimeCall { name, arguments }.into());
 
 		self.push_statement(statement);
 	}
 
-	pub fn do_mutable_set(&mut self, destination: Expression, source: Expression) {
+	pub fn emit_mutable_set(&mut self, destination: Expression, source: Expression) {
 		let statement = Statement::GlobalSet(
 			GlobalSet {
 				destination,
@@ -172,7 +172,7 @@ impl CodeHandler {
 		self.push_statement(statement);
 	}
 
-	pub fn do_table_set(&mut self, destination: Location, source: Expression) {
+	pub fn emit_table_set(&mut self, destination: Location, source: Expression) {
 		let statement = Statement::TableSet(
 			TableSet {
 				destination,
@@ -184,7 +184,7 @@ impl CodeHandler {
 		self.push_statement(statement);
 	}
 
-	pub fn do_table_fill(&mut self, destination: Location, source: Expression, size: Expression) {
+	pub fn emit_table_fill(&mut self, destination: Location, source: Expression, size: Expression) {
 		let statement = Statement::TableFill(
 			TableFill {
 				destination,
@@ -197,7 +197,7 @@ impl CodeHandler {
 		self.push_statement(statement);
 	}
 
-	pub fn do_table_copy(&mut self, destination: Location, source: Location, size: Expression) {
+	pub fn emit_table_copy(&mut self, destination: Location, source: Location, size: Expression) {
 		let statement = Statement::TableCopy(
 			TableCopy {
 				destination,
@@ -210,13 +210,18 @@ impl CodeHandler {
 		self.push_statement(statement);
 	}
 
-	pub fn do_table_drop(&mut self, source: Expression) {
+	pub fn emit_table_drop(&mut self, source: Expression) {
 		let statement = Statement::TableDrop(TableDrop { source }.into());
 
 		self.push_statement(statement);
 	}
 
-	pub fn do_memory_store(&mut self, destination: Location, source: Expression, kind: StoreType) {
+	pub fn emit_memory_store(
+		&mut self,
+		destination: Location,
+		source: Expression,
+		kind: StoreType,
+	) {
 		let statement = Statement::MemoryStore(
 			MemoryStore {
 				destination,
@@ -229,7 +234,7 @@ impl CodeHandler {
 		self.push_statement(statement);
 	}
 
-	pub fn do_memory_fill(&mut self, destination: Location, byte: Expression, size: Expression) {
+	pub fn emit_memory_fill(&mut self, destination: Location, byte: Expression, size: Expression) {
 		let statement = Statement::MemoryFill(
 			MemoryFill {
 				destination,
@@ -242,7 +247,7 @@ impl CodeHandler {
 		self.push_statement(statement);
 	}
 
-	pub fn do_memory_copy(&mut self, destination: Location, source: Location, size: Expression) {
+	pub fn emit_memory_copy(&mut self, destination: Location, source: Location, size: Expression) {
 		let statement = Statement::MemoryCopy(
 			MemoryCopy {
 				destination,
@@ -255,7 +260,7 @@ impl CodeHandler {
 		self.push_statement(statement);
 	}
 
-	pub fn do_memory_drop(&mut self, source: Expression) {
+	pub fn emit_memory_drop(&mut self, source: Expression) {
 		let statement = Statement::MemoryDrop(MemoryDrop { source }.into());
 
 		self.push_statement(statement);

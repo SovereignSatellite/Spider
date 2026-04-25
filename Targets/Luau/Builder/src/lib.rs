@@ -33,12 +33,7 @@ impl LuauBuilder {
 		}
 	}
 
-	/// Builds a Luau tree from the given module.
-	///
-	/// # Panics
-	///
-	/// Panics if the module does not contain valid structure;
-	/// if this happens, it is a bug.
+	/// Builds a Luau tree.
 	pub fn run(&mut self, module: &Arc<Mutex<Module>>) -> LuauTree {
 		let guard = module.lock();
 		let scope = Arc::as_ptr(module) as usize;

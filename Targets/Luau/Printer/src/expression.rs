@@ -126,10 +126,10 @@ pub fn fmt_stack_enter(size: u16, printer: &LuauPrinter, out: &mut dyn Write) ->
 		return Ok(());
 	}
 
-	printer.tab(out)?;
+	printer.write_indent(out)?;
 	writeln!(out, "local stack_top = excess_stack.top + {size}")?;
 
-	printer.tab(out)?;
+	printer.write_indent(out)?;
 	writeln!(out, "excess_stack.top = stack_top")
 }
 
@@ -138,7 +138,7 @@ pub fn fmt_stack_leave(size: u16, printer: &LuauPrinter, out: &mut dyn Write) ->
 		return Ok(());
 	}
 
-	printer.tab(out)?;
+	printer.write_indent(out)?;
 	writeln!(out, "excess_stack.top = stack_top - {size}")
 }
 
@@ -174,7 +174,7 @@ pub fn fmt_locals(names: &[Name], printer: &mut LuauPrinter, out: &mut dyn Write
 		return Ok(());
 	}
 
-	printer.tab(out)?;
+	printer.write_indent(out)?;
 	write!(out, "local ")?;
 
 	fmt_delimited(names, printer, out)?;
@@ -219,7 +219,7 @@ impl Print for Function {
 		fmt_stack_leave(*stack, printer, out)?;
 
 		if !returns.is_empty() {
-			printer.tab(out)?;
+			printer.write_indent(out)?;
 			write!(out, "return ")?;
 
 			fmt_delimited(returns, printer, out)?;
@@ -229,7 +229,7 @@ impl Print for Function {
 
 		printer.outdent();
 
-		printer.tab(out)?;
+		printer.write_indent(out)?;
 		write!(out, "end)")
 	}
 }
@@ -269,12 +269,12 @@ impl Print for i64 {
 	fn print(&self, _printer: &mut LuauPrinter, out: &mut dyn Write) -> Result<()> {
 		let [b1, b2, b3, b4, b5, b6, b7, b8] = self.to_le_bytes();
 
-		let source_1 = u32::from_le_bytes([b1, b2, b3, b4]);
-		let source_2 = u32::from_le_bytes([b5, b6, b7, b8]);
+		let low_bits = u32::from_le_bytes([b1, b2, b3, b4]);
+		let high_bits = u32::from_le_bytes([b5, b6, b7, b8]);
 
 		let intrinsic = self.needs_name();
 
-		write!(out, "{intrinsic}(0x{source_1:08X}, 0x{source_2:08X})")
+		write!(out, "{intrinsic}(0x{low_bits:08X}, 0x{high_bits:08X})")
 	}
 }
 
@@ -301,12 +301,12 @@ impl Print for f64 {
 		} else {
 			let [b1, b2, b3, b4, b5, b6, b7, b8] = self.to_le_bytes();
 
-			let source_1 = u32::from_le_bytes([b1, b2, b3, b4]);
-			let source_2 = u32::from_le_bytes([b5, b6, b7, b8]);
+			let low_bits = u32::from_le_bytes([b1, b2, b3, b4]);
+			let high_bits = u32::from_le_bytes([b5, b6, b7, b8]);
 
 			let intrinsic = self.needs_name();
 
-			write!(out, "{intrinsic}(0x{source_1:08X}, 0x{source_2:08X})")
+			write!(out, "{intrinsic}(0x{low_bits:08X}, 0x{high_bits:08X})")
 		}
 	}
 }

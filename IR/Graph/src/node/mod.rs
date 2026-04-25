@@ -234,7 +234,9 @@ macro_rules! for_each_visit {
 impl Node {
 	/// Adds a trap node to the graph.
 	pub fn add_trap_into(nodes: &mut Vec<Self>) -> Link {
-		let id = nodes.len().try_into().unwrap_or_else(|_| unreachable!());
+		let Ok(id) = nodes.len().try_into() else {
+			unreachable!()
+		};
 
 		nodes.push(Self::Trap);
 
@@ -243,7 +245,9 @@ impl Node {
 
 	/// Adds a null reference constant node to the graph.
 	pub fn add_null_into(nodes: &mut Vec<Self>) -> Link {
-		let id = nodes.len().try_into().unwrap_or_else(|_| unreachable!());
+		let Ok(id) = nodes.len().try_into() else {
+			unreachable!()
+		};
 
 		nodes.push(Self::Null);
 
@@ -251,9 +255,11 @@ impl Node {
 	}
 
 	/// Adds a 32-bit integer constant node to the graph.
-	pub fn add_i32_into(nodes: &mut Vec<Self>, source: i32) -> Link {
-		let id = nodes.len().try_into().unwrap_or_else(|_| unreachable!());
-		let node = Self::I32(source);
+	pub fn add_i32_into(nodes: &mut Vec<Self>, value: i32) -> Link {
+		let Ok(id) = nodes.len().try_into() else {
+			unreachable!()
+		};
+		let node = Self::I32(value);
 
 		nodes.push(node);
 
@@ -261,9 +267,11 @@ impl Node {
 	}
 
 	/// Adds a 64-bit integer constant node to the graph.
-	pub fn add_i64_into(nodes: &mut Vec<Self>, source: i64) -> Link {
-		let id = nodes.len().try_into().unwrap_or_else(|_| unreachable!());
-		let node = Self::I64(source);
+	pub fn add_i64_into(nodes: &mut Vec<Self>, value: i64) -> Link {
+		let Ok(id) = nodes.len().try_into() else {
+			unreachable!()
+		};
+		let node = Self::I64(value);
 
 		nodes.push(node);
 
@@ -271,9 +279,11 @@ impl Node {
 	}
 
 	/// Adds a 32-bit float constant node to the graph.
-	pub fn add_f32_into(nodes: &mut Vec<Self>, source: f32) -> Link {
-		let id = nodes.len().try_into().unwrap_or_else(|_| unreachable!());
-		let node = Self::F32(source);
+	pub fn add_f32_into(nodes: &mut Vec<Self>, value: f32) -> Link {
+		let Ok(id) = nodes.len().try_into() else {
+			unreachable!()
+		};
+		let node = Self::F32(value);
 
 		nodes.push(node);
 
@@ -281,9 +291,11 @@ impl Node {
 	}
 
 	/// Adds a 64-bit float constant node to the graph.
-	pub fn add_f64_into(nodes: &mut Vec<Self>, source: f64) -> Link {
-		let id = nodes.len().try_into().unwrap_or_else(|_| unreachable!());
-		let node = Self::F64(source);
+	pub fn add_f64_into(nodes: &mut Vec<Self>, value: f64) -> Link {
+		let Ok(id) = nodes.len().try_into() else {
+			unreachable!()
+		};
+		let node = Self::F64(value);
 
 		nodes.push(node);
 

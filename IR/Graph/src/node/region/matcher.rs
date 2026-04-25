@@ -23,10 +23,9 @@ impl Match {
 		F: FnOnce(&Weak<Mutex<Self>>, u16) -> Vec<Arc<Mutex<Branch>>>,
 	{
 		let create = |weak: &Weak<Mutex<Self>>| {
-			let argument_count = arguments
-				.len()
-				.try_into()
-				.unwrap_or_else(|_| unreachable!());
+			let Ok(argument_count) = arguments.len().try_into() else {
+				unreachable!()
+			};
 
 			let branches = initializer(weak, argument_count);
 
@@ -50,7 +49,9 @@ impl Match {
 	where
 		F: FnOnce(&Weak<Mutex<Self>>, u16) -> Vec<Arc<Mutex<Branch>>>,
 	{
-		let id = nodes.len().try_into().unwrap_or_else(|_| unreachable!());
+		let Ok(id) = nodes.len().try_into() else {
+			unreachable!()
+		};
 		let node = Node::Match(Self::create(arguments, condition, initializer));
 
 		nodes.push(node);
@@ -89,7 +90,9 @@ impl Match {
 		F: FnOnce(&mut Vec<Node>, u32) -> Vec<Link>,
 		T: FnOnce(&mut Vec<Node>, u32) -> Vec<Link>,
 	{
-		let id = nodes.len().try_into().unwrap_or_else(|_| unreachable!());
+		let Ok(id) = nodes.len().try_into() else {
+			unreachable!()
+		};
 		let node = Node::Match(Self::create_if(arguments, condition, on_false, on_true));
 
 		nodes.push(node);

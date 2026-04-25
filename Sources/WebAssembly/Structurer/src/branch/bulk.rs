@@ -7,7 +7,7 @@ use super::single::Single;
 pub struct Bulk {
 	single: Single,
 
-	infos: Vec<(u16, u16)>,
+	regions: Vec<(u16, u16)>,
 }
 
 impl Bulk {
@@ -16,7 +16,7 @@ impl Bulk {
 		Self {
 			single: Single::new(),
 
-			infos: Vec::new(),
+			regions: Vec::new(),
 		}
 	}
 
@@ -37,7 +37,7 @@ impl Bulk {
 
 	fn add_branch(&mut self, graph: &ControlFlowGraph, entry: u16, exit: u16) {
 		if let Some(branch_entry) = Self::find_next_branch(graph, entry, exit) {
-			self.infos.push((branch_entry, exit));
+			self.regions.push((branch_entry, exit));
 		}
 	}
 
@@ -54,7 +54,7 @@ impl Bulk {
 	pub fn run(&mut self, graph: &mut ControlFlowGraph, entry: u16, exit: u16) {
 		self.add_branch(graph, entry, exit);
 
-		while let Some((region_entry, region_exit)) = self.infos.pop() {
+		while let Some((region_entry, region_exit)) = self.regions.pop() {
 			self.handle_region(graph, region_entry, region_exit);
 		}
 	}

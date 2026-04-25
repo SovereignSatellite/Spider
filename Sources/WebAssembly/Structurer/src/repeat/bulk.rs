@@ -7,7 +7,7 @@ use super::{single::Single, strongly_connected_finder::StronglyConnectedFinder};
 pub struct Bulk {
 	single: Single,
 
-	infos: Vec<(u16, u16)>,
+	regions: Vec<(u16, u16)>,
 	strongly_connected_finder: StronglyConnectedFinder,
 }
 
@@ -17,14 +17,14 @@ impl Bulk {
 		Self {
 			single: Single::new(),
 
-			infos: Vec::new(),
+			regions: Vec::new(),
 			strongly_connected_finder: StronglyConnectedFinder::new(),
 		}
 	}
 
 	#[must_use]
-	pub fn infos(&self) -> &[(u16, u16)] {
-		&self.infos
+	pub fn regions(&self) -> &[(u16, u16)] {
+		&self.regions
 	}
 
 	fn handle_region(&mut self, graph: &mut ControlFlowGraph, entry: u16, exit: u16) {
@@ -32,19 +32,19 @@ impl Bulk {
 		self.strongly_connected_finder.for_each(|region| {
 			let item = self.single.run(graph, region);
 
-			self.infos.push(item);
+			self.regions.push(item);
 		});
 	}
 
 	pub fn run(&mut self, graph: &mut ControlFlowGraph, entry: u16, exit: u16) {
 		let mut index = 0;
 
-		self.infos.clear();
+		self.regions.clear();
 
 		self.handle_region(graph, entry, exit);
 
-		while index < self.infos.len() {
-			let (region_entry, latch) = self.infos[index];
+		while index < self.regions.len() {
+			let (region_entry, latch) = self.regions[index];
 
 			index += 1;
 

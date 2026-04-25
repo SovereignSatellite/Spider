@@ -22,15 +22,15 @@ pub enum UnaryOperator {
 	/// Population count.
 	CountOnes,
 	/// Count of leading zero bits.
-	LeadingZeroes,
+	LeadingZeros,
 	/// Count of trailing zero bits.
-	TrailingZeroes,
+	TrailingZeros,
 }
 
 /// An integer unary operation node.
 #[derive(Clone, Copy)]
 pub struct UnaryOperation {
-	/// The link to the source value.
+	/// The source value.
 	pub source: Link,
 	/// The integer type of the operation.
 	pub kind: Type,
@@ -46,7 +46,9 @@ impl UnaryOperation {
 		kind: Type,
 		operator: UnaryOperator,
 	) -> Link {
-		let id = nodes.len().try_into().unwrap_or_else(|_| unreachable!());
+		let Ok(id) = nodes.len().try_into() else {
+			unreachable!()
+		};
 		let node = Node::IntegerUnaryOperation(Self {
 			source,
 			kind,
@@ -73,12 +75,12 @@ pub enum BinaryOperator {
 	/// Division.
 	Divide {
 		/// Whether the operands are treated as signed.
-		signed: bool,
+		is_signed: bool,
 	},
 	/// Remainder.
 	Remainder {
 		/// Whether the operands are treated as signed.
-		signed: bool,
+		is_signed: bool,
 	},
 	/// Bitwise AND.
 	And,
@@ -91,7 +93,7 @@ pub enum BinaryOperator {
 	/// Right shift.
 	ShiftRight {
 		/// Whether the shift is arithmetic.
-		signed: bool,
+		is_signed: bool,
 	},
 	/// Left rotation.
 	RotateLeft,
@@ -121,7 +123,9 @@ impl BinaryOperation {
 		kind: Type,
 		operator: BinaryOperator,
 	) -> Link {
-		let id = nodes.len().try_into().unwrap_or_else(|_| unreachable!());
+		let Ok(id) = nodes.len().try_into() else {
+			unreachable!()
+		};
 		let node = Node::IntegerBinaryOperation(Self {
 			lhs,
 			rhs,
@@ -147,22 +151,22 @@ pub enum CompareOperator {
 	/// Less than.
 	LessThan {
 		/// Whether the comparison is signed.
-		signed: bool,
+		is_signed: bool,
 	},
 	/// Greater than.
 	GreaterThan {
 		/// Whether the comparison is signed.
-		signed: bool,
+		is_signed: bool,
 	},
 	/// Less than or equal.
 	LessThanEqual {
 		/// Whether the comparison is signed.
-		signed: bool,
+		is_signed: bool,
 	},
 	/// Greater than or equal.
 	GreaterThanEqual {
 		/// Whether the comparison is signed.
-		signed: bool,
+		is_signed: bool,
 	},
 }
 
@@ -188,7 +192,9 @@ impl CompareOperation {
 		kind: Type,
 		operator: CompareOperator,
 	) -> Link {
-		let id = nodes.len().try_into().unwrap_or_else(|_| unreachable!());
+		let Ok(id) = nodes.len().try_into() else {
+			unreachable!()
+		};
 		let node = Node::IntegerCompareOperation(Self {
 			lhs,
 			rhs,

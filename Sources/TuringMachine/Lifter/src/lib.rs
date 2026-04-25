@@ -57,7 +57,7 @@ pub struct TuringMachineLifter {
 	store: Link,
 	offset: Link,
 
-	io: Link,
+	io_state: Link,
 
 	operators: Vec<Operator>,
 }
@@ -71,7 +71,7 @@ impl TuringMachineLifter {
 			store: Link::DANGLING,
 			offset: Link::DANGLING,
 
-			io: Link::DANGLING,
+			io_state: Link::DANGLING,
 
 			operators: Vec::new(),
 		}
@@ -96,7 +96,7 @@ impl TuringMachineLifter {
 		}
 	}
 
-	fn do_load(&mut self, nodes: &mut Vec<Node>) -> Link {
+	fn emit_load(&mut self, nodes: &mut Vec<Node>) -> Link {
 		let source = Location {
 			reference: self.store,
 			offset: self.offset,
@@ -108,7 +108,7 @@ impl TuringMachineLifter {
 		result
 	}
 
-	fn do_store(&mut self, nodes: &mut Vec<Node>, source: Link) {
+	fn emit_store(&mut self, nodes: &mut Vec<Node>, source: Link) {
 		let destination = Location {
 			reference: self.reconcile_store(nodes),
 			offset: self.offset,
@@ -117,8 +117,8 @@ impl TuringMachineLifter {
 		self.store = MemoryStore::add_into(nodes, destination, source, StoreType::I32);
 	}
 
-	fn do_condition(&mut self, nodes: &mut Vec<Node>) -> Link {
-		let lhs = self.do_load(nodes);
+	fn emit_condition(&mut self, nodes: &mut Vec<Node>) -> Link {
+		let lhs = self.emit_load(nodes);
 		let rhs = Node::add_i32_into(nodes, 0);
 
 		integer::CompareOperation::add_into(
@@ -151,36 +151,36 @@ impl TuringMachineLifter {
 		nodes: &mut Vec<Node>,
 		operator: integer::BinaryOperator,
 	) {
-		let lhs = self.do_load(nodes);
+		let lhs = self.emit_load(nodes);
 		let rhs = Node::add_i32_into(nodes, 1);
 		let source =
 			integer::BinaryOperation::add_into(nodes, lhs, rhs, integer::Type::I32, operator);
 
-		self.do_store(nodes, source);
+		self.emit_store(nodes, source);
 	}
 
 	fn handle_ask(&mut self, nodes: &mut Vec<Node>) {
-		let (character, io) = Ask::add_into(nodes, self.io);
+		let (character, next_state) = Ask::add_into(nodes, self.io_state);
 
-		self.io = io;
+		self.io_state = next_state;
 
-		self.do_store(nodes, character);
+		self.emit_store(nodes, character);
 	}
 
 	fn handle_tell(&mut self, nodes: &mut Vec<Node>) {
-		let source = self.do_load(nodes);
+		let source = self.emit_load(nodes);
 
-		self.io = Tell::add_into(nodes, self.io, source);
+		self.io_state = Tell::add_into(nodes, self.io_state, source);
 	}
 
-	fn pull_all_active(&mut self, nodes: &mut Vec<Node>) -> Vec<Link> {
-		vec![self.reconcile_store(nodes), self.offset, self.io]
+	fn capture_state(&mut self, nodes: &mut Vec<Node>) -> Vec<Link> {
+		vec![self.reconcile_store(nodes), self.offset, self.io_state]
 	}
 
-	const fn push_all_active(&mut self, source: u32) {
+	const fn rebind_state(&mut self, source: u32) {
 		self.store = Link(source, 0);
 		self.offset = Link(source, 1);
-		self.io = Link(source, 2);
+		self.io_state = Link(source, 2);
 	}
 
 	fn create_false_branch(
@@ -189,26 +189,26 @@ impl TuringMachineLifter {
 		argument_count: u16,
 	) -> Arc<Mutex<Branch>> {
 		Branch::create(Weak::clone(parent), argument_count, |nodes, arguments| {
-			self.push_all_active(arguments);
+			self.rebind_state(arguments);
 
-			self.pull_all_active(nodes)
+			self.capture_state(nodes)
 		})
 	}
 
 	fn create_repeat(&mut self, nodes: &mut Vec<Node>) {
-		let arguments = self.pull_all_active(nodes);
+		let arguments = self.capture_state(nodes);
 
 		let repeat = Repeat::add_into(nodes, arguments, |nodes, repeat_arguments| {
-			self.push_all_active(repeat_arguments);
+			self.rebind_state(repeat_arguments);
 			self.handle_code(nodes);
 
-			let condition = self.do_condition(nodes);
-			let results = self.pull_all_active(nodes);
+			let condition = self.emit_condition(nodes);
+			let results = self.capture_state(nodes);
 
 			(results, condition)
 		});
 
-		self.push_all_active(repeat);
+		self.rebind_state(repeat);
 	}
 
 	fn create_true_branch(
@@ -217,16 +217,16 @@ impl TuringMachineLifter {
 		argument_count: u16,
 	) -> Arc<Mutex<Branch>> {
 		Branch::create(Weak::clone(parent), argument_count, |nodes, arguments| {
-			self.push_all_active(arguments);
+			self.rebind_state(arguments);
 			self.create_repeat(nodes);
 
-			self.pull_all_active(nodes)
+			self.capture_state(nodes)
 		})
 	}
 
 	fn handle_block(&mut self, nodes: &mut Vec<Node>) {
-		let condition = self.do_condition(nodes);
-		let arguments = self.pull_all_active(nodes);
+		let condition = self.emit_condition(nodes);
+		let arguments = self.capture_state(nodes);
 
 		let match_id = Match::add_into(nodes, arguments, condition, |parent, argument_count| {
 			let false_branch = self.create_false_branch(parent, argument_count);
@@ -235,7 +235,7 @@ impl TuringMachineLifter {
 			vec![false_branch, true_branch]
 		});
 
-		self.push_all_active(match_id);
+		self.rebind_state(match_id);
 	}
 
 	fn handle_code(&mut self, nodes: &mut Vec<Node>) {
@@ -275,12 +275,12 @@ impl TuringMachineLifter {
 		);
 
 		Module::create(|nodes, arguments| {
-			self.io = Link(arguments, module::Arguments::STATE_PORT);
+			self.io_state = Link(arguments, module::Arguments::STATE_PORT);
 
 			self.create_memory(nodes);
 			self.handle_code(nodes);
 
-			vec![self.io]
+			vec![self.io_state]
 		})
 	}
 }

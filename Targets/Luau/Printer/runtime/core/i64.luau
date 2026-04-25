@@ -13,21 +13,21 @@ local function rt_count_ones_i64(source: number): number
 	return source
 end
 
--- SECTION leading_zeroes_i64
+-- SECTION leading_zeros_i64
 -- NEEDS into_bits_i64
--- NEEDS raw_leading_zeroes_i64
-local function rt_leading_zeroes_i64(source: number): number
-	source = raw_leading_zeroes_i64(source)
+-- NEEDS raw_leading_zeros_i64
+local function rt_leading_zeros_i64(source: number): number
+	source = raw_leading_zeros_i64(source)
 	source = into_bits_i64(source, 0)
 
 	return source
 end
 
--- SECTION trailing_zeroes_i64
+-- SECTION trailing_zeros_i64
 -- NEEDS into_bits_i64
--- NEEDS raw_trailing_zeroes_i64
-local function rt_trailing_zeroes_i64(source: number): number
-	source = raw_trailing_zeroes_i64(source)
+-- NEEDS raw_trailing_zeros_i64
+local function rt_trailing_zeros_i64(source: number): number
+	source = raw_trailing_zeros_i64(source)
 	source = into_bits_i64(source, 0)
 
 	return source
@@ -169,35 +169,35 @@ end
 -- NEEDS I64_0000_0000_0000_0001
 -- NEEDS convert_u64_to_f64
 -- NEEDS greater_than_equal_u64
--- NEEDS is_all_zeroes
+-- NEEDS is_all_zeros
 -- NEEDS or_i64
--- NEEDS raw_leading_zeroes_i64
+-- NEEDS raw_leading_zeros_i64
 -- NEEDS raw_shift_left_i64
 -- NEEDS subtract_i64
 -- NEEDS truncate_f64_to_u64
 local function rt_divide_u64(lhs: number, rhs: number): number
-	if is_all_zeroes(rhs) then
+	if is_all_zeros(rhs) then
 		error("integer divide by zero")
 	end
 
-	local lhs_zeroes = raw_leading_zeroes_i64(lhs)
-	local rhs_zeroes = raw_leading_zeroes_i64(rhs)
+	local lhs_zeros = raw_leading_zeros_i64(lhs)
+	local rhs_zeros = raw_leading_zeros_i64(rhs)
 
-	if lhs_zeroes >= 11 and rhs_zeroes >= 11 then
+	if lhs_zeros >= 11 and rhs_zeros >= 11 then
 		lhs = rt_convert_u64_to_f64(lhs)
 		rhs = rt_convert_u64_to_f64(rhs)
 
 		local result = rt_truncate_f64_to_u64(lhs / rhs)
 
 		return result
-	elseif lhs_zeroes > rhs_zeroes then
+	elseif lhs_zeros > rhs_zeros then
 		return 0
 	end
 
 	local quotient = 0
 	local remainder = lhs
 
-	for offset = rhs_zeroes - lhs_zeroes, 0, -1 do
+	for offset = rhs_zeros - lhs_zeros, 0, -1 do
 		local divisor = raw_shift_left_i64(rhs, offset)
 
 		if rt_greater_than_equal_u64(remainder, divisor) then
@@ -237,33 +237,33 @@ end
 -- SECTION remainder_u64
 -- NEEDS convert_u64_to_f64
 -- NEEDS greater_than_equal_u64
--- NEEDS is_all_zeroes
--- NEEDS raw_leading_zeroes_i64
+-- NEEDS is_all_zeros
+-- NEEDS raw_leading_zeros_i64
 -- NEEDS raw_shift_left_i64
 -- NEEDS subtract_i64
 -- NEEDS truncate_f64_to_u64
 local function rt_remainder_u64(lhs: number, rhs: number): number
-	if is_all_zeroes(rhs) then
+	if is_all_zeros(rhs) then
 		error("integer divide by zero")
 	end
 
-	local lhs_zeroes = raw_leading_zeroes_i64(lhs)
-	local rhs_zeroes = raw_leading_zeroes_i64(rhs)
+	local lhs_zeros = raw_leading_zeros_i64(lhs)
+	local rhs_zeros = raw_leading_zeros_i64(rhs)
 
-	if lhs_zeroes >= 11 and rhs_zeroes >= 11 then
+	if lhs_zeros >= 11 and rhs_zeros >= 11 then
 		lhs = rt_convert_u64_to_f64(lhs)
 		rhs = rt_convert_u64_to_f64(rhs)
 
 		local result = rt_truncate_f64_to_u64(lhs % rhs)
 
 		return result
-	elseif lhs_zeroes > rhs_zeroes then
+	elseif lhs_zeros > rhs_zeros then
 		return lhs
 	end
 
 	local remainder = lhs
 
-	for offset = rhs_zeroes - lhs_zeroes, 0, -1 do
+	for offset = rhs_zeros - lhs_zeros, 0, -1 do
 		local divisor = raw_shift_left_i64(rhs, offset)
 
 		if rt_greater_than_equal_u64(remainder, divisor) then

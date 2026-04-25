@@ -95,15 +95,15 @@ impl FunctionLifter {
 		references::track(&mut self.dependencies, &self.graph.instructions);
 
 		let captures = global_state.get_dependencies(&self.dependencies);
-		let total_result_count = result_count
-			.checked_add(1)
-			.unwrap_or_else(|| unreachable!());
+		let Some(total_result_count) = result_count.checked_add(1) else {
+			unreachable!()
+		};
 		let stack_size = self
 			.local_tracker
 			.run(&mut self.locals, &self.graph, total_result_count);
-		let total_argument_count = argument_count
-			.checked_add(2)
-			.unwrap_or_else(|| unreachable!());
+		let Some(total_argument_count) = argument_count.checked_add(2) else {
+			unreachable!()
+		};
 
 		let state = Aggregate::add_into(nodes, captures);
 		let function = Function::add_into(nodes, total_argument_count, |inner_nodes, arguments| {

@@ -331,14 +331,14 @@ impl CodeBuilder {
 		&mut self,
 		destination: u16,
 		source: u16,
-		signed: bool,
+		is_signed: bool,
 		to: number::Type,
 		from: integer::Type,
 	) {
 		let instruction = Instruction::IntegerConvertToNumber(IntegerConvertToNumber {
 			destination,
 			source,
-			signed,
+			is_signed,
 			to,
 			from,
 		});
@@ -438,16 +438,16 @@ impl CodeBuilder {
 		&mut self,
 		destination: u16,
 		source: u16,
-		signed: bool,
-		saturate: bool,
+		is_signed: bool,
+		is_saturating: bool,
 		to: integer::Type,
 		from: number::Type,
 	) {
 		let instruction = Instruction::NumberTruncateToInteger(NumberTruncateToInteger {
 			destination,
 			source,
-			signed,
-			saturate,
+			is_signed,
+			is_saturating,
 			to,
 			from,
 		});
@@ -625,7 +625,7 @@ impl CodeBuilder {
 			destination,
 			destination,
 			SHARED_LOCAL,
-			integer::BinaryOperator::Divide { signed: false },
+			integer::BinaryOperator::Divide { is_signed: false },
 		);
 	}
 
@@ -662,7 +662,7 @@ impl CodeBuilder {
 					destination,
 					destination,
 					SHARED_LOCAL,
-					integer::BinaryOperator::Divide { signed: false },
+					integer::BinaryOperator::Divide { is_signed: false },
 				);
 			},
 			|_| {},
@@ -676,7 +676,7 @@ impl CodeBuilder {
 			SHARED_LOCAL,
 			size,
 			page_limit,
-			integer::CompareOperator::LessThanEqual { signed: false },
+			integer::CompareOperator::LessThanEqual { is_signed: false },
 		);
 
 		self.add_if(
@@ -771,9 +771,9 @@ impl CodeBuilder {
 		// Levels with destinations need to point to it, while levels
 		// without it simply defer to the next basic block after all
 		// adjustments have been completed.
-		if let Some(dest) = destination {
+		if let Some(target) = destination {
 			self.add_jump_adjustments(base, parameters, &mut jumps);
-			self.set_jump_destinations(dest, &jumps);
+			self.set_jump_destinations(target, &jumps);
 		} else {
 			self.add_jump_adjustments(base, results, &mut jumps);
 

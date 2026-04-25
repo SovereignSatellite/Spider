@@ -11,7 +11,7 @@ pub enum Color {
 
 impl Color {
 	#[expect(clippy::too_many_lines, reason = "exhaustive match over node variants")]
-	pub const fn from_reference(node: &Node) -> Self {
+	pub const fn from_node(node: &Node) -> Self {
 		match node {
 			Node::Function(_) | Node::FunctionArguments(_) | Node::FunctionResults(_) => Self::Blue,
 			Node::Match(_) | Node::BranchArguments(_) | Node::BranchResults(_) => Self::Green,
@@ -68,7 +68,7 @@ impl Color {
 		}
 	}
 
-	pub const fn as_string(self) -> &'static str {
+	pub const fn as_css_color(self) -> &'static str {
 		match self {
 			Self::Blue => "#8BB1F9",
 			Self::Green => "#A1FC8F",

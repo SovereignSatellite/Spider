@@ -25,7 +25,9 @@ impl Import {
 
 	/// Adds an `Import` node to the graph.
 	pub fn add_into(nodes: &mut Vec<Node>, namespace: Arc<str>, identifier: Arc<str>) -> Link {
-		let id = nodes.len().try_into().unwrap_or_else(|_| unreachable!());
+		let Ok(id) = nodes.len().try_into() else {
+			unreachable!()
+		};
 		let node = Node::Foreign(Box::new(Self {
 			namespace,
 			identifier,
@@ -63,7 +65,9 @@ impl Export {
 
 	/// Adds an `Export` node to the graph and returns its state edge.
 	pub fn add_into(nodes: &mut Vec<Node>, identifier: Arc<str>, value: Link) -> Link {
-		let id = nodes.len().try_into().unwrap_or_else(|_| unreachable!());
+		let Ok(id) = nodes.len().try_into() else {
+			unreachable!()
+		};
 		let node = Node::Foreign(Box::new(Self { identifier, value }));
 
 		nodes.push(node);

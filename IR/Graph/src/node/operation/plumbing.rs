@@ -19,7 +19,9 @@ pub struct Identity {
 impl Identity {
 	/// Adds an identity node to the graph.
 	pub fn add_into(nodes: &mut Vec<Node>, sources: Resizable<Link, 4>) -> u32 {
-		let id = nodes.len().try_into().unwrap_or_else(|_| unreachable!());
+		let Ok(id) = nodes.len().try_into() else {
+			unreachable!()
+		};
 		let node = Node::Identity(Self { sources });
 
 		nodes.push(node);
@@ -48,7 +50,9 @@ pub struct Fence {
 impl Fence {
 	/// Adds a fence node to the graph.
 	pub fn add_into(nodes: &mut Vec<Node>, sources: Resizable<Link, 4>) -> u32 {
-		let id = nodes.len().try_into().unwrap_or_else(|_| unreachable!());
+		let Ok(id) = nodes.len().try_into() else {
+			unreachable!()
+		};
 		let node = Node::Fence(Self { sources });
 
 		nodes.push(node);
@@ -70,12 +74,12 @@ impl Fence {
 
 /// A function application node.
 pub struct Apply {
-	/// The link to the function being applied.
+	/// The function being applied.
 	pub function: Link,
-	/// The argument links passed to the function.
+	/// The argument values passed to the function.
 	pub arguments: Vec<Link>,
 	/// The number of results produced.
-	pub results: u16,
+	pub result_count: u16,
 }
 
 impl Apply {
@@ -84,13 +88,15 @@ impl Apply {
 		nodes: &mut Vec<Node>,
 		function: Link,
 		arguments: Vec<Link>,
-		results: u16,
+		result_count: u16,
 	) -> u32 {
-		let id = nodes.len().try_into().unwrap_or_else(|_| unreachable!());
+		let Ok(id) = nodes.len().try_into() else {
+			unreachable!()
+		};
 		let node = Node::Apply(Self {
 			function,
 			arguments,
-			results,
+			result_count,
 		});
 
 		nodes.push(node);
@@ -101,23 +107,29 @@ impl Apply {
 	/// Returns the number of output ports.
 	#[must_use]
 	pub const fn result_count(&self) -> u16 {
-		self.results
+		self.result_count
 	}
 
-	handle_sources!((function, link), (arguments, link_list), (results, ignore));
+	handle_sources!(
+		(function, link),
+		(arguments, link_list),
+		(result_count, ignore)
+	);
 }
 
 /// A reference null check node.
 #[derive(Clone, Copy)]
 pub struct RefIsNull {
-	/// The link to the reference being checked.
+	/// The reference being checked.
 	pub source: Link,
 }
 
 impl RefIsNull {
 	/// Adds a reference null check node to the graph.
 	pub fn add_into(nodes: &mut Vec<Node>, source: Link) -> Link {
-		let id = nodes.len().try_into().unwrap_or_else(|_| unreachable!());
+		let Ok(id) = nodes.len().try_into() else {
+			unreachable!()
+		};
 		let node = Node::RefIsNull(Self { source });
 
 		nodes.push(node);

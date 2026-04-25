@@ -50,10 +50,10 @@ pub fn fmt_stack_enter(size: u16, printer: &LuaJITPrinter, out: &mut dyn Write) 
 		return Ok(());
 	}
 
-	printer.tab(out)?;
+	printer.write_indent(out)?;
 	writeln!(out, "local stack_top = excess_stack.top + {size}")?;
 
-	printer.tab(out)?;
+	printer.write_indent(out)?;
 	writeln!(out, "excess_stack.top = stack_top")
 }
 
@@ -62,7 +62,7 @@ pub fn fmt_stack_leave(size: u16, printer: &LuaJITPrinter, out: &mut dyn Write) 
 		return Ok(());
 	}
 
-	printer.tab(out)?;
+	printer.write_indent(out)?;
 	writeln!(out, "excess_stack.top = stack_top - {size}")
 }
 
@@ -80,7 +80,7 @@ pub fn fmt_locals(names: &[Name], printer: &mut LuaJITPrinter, out: &mut dyn Wri
 		return Ok(());
 	}
 
-	printer.tab(out)?;
+	printer.write_indent(out)?;
 	write!(out, "local ")?;
 
 	fmt_delimited(names, printer, out)?;
@@ -125,7 +125,7 @@ impl Print for Function {
 		fmt_stack_leave(*stack, printer, out)?;
 
 		if !returns.is_empty() {
-			printer.tab(out)?;
+			printer.write_indent(out)?;
 			write!(out, "return ")?;
 
 			fmt_delimited(returns, printer, out)?;
@@ -135,7 +135,7 @@ impl Print for Function {
 
 		printer.outdent();
 
-		printer.tab(out)?;
+		printer.write_indent(out)?;
 		write!(out, "end)")
 	}
 }

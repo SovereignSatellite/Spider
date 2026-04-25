@@ -1,6 +1,6 @@
 pub use ir_graph::operation::{ExtendType, LoadType, StoreType, integer, number};
 
-/// Local variable names used as branch conditions.
+/// Reserved local-variable slots used as branch conditions and assignment scratch.
 #[derive(PartialEq, Eq, Clone, Copy)]
 #[expect(
 	clippy::min_ident_chars,
@@ -195,7 +195,7 @@ pub struct IntegerConvertToNumber {
 	pub source: u16,
 
 	/// Whether the source integer is signed.
-	pub signed: bool,
+	pub is_signed: bool,
 	/// The target floating-point type.
 	pub to: number::Type,
 	/// The source integer type.
@@ -269,9 +269,9 @@ pub struct NumberTruncateToInteger {
 	pub source: u16,
 
 	/// Whether the target integer is signed.
-	pub signed: bool,
-	/// Whether to use saturating semantics.
-	pub saturate: bool,
+	pub is_signed: bool,
+	/// True for saturating conversion; false for trapping on out-of-range.
+	pub is_saturating: bool,
 	/// The target integer type.
 	pub to: integer::Type,
 	/// The source floating-point type.

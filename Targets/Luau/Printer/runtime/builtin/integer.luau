@@ -34,12 +34,12 @@ local function convert_f64_to_u64(source: number): number
 	return source
 end
 
--- SECTION raw_leading_zeroes_i64
+-- SECTION raw_leading_zeros_i64
 -- NEEDS bit32_countlz
 -- NEEDS buffer_read_u32
 -- NEEDS buffer_write_f64
 -- NEEDS transmute_n64
-local function raw_leading_zeroes_i64(source: number): number
+local function raw_leading_zeros_i64(source: number): number
 	buffer_write_f64(TRANSMUTE_N64, 0, source)
 
 	source = buffer_read_u32(TRANSMUTE_N64, 4)
@@ -54,12 +54,12 @@ local function raw_leading_zeroes_i64(source: number): number
 	return source
 end
 
--- SECTION raw_trailing_zeroes_i64
+-- SECTION raw_trailing_zeros_i64
 -- NEEDS bit32_countrz
 -- NEEDS buffer_read_u32
 -- NEEDS buffer_write_f64
 -- NEEDS transmute_n64
-local function raw_trailing_zeroes_i64(source: number): number
+local function raw_trailing_zeros_i64(source: number): number
 	buffer_write_f64(TRANSMUTE_N64, 0, source)
 
 	source = buffer_read_u32(TRANSMUTE_N64, 0)

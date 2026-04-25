@@ -16,18 +16,18 @@ mod sources;
 mod targets;
 
 fn lock_standard_output() -> BufWriter<StdoutLock<'static>> {
-	const DEFAULT_BUF_SIZE: usize = 1024 * 1024;
+	const DEFAULT_BUFFER_SIZE: usize = 1024 * 1024;
 
-	BufWriter::with_capacity(DEFAULT_BUF_SIZE, std::io::stdout().lock())
+	BufWriter::with_capacity(DEFAULT_BUFFER_SIZE, std::io::stdout().lock())
 }
 
-fn build_module(data: &[u8], optimize: bool, source: Source) -> Arc<Mutex<Module>> {
+fn build_module(data: &[u8], should_optimize: bool, source: Source) -> Arc<Mutex<Module>> {
 	let module = match source {
 		Source::TuringMachine => sources::from_turing_machine(data),
 		Source::WebAssembly => sources::from_web_assembly(data),
 	};
 
-	Optimizer::new().run(&module, optimize);
+	Optimizer::new().run(&module, should_optimize);
 
 	module
 }
@@ -49,11 +49,11 @@ fn main() {
 		file,
 		source,
 		target,
-		optimize,
+		should_optimize,
 	} = Arguments::parse();
 
 	let data = std::fs::read(file).expect("failed to read file");
-	let module = build_module(&data, optimize, source);
+	let module = build_module(&data, should_optimize, source);
 
 	print_module(&module, target);
 }

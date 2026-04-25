@@ -8,9 +8,9 @@ use std::{
 };
 
 fn poll_until_timeout(child: &mut Child, duration: Duration) -> Result<ExitStatus> {
-	let now = Instant::now();
+	let start = Instant::now();
 
-	while now.elapsed() < duration {
+	while start.elapsed() < duration {
 		thread::sleep(Duration::from_millis(100));
 
 		if let Some(status) = child.try_wait()? {

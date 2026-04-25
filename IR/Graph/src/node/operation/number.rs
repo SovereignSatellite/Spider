@@ -38,7 +38,7 @@ pub enum UnaryOperator {
 /// A floating-point unary operation node.
 #[derive(Clone, Copy)]
 pub struct UnaryOperation {
-	/// The link to the source value.
+	/// The source value.
 	pub source: Link,
 	/// The floating-point type of the operation.
 	pub kind: Type,
@@ -54,7 +54,9 @@ impl UnaryOperation {
 		kind: Type,
 		operator: UnaryOperator,
 	) -> Link {
-		let id = nodes.len().try_into().unwrap_or_else(|_| unreachable!());
+		let Ok(id) = nodes.len().try_into() else {
+			unreachable!()
+		};
 		let node = Node::NumberUnaryOperation(Self {
 			source,
 			kind,
@@ -110,7 +112,9 @@ impl BinaryOperation {
 		kind: Type,
 		operator: BinaryOperator,
 	) -> Link {
-		let id = nodes.len().try_into().unwrap_or_else(|_| unreachable!());
+		let Ok(id) = nodes.len().try_into() else {
+			unreachable!()
+		};
 		let node = Node::NumberBinaryOperation(Self {
 			lhs,
 			rhs,
@@ -165,7 +169,9 @@ impl CompareOperation {
 		kind: Type,
 		operator: CompareOperator,
 	) -> Link {
-		let id = nodes.len().try_into().unwrap_or_else(|_| unreachable!());
+		let Ok(id) = nodes.len().try_into() else {
+			unreachable!()
+		};
 		let node = Node::NumberCompareOperation(Self {
 			lhs,
 			rhs,

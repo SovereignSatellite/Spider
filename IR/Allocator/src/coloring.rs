@@ -1,3 +1,5 @@
+//! Register coloring: tracks live registers and picks free slots by kind.
+
 use alloc::vec::Vec;
 
 use ir_graph::Link;

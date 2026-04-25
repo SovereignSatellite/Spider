@@ -46,22 +46,14 @@ impl Types {
 
 	#[must_use]
 	/// Returns the type index for a function.
-	///
-	/// # Panics
-	///
-	/// Panics if the function index is out of range.
 	pub fn get_function_index(&self, function: u32) -> u32 {
-		self.functions[usize::try_from(function).unwrap()]
+		self.functions[usize::try_from(function).unwrap_or_else(|_| unreachable!())]
 	}
 
 	#[must_use]
 	/// Returns the sub type at the given index.
-	///
-	/// # Panics
-	///
-	/// Panics if the type index is out of range.
-	pub fn get_type(&self, kind: u32) -> &SubType {
-		&self.sub_types[usize::try_from(kind).unwrap()]
+	pub fn get_type(&self, index: u32) -> &SubType {
+		&self.sub_types[usize::try_from(index).unwrap_or_else(|_| unreachable!())]
 	}
 
 	#[must_use]

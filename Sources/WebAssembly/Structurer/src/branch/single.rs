@@ -26,18 +26,18 @@ impl Single {
 
 	fn has_assignment_in_branch(&self, graph: &ControlFlowGraph) -> bool {
 		self.points.iter().any(|&id| {
-			graph.predecessors(id).any(|pred_id| {
-				graph.has_assignment(pred_id, Name::A)
-					&& self.edges.iter().any(|edge| edge.0 == pred_id)
+			graph.predecessors(id).any(|predecessor_id| {
+				graph.has_assignment(predecessor_id, Name::A)
+					&& self.edges.iter().any(|edge| edge.0 == predecessor_id)
 			})
 		})
 	}
 
 	fn has_assignment_in_tail(&self, graph: &ControlFlowGraph) -> bool {
 		self.points.iter().any(|&id| {
-			graph.predecessors(id).any(|pred_id| {
-				graph.has_assignment(pred_id, Name::A)
-					&& self.edges.iter().all(|edge| edge.0 != pred_id)
+			graph.predecessors(id).any(|predecessor_id| {
+				graph.has_assignment(predecessor_id, Name::A)
+					&& self.edges.iter().all(|edge| edge.0 != predecessor_id)
 			})
 		})
 	}
@@ -50,11 +50,11 @@ impl Single {
 				.map(|id| {
 					let mut predecessors = graph.predecessors(id);
 
-					if let Some(pred_id) = predecessors.next()
+					if let Some(predecessor_id) = predecessors.next()
 						&& predecessors.next().is_none()
-						&& graph.has_assignment(pred_id, Name::C)
+						&& graph.has_assignment(predecessor_id, Name::C)
 					{
-						pred_id
+						predecessor_id
 					} else {
 						id
 					}

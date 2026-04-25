@@ -12,10 +12,10 @@ local function rt_count_ones_i32(source)
 	return source
 end
 
--- SECTION leading_zeroes_i32
+-- SECTION leading_zeros_i32
 -- NEEDS bit_lshift
 -- NEEDS bit_rshift
-local function rt_leading_zeroes_i32(source)
+local function rt_leading_zeros_i32(source)
 	if source == 0 then
 		return 32
 	end
@@ -49,10 +49,10 @@ local function rt_leading_zeroes_i32(source)
 	return result
 end
 
--- SECTION trailing_zeroes_i32
+-- SECTION trailing_zeros_i32
 -- NEEDS bit_lshift
 -- NEEDS bit_rshift
-local function rt_trailing_zeroes_i32(source)
+local function rt_trailing_zeros_i32(source)
 	if source == 0 then
 		return 32
 	end

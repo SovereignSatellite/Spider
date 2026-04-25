@@ -1,3 +1,5 @@
+//! Greedy register allocator driver.
+
 use alloc::sync::Arc;
 
 use hashbrown::HashMap;
@@ -22,7 +24,7 @@ pub struct Allocator {
 struct Allocation<'alloc> {
 	coloring: &'alloc mut Coloring,
 	policy: &'alloc dyn Policy,
-	output: &'alloc mut HashMap<(Link, usize), u32>,
+	registers: &'alloc mut HashMap<(Link, usize), u32>,
 }
 
 impl Allocation<'_> {
@@ -35,7 +37,7 @@ impl Allocation<'_> {
 			.coloring
 			.allocate(self.policy, scope, interval.source, interval.end);
 
-		self.output.insert((interval.source, scope), register);
+		self.registers.insert((interval.source, scope), register);
 	}
 
 	fn descend_branch(&mut self, arc: &Arc<Mutex<Branch>>) {
@@ -187,20 +189,20 @@ impl Allocator {
 		policy: &dyn Policy,
 		scope: usize,
 		nodes: &[Node],
-		output: &mut HashMap<(Link, usize), u32>,
+		registers: &mut HashMap<(Link, usize), u32>,
 	) -> u32 {
-		output.clear();
+		registers.clear();
 
 		self.coloring.reset(policy);
 
 		Allocation {
 			coloring: &mut self.coloring,
 			policy,
-			output,
+			registers,
 		}
 		.allocate_region(scope, nodes);
 
-		output.values().max().map_or(0, |&register| register + 1)
+		registers.values().max().map_or(0, |&register| register + 1)
 	}
 }
 

@@ -12,11 +12,11 @@ local function rt_count_ones_i32(source: number): number
 	return source
 end
 
--- SECTION leading_zeroes_i32
-local rt_leading_zeroes_i32 = bit32.countlz
+-- SECTION leading_zeros_i32
+local rt_leading_zeros_i32 = bit32.countlz
 
--- SECTION trailing_zeroes_i32
-local rt_trailing_zeroes_i32 = bit32.countrz
+-- SECTION trailing_zeros_i32
+local rt_trailing_zeros_i32 = bit32.countrz
 
 -- SECTION add_i32
 -- NEEDS bit32_or

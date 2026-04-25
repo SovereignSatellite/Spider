@@ -15,7 +15,7 @@ use crate::tracer;
 
 /// Moves invariant ports out of control flow regions.
 pub struct InvariantPortMover {
-	map: HashMap<Link, Link>,
+	replacements: HashMap<Link, Link>,
 	visited: Set,
 }
 
@@ -24,26 +24,27 @@ impl InvariantPortMover {
 	#[must_use]
 	pub fn new() -> Self {
 		Self {
-			map: HashMap::new(),
+			replacements: HashMap::new(),
 			visited: Set::new(),
 		}
 	}
 
-	fn get_redirected(&self, link: Link) -> Link {
-		self.map.get(&link).copied().unwrap_or(link)
+	fn redirected_or_self(&self, link: Link) -> Link {
+		self.replacements.get(&link).copied().unwrap_or(link)
 	}
 
-	fn find_match(&mut self, id: u32, arc: &Arc<Mutex<Match>>) {
+	fn process_match(&mut self, id: u32, arc: &Arc<Mutex<Match>>) {
 		let guard = arc.lock();
 
 		for port in 0..guard.result_count() {
 			if let Some(origin) = tracer::trace_match(&guard, port) {
-				self.map.insert(Link(id, port), self.get_redirected(origin));
+				self.replacements
+					.insert(Link(id, port), self.redirected_or_self(origin));
 			}
 		}
 	}
 
-	fn find_repeat(&mut self, id: u32, arc: &Arc<Mutex<Repeat>>) {
+	fn process_repeat(&mut self, id: u32, arc: &Arc<Mutex<Repeat>>) {
 		let mut guard = arc.lock();
 
 		for port in 0..guard.result_count() {
@@ -54,15 +55,16 @@ impl InvariantPortMover {
 			let canonical = self.visited.ascending().next().unwrap();
 			let canonical = u16::try_from(canonical).unwrap();
 
-			self.map.insert(Link(id, port), self.get_redirected(origin));
+			self.replacements
+				.insert(Link(id, port), self.redirected_or_self(origin));
 
 			guard.results_mut().sources[usize::from(port)] = Link(0, canonical);
 		}
 	}
 
 	#[expect(clippy::too_many_lines, reason = "exhaustive match over node variants")]
-	fn find_all(&mut self, nodes: &[Node]) {
-		self.map.clear();
+	fn process_all(&mut self, nodes: &[Node]) {
+		self.replacements.clear();
 
 		for (index, node) in nodes.iter().enumerate() {
 			let id = u32::try_from(index).unwrap();
@@ -125,14 +127,14 @@ impl InvariantPortMover {
 				| Node::MemoryCopy(_)
 				| Node::MemoryDrop(_) => {}
 
-				Node::Match(arc) => self.find_match(id, arc),
-				Node::Repeat(arc) => self.find_repeat(id, arc),
+				Node::Match(arc) => self.process_match(id, arc),
+				Node::Repeat(arc) => self.process_repeat(id, arc),
 			}
 		}
 	}
 
-	fn assign_single(&self, link: &mut Link) {
-		if let Some(&new) = self.map.get(link) {
+	fn apply_single(&self, link: &mut Link) {
+		if let Some(&new) = self.replacements.get(link) {
 			*link = new;
 		}
 	}
@@ -159,9 +161,9 @@ impl InvariantPortMover {
 		}
 	}
 
-	fn assign_all(&self, nodes: &mut [Node]) {
+	fn apply_all(&self, nodes: &mut [Node]) {
 		for node in nodes.iter_mut() {
-			node.for_each_mut_outer(|link| self.assign_single(link));
+			node.for_each_mut_outer(|link| self.apply_single(link));
 		}
 
 		for node in nodes.iter() {
@@ -173,8 +175,8 @@ impl InvariantPortMover {
 
 	/// Runs the invariant port motion pass on the region.
 	pub fn run(&mut self, nodes: &mut [Node]) {
-		self.find_all(nodes);
-		self.assign_all(nodes);
+		self.process_all(nodes);
+		self.apply_all(nodes);
 	}
 }
 

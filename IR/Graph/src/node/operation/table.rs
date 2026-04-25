@@ -22,7 +22,9 @@ impl TableNew {
 		minimum: u32,
 		maximum: u32,
 	) -> Link {
-		let id = nodes.len().try_into().unwrap_or_else(|_| unreachable!());
+		let Ok(id) = nodes.len().try_into() else {
+			unreachable!()
+		};
 		let node = Node::TableNew(Self {
 			initializer,
 			minimum,
@@ -54,7 +56,7 @@ impl TableNew {
 /// A table element read node.
 #[derive(Clone, Copy)]
 pub struct TableGet {
-	/// The source location to read from.
+	/// The source location.
 	pub source: Location,
 }
 
@@ -68,7 +70,9 @@ impl TableGet {
 
 	/// Adds a table read node to the graph.
 	pub fn add_into(nodes: &mut Vec<Node>, source: Location) -> (Link, Link) {
-		let id = nodes.len().try_into().unwrap_or_else(|_| unreachable!());
+		let Ok(id) = nodes.len().try_into() else {
+			unreachable!()
+		};
 		let node = Node::TableGet(Self { source });
 
 		nodes.push(node);
@@ -84,7 +88,7 @@ impl TableGet {
 pub struct TableSet {
 	/// The destination location.
 	pub destination: Location,
-	/// The link to the value being stored.
+	/// The value being stored.
 	pub source: Link,
 }
 
@@ -96,7 +100,9 @@ impl TableSet {
 
 	/// Adds a table write node to the graph.
 	pub fn add_into(nodes: &mut Vec<Node>, destination: Location, source: Link) -> Link {
-		let id = nodes.len().try_into().unwrap_or_else(|_| unreachable!());
+		let Ok(id) = nodes.len().try_into() else {
+			unreachable!()
+		};
 		let node = Node::TableSet(Self {
 			destination,
 			source,
@@ -113,7 +119,7 @@ impl TableSet {
 /// A table size query node.
 #[derive(Clone, Copy)]
 pub struct TableSize {
-	/// The link to the table being queried.
+	/// The table being queried.
 	pub source: Link,
 }
 
@@ -127,7 +133,9 @@ impl TableSize {
 
 	/// Adds a table size query node to the graph.
 	pub fn add_into(nodes: &mut Vec<Node>, source: Link) -> (Link, Link) {
-		let id = nodes.len().try_into().unwrap_or_else(|_| unreachable!());
+		let Ok(id) = nodes.len().try_into() else {
+			unreachable!()
+		};
 		let node = Node::TableSize(Self { source });
 
 		nodes.push(node);
@@ -141,9 +149,9 @@ impl TableSize {
 /// A table grow node.
 #[derive(Clone, Copy)]
 pub struct TableGrow {
-	/// The link to the table being grown.
+	/// The table being grown.
 	pub destination: Link,
-	/// The link to the initial value for new elements.
+	/// The initial value for new elements.
 	pub initializer: Link,
 	/// The number of elements to grow by.
 	pub size: Link,
@@ -164,7 +172,9 @@ impl TableGrow {
 		initializer: Link,
 		size: Link,
 	) -> (Link, Link) {
-		let id = nodes.len().try_into().unwrap_or_else(|_| unreachable!());
+		let Ok(id) = nodes.len().try_into() else {
+			unreachable!()
+		};
 		let node = Node::TableGrow(Self {
 			destination,
 			initializer,
@@ -184,7 +194,7 @@ impl TableGrow {
 pub struct TableFill {
 	/// The destination location.
 	pub destination: Location,
-	/// The link to the fill value.
+	/// The fill value.
 	pub source: Link,
 	/// The number of elements to fill.
 	pub size: Link,
@@ -203,7 +213,9 @@ impl TableFill {
 		source: Link,
 		size: Link,
 	) -> Link {
-		let id = nodes.len().try_into().unwrap_or_else(|_| unreachable!());
+		let Ok(id) = nodes.len().try_into() else {
+			unreachable!()
+		};
 		let node = Node::TableFill(Self {
 			destination,
 			source,
@@ -244,7 +256,9 @@ impl TableCopy {
 		source: Location,
 		size: Link,
 	) -> (Link, Link) {
-		let id = nodes.len().try_into().unwrap_or_else(|_| unreachable!());
+		let Ok(id) = nodes.len().try_into() else {
+			unreachable!()
+		};
 		let node = Node::TableCopy(Self {
 			destination,
 			source,
@@ -265,7 +279,7 @@ impl TableCopy {
 /// A table drop node.
 #[derive(Clone, Copy)]
 pub struct TableDrop {
-	/// The link to the table being dropped.
+	/// The table being dropped.
 	pub source: Link,
 }
 
@@ -277,7 +291,9 @@ impl TableDrop {
 
 	/// Adds a table drop node to the graph.
 	pub fn add_into(nodes: &mut Vec<Node>, source: Link) -> Link {
-		let id = nodes.len().try_into().unwrap_or_else(|_| unreachable!());
+		let Ok(id) = nodes.len().try_into() else {
+			unreachable!()
+		};
 		let node = Node::TableDrop(Self { source });
 
 		nodes.push(node);

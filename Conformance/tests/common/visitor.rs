@@ -36,13 +36,17 @@ pub trait Visitor {
 
 	fn visit_invoke(&mut self, wast_invoke: WastInvoke<'_>) -> Result<()>;
 
-	fn visit_assert_trap(&mut self, span: Span, exec: WastExecute<'_>, message: &str)
-	-> Result<()>;
+	fn visit_assert_trap(
+		&mut self,
+		span: Span,
+		wast_execute: WastExecute<'_>,
+		message: &str,
+	) -> Result<()>;
 
 	fn visit_assert_return(
 		&mut self,
 		span: Span,
-		exec: WastExecute<'_>,
+		wast_execute: WastExecute<'_>,
 		results: Vec<WastRet<'_>>,
 	) -> Result<()>;
 
@@ -56,12 +60,12 @@ pub trait Visitor {
 	fn visit_assert_unlinkable(&mut self, span: Span, module: Wat<'_>, message: &str)
 	-> Result<()>;
 
-	fn visit_assert_exception(&mut self, span: Span, exec: WastExecute<'_>) -> Result<()>;
+	fn visit_assert_exception(&mut self, span: Span, wast_execute: WastExecute<'_>) -> Result<()>;
 
 	fn visit_assert_suspension(
 		&mut self,
 		span: Span,
-		exec: WastExecute<'_>,
+		wast_execute: WastExecute<'_>,
 		message: &str,
 	) -> Result<()>;
 

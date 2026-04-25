@@ -315,7 +315,7 @@ impl MemoryGrow {
 impl Expression {
 	#[expect(
 		clippy::too_many_lines,
-		reason = "exhaustive match over statement variants"
+		reason = "exhaustive match over expression variants"
 	)]
 	fn accept<T: Visitor>(&self, visitor: &mut T) -> ControlFlow<T::Output> {
 		visitor.visit_expression(self)?;
@@ -388,9 +388,10 @@ impl Expression {
 
 impl Sequence {
 	fn accept<T: Visitor>(&self, visitor: &mut T) -> ControlFlow<T::Output> {
-		let Self { list } = self;
+		let Self { statements } = self;
 
-		list.iter()
+		statements
+			.iter()
 			.try_for_each(|statement| statement.accept(visitor))
 	}
 }
@@ -577,11 +578,11 @@ impl Statement {
 			Self::TableSet(table_set) => table_set.accept(visitor),
 			Self::TableFill(table_fill) => table_fill.accept(visitor),
 			Self::TableCopy(table_copy) => table_copy.accept(visitor),
-			Self::TableDrop(elements_drop) => elements_drop.accept(visitor),
+			Self::TableDrop(table_drop) => table_drop.accept(visitor),
 			Self::MemoryStore(memory_store) => memory_store.accept(visitor),
 			Self::MemoryFill(memory_fill) => memory_fill.accept(visitor),
 			Self::MemoryCopy(memory_copy) => memory_copy.accept(visitor),
-			Self::MemoryDrop(data_drop) => data_drop.accept(visitor),
+			Self::MemoryDrop(memory_drop) => memory_drop.accept(visitor),
 		}
 	}
 }
