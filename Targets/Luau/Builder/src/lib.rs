@@ -1,4 +1,4 @@
-//! Builds `Luau` trees from IR modules.
+//! Builds `Luau` functions from IR functions.
 
 extern crate alloc;
 
@@ -6,8 +6,8 @@ use alloc::sync::Arc;
 
 use parking_lot::Mutex;
 
-use ir_graph::region::Module;
-use luau_tree::LuauTree;
+use ir_graph::region::Function;
+use luau_tree::expression;
 
 use self::{emitter::Emitter, policy::LuauPolicy};
 
@@ -17,7 +17,7 @@ mod data_handler;
 mod emitter;
 mod policy;
 
-/// Builds a Luau tree from an IR module.
+/// Builds a `Luau` function from an IR function.
 pub struct LuauBuilder {
 	allocator: ir_allocator::Allocator,
 	policy: LuauPolicy,
@@ -33,13 +33,13 @@ impl LuauBuilder {
 		}
 	}
 
-	/// Builds a Luau tree.
-	pub fn run(&mut self, module: &Arc<Mutex<Module>>) -> LuauTree {
-		let guard = module.lock();
-		let scope = Arc::as_ptr(module) as usize;
+	/// Builds a `Luau` function.
+	pub fn run(&mut self, function: &Arc<Mutex<Function>>) -> expression::Function {
+		let guard = function.lock();
+		let scope = Arc::as_ptr(function) as usize;
 		let mut emitter = Emitter::new(&mut self.allocator, &self.policy);
 
-		emitter.emit_module(&guard, scope)
+		emitter.emit_function(&guard, scope)
 	}
 }
 

@@ -196,8 +196,6 @@ impl DeadPortEliminator {
 				Node::Repeat(arc) => self.process_repeat(id, arc, nodes),
 
 				Node::Function(_)
-				| Node::ModuleArguments(_)
-				| Node::ModuleResults(_)
 				| Node::FunctionArguments(_)
 				| Node::FunctionResults(_)
 				| Node::BranchArguments(_)

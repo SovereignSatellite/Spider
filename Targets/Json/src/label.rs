@@ -13,8 +13,6 @@ pub fn get_static(node: &Node) -> Option<&'static str> {
 		Node::Match(_) => "Match",
 		Node::Repeat(_) => "Repeat",
 
-		Node::ModuleArguments(_) => "Module Arguments",
-		Node::ModuleResults(_) => "Module Results",
 		Node::FunctionArguments(_) => "Function Arguments",
 		Node::FunctionResults(_) => "Function Results",
 		Node::BranchArguments(_) => "Branch Arguments",
@@ -250,8 +248,6 @@ pub fn write(node: &Node, out: &mut dyn Write) -> Result<()> {
 		Node::Function(_)
 		| Node::Match(_)
 		| Node::Repeat(_)
-		| Node::ModuleArguments(_)
-		| Node::ModuleResults(_)
 		| Node::FunctionArguments(_)
 		| Node::FunctionResults(_)
 		| Node::BranchArguments(_)

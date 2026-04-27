@@ -1,16 +1,13 @@
 use std::io::{Result, Write};
 
-use luau_tree::{
-	LuauTree,
-	statement::{
-		Assign, Call, GlobalSet, Match, MemoryCopy, MemoryDrop, MemoryFill, MemoryStore, Repeat,
-		RuntimeCall, Sequence, Statement, SwapAll, TableCopy, TableDrop, TableFill, TableSet,
-	},
+use luau_tree::statement::{
+	Assign, Call, GlobalSet, Match, MemoryCopy, MemoryDrop, MemoryFill, MemoryStore, Repeat,
+	RuntimeCall, Sequence, Statement, SwapAll, TableCopy, TableDrop, TableFill, TableSet,
 };
 
 use super::{
 	LuauPrinter,
-	expression::{fmt_delimited, fmt_locals, fmt_runtime_call, fmt_stack_enter, fmt_stack_leave},
+	expression::{fmt_delimited, fmt_runtime_call},
 	library::NeedsName as _,
 	print::Print,
 };
@@ -524,35 +521,5 @@ impl Print for Sequence {
 		self.statements
 			.iter()
 			.try_for_each(|statement| statement.print(printer, out))
-	}
-}
-
-impl Print for LuauTree {
-	fn print(&self, printer: &mut LuauPrinter, out: &mut dyn Write) -> Result<()> {
-		let Self {
-			locals,
-			stack,
-			code,
-		} = self;
-
-		printer.write_indent(out)?;
-		writeln!(out, "local function module()")?;
-
-		printer.indent();
-
-		printer.write_indent(out)?;
-		writeln!(out, "local excess_stack = {{ top = 0 }}")?;
-
-		fmt_stack_enter(*stack, printer, out)?;
-		fmt_locals(locals, printer, out)?;
-
-		code.print(printer, out)?;
-
-		fmt_stack_leave(*stack, printer, out)?;
-
-		printer.outdent();
-
-		printer.write_indent(out)?;
-		writeln!(out, "end")
 	}
 }

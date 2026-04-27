@@ -2,7 +2,7 @@ use std::sync::Arc;
 
 use parking_lot::Mutex;
 
-use ir_graph::region::Module;
+use ir_graph::region::Function;
 use turing_machine_lifter::TuringMachineLifter;
 
 fn has_balanced_brackets(source: &str) -> bool {
@@ -22,7 +22,7 @@ fn has_balanced_brackets(source: &str) -> bool {
 	open == 0
 }
 
-pub fn lift(data: &[u8]) -> Arc<Mutex<Module>> {
+pub fn lift(data: &[u8]) -> Arc<Mutex<Function>> {
 	let source = str::from_utf8(data).expect("`file` should be a valid UTF-8 string");
 
 	assert!(

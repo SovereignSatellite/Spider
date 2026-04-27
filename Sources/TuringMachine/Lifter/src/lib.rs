@@ -12,7 +12,7 @@ use ir_graph::{
 	operation::{
 		Fence, LoadType, Location, MemoryLoad, MemoryNew, MemoryStore, StoreType, integer,
 	},
-	region::{Branch, Match, Module, Repeat, module},
+	region::{Branch, Function, Match, Repeat},
 };
 use turing_machine_foreign::{Ask, Tell};
 
@@ -264,8 +264,8 @@ impl TuringMachineLifter {
 		}
 	}
 
-	/// Compiles the given source code into a module.
-	pub fn run(&mut self, source: &str) -> Arc<Mutex<Module>> {
+	/// Compiles the given source code into a root function.
+	pub fn run(&mut self, source: &str) -> Arc<Mutex<Function>> {
 		self.operators.clear();
 		self.operators.extend(
 			source
@@ -274,8 +274,8 @@ impl TuringMachineLifter {
 				.filter_map(|character| Operator::try_from(character).ok()),
 		);
 
-		Module::create(|nodes, arguments| {
-			self.io_state = Link(arguments, module::Arguments::STATE_PORT);
+		Function::create(1, |nodes, arguments| {
+			self.io_state = Link(arguments, 0);
 
 			self.create_memory(nodes);
 			self.handle_code(nodes);

@@ -6,14 +6,14 @@
 use core::ops::ControlFlow;
 
 use luajit_tree::{
-	LuaJITTree,
 	expression::{
-		Aggregate, Expression, ExtendType, Extract, GlobalGet, GlobalNew, IntegerBinaryOperation,
-		IntegerCompareOperation, IntegerConvertToNumber, IntegerExtend, IntegerNarrow,
-		IntegerTransmuteToNumber, IntegerUnaryOperation, IntegerWiden, LoadType, MemoryGrow,
-		MemoryLoad, MemoryNew, MemorySize, NumberBinaryOperation, NumberCompareOperation,
-		NumberNarrow, NumberTransmuteToInteger, NumberTruncateToInteger, NumberUnaryOperation,
-		NumberWiden, TableGet, TableGrow, TableNew, TableSize, integer, number,
+		Aggregate, Expression, ExtendType, Extract, Function, GlobalGet, GlobalNew,
+		IntegerBinaryOperation, IntegerCompareOperation, IntegerConvertToNumber, IntegerExtend,
+		IntegerNarrow, IntegerTransmuteToNumber, IntegerUnaryOperation, IntegerWiden, LoadType,
+		MemoryGrow, MemoryLoad, MemoryNew, MemorySize, NumberBinaryOperation,
+		NumberCompareOperation, NumberNarrow, NumberTransmuteToInteger, NumberTruncateToInteger,
+		NumberUnaryOperation, NumberWiden, TableGet, TableGrow, TableNew, TableSize, integer,
+		number,
 	},
 	statement::{
 		GlobalSet, MemoryCopy, MemoryDrop, MemoryFill, MemoryStore, Statement, StoreType,
@@ -628,7 +628,7 @@ impl NeedsName for Statement {
 	}
 }
 
-/// Collects all runtime library function names needed by a tree.
+/// Collects all runtime library function names needed by a function.
 pub struct NamesFinder<'names> {
 	names: &'names mut Vec<&'static str>,
 }
@@ -639,9 +639,12 @@ impl<'names> NamesFinder<'names> {
 		Self { names }
 	}
 
-	/// Collects all needed names from the tree.
-	pub fn run(&mut self, tree: &LuaJITTree) {
-		tree.accept(self)
+	/// Collects all needed names from the function.
+	pub fn run(&mut self, function: &Function) {
+		self.names.push("excess_stack");
+
+		function
+			.accept(self)
 			.continue_value()
 			.unwrap_or_else(|| unreachable!("names finder must not fail"));
 	}

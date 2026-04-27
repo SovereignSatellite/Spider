@@ -14,10 +14,9 @@ use ir_graph::{
 		NumberWiden, RefIsNull, TableCopy, TableDrop, TableFill, TableGet, TableGrow, TableNew,
 		TableSet, TableSize, integer, number,
 	},
-	region::{Branch, Function, Match, Module, Repeat, repeat},
+	region::{Branch, Function, Match, Repeat, repeat},
 };
 use luajit_tree::{
-	LuaJITTree,
 	expression::{self, Expression, Local, Location, Name},
 	statement::Sequence,
 };
@@ -49,6 +48,12 @@ fn stack_size_for(peak: u32) -> u16 {
 	let spill = peak.saturating_sub(PHYSICAL_REGISTERS);
 
 	u16::try_from(spill).unwrap()
+}
+
+fn collect_argument_names(argument_count: u16) -> Vec<Name> {
+	(0..u32::from(argument_count))
+		.map(|id| Name { id })
+		.collect()
 }
 
 impl<'allocator, 'policy> Emitter<'allocator, 'policy> {
@@ -167,10 +172,7 @@ impl<'allocator, 'policy> Emitter<'allocator, 'policy> {
 		let function = arc.lock();
 		let function_scope = Arc::as_ptr(arc) as usize;
 
-		let argument_count = u32::from(function.argument_count);
-		let argument_names: Vec<Name> = (0..argument_count)
-			.map(|offset| Name { id: offset })
-			.collect();
+		let argument_names = collect_argument_names(function.argument_count);
 
 		let mut child = Emitter::new(&mut *self.allocator, self.policy);
 		let inner = child.emit_function_body(&function, argument_names, function_scope);
@@ -310,28 +312,10 @@ impl<'allocator, 'policy> Emitter<'allocator, 'policy> {
 			.emit_repeat(node.condition, scope, &mut self.data_handler);
 	}
 
-	pub fn emit_module(&mut self, module: &Module, scope: usize) -> LuaJITTree {
-		let peak = self.allocator.run(
-			self.policy,
-			scope,
-			&module.nodes,
-			self.data_handler.registers_mut(),
-		);
+	pub fn emit_function(&mut self, function: &Function, scope: usize) -> expression::Function {
+		let argument_names = collect_argument_names(function.argument_count);
 
-		self.scope = scope;
-		self.code_handler.push_scope();
-
-		self.handle_nodes(&module.nodes, scope);
-
-		let locals = fast_locals_for(peak, 0);
-		let stack = stack_size_for(peak);
-		let code = self.code_handler.pop_scope();
-
-		LuaJITTree {
-			locals,
-			stack,
-			code,
-		}
+		self.emit_function_body(function, argument_names, scope)
 	}
 
 	fn handle_wasm_import(&mut self, id: u32, node: &WasmImport) {
@@ -731,9 +715,7 @@ impl<'allocator, 'policy> Emitter<'allocator, 'policy> {
 			Node::Match(ref arc) => self.handle_match(id, arc),
 			Node::Repeat(ref arc) => self.handle_repeat(id, arc),
 
-			Node::ModuleArguments(_)
-			| Node::ModuleResults(_)
-			| Node::FunctionArguments(_)
+			Node::FunctionArguments(_)
 			| Node::FunctionResults(_)
 			| Node::BranchArguments(_)
 			| Node::BranchResults(_)

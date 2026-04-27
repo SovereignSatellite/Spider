@@ -3,7 +3,6 @@
 use core::ops::ControlFlow;
 
 use super::{
-	LuauTree,
 	expression::{
 		Aggregate, BooleanToInteger, Call as ExpressionCall, Expression, Extract, Function,
 		GlobalGet, GlobalNew, IntegerBinaryOperation, IntegerCompareOperation,
@@ -33,7 +32,8 @@ pub trait Visitor {
 }
 
 impl Function {
-	fn accept<T: Visitor>(&self, visitor: &mut T) -> ControlFlow<T::Output> {
+	/// Accepts a visitor and traverses the function.
+	pub fn accept<T: Visitor>(&self, visitor: &mut T) -> ControlFlow<T::Output> {
 		let Self { code, returns, .. } = self;
 
 		code.accept(visitor)?;
@@ -599,14 +599,5 @@ impl Statement {
 			Self::MemoryCopy(memory_copy) => memory_copy.accept(visitor),
 			Self::MemoryDrop(memory_drop) => memory_drop.accept(visitor),
 		}
-	}
-}
-
-impl LuauTree {
-	/// Accepts a visitor and traverses the tree.
-	pub fn accept<T: Visitor>(&self, visitor: &mut T) -> ControlFlow<T::Output> {
-		let Self { code, .. } = self;
-
-		code.accept(visitor)
 	}
 }

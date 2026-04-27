@@ -1,7 +1,7 @@
 use ir_allocator::Policy;
 use ir_graph::Link;
 
-pub const PHYSICAL_REGISTERS: u32 = 197;
+pub const PHYSICAL_REGISTERS: u32 = 100;
 
 static REGISTERS: [u8; PHYSICAL_REGISTERS as usize] = [0xFF; PHYSICAL_REGISTERS as usize];
 

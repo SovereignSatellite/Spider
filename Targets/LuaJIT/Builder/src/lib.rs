@@ -1,4 +1,4 @@
-//! Builds `LuaJIT` trees from IR modules.
+//! Builds `LuaJIT` functions from IR functions.
 
 extern crate alloc;
 
@@ -6,8 +6,8 @@ use alloc::sync::Arc;
 
 use parking_lot::Mutex;
 
-use ir_graph::region::Module;
-use luajit_tree::LuaJITTree;
+use ir_graph::region::Function;
+use luajit_tree::expression;
 
 use self::{emitter::Emitter, policy::LuaJITPolicy};
 
@@ -17,7 +17,7 @@ mod data_handler;
 mod emitter;
 mod policy;
 
-/// Builds a `LuaJIT` tree from an IR module.
+/// Builds a `LuaJIT` function from an IR function.
 pub struct LuaJITBuilder {
 	allocator: ir_allocator::Allocator,
 	policy: LuaJITPolicy,
@@ -33,13 +33,13 @@ impl LuaJITBuilder {
 		}
 	}
 
-	/// Builds a `LuaJIT` tree.
-	pub fn run(&mut self, module: &Arc<Mutex<Module>>) -> LuaJITTree {
-		let guard = module.lock();
-		let scope = Arc::as_ptr(module) as usize;
+	/// Builds a `LuaJIT` function.
+	pub fn run(&mut self, function: &Arc<Mutex<Function>>) -> expression::Function {
+		let guard = function.lock();
+		let scope = Arc::as_ptr(function) as usize;
 		let mut emitter = Emitter::new(&mut self.allocator, &self.policy);
 
-		emitter.emit_module(&guard, scope)
+		emitter.emit_function(&guard, scope)
 	}
 }
 

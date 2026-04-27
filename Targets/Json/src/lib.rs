@@ -10,7 +10,7 @@ use parking_lot::Mutex;
 
 use ir_graph::{
 	Node,
-	region::{Function, Match, Module, Repeat},
+	region::{Function, Match, Repeat},
 };
 
 use self::{color::Color, interner::Interner, names::Names};
@@ -97,7 +97,7 @@ impl JsonPrinter {
 		self.interner.resolve(name)
 	}
 
-	fn record_module(&mut self, id: u32) {
+	fn record_root(&mut self, id: u32) {
 		let name = self.interner.resolve("Module");
 		let color = self.interner.resolve(Color::Brown.as_css_color());
 
@@ -119,15 +119,6 @@ impl JsonPrinter {
 		self.subgraphs.push(parent);
 		self.subgraphs.push(entry);
 		self.subgraphs.push(exit);
-	}
-
-	fn handle_module(&mut self, module: &Arc<Mutex<Module>>, parent: u32) {
-		let guard = module.lock();
-		let (entry, exit) = self.handle_nodes(&guard.nodes);
-
-		drop(guard);
-
-		self.record_subgraph(parent, entry, exit);
 	}
 
 	fn handle_function(&mut self, region: &Arc<Mutex<Function>>, parent: u32) {
@@ -171,9 +162,7 @@ impl JsonPrinter {
 				Node::Match(region) => self.handle_match(region, global),
 				Node::Repeat(region) => self.handle_repeat(region, global),
 
-				Node::ModuleArguments(_)
-				| Node::ModuleResults(_)
-				| Node::FunctionArguments(_)
+				Node::FunctionArguments(_)
 				| Node::FunctionResults(_)
 				| Node::BranchArguments(_)
 				| Node::BranchResults(_)
@@ -282,18 +271,18 @@ impl JsonPrinter {
 		write!(out, "]}}")
 	}
 
-	/// Prints the module as JSON.
+	/// Prints the function as JSON.
 	///
 	/// # Errors
 	///
 	/// Returns an error if writing to the output fails.
-	pub fn print(&mut self, module: &Arc<Mutex<Module>>, out: &mut dyn Write) -> Result<()> {
+	pub fn print(&mut self, function: &Arc<Mutex<Function>>, out: &mut dyn Write) -> Result<()> {
 		self.clear();
 
 		let parent = self.names.assign();
 
-		self.record_module(parent);
-		self.handle_module(module, parent);
+		self.record_root(parent);
+		self.handle_function(function, parent);
 		self.print_all_fields(out)
 	}
 }

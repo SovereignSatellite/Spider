@@ -71,8 +71,6 @@ impl InvariantPortMover {
 
 			match node {
 				Node::Function(_)
-				| Node::ModuleArguments(_)
-				| Node::ModuleResults(_)
 				| Node::FunctionArguments(_)
 				| Node::FunctionResults(_)
 				| Node::BranchArguments(_)

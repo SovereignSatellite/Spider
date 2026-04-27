@@ -81,8 +81,6 @@ impl Allocation<'_> {
 			Node::Match(arc) => self.descend_match(arc),
 			Node::Repeat(arc) => self.descend_repeat(arc),
 			Node::Function(_)
-			| Node::ModuleArguments(_)
-			| Node::ModuleResults(_)
 			| Node::FunctionArguments(_)
 			| Node::FunctionResults(_)
 			| Node::BranchArguments(_)

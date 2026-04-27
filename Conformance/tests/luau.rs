@@ -89,13 +89,13 @@ impl Luau {
 	}
 
 	fn format_source(&mut self, data: &[u8]) -> Result<()> {
-		let module = self.compiler.run(data, self.is_optimized);
-		let tree = self.builder.run(&module);
+		let root = self.compiler.run(data, self.is_optimized);
+		let function = self.builder.run(&root);
 
-		NamesFinder::new(&mut self.references).run(&tree);
+		NamesFinder::new(&mut self.references).run(&function);
 
 		self.printer.indent();
-		self.printer.print(&tree, &mut self.file)?;
+		self.printer.print(&function, &mut self.file)?;
 		self.printer.outdent();
 
 		Ok(())

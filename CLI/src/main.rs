@@ -7,7 +7,7 @@ use clap::Parser as _;
 use ir_pipeline::Optimizer;
 use parking_lot::Mutex;
 
-use ir_graph::region::Module;
+use ir_graph::region::Function;
 
 use self::arguments::{Arguments, Source, Target};
 
@@ -21,24 +21,24 @@ fn lock_standard_output() -> BufWriter<StdoutLock<'static>> {
 	BufWriter::with_capacity(DEFAULT_BUFFER_SIZE, std::io::stdout().lock())
 }
 
-fn build_module(data: &[u8], should_optimize: bool, source: Source) -> Arc<Mutex<Module>> {
-	let module = match source {
+fn build_root(data: &[u8], should_optimize: bool, source: Source) -> Arc<Mutex<Function>> {
+	let root = match source {
 		Source::TuringMachine => sources::from_turing_machine(data),
 		Source::WebAssembly => sources::from_web_assembly(data),
 	};
 
-	Optimizer::new().run(&module, should_optimize);
+	Optimizer::new().run(&root, should_optimize);
 
-	module
+	root
 }
 
-fn print_module(module: &Arc<Mutex<Module>>, target: Target) {
+fn print_root(root: &Arc<Mutex<Function>>, target: Target) {
 	let mut output = lock_standard_output();
 
 	match target {
-		Target::Json => targets::into_json(module, &mut output),
-		Target::Luau => targets::into_luau(module, &mut output),
-		Target::LuaJIT => targets::into_luajit(module, &mut output),
+		Target::Json => targets::into_json(root, &mut output),
+		Target::Luau => targets::into_luau(root, &mut output),
+		Target::LuaJIT => targets::into_luajit(root, &mut output),
 	}
 
 	output.flush().expect("output should print");
@@ -53,7 +53,7 @@ fn main() {
 	} = Arguments::parse();
 
 	let data = std::fs::read(file).expect("failed to read file");
-	let module = build_module(&data, should_optimize, source);
+	let root = build_root(&data, should_optimize, source);
 
-	print_module(&module, target);
+	print_root(&root, target);
 }

@@ -96,6 +96,8 @@ impl Sections {
 	pub const TABLE_SOURCE: &str = include_str!("../../runtime/core/table.lua");
 	/// The memory core source.
 	pub const MEMORY_SOURCE: &str = include_str!("../../runtime/core/memory.lua");
+	/// The stack core source.
+	pub const STACK_SOURCE: &str = include_str!("../../runtime/core/stack.lua");
 
 	/// The Turing machine source runtime.
 	pub const TURING_MACHINE_SOURCE: &str = include_str!("../../runtime/source/turing_machine.lua");
@@ -121,6 +123,7 @@ impl Sections {
 		sections.parse_from(Self::F64_SOURCE);
 		sections.parse_from(Self::TABLE_SOURCE);
 		sections.parse_from(Self::MEMORY_SOURCE);
+		sections.parse_from(Self::STACK_SOURCE);
 
 		sections.parse_from(Self::TURING_MACHINE_SOURCE);
 		sections.parse_from(Self::WEB_ASSEMBLY_SOURCE);
