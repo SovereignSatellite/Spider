@@ -6,7 +6,7 @@ use parking_lot::Mutex;
 
 use crate::{
 	Node, Region,
-	node::region::{Branch, Function, Match, Module, Repeat},
+	node::region::{Branch, Function, Match, Repeat},
 };
 
 fn run_region<H>(region: Region, handler: &mut H)
@@ -20,21 +20,12 @@ where
 	handler(region);
 }
 
-/// Visits every region in the module, deepest first.
-pub fn run_module<H>(module: &Arc<Mutex<Module>>, handler: &mut H)
+/// Visits every region in the function, deepest first.
+pub fn run_function<H>(function: &Arc<Mutex<Function>>, handler: &mut H)
 where
 	H: FnMut(Region),
 {
-	let guard = Mutex::lock_arc(module);
-
-	run_region(Region::Module(guard), handler);
-}
-
-fn run_function<H>(region: &Arc<Mutex<Function>>, handler: &mut H)
-where
-	H: FnMut(Region),
-{
-	let guard = Mutex::lock_arc(region);
+	let guard = Mutex::lock_arc(function);
 
 	run_region(Region::Function(guard), handler);
 }
@@ -79,9 +70,7 @@ where
 		Node::Match(region) => run_match(region, handler),
 		Node::Repeat(region) => run_repeat(region, handler),
 
-		Node::ModuleArguments(_)
-		| Node::ModuleResults(_)
-		| Node::FunctionArguments(_)
+		Node::FunctionArguments(_)
 		| Node::FunctionResults(_)
 		| Node::BranchArguments(_)
 		| Node::BranchResults(_)

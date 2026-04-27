@@ -51,7 +51,7 @@ fn route_results_node(nodes: &mut Vec<Node>, position: usize) {
 
 fn route_region_results(region: &mut Region) {
 	match region {
-		Region::Module(_) | Region::Function(_) => {}
+		Region::Function(_) => {}
 
 		Region::Branch(region) => {
 			let position = region.results_index();

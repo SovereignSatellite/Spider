@@ -2,25 +2,25 @@ use std::{io::Write, sync::Arc};
 
 use parking_lot::Mutex;
 
-use ir_graph::region::Module;
+use ir_graph::region::Function;
 use luajit_builder::LuaJITBuilder;
 use luajit_printer::{
 	LuaJITPrinter,
 	library::{NamesFinder, Printer as LibraryPrinter, Sections as LibrarySections},
 };
-use luajit_tree::LuaJITTree;
+use luajit_tree::expression;
 
-fn build_tree(module: &Arc<Mutex<Module>>) -> LuaJITTree {
+fn build_function(root: &Arc<Mutex<Function>>) -> expression::Function {
 	let mut builder = LuaJITBuilder::new();
 
-	builder.run(module)
+	builder.run(root)
 }
 
-fn print_library(tree: &LuaJITTree, out: &mut dyn Write) -> std::io::Result<()> {
+fn print_library(function: &expression::Function, out: &mut dyn Write) -> std::io::Result<()> {
 	let mut printer = LibraryPrinter::new();
 	let mut references = Vec::new();
 
-	NamesFinder::new(&mut references).run(tree);
+	NamesFinder::new(&mut references).run(function);
 
 	let sections = LibrarySections::with_built_ins();
 
@@ -29,16 +29,16 @@ fn print_library(tree: &LuaJITTree, out: &mut dyn Write) -> std::io::Result<()> 
 	out.flush()
 }
 
-fn print_tree(tree: &LuaJITTree, out: &mut dyn Write) -> std::io::Result<()> {
+fn print_function(function: &expression::Function, out: &mut dyn Write) -> std::io::Result<()> {
 	let mut printer = LuaJITPrinter::new();
 
-	printer.print(tree, out)?;
+	printer.print(function, out)?;
 	out.flush()
 }
 
-pub fn print(module: &Arc<Mutex<Module>>, out: &mut dyn Write) {
-	let tree = build_tree(module);
+pub fn print(root: &Arc<Mutex<Function>>, out: &mut dyn Write) {
+	let function = build_function(root);
 
-	print_library(&tree, out).expect("library should print");
-	print_tree(&tree, out).expect("source should print");
+	print_library(&function, out).expect("library should print");
+	print_function(&function, out).expect("source should print");
 }

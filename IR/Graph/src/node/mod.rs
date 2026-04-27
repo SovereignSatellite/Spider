@@ -21,7 +21,7 @@ use self::{
 		NumberWiden, RefIsNull, TableCopy, TableDrop, TableFill, TableGet, TableGrow, TableNew,
 		TableSet, TableSize, integer, number,
 	},
-	region::{Function, Match, Repeat, branch, function, module, repeat},
+	region::{Function, Match, Repeat, branch, function, repeat},
 };
 
 pub use self::region::Region;
@@ -38,10 +38,6 @@ pub enum Node {
 	/// A repeat (loop) region.
 	Repeat(Arc<Mutex<Repeat>>),
 
-	/// The boundary arguments of a module region.
-	ModuleArguments(module::Arguments),
-	/// The boundary results of a module region.
-	ModuleResults(module::Results),
 	/// The boundary arguments of a function region.
 	FunctionArguments(function::Arguments),
 	/// The boundary results of a function region.
@@ -166,7 +162,6 @@ macro_rules! for_each_visit {
 	($self:ident, $visit:ident, $handler:ident) => {
 		match $self {
 			Self::Function(_)
-			| Self::ModuleArguments(_)
 			| Self::FunctionArguments(_)
 			| Self::BranchArguments(_)
 			| Self::RepeatArguments(_)
@@ -180,7 +175,6 @@ macro_rules! for_each_visit {
 			Self::Match(arc) => arc.lock().$visit($handler),
 			Self::Repeat(arc) => arc.lock().$visit($handler),
 
-			Self::ModuleResults(node) => node.$visit($handler),
 			Self::FunctionResults(node) => node.$visit($handler),
 			Self::BranchResults(node) => node.$visit($handler),
 			Self::RepeatResults(node) => node.$visit($handler),
@@ -339,12 +333,7 @@ impl Node {
 			Self::Match(arc) => arc.lock().result_count(),
 			Self::Repeat(arc) => arc.lock().result_count(),
 
-			Self::ModuleArguments(_) => module::Arguments::RESULT_COUNT,
-
-			Self::ModuleResults(_)
-			| Self::FunctionResults(_)
-			| Self::BranchResults(_)
-			| Self::RepeatResults(_) => 0,
+			Self::FunctionResults(_) | Self::BranchResults(_) | Self::RepeatResults(_) => 0,
 
 			Self::FunctionArguments(node) => node.result_count(),
 

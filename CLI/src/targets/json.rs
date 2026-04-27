@@ -2,11 +2,11 @@ use std::{io::Write, sync::Arc};
 
 use parking_lot::Mutex;
 
-use ir_graph::region::Module;
+use ir_graph::region::Function;
 use json_target::JsonPrinter;
 
-pub fn print(module: &Arc<Mutex<Module>>, out: &mut dyn Write) {
+pub fn print(root: &Arc<Mutex<Function>>, out: &mut dyn Write) {
 	let mut printer = JsonPrinter::new();
 
-	printer.print(module, out).expect("module should print");
+	printer.print(root, out).expect("function should print");
 }

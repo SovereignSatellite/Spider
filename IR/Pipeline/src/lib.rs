@@ -6,7 +6,7 @@ use alloc::sync::Arc;
 
 use parking_lot::Mutex;
 
-use ir_graph::{Node, Region, region::Module, region_driver};
+use ir_graph::{Node, Region, region::Function, region_driver};
 use ir_passes::{
 	dead_port_eliminator::DeadPortEliminator, identity, invariant_port_mover::InvariantPortMover,
 	isle, topological_compactor::TopologicalCompactor,
@@ -66,9 +66,9 @@ impl Optimizer {
 		self.topological_compactor.run(region);
 	}
 
-	/// Runs the optimization pipeline over every region in the module.
-	pub fn run(&mut self, module: &Arc<Mutex<Module>>, should_optimize: bool) {
-		region_driver::run_module(module, &mut |mut region| {
+	/// Runs the optimization pipeline over every region in the function.
+	pub fn run(&mut self, function: &Arc<Mutex<Function>>, should_optimize: bool) {
+		region_driver::run_function(function, &mut |mut region| {
 			if should_optimize {
 				self.apply(&mut region);
 			}

@@ -16,7 +16,6 @@ impl Color {
 			Node::Function(_) | Node::FunctionArguments(_) | Node::FunctionResults(_) => Self::Blue,
 			Node::Match(_) | Node::BranchArguments(_) | Node::BranchResults(_) => Self::Green,
 			Node::Repeat(_) | Node::RepeatArguments(_) | Node::RepeatResults(_) => Self::Red,
-			Node::ModuleArguments(_) | Node::ModuleResults(_) => Self::Brown,
 
 			Node::Foreign(_)
 			| Node::Trap

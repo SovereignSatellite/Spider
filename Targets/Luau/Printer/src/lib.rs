@@ -1,4 +1,4 @@
-//! Prints `Luau` trees.
+//! Prints `Luau` functions.
 
 extern crate alloc;
 
@@ -7,7 +7,7 @@ use std::io::{Result, Write};
 
 use hashbrown::HashMap;
 
-use luau_tree::{LuauTree, expression::Name};
+use luau_tree::expression::{Function, Name};
 
 use self::print::Print as _;
 
@@ -18,7 +18,7 @@ mod statement;
 /// Runtime library section management.
 pub mod library;
 
-/// Prints a `Luau` tree into a writer.
+/// Prints a `Luau` function into a writer.
 pub struct LuauPrinter {
 	names: HashMap<Name, Arc<str>>,
 	depth: u16,
@@ -58,13 +58,16 @@ impl LuauPrinter {
 		self.depth = self.depth.wrapping_sub(1);
 	}
 
-	/// Prints the tree into the writer.
+	/// Prints the function into the writer.
 	///
 	/// # Errors
 	///
 	/// Returns any IO errors that the `out` produces during the process.
-	pub fn print(&mut self, tree: &LuauTree, out: &mut dyn Write) -> Result<()> {
-		tree.print(self, out)
+	pub fn print(&mut self, function: &Function, out: &mut dyn Write) -> Result<()> {
+		self.write_indent(out)?;
+		write!(out, "local module = ")?;
+		function.print(self, out)?;
+		writeln!(out)
 	}
 }
 

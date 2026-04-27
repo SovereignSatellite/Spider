@@ -15,7 +15,7 @@ use ir_graph::{
 		Fence, Location, MemoryCopy, MemoryDrop, MemoryNew, MutableNew, MutableSet, TableCopy,
 		TableDrop, TableFill, TableNew, TableSet,
 	},
-	region::{Module, module},
+	region::Function,
 };
 use web_assembly_builder::Types;
 use web_assembly_foreign::{Export, Import};
@@ -637,7 +637,7 @@ impl WebAssemblyLifter {
 		arguments: u32,
 		start: Option<u32>,
 	) -> Link {
-		let trap = Link(arguments, module::Arguments::STATE_PORT);
+		let trap = Link(arguments, 0);
 		let trap = self.create_fence(nodes, trap);
 
 		start.map_or(trap, |start| {
@@ -648,15 +648,15 @@ impl WebAssemblyLifter {
 		})
 	}
 
-	/// Lifts the given WebAssembly binary data into a module.
-	pub fn run(&mut self, data: &[u8]) -> Arc<Mutex<Module>> {
+	/// Lifts the given WebAssembly binary data into a root function.
+	pub fn run(&mut self, data: &[u8]) -> Arc<Mutex<Function>> {
 		let sections = Sections::load(data);
 
 		self.global_state.clear();
 		self.types.clear();
 		self.types.add_sub_types(sections.types);
 
-		Module::create(|nodes, arguments| {
+		Function::create(1, |nodes, arguments| {
 			self.handle_import_section(nodes, sections.imports);
 
 			self.handle_table_declarations(nodes, sections.tables.clone());
