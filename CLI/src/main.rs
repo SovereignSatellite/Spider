@@ -4,12 +4,12 @@ use std::{
 };
 
 use clap::Parser as _;
-use ir_pipeline::Optimizer;
 use parking_lot::Mutex;
 
 use ir_graph::region::Function;
+use ir_pipeline::Optimizer;
 
-use self::arguments::{Arguments, Source, Target};
+use self::arguments::{Arguments, Command, CompileArguments, RuntimeTarget, Source, Target};
 
 mod arguments;
 mod sources;
@@ -44,16 +44,36 @@ fn print_root(root: &Arc<Mutex<Function>>, target: Target) {
 	output.flush().expect("output should print");
 }
 
-fn main() {
-	let Arguments {
+fn compile(arguments: CompileArguments) {
+	let CompileArguments {
 		file,
 		source,
 		target,
-		should_optimize,
-	} = Arguments::parse();
+		optimize,
+	} = arguments;
 
 	let data = std::fs::read(file).expect("failed to read file");
-	let root = build_root(&data, should_optimize, source);
+	let root = build_root(&data, optimize, source);
 
 	print_root(&root, target);
+}
+
+fn print_runtime(target: RuntimeTarget) {
+	let mut output = lock_standard_output();
+
+	match target {
+		RuntimeTarget::Luau => targets::into_luau_runtime(&mut output),
+		RuntimeTarget::LuaJIT => targets::into_luajit_runtime(&mut output),
+	}
+
+	output.flush().expect("output should print");
+}
+
+fn main() {
+	let arguments = Arguments::parse();
+
+	match arguments.command {
+		Command::Compile(arguments) => compile(arguments),
+		Command::Runtime(arguments) => print_runtime(arguments.target),
+	}
 }
