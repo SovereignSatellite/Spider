@@ -161,6 +161,12 @@ impl Sections {
 		}
 	}
 
+	/// Returns the parsed runtime library sections.
+	#[must_use]
+	pub fn as_slice(&self) -> &[Section] {
+		&self.entries
+	}
+
 	/// Finds a section by name.
 	#[must_use]
 	pub fn find(&self, name: &'static str) -> &Section {
