@@ -641,7 +641,7 @@ impl<'names> NamesFinder<'names> {
 
 	/// Collects all needed names from the function.
 	pub fn run(&mut self, function: &Function) {
-		self.names.push("excess_stack");
+		self.names.extend(["stack_acquire", "stack_release"]);
 
 		function
 			.accept(self)

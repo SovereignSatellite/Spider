@@ -44,10 +44,15 @@ fn fast_locals_for(peak: u32, argument_count: u16) -> Vec<Name> {
 	(start..fast_count).map(|id| Name { id }).collect()
 }
 
-fn stack_size_for(peak: u32) -> u16 {
+fn stack_size_class_for(peak: u32) -> u16 {
+	const SIZE_CLASSES: [u16; 7] = [0, 16, 64, 256, 1024, 4096, 16384];
+
 	let spill = peak.saturating_sub(PHYSICAL_REGISTERS);
 
-	u16::try_from(spill).unwrap()
+	SIZE_CLASSES
+		.into_iter()
+		.find(|&class| u32::from(class) >= spill)
+		.unwrap_or_else(|| panic!("spill {spill} exceeds maximum size class"))
 }
 
 fn collect_argument_names(argument_count: u16) -> Vec<Name> {
@@ -155,7 +160,7 @@ impl<'allocator, 'policy> Emitter<'allocator, 'policy> {
 		self.handle_nodes(&function.nodes, function_scope);
 
 		let locals = fast_locals_for(peak, function.argument_count);
-		let stack = stack_size_for(peak);
+		let stack = stack_size_class_for(peak);
 		let code = self.code_handler.pop_scope();
 		let returns = self.load_function_returns(&function.results().sources, function_scope);
 

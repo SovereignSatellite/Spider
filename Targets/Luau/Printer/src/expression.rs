@@ -127,10 +127,7 @@ pub fn fmt_stack_enter(size: u16, printer: &LuauPrinter, out: &mut dyn Write) ->
 	}
 
 	printer.write_indent(out)?;
-	writeln!(out, "local stack_top = excess_stack.top + {size}")?;
-
-	printer.write_indent(out)?;
-	writeln!(out, "excess_stack.top = stack_top")
+	writeln!(out, "local stack = stack_acquire({size})")
 }
 
 pub fn fmt_stack_leave(size: u16, printer: &LuauPrinter, out: &mut dyn Write) -> Result<()> {
@@ -139,7 +136,7 @@ pub fn fmt_stack_leave(size: u16, printer: &LuauPrinter, out: &mut dyn Write) ->
 	}
 
 	printer.write_indent(out)?;
-	writeln!(out, "excess_stack.top = stack_top - {size}")
+	writeln!(out, "stack_release({size}, stack)")
 }
 
 fn fmt_infix_operator(
@@ -187,7 +184,7 @@ impl Print for Local {
 		match self {
 			Self::Fast { name } => name.print(printer, out),
 			Self::Slow { offset } => {
-				write!(out, "excess_stack[stack_top - {offset}]")
+				write!(out, "stack[{}]", offset + 1)
 			}
 		}
 	}
