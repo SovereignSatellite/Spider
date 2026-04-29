@@ -25,12 +25,12 @@ impl<'data> Arbitrary<'data> for SupportedSource {
 
 impl SupportedSource {
 	#[must_use]
-	pub fn to_bytes(&self) -> Vec<u8> {
+	pub fn into_string(self) -> String {
 		let mut source = String::new();
 
 		self.block.write(&mut source);
 
-		source.into_bytes()
+		source
 	}
 }
 

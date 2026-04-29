@@ -1,16 +1,17 @@
+use alloc::sync::Arc;
 use std::io;
 
+use parking_lot::Mutex;
+
+use ir_graph::region::Function;
 use luajit_builder::LuaJITBuilder;
 use luajit_printer::LuaJITPrinter;
 
-use crate::optimization::optimize;
-
-pub fn compile(bytes: &[u8], should_optimize: bool) {
+pub fn compile(root: &Arc<Mutex<Function>>) {
 	let function = {
-		let root = optimize(bytes, should_optimize);
 		let mut builder = LuaJITBuilder::new();
 
-		builder.run(&root)
+		builder.run(root)
 	};
 
 	let mut printer = LuaJITPrinter::new();
