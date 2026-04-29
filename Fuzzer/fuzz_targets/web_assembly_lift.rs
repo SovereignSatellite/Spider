@@ -6,9 +6,9 @@
 )]
 #![no_main]
 
-#[path = "../support/generation.rs"]
+#[path = "../support/web_assembly/generation.rs"]
 mod generation;
-#[path = "../support/lifting.rs"]
+#[path = "../support/web_assembly/lifting.rs"]
 mod lifting;
 
 use libfuzzer_sys::fuzz_target;

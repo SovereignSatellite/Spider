@@ -22,6 +22,8 @@ web-assembly-lifter.workspace = true
 
 libfuzzer-sys = "=0.4.10"
 
+turing-machine-lifter = { path = "../Sources/TuringMachine/Lifter" }
+
 arbitrary = { version = "=1.4.2", features = ["derive"] }
 wasm-smith = { version = "=0.247.0", default-features = false }
 
@@ -56,6 +58,41 @@ bench = false
 [[bin]]
 name = "web_assembly_luajit_optimized"
 path = "fuzz_targets/web_assembly_luajit_optimized.rs"
+test = false
+doc = false
+bench = false
+
+[[bin]]
+name = "turing_machine_lift"
+path = "fuzz_targets/turing_machine_lift.rs"
+test = false
+doc = false
+bench = false
+
+[[bin]]
+name = "turing_machine_luau"
+path = "fuzz_targets/turing_machine_luau.rs"
+test = false
+doc = false
+bench = false
+
+[[bin]]
+name = "turing_machine_luau_optimized"
+path = "fuzz_targets/turing_machine_luau_optimized.rs"
+test = false
+doc = false
+bench = false
+
+[[bin]]
+name = "turing_machine_luajit"
+path = "fuzz_targets/turing_machine_luajit.rs"
+test = false
+doc = false
+bench = false
+
+[[bin]]
+name = "turing_machine_luajit_optimized"
+path = "fuzz_targets/turing_machine_luajit_optimized.rs"
 test = false
 doc = false
 bench = false

@@ -8,11 +8,11 @@
 
 extern crate alloc;
 
-#[path = "../support/generation.rs"]
+#[path = "../support/web_assembly/generation.rs"]
 mod generation;
 #[path = "../support/luajit.rs"]
 mod luajit;
-#[path = "../support/optimization.rs"]
+#[path = "../support/web_assembly/optimization.rs"]
 mod optimization;
 
 use libfuzzer_sys::fuzz_target;
