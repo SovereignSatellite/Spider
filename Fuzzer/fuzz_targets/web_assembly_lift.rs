@@ -1,0 +1,22 @@
+//! Generates valid WebAssembly modules and lifts them into Spider IR.
+
+#![expect(
+	unused_crate_dependencies,
+	reason = "this target only exercises lifting"
+)]
+#![no_main]
+
+#[path = "../support/generation.rs"]
+mod generation;
+#[path = "../support/lifting.rs"]
+mod lifting;
+
+use libfuzzer_sys::fuzz_target;
+
+use self::generation::SupportedModule;
+
+fuzz_target!(|module: SupportedModule| {
+	let bytes = module.to_bytes();
+
+	lifting::lift(&bytes);
+});

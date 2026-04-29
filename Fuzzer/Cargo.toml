@@ -1,0 +1,61 @@
+[package]
+name = "spider-fuzzer"
+version = "1.0.0"
+edition = "2024"
+publish = false
+
+[package.metadata]
+cargo-fuzz = true
+
+[lints]
+workspace = true
+
+[dependencies]
+ir-graph.workspace = true
+ir-pipeline.workspace = true
+luajit-builder.workspace = true
+luajit-printer.workspace = true
+luau-builder.workspace = true
+luau-printer.workspace = true
+parking_lot.workspace = true
+web-assembly-lifter.workspace = true
+
+libfuzzer-sys = "=0.4.10"
+
+arbitrary = { version = "=1.4.2", features = ["derive"] }
+wasm-smith = { version = "=0.247.0", default-features = false }
+
+[[bin]]
+name = "web_assembly_lift"
+path = "fuzz_targets/web_assembly_lift.rs"
+test = false
+doc = false
+bench = false
+
+[[bin]]
+name = "web_assembly_luau"
+path = "fuzz_targets/web_assembly_luau.rs"
+test = false
+doc = false
+bench = false
+
+[[bin]]
+name = "web_assembly_luau_optimized"
+path = "fuzz_targets/web_assembly_luau_optimized.rs"
+test = false
+doc = false
+bench = false
+
+[[bin]]
+name = "web_assembly_luajit"
+path = "fuzz_targets/web_assembly_luajit.rs"
+test = false
+doc = false
+bench = false
+
+[[bin]]
+name = "web_assembly_luajit_optimized"
+path = "fuzz_targets/web_assembly_luajit_optimized.rs"
+test = false
+doc = false
+bench = false

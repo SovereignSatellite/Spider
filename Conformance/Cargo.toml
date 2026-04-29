@@ -8,17 +8,16 @@ workspace = true
 
 [dev-dependencies]
 ir-graph.workspace = true
+ir-pipeline.workspace = true
+luajit-builder.workspace = true
+luajit-printer.workspace = true
+luau-builder.workspace = true
+luau-printer.workspace = true
 parking_lot.workspace = true
+web-assembly-lifter.workspace = true
 
 datatest-stable = "=0.3.3"
 wast = "=247.0.0"
-
-ir-pipeline = { path = "../IR/Pipeline" }
-luajit-builder = { path = "../Targets/LuaJIT/Builder" }
-luajit-printer = { path = "../Targets/LuaJIT/Printer" }
-luau-builder = { path = "../Targets/Luau/Builder" }
-luau-printer = { path = "../Targets/Luau/Printer" }
-web-assembly-lifter = { path = "../Sources/WebAssembly/Lifter" }
 
 [[test]]
 name = "luau"
