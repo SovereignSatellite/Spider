@@ -47,7 +47,7 @@ const fn disable_unsupported_proposals(config: &mut Config) {
 
 impl SupportedModule {
 	#[must_use]
-	pub fn to_bytes(&self) -> Vec<u8> {
+	pub fn into_bytes(self) -> Vec<u8> {
 		self.module.to_bytes()
 	}
 }
