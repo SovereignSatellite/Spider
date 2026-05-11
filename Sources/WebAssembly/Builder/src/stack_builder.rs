@@ -61,11 +61,12 @@ impl StackBuilder {
 	pub fn push_level(&mut self, types: &Types, block_type: BlockType, destination: Option<u16>) {
 		let parameters = types.get_parameter_count(block_type).try_into().unwrap();
 		let results = types.get_result_count(block_type).try_into().unwrap();
+		let base = self.top.wrapping_sub(parameters);
 
 		self.levels.push(Level {
 			parameters,
 			results,
-			base: self.top - parameters,
+			base,
 
 			destination,
 			jumps: Resizable::new(),
@@ -75,7 +76,7 @@ impl StackBuilder {
 	pub fn pull_level(&mut self) -> Level {
 		let level @ Level { base, results, .. } = self.levels.pop().unwrap();
 
-		self.top = base + results;
+		self.top = base.wrapping_add(results);
 
 		level
 	}
