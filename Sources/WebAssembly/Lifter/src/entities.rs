@@ -1,7 +1,7 @@
 use ir_graph::{Link, Node, operation::MutableGet};
-use web_assembly_liveness::references::{Reference, ReferenceType};
+use web_assembly_graph::instruction::{Reference, ReferenceType};
 
-pub struct GlobalState {
+pub struct Entities {
 	pub functions: Vec<Link>,
 	pub tables: Vec<Link>,
 	pub memories: Vec<Link>,
@@ -11,7 +11,7 @@ pub struct GlobalState {
 	pub datas: Vec<Link>,
 }
 
-impl GlobalState {
+impl Entities {
 	#[must_use]
 	pub const fn new() -> Self {
 		Self {
@@ -35,7 +35,7 @@ impl GlobalState {
 		self.datas.clear();
 	}
 
-	pub fn retrieve_all_mutable(&self, results: &mut Vec<Link>) {
+	pub fn collect_states_into(&self, results: &mut Vec<Link>) {
 		results.extend_from_slice(&self.functions);
 		results.extend_from_slice(&self.tables);
 		results.extend_from_slice(&self.memories);

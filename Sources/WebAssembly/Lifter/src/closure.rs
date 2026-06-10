@@ -1,5 +1,3 @@
-use core::iter;
-
 use ir_graph::{
 	Link, Node,
 	operation::{Aggregate, Apply, Extract},
@@ -19,12 +17,8 @@ pub fn split(nodes: &mut Vec<Node>, closure: Link) -> (Link, Link) {
 	(function, state)
 }
 
-pub fn apply<I>(nodes: &mut Vec<Node>, closure: Link, extra_arguments: I, result_count: u16) -> u32
-where
-	I: IntoIterator<Item = Link>,
-{
+pub fn apply(nodes: &mut Vec<Node>, closure: Link, argument: Link, result_count: u16) -> u32 {
 	let (function, state) = split(nodes, closure);
-	let arguments = iter::once(state).chain(extra_arguments).collect();
 
-	Apply::add_into(nodes, function, arguments, result_count)
+	Apply::add_into(nodes, function, vec![state, argument], result_count)
 }

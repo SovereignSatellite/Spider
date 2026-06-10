@@ -7,86 +7,59 @@ use core::iter;
 
 use list::resizable::Resizable;
 use parking_lot::Mutex;
-use wasmparser::{ConstExpr, ElementItems, FunctionBody, SectionLimited, ValType};
+use wasmparser::FunctionBody;
 
 use ir_graph::{
 	Link, Node,
-	operation::{
-		Fence, Location, MemoryCopy, MemoryDrop, MemoryNew, MutableNew, MutableSet, TableCopy,
-		TableDrop, TableFill, TableNew, TableSet,
-	},
+	operation::{Fence, Location, MemoryNew, MutableNew, MutableSet, TableNew, TableSet},
 	region::Function,
 };
 use web_assembly_builder::Types;
 use web_assembly_foreign::{Export, Import};
-use web_assembly_graph::instruction::MemorySize;
 
-use self::{function::FunctionLifter, global_state::GlobalState, sections::Sections};
+use self::{
+	entities::Entities,
+	environment::{
+		ElementItemPlan, ElementKindPlan, ElementPlan, EnvironmentPlan, ExportKind, ExportPlan,
+		ImportKind, ImportPlan,
+	},
+	function::FunctionLifter,
+	graph_builder::GraphBuilder,
+	module::Module,
+};
 
-mod basic_block;
 mod closure;
-mod control_flow;
+mod constant_expression;
 mod dependencies;
+mod entities;
+mod environment;
 mod function;
-mod global_state;
-mod sections;
+mod graph_builder;
+mod interval;
+mod module;
+mod slots;
+mod synthesis;
 
-fn get_element_count(items: &ElementItems<'_>) -> u32 {
-	match items {
-		ElementItems::Functions(section) => section.count(),
-		ElementItems::Expressions(_, section) => section.count(),
-	}
-}
-
-fn add_table_from_type(nodes: &mut Vec<Node>, table_type: wasmparser::TableType) -> Link {
-	let wasmparser::TableType {
-		initial, maximum, ..
-	} = table_type;
-
-	let minimum = initial.try_into().unwrap();
-	let maximum = maximum.map_or(u32::MAX, |maximum| maximum.try_into().unwrap());
-
-	TableNew::add_into(nodes, Vec::new(), minimum, maximum)
-}
-
-fn add_table_from_items(nodes: &mut Vec<Node>, items: &ElementItems<'_>) -> Link {
-	let count = get_element_count(items);
-
-	TableNew::add_into(nodes, Vec::new(), count, count)
-}
-
-fn add_memory_from_type(nodes: &mut Vec<Node>, memory_type: wasmparser::MemoryType) -> Link {
-	let wasmparser::MemoryType {
-		initial, maximum, ..
-	} = memory_type;
-
-	let page = u32::try_from(MemorySize::PAGE_SIZE).unwrap();
-
-	let minimum = u32::try_from(initial).unwrap().saturating_mul(page);
-	let maximum = maximum.map_or(u32::MAX, |maximum| {
-		u32::try_from(maximum).unwrap().saturating_mul(page)
-	});
-
-	MemoryNew::add_into(nodes, Vec::new(), minimum, maximum)
-}
-
-fn add_memory_from_data(nodes: &mut Vec<Node>, data: &[u8]) -> Link {
-	let data = Arc::<[u8]>::from(data);
-	let len = data.len().try_into().unwrap();
-
-	MemoryNew::add_into(nodes, vec![(data, 0)], len, len)
-}
-
-fn add_global_from_null(nodes: &mut Vec<Node>) -> Link {
+fn add_mutable_from_null(nodes: &mut Vec<Node>) -> Link {
 	let null = Node::add_null_into(nodes);
 
 	MutableNew::add_into(nodes, null)
 }
 
+impl ElementItemPlan {
+	fn emit_into(self, nodes: &mut Vec<Node>, entities: &Entities) -> Link {
+		match self {
+			Self::Function(function) => entities.emit_function_reference(nodes, function),
+			Self::Expression(expression) => expression.emit_into(nodes, entities),
+		}
+	}
+}
+
 /// Lifts WebAssembly binary data into an IR data flow graph.
 pub struct WebAssemblyLifter {
 	function_lifter: FunctionLifter,
-	global_state: GlobalState,
+	entities: Entities,
+	graph_builder: GraphBuilder,
 	types: Types,
 }
 
@@ -96,590 +69,235 @@ impl WebAssemblyLifter {
 	pub const fn new() -> Self {
 		Self {
 			function_lifter: FunctionLifter::new(),
-			global_state: GlobalState::new(),
+			entities: Entities::new(),
+			graph_builder: GraphBuilder::new(),
 			types: Types::new(),
 		}
 	}
 
-	fn handle_function_import(
-		&mut self,
-		nodes: &mut Vec<Node>,
-		namespace: Arc<str>,
-		identifier: Arc<str>,
-		function: u32,
-	) {
-		self.types.add_function(function);
+	fn load_types(&mut self, module: &Module<'_>) {
+		self.types.clear();
 
-		let value = Import::add_into(nodes, namespace, identifier);
-		let slot = MutableNew::add_into(nodes, value);
+		if let Some(types) = module.types.clone() {
+			self.types.add_sub_types(types);
+		}
 
-		self.global_state.functions.push(slot);
-	}
-
-	fn handle_memory_import(
-		&mut self,
-		nodes: &mut Vec<Node>,
-		namespace: Arc<str>,
-		identifier: Arc<str>,
-	) {
-		let value = Import::add_into(nodes, namespace, identifier);
-
-		self.global_state.memories.push(value);
-	}
-
-	fn handle_table_import(
-		&mut self,
-		nodes: &mut Vec<Node>,
-		namespace: Arc<str>,
-		identifier: Arc<str>,
-	) {
-		let value = Import::add_into(nodes, namespace, identifier);
-
-		self.global_state.tables.push(value);
-	}
-
-	fn handle_global_import(
-		&mut self,
-		nodes: &mut Vec<Node>,
-		namespace: Arc<str>,
-		identifier: Arc<str>,
-	) {
-		let value = Import::add_into(nodes, namespace, identifier);
-
-		self.global_state.globals.push(value);
-	}
-
-	fn handle_import(
-		&mut self,
-		nodes: &mut Vec<Node>,
-		module: &str,
-		name: &str,
-		ty: wasmparser::TypeRef,
-	) {
-		let namespace = Arc::<str>::from(module);
-		let identifier = Arc::<str>::from(name);
-
-		match ty {
-			wasmparser::TypeRef::Func(function) => {
-				self.handle_function_import(nodes, namespace, identifier, function);
+		for import in &module.environment.imports {
+			if let ImportKind::Function { type_index } = import.kind {
+				self.types.add_function(type_index);
 			}
-			wasmparser::TypeRef::Memory(_) => {
-				self.handle_memory_import(nodes, namespace, identifier);
-			}
-			wasmparser::TypeRef::Table(_) => {
-				self.handle_table_import(nodes, namespace, identifier);
-			}
-			wasmparser::TypeRef::Global(_) => {
-				self.handle_global_import(nodes, namespace, identifier);
-			}
-			wasmparser::TypeRef::Tag(_) => unimplemented!("`Tag` imports"),
-			wasmparser::TypeRef::FuncExact(_) => unimplemented!("`FuncExact` imports"),
+		}
+
+		if let Some(functions) = module.functions.clone() {
+			self.types.add_functions(functions);
 		}
 	}
 
-	fn handle_import_section(
-		&mut self,
-		nodes: &mut Vec<Node>,
-		section: SectionLimited<'_, wasmparser::Imports<'_>>,
-	) {
-		for group in section.into_iter().map(Result::unwrap) {
-			match group {
-				wasmparser::Imports::Single(_, import) => {
-					self.handle_import(nodes, import.module, import.name, import.ty);
-				}
-				wasmparser::Imports::Compact1 { .. } => unimplemented!("`Compact1` imports"),
-				wasmparser::Imports::Compact2 { .. } => unimplemented!("`Compact2` imports"),
+	fn create_import(&mut self, nodes: &mut Vec<Node>, import: &ImportPlan) {
+		let namespace = Arc::clone(&import.namespace);
+		let identifier = Arc::clone(&import.identifier);
+		let value = Import::add_into(nodes, namespace, identifier);
+
+		match import.kind {
+			ImportKind::Function { .. } => {
+				let slot = MutableNew::add_into(nodes, value);
+
+				self.entities.functions.push(slot);
 			}
+			ImportKind::Table => self.entities.tables.push(value),
+			ImportKind::Memory => self.entities.memories.push(value),
+			ImportKind::Global => self.entities.globals.push(value),
 		}
 	}
 
-	fn handle_function_section(&mut self, nodes: &mut Vec<Node>, section: SectionLimited<'_, u32>) {
-		let len = section.count().try_into().unwrap();
+	fn populate_element(&self, nodes: &mut Vec<Node>, element: &ElementPlan, table: Link) -> Link {
+		let mut link = table;
 
-		self.types.add_functions(section);
+		for (&item, offset) in element.items.iter().zip(0_i32..) {
+			let source = item.emit_into(nodes, &self.entities);
+			let destination = Location {
+				reference: link,
+				offset: Node::add_i32_into(nodes, offset),
+			};
 
-		self.global_state
-			.functions
-			.extend(iter::repeat_with(|| add_global_from_null(nodes)).take(len));
+			link = TableSet::add_into(nodes, destination, source);
+		}
+
+		link
 	}
 
-	fn build_expression(
+	fn create_element(nodes: &mut Vec<Node>, element: &ElementPlan) -> Link {
+		let Ok(count) = u32::try_from(element.items.len()) else {
+			unreachable!()
+		};
+
+		TableNew::add_into(nodes, Vec::new(), count, count)
+	}
+
+	// Population happens after function installation so that function
+	// reference items read the slots through their post-installation states.
+	// Declared segments are dropped without ever being readable, so only
+	// active and passive segments receive their items.
+	fn populate_elements(&mut self, nodes: &mut Vec<Node>, environment: &EnvironmentPlan) {
+		for (index, element) in environment.elements.iter().enumerate() {
+			if matches!(element.kind, ElementKindPlan::Declared) {
+				continue;
+			}
+
+			let table = self.entities.elements[index];
+			let link = self.populate_element(nodes, element, table);
+
+			self.entities.elements[index] = link;
+		}
+	}
+
+	fn create_entities(
 		&mut self,
 		nodes: &mut Vec<Node>,
-		code: &ConstExpr<'_>,
-		result: ValType,
+		environment: &EnvironmentPlan,
+		declared_function_count: usize,
+	) {
+		for import in &environment.imports {
+			self.create_import(nodes, import);
+		}
+
+		self.entities.functions.extend(
+			iter::repeat_with(|| add_mutable_from_null(nodes)).take(declared_function_count),
+		);
+
+		self.entities.globals.extend(
+			iter::repeat_with(|| add_mutable_from_null(nodes)).take(environment.globals.len()),
+		);
+
+		self.entities.tables.extend(
+			environment
+				.tables
+				.iter()
+				.map(|table| TableNew::add_into(nodes, Vec::new(), table.minimum, table.maximum)),
+		);
+
+		self.entities.memories.extend(
+			environment.memories.iter().map(|memory| {
+				MemoryNew::add_into(nodes, Vec::new(), memory.minimum, memory.maximum)
+			}),
+		);
+
+		self.entities
+			.datas
+			.extend(environment.datas.iter().map(|data| {
+				let bytes = Arc::clone(&data.bytes);
+				let Ok(size) = u32::try_from(data.bytes.len()) else {
+					unreachable!()
+				};
+
+				MemoryNew::add_into(nodes, vec![(bytes, 0)], size, size)
+			}));
+
+		self.entities.elements.extend(
+			environment
+				.elements
+				.iter()
+				.map(|element| Self::create_element(nodes, element)),
+		);
+	}
+
+	fn install_functions(&mut self, nodes: &mut Vec<Node>, code: &[FunctionBody<'_>]) {
+		let import_count = self.entities.functions.len() - code.len();
+
+		for (offset, body) in code.iter().enumerate() {
+			let overall_index = import_count + offset;
+			let Ok(function_index) = u32::try_from(overall_index) else {
+				unreachable!()
+			};
+			let function = self.function_lifter.build_function(
+				nodes,
+				body,
+				function_index,
+				&self.types,
+				&self.entities,
+			);
+			let slot = self.entities.functions[overall_index];
+
+			self.entities.functions[overall_index] = MutableSet::add_into(nodes, slot, function);
+		}
+	}
+
+	fn lower_initialization(
+		&mut self,
+		nodes: &mut Vec<Node>,
+		environment: &EnvironmentPlan,
 	) -> Link {
-		let code = code.get_operators_reader();
+		self.graph_builder.clear();
+
+		synthesis::synthesize_initialization(&mut self.graph_builder, environment);
 
 		self.function_lifter
-			.build_expression(nodes, code, result, &self.types, &self.global_state)
+			.build_synthesized(nodes, self.graph_builder.finish(), &self.entities)
 	}
 
-	fn handle_table_declarations(
-		&mut self,
-		nodes: &mut Vec<Node>,
-		section: SectionLimited<'_, wasmparser::Table<'_>>,
-	) {
-		self.global_state.tables.extend(
-			section
-				.into_iter()
-				.map(Result::unwrap)
-				.map(|wasmparser::Table { ty, .. }| add_table_from_type(nodes, ty)),
-		);
-	}
-
-	fn emit_table_fill(
-		&mut self,
-		nodes: &mut Vec<Node>,
-		reference: Link,
-		code: &ConstExpr<'_>,
-		ty: wasmparser::TableType,
-	) -> Link {
-		let destination = Location {
-			reference,
-			offset: Node::add_i32_into(nodes, 0),
-		};
-
-		let source = self.build_expression(nodes, code, ValType::Ref(ty.element_type));
-		let size = Node::add_i32_into(nodes, ty.initial.try_into().unwrap());
-
-		TableFill::add_into(nodes, destination, source, size)
-	}
-
-	fn initialize_table(
-		&mut self,
-		nodes: &mut Vec<Node>,
-		index: usize,
-		table: &wasmparser::Table<'_>,
-	) {
-		let wasmparser::TableInit::Expr(code) = &table.init else {
-			return;
-		};
-
-		let destination = self.global_state.tables[index];
-
-		self.global_state.tables[index] = self.emit_table_fill(nodes, destination, code, table.ty);
-	}
-
-	fn handle_table_initializations(
-		&mut self,
-		nodes: &mut Vec<Node>,
-		section: SectionLimited<'_, wasmparser::Table<'_>>,
-	) {
-		let start = self.global_state.tables.len() - usize::try_from(section.count()).unwrap();
-
-		for (offset, table) in section.into_iter().map(Result::unwrap).enumerate() {
-			self.initialize_table(nodes, start + offset, &table);
-		}
-	}
-
-	fn handle_element_declarations(
-		&mut self,
-		nodes: &mut Vec<Node>,
-		section: SectionLimited<'_, wasmparser::Element<'_>>,
-	) {
-		self.global_state.elements.extend(
-			section
-				.into_iter()
-				.map(Result::unwrap)
-				.map(|wasmparser::Element { items, .. }| add_table_from_items(nodes, &items)),
-		);
-	}
-
-	fn set_table_functions(
-		&self,
-		nodes: &mut Vec<Node>,
-		section: SectionLimited<'_, u32>,
-		mut element: Link,
-	) -> Link {
-		for (function, offset) in section.into_iter().map(Result::unwrap).zip(0_i32..) {
-			let source = self.global_state.emit_function_reference(nodes, function);
-			let destination = Location {
-				reference: element,
-				offset: Node::add_i32_into(nodes, offset),
-			};
-
-			element = TableSet::add_into(nodes, destination, source);
-		}
-
-		element
-	}
-
-	fn set_table_expressions(
-		&mut self,
-		nodes: &mut Vec<Node>,
-		section: SectionLimited<'_, ConstExpr<'_>>,
-		kind: wasmparser::RefType,
-		mut element: Link,
-	) -> Link {
-		for (code, offset) in section.into_iter().map(Result::unwrap).zip(0_i32..) {
-			let source = self.build_expression(nodes, &code, ValType::Ref(kind));
-			let destination = Location {
-				reference: element,
-				offset: Node::add_i32_into(nodes, offset),
-			};
-
-			element = TableSet::add_into(nodes, destination, source);
-		}
-
-		element
-	}
-
-	fn initialize_element(
-		&mut self,
-		nodes: &mut Vec<Node>,
-		items: ElementItems<'_>,
-		element: Link,
-	) -> Link {
-		match items {
-			ElementItems::Functions(section) => self.set_table_functions(nodes, section, element),
-			ElementItems::Expressions(kind, section) => {
-				self.set_table_expressions(nodes, section, kind, element)
-			}
-		}
-	}
-
-	#[expect(
-		clippy::too_many_arguments,
-		reason = "copy operation requires source, destination, reference, offset, and size"
-	)]
-	fn emit_table_copy(
-		&mut self,
-		nodes: &mut Vec<Node>,
-		reference: Link,
-		offset: &ConstExpr<'_>,
-		elements: Link,
-		size: i32,
-	) -> Link {
-		let destination = Location {
-			reference,
-			offset: self.build_expression(nodes, offset, ValType::I32),
-		};
-
-		let source = Location {
-			reference: elements,
-			offset: Node::add_i32_into(nodes, 0),
-		};
-
-		let size = Node::add_i32_into(nodes, size);
-
-		TableCopy::add_into(nodes, destination, source, size).0
-	}
-
-	fn action_element(
-		&mut self,
-		nodes: &mut Vec<Node>,
-		elements: Link,
-		size: i32,
-		element_kind: &wasmparser::ElementKind<'_>,
-	) -> Link {
-		match element_kind {
-			wasmparser::ElementKind::Active {
-				table_index,
-				offset_expr,
-			} => {
-				let index: usize = table_index.unwrap_or(0).try_into().unwrap();
-				let reference = self.global_state.tables[index];
-
-				self.global_state.tables[index] =
-					self.emit_table_copy(nodes, reference, offset_expr, elements, size);
-
-				TableDrop::add_into(nodes, elements)
-			}
-			wasmparser::ElementKind::Passive => elements,
-			wasmparser::ElementKind::Declared => TableDrop::add_into(nodes, elements),
-		}
-	}
-
-	fn handle_element_initializations(
-		&mut self,
-		nodes: &mut Vec<Node>,
-		section: SectionLimited<'_, wasmparser::Element<'_>>,
-	) {
-		for (index, element) in section.into_iter().map(Result::unwrap).enumerate() {
-			let size = get_element_count(&element.items);
-			let size = i32::from_ne_bytes(size.to_ne_bytes());
-
-			let link = self.global_state.elements[index];
-			let link = self.initialize_element(nodes, element.items, link);
-			let link = self.action_element(nodes, link, size, &element.kind);
-
-			self.global_state.elements[index] = link;
-		}
-	}
-
-	fn handle_memory_section(
-		&mut self,
-		nodes: &mut Vec<Node>,
-		section: SectionLimited<'_, wasmparser::MemoryType>,
-	) {
-		self.global_state.memories.extend(
-			section
-				.into_iter()
-				.map(Result::unwrap)
-				.map(|memory_type| add_memory_from_type(nodes, memory_type)),
-		);
-	}
-
-	#[expect(
-		clippy::too_many_arguments,
-		reason = "copy operation requires source, destination, reference, offset, and size"
-	)]
-	fn emit_memory_copy(
-		&mut self,
-		nodes: &mut Vec<Node>,
-		reference: Link,
-		offset: &ConstExpr<'_>,
-		data: Link,
-		size: i32,
-	) -> Link {
-		let destination = Location {
-			reference,
-			offset: self.build_expression(nodes, offset, ValType::I32),
-		};
-
-		let source = Location {
-			reference: data,
-			offset: Node::add_i32_into(nodes, 0),
-		};
-
-		let size = Node::add_i32_into(nodes, size);
-
-		MemoryCopy::add_into(nodes, destination, source, size).0
-	}
-
-	fn handle_data_declarations(
-		&mut self,
-		nodes: &mut Vec<Node>,
-		section: SectionLimited<'_, wasmparser::Data<'_>>,
-	) {
-		self.global_state.datas.extend(
-			section
-				.into_iter()
-				.map(Result::unwrap)
-				.map(|wasmparser::Data { data, .. }| add_memory_from_data(nodes, data)),
-		);
-	}
-
-	fn action_data(
-		&mut self,
-		nodes: &mut Vec<Node>,
-		data: Link,
-		size: i32,
-		data_kind: &wasmparser::DataKind<'_>,
-	) -> Link {
-		match data_kind {
-			wasmparser::DataKind::Passive => data,
-			wasmparser::DataKind::Active {
-				memory_index,
-				offset_expr,
-			} => {
-				let index = usize::try_from(*memory_index).unwrap();
-				let reference = self.global_state.memories[index];
-
-				self.global_state.memories[index] =
-					self.emit_memory_copy(nodes, reference, offset_expr, data, size);
-
-				MemoryDrop::add_into(nodes, data)
-			}
-		}
-	}
-
-	fn handle_data_initializations(
-		&mut self,
-		nodes: &mut Vec<Node>,
-		section: SectionLimited<'_, wasmparser::Data<'_>>,
-	) {
-		for (index, data) in section.into_iter().map(Result::unwrap).enumerate() {
-			let size = u32::try_from(data.data.len()).unwrap();
-			let size = i32::from_ne_bytes(size.to_ne_bytes());
-
-			let link = self.global_state.datas[index];
-			let link = self.action_data(nodes, link, size, &data.kind);
-
-			self.global_state.datas[index] = link;
-		}
-	}
-
-	fn handle_global_declarations(
-		&mut self,
-		nodes: &mut Vec<Node>,
-		section: &SectionLimited<'_, wasmparser::Global<'_>>,
-	) {
-		let len = section.count().try_into().unwrap();
-
-		self.global_state
-			.globals
-			.extend(iter::repeat_with(|| add_global_from_null(nodes)).take(len));
-	}
-
-	fn initialize_global(
-		&mut self,
-		nodes: &mut Vec<Node>,
-		index: usize,
-		global: &wasmparser::Global<'_>,
-	) {
-		let source = self.build_expression(nodes, &global.init_expr, global.ty.content_type);
-
-		self.global_state.globals[index] =
-			MutableSet::add_into(nodes, self.global_state.globals[index], source);
-	}
-
-	fn handle_global_initializations(
-		&mut self,
-		nodes: &mut Vec<Node>,
-		section: SectionLimited<'_, wasmparser::Global<'_>>,
-	) {
-		let start = self.global_state.globals.len() - usize::try_from(section.count()).unwrap();
-
-		for (offset, global) in section.into_iter().map(Result::unwrap).enumerate() {
-			self.initialize_global(nodes, start + offset, &global);
-		}
-	}
-
-	#[expect(
-		clippy::needless_pass_by_ref_mut,
-		clippy::needless_pass_by_value,
-		clippy::ptr_arg,
-		unused_variables,
-		reason = "tag section handler signature matches other section handlers"
-	)]
-	fn handle_tag_section(
-		&mut self,
-		nodes: &mut Vec<Node>,
-		section: SectionLimited<'_, wasmparser::TagType>,
-	) {
-		if section.count() == 0 {
-			return;
-		}
-
-		unimplemented!("`Tag`s are not supported yet")
-	}
-
-	fn build_function(
-		&mut self,
-		nodes: &mut Vec<Node>,
-		body: &FunctionBody<'_>,
-		index: usize,
-	) -> Link {
-		self.function_lifter.build_function(
-			nodes,
-			body,
-			index.try_into().unwrap(),
-			&self.types,
-			&self.global_state,
-		)
-	}
-
-	fn handle_code_section(&mut self, nodes: &mut Vec<Node>, section: &[FunctionBody<'_>]) {
-		let import_count = self.global_state.functions.len() - section.len();
-
-		for (offset, body) in section.iter().enumerate() {
-			let overall_index = import_count + offset;
-			let function = self.build_function(nodes, body, overall_index);
-			let slot = self.global_state.functions[overall_index];
-
-			self.global_state.functions[overall_index] =
-				MutableSet::add_into(nodes, slot, function);
-		}
-	}
-
-	fn resolve_export_reference(
-		&self,
-		nodes: &mut Vec<Node>,
-		export: &wasmparser::Export<'_>,
-	) -> Link {
-		let index = usize::try_from(export.index).unwrap();
-
-		match export.kind {
-			wasmparser::ExternalKind::Func => self
-				.global_state
-				.emit_function_reference(nodes, export.index),
-			wasmparser::ExternalKind::Memory => self.global_state.memories[index],
-			wasmparser::ExternalKind::Table => self.global_state.tables[index],
-			wasmparser::ExternalKind::Global => self.global_state.globals[index],
-			wasmparser::ExternalKind::Tag => unimplemented!("`Tag`"),
-			wasmparser::ExternalKind::FuncExact => unimplemented!("`FuncExact`"),
-		}
-	}
-
-	fn emit_export(&self, nodes: &mut Vec<Node>, export: wasmparser::Export<'_>) -> Link {
-		let value = self.resolve_export_reference(nodes, &export);
-
-		Export::add_into(nodes, export.name.into(), value)
-	}
-
-	fn handle_export_section(
-		&self,
-		nodes: &mut Vec<Node>,
-		section: SectionLimited<'_, wasmparser::Export<'_>>,
-	) -> Vec<Link> {
-		section
-			.into_iter()
-			.map(Result::unwrap)
-			.map(|export| self.emit_export(nodes, export))
-			.collect()
-	}
-
+	// Every entity state feeds the fence so the compactor keeps root-level
+	// writes whose only readers run later, inside called function bodies.
 	fn create_fence(&self, nodes: &mut Vec<Node>, state: Link) -> Link {
 		let mut states = vec![state];
 
-		self.global_state.retrieve_all_mutable(&mut states);
+		self.entities.collect_states_into(&mut states);
 
 		let fence = Fence::add_into(nodes, Resizable::Heap(states));
 
 		Link(fence, 0)
 	}
 
-	fn handle_start_section(
-		&self,
-		nodes: &mut Vec<Node>,
-		arguments: u32,
-		start: Option<u32>,
-	) -> Link {
-		let trap = Link(arguments, 0);
-		let trap = self.create_fence(nodes, trap);
+	fn resolve_export(&self, nodes: &mut Vec<Node>, export: &ExportPlan) -> Link {
+		let Ok(index) = usize::try_from(export.index) else {
+			unreachable!()
+		};
 
-		start.map_or(trap, |start| {
-			let closure = self.global_state.emit_function_reference(nodes, start);
-			let apply = closure::apply(nodes, closure, [trap], 1);
+		match export.kind {
+			ExportKind::Function => self.entities.emit_function_reference(nodes, export.index),
+			ExportKind::Table => self.entities.tables[index],
+			ExportKind::Memory => self.entities.memories[index],
+			ExportKind::Global => self.entities.globals[index],
+		}
+	}
 
-			Link(apply, 0)
-		})
+	fn emit_exports(&self, nodes: &mut Vec<Node>, environment: &EnvironmentPlan) -> Vec<Link> {
+		environment
+			.exports
+			.iter()
+			.map(|export| {
+				let value = self.resolve_export(nodes, export);
+
+				Export::add_into(nodes, Arc::clone(&export.identifier), value)
+			})
+			.collect()
 	}
 
 	/// Lifts the given WebAssembly binary data into a root function.
 	pub fn run(&mut self, data: &[u8]) -> Arc<Mutex<Function>> {
-		let sections = Sections::load(data);
+		let module = Module::load(data);
+		let environment = &module.environment;
 
-		self.global_state.clear();
-		self.types.clear();
-		self.types.add_sub_types(sections.types);
+		self.entities.clear();
+		self.load_types(&module);
 
 		Function::create(1, |nodes, arguments| {
-			self.handle_import_section(nodes, sections.imports);
+			self.create_entities(nodes, environment, module.code.len());
+			self.install_functions(nodes, &module.code);
+			self.populate_elements(nodes, environment);
 
-			self.handle_table_declarations(nodes, sections.tables.clone());
-			self.handle_element_declarations(nodes, sections.elements.clone());
-			self.handle_data_declarations(nodes, sections.datas.clone());
-			self.handle_global_declarations(nodes, &sections.globals);
+			let initialization = self.lower_initialization(nodes, environment);
+			let trap = self.create_fence(nodes, Link(arguments, 0));
+			let apply = closure::apply(nodes, initialization, trap, 1);
 
-			self.handle_function_section(nodes, sections.functions);
-			self.handle_memory_section(nodes, sections.memories);
-			self.handle_tag_section(nodes, sections.tags);
-			self.handle_code_section(nodes, &sections.code);
+			let mut states = self.emit_exports(nodes, environment);
 
-			self.handle_table_initializations(nodes, sections.tables);
-			self.handle_element_initializations(nodes, sections.elements);
-			self.handle_data_initializations(nodes, sections.datas);
-			self.handle_global_initializations(nodes, sections.globals);
+			states.push(Link(apply, 0));
 
-			let start = self.handle_start_section(nodes, arguments, sections.start);
-			let mut results = self.handle_export_section(nodes, sections.exports);
+			// A single fenced result keeps every export observed without
+			// returning one value per export, which targets cap.
+			let fence = Fence::add_into(nodes, Resizable::Heap(states));
 
-			results.push(start);
-
-			results
+			vec![Link(fence, 0)]
 		})
 	}
 }

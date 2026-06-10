@@ -34,10 +34,13 @@ impl Locals {
 		}
 	}
 
-	#[must_use]
-	/// Returns the live locals for the given basic block.
-	pub fn get(&self, id: u16) -> &[u16] {
+	fn get_known(&self, id: u16) -> &[u16] {
 		let (start, end) = self.ranges[usize::from(id)];
+
+		if start == u32::MAX {
+			return &[];
+		}
+
 		let Ok(start) = start.try_into() else {
 			unreachable!()
 		};
@@ -48,29 +51,47 @@ impl Locals {
 		&self.locals[start..end]
 	}
 
-	/// Computes the union of live locals across multiple basic blocks.
-	pub fn get_union<I: IntoIterator<Item = u16>>(&self, ids: I, successors: &mut Vec<u16>) {
-		successors.clear();
+	/// Returns the live locals for the given basic block.
+	///
+	/// Live sets exist only at region boundaries: the entry block, loop
+	/// headers, branch merges, and branch arm entries.
+	///
+	/// # Panics
+	///
+	/// Panics when queried at any other block.
+	#[must_use]
+	pub fn get(&self, id: u16) -> &[u16] {
+		let (start, _) = self.ranges[usize::from(id)];
 
-		for id in ids {
-			successors.extend(self.get(id));
-		}
+		assert!(start != u32::MAX, "block {id} is not a region boundary");
 
-		successors.sort_unstable();
-		successors.dedup();
+		self.get_known(id)
 	}
 
-	fn set_len(&mut self, len: usize) {
+	/// Computes the union of live locals across multiple basic blocks.
+	pub fn get_union<I: IntoIterator<Item = u16>>(&self, ids: I, union: &mut Vec<u16>) {
+		union.clear();
+
+		for id in ids {
+			union.extend(self.get(id));
+		}
+
+		union.sort_unstable();
+		union.dedup();
+	}
+
+	fn set_block_count(&mut self, block_count: usize) {
 		self.locals.clear();
 		self.ranges.clear();
-		self.ranges.resize(len, (0, 0));
+		self.ranges.resize(block_count, (u32::MAX, u32::MAX));
 	}
 
 	fn insert(&mut self, id: u16, set: Slice<'_>) {
 		let start = self.locals.len().try_into().unwrap();
-		let iter = set.ascending().map(|index| u16::try_from(index).unwrap());
 
-		self.locals.extend(iter);
+		self.locals
+			.extend(set.ascending().map(|index| u16::try_from(index).unwrap()));
+
 		self.ranges[usize::from(id)] = (start, self.locals.len().try_into().unwrap());
 	}
 }
@@ -116,7 +137,8 @@ impl LocalTracker {
 	}
 
 	fn read_other_in(&mut self, locals: &Locals, id: u16) {
-		let live = locals.get(id).iter().copied().map(usize::from);
+		// The first backward pass reads loop headers before storing them.
+		let live = locals.get_known(id).iter().copied().map(usize::from);
 
 		self.reads.extend(live);
 	}
@@ -640,10 +662,10 @@ impl LocalTracker {
 		}
 	}
 
-	fn handle_all(&mut self, locals: &mut Locals, graph: &ControlFlowGraph, results: u16) {
+	fn handle_all(&mut self, locals: &mut Locals, graph: &ControlFlowGraph, result_count: u16) {
 		self.reads.clear();
 
-		for result in 0..results {
+		for result in 0..result_count {
 			self.read_local(result + Name::COUNT);
 		}
 
@@ -655,15 +677,15 @@ impl LocalTracker {
 	}
 
 	/// Runs liveness analysis and returns the number of locals used.
-	pub fn run(&mut self, locals: &mut Locals, graph: &ControlFlowGraph, results: u16) -> u16 {
-		locals.set_len(graph.basic_blocks.len());
+	pub fn run(&mut self, locals: &mut Locals, graph: &ControlFlowGraph, result_count: u16) -> u16 {
+		locals.set_block_count(graph.basic_blocks.len());
 
 		self.count = 0;
 
-		self.handle_all(locals, graph, results);
+		self.handle_all(locals, graph, result_count);
 
 		if graph.has_repeats() {
-			self.handle_all(locals, graph, results);
+			self.handle_all(locals, graph, result_count);
 		}
 
 		locals.insert(0, self.reads.as_slice());

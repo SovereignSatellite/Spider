@@ -10,16 +10,32 @@ use web_assembly_graph::instruction::{
 	IntegerUnaryOperation, IntegerWiden, LocalBranch, LocalSet, Location, MemoryCopy, MemoryFill,
 	MemoryGrow, MemoryInit, MemoryLoad, MemorySize, MemoryStore, Name, NumberBinaryOperation,
 	NumberCompareOperation, NumberNarrow, NumberTransmuteToInteger, NumberTruncateToInteger,
-	NumberUnaryOperation, NumberWiden, RefFunction, RefIsNull, RefNull, TableCopy, TableFill,
-	TableGet, TableGrow, TableInit, TableSet, TableSize,
+	NumberUnaryOperation, NumberWiden, RefFunction, RefIsNull, RefNull, Reference, ReferenceType,
+	TableCopy, TableFill, TableGet, TableGrow, TableInit, TableSet, TableSize,
 };
-use web_assembly_liveness::references::{Reference, ReferenceType};
 
 use super::{closure, dependencies::DependencyMap, function::LocalKind};
 
 const LOCAL_BASE: usize = Name::COUNT as usize;
 
-pub struct BasicBlockLifter {
+fn to_port(index: usize) -> u16 {
+	let Ok(port) = index.try_into() else {
+		unreachable!()
+	};
+
+	port
+}
+
+pub struct FunctionHeader<'function> {
+	pub arguments: u32,
+	pub argument_count: usize,
+	pub result_count: usize,
+	pub local_kinds: &'function [LocalKind],
+	pub stack_size: u16,
+	pub dependencies: &'function [Reference],
+}
+
+pub struct SlotFile {
 	locals: Vec<Link>,
 
 	condition: Link,
@@ -27,7 +43,7 @@ pub struct BasicBlockLifter {
 	dependencies: DependencyMap,
 }
 
-impl BasicBlockLifter {
+impl SlotFile {
 	pub const fn new() -> Self {
 		Self {
 			locals: Vec::new(),
@@ -38,7 +54,7 @@ impl BasicBlockLifter {
 		}
 	}
 
-	pub const fn get_condition(&self) -> Link {
+	pub const fn condition(&self) -> Link {
 		self.condition
 	}
 
@@ -47,16 +63,17 @@ impl BasicBlockLifter {
 
 		self.dependencies.get_mutable_into(&mut sources);
 
+		let source_count = to_port(sources.len());
 		let fence = operation::Fence::add_into(nodes, Resizable::Heap(sources));
-		let mut fence = (0..u16::MAX).map(|port| Link(fence, port));
 
-		self.trap = fence.next().unwrap();
+		self.trap = Link(fence, 0);
 
-		self.dependencies.set_mutable_from(fence);
+		self.dependencies
+			.set_mutable_from((1..source_count).map(|port| Link(fence, port)));
 	}
 
-	pub fn get_function_outputs(&mut self, nodes: &mut Vec<Node>, results: usize) -> Vec<Link> {
-		let mut results = self.locals[LOCAL_BASE..LOCAL_BASE + results].to_vec();
+	pub fn capture_outputs(&mut self, nodes: &mut Vec<Node>, result_count: usize) -> Vec<Link> {
+		let mut results = self.locals[LOCAL_BASE..LOCAL_BASE + result_count].to_vec();
 
 		self.create_fence(nodes);
 
@@ -65,42 +82,16 @@ impl BasicBlockLifter {
 		results
 	}
 
-	fn seed_dependencies_from_state(&mut self, nodes: &mut Vec<Node>, state: Link, count: usize) {
-		let extracts = (0..count).map(|index| {
-			let Ok(port) = u32::try_from(index) else {
-				unreachable!()
-			};
-
-			operation::Extract::add_into(nodes, state, port)
-		});
+	fn seed_dependencies_from_state(&mut self, nodes: &mut Vec<Node>, state: Link) {
+		let Ok(count) = u32::try_from(self.dependencies.count()) else {
+			unreachable!()
+		};
+		let extracts = (0..count).map(|port| operation::Extract::add_into(nodes, state, port));
 
 		self.dependencies.set_all_from(extracts);
 	}
 
-	fn seed_wasm_locals(&mut self, arguments: u32, argument_count: usize) {
-		let reserved = iter::repeat_n(Link::DANGLING, LOCAL_BASE);
-		let mut ports = (1..u16::MAX).map(|port| Link(arguments, port));
-
-		self.locals.clear();
-		self.locals.extend(reserved);
-		self.locals.extend(ports.by_ref().take(argument_count));
-
-		self.trap = ports.next().unwrap();
-	}
-
-	pub fn set_function_inputs(
-		&mut self,
-		nodes: &mut Vec<Node>,
-		arguments: u32,
-		argument_count: usize,
-		dependencies: &[Reference],
-	) {
-		self.dependencies.fill_keys(dependencies);
-		self.seed_dependencies_from_state(nodes, Link(arguments, 0), dependencies.len());
-		self.seed_wasm_locals(arguments, argument_count);
-	}
-
-	pub fn set_local_types(&mut self, nodes: &mut Vec<Node>, kinds: &[LocalKind]) {
+	fn seed_declared_locals(&mut self, nodes: &mut Vec<Node>, kinds: &[LocalKind]) {
 		self.locals.extend(kinds.iter().map(|&local| match local {
 			LocalKind::I32 => Node::add_i32_into(nodes, 0),
 			LocalKind::I64 => Node::add_i64_into(nodes, 0),
@@ -110,44 +101,58 @@ impl BasicBlockLifter {
 		}));
 	}
 
-	pub fn set_stack_size(&mut self, nodes: &mut Vec<Node>, size: u16) {
+	// The slot layout is [scratch | parameters | declared locals | stack]; the
+	// trap rides the argument port directly after the parameters.
+	pub fn seed(&mut self, nodes: &mut Vec<Node>, header: &FunctionHeader<'_>) {
+		let &FunctionHeader {
+			arguments,
+			argument_count,
+			local_kinds,
+			stack_size,
+			dependencies,
+			..
+		} = header;
+
+		self.dependencies.fill_keys(dependencies);
+		self.seed_dependencies_from_state(nodes, Link(arguments, 0));
+
 		let null = Node::add_null_into(nodes);
-		let count = usize::from(size).saturating_sub(self.locals.len());
+		let parameters = (1..=to_port(argument_count)).map(|port| Link(arguments, port));
 
-		self.locals.extend(iter::repeat_n(null, count));
-		self.locals[..LOCAL_BASE].fill(null);
+		self.locals.clear();
+		self.locals.extend(iter::repeat_n(null, LOCAL_BASE));
+		self.locals.extend(parameters);
+		self.seed_declared_locals(nodes, local_kinds);
+
+		let padding = usize::from(stack_size).saturating_sub(self.locals.len());
+
+		self.locals.extend(iter::repeat_n(null, padding));
+
+		self.trap = Link(arguments, to_port(argument_count + 1));
 	}
 
-	pub fn get_active_bindings(&self, locals: &[u16]) -> Vec<Link> {
-		let mut results = Vec::new();
+	pub fn capture_bindings(&self, live: &[u16]) -> Vec<Link> {
+		let mut links = Vec::new();
 
-		self.dependencies.get_all_into(&mut results);
+		self.dependencies.get_all_into(&mut links);
 
-		results.extend(
-			locals
-				.iter()
-				.copied()
-				.map(usize::from)
-				.map(|local| self.locals[local]),
-		);
-		results.push(self.trap);
+		links.extend(live.iter().map(|&slot| self.locals[usize::from(slot)]));
+		links.push(self.trap);
 
-		results
+		links
 	}
 
-	pub fn set_active_bindings(&mut self, producer: u32, locals: &[u16]) {
-		let mut producer = (0..u16::MAX).map(|port| Link(producer, port));
+	pub fn rebind_bindings(&mut self, producer: u32, live: &[u16]) {
+		let dependency_count = to_port(self.dependencies.count());
 
-		self.dependencies.set_all_from(&mut producer);
+		self.dependencies
+			.set_all_from((0..dependency_count).map(|port| Link(producer, port)));
 
-		locals
-			.iter()
-			.copied()
-			.map(usize::from)
-			.zip(&mut producer)
-			.for_each(|(local, link)| self.locals[local] = link);
+		for (offset, &slot) in (0..).zip(live) {
+			self.locals[usize::from(slot)] = Link(producer, dependency_count + offset);
+		}
 
-		self.trap = producer.next().unwrap();
+		self.trap = Link(producer, dependency_count + to_port(live.len()));
 	}
 
 	fn handle_local_set(&mut self, instruction: LocalSet) {
@@ -241,13 +246,12 @@ impl BasicBlockLifter {
 
 	fn handle_post_call(&mut self, nodes: &mut Vec<Node>, call: u32, from: u16, to: u16) {
 		let destinations = self.locals[usize::from(from)..usize::from(to)].iter_mut();
-		let mut call = (0..u16::MAX).map(|port| Link(call, port));
 
-		for (destination, result) in destinations.zip(&mut call) {
-			*destination = result;
+		for (port, destination) in (0..).zip(destinations) {
+			*destination = Link(call, port);
 		}
 
-		self.trap = call.next().unwrap();
+		self.trap = Link(call, to - from);
 
 		self.create_fence(nodes);
 	}
@@ -684,12 +688,10 @@ impl BasicBlockLifter {
 			size,
 		} = instruction;
 
-		let elements = self.load_location(ReferenceType::Elements, source);
-
 		let (destination_state, source_state) = operation::TableCopy::add_into(
 			nodes,
 			self.load_location(ReferenceType::Table, destination),
-			elements,
+			self.load_location(ReferenceType::Elements, source),
 			self.locals[usize::from(size)],
 		);
 
