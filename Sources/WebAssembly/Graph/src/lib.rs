@@ -121,6 +121,32 @@ impl ControlFlowGraph {
 			.find(|&other| self.is_branch_end(other))
 	}
 
+	/// Finds the merge block of the branch (diamond) starting at the given block.
+	///
+	/// Arm entries tile the diamond in ascending order, so the block before the
+	/// second-lowest entry is the first arm's tail, and the tail's merge
+	/// successor is the diamond's merge.
+	#[must_use]
+	pub fn branch_merge(&self, id: u16) -> u16 {
+		let mut lowest = u16::MAX;
+		let mut second = u16::MAX;
+
+		for successor in self.successors_acyclic(id) {
+			if successor < lowest {
+				second = lowest;
+				lowest = successor;
+			} else if successor < second {
+				second = successor;
+			}
+		}
+
+		let Some(end) = self.find_branch_end(second - 1) else {
+			unreachable!()
+		};
+
+		end
+	}
+
 	/// Finds the start of a repeat (loop) containing the given block.
 	#[must_use]
 	pub fn find_repeat_start(&self, id: u16) -> Option<u16> {

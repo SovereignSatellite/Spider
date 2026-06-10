@@ -65,6 +65,19 @@ impl Types {
 	}
 
 	#[must_use]
+	/// Returns the parameter and result counts for the function type at the given index.
+	pub fn get_arity(&self, index: u32) -> (u16, u16) {
+		let function = self.get_type(index).unwrap_func();
+		let parameters = function.params().len();
+		let results = function.results().len();
+
+		(
+			parameters.try_into().unwrap_or_else(|_| unreachable!()),
+			results.try_into().unwrap_or_else(|_| unreachable!()),
+		)
+	}
+
+	#[must_use]
 	/// Returns the parameter count for a block type.
 	pub fn get_parameter_count(&self, block_type: BlockType) -> usize {
 		match block_type {

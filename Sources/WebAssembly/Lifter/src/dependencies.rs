@@ -1,5 +1,5 @@
 use ir_graph::Link;
-use web_assembly_liveness::references::{Reference, ReferenceType};
+use web_assembly_graph::instruction::{Reference, ReferenceType};
 
 pub struct DependencyMap {
 	buffer: Vec<(Reference, Link)>,
@@ -17,9 +17,14 @@ impl DependencyMap {
 		self.buffer.extend(keys);
 	}
 
+	#[must_use]
+	pub const fn count(&self) -> usize {
+		self.buffer.len()
+	}
+
 	fn position(&self, kind: ReferenceType, id: u16) -> usize {
 		self.buffer
-			.binary_search_by_key(&Reference { kind, id }, |data| data.0)
+			.binary_search_by_key(&Reference { kind, id }, |&(reference, _)| reference)
 			.unwrap()
 	}
 
@@ -36,18 +41,15 @@ impl DependencyMap {
 	}
 
 	pub fn get_all_into(&self, target: &mut Vec<Link>) {
-		let iter = self.buffer.iter().map(|data| data.1);
-
-		target.extend(iter);
+		target.extend(self.buffer.iter().map(|&(_, link)| link));
 	}
 
 	pub fn get_mutable_into(&self, target: &mut Vec<Link>) {
-		let iter = self
-			.buffer
-			.iter()
-			.filter_map(|(Reference { kind, .. }, link)| kind.is_mutable().then_some(link));
-
-		target.extend(iter);
+		target.extend(
+			self.buffer
+				.iter()
+				.filter_map(|(Reference { kind, .. }, link)| kind.is_mutable().then_some(link)),
+		);
 	}
 
 	pub fn set_all_from<I>(&mut self, values: I)
@@ -57,7 +59,7 @@ impl DependencyMap {
 		self.buffer
 			.iter_mut()
 			.zip(values)
-			.for_each(|(reference, value)| reference.1 = value);
+			.for_each(|((_, link), value)| *link = value);
 	}
 
 	pub fn set_mutable_from<I>(&mut self, values: I)
@@ -68,6 +70,6 @@ impl DependencyMap {
 			.iter_mut()
 			.filter(|(Reference { kind, .. }, _)| kind.is_mutable())
 			.zip(values)
-			.for_each(|(reference, value)| reference.1 = value);
+			.for_each(|((_, link), value)| *link = value);
 	}
 }

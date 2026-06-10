@@ -607,3 +607,181 @@ pub enum Instruction {
 	/// A data segment drop.
 	DataDrop(DataDrop),
 }
+
+/// The type of an external reference.
+#[derive(PartialEq, Eq, PartialOrd, Ord, Clone, Copy)]
+pub enum ReferenceType {
+	/// A function reference.
+	Function,
+
+	/// A global variable reference.
+	Global,
+	/// A table reference.
+	Table,
+	/// An element segment reference.
+	Elements,
+	/// A linear memory reference.
+	Memory,
+	/// A data segment reference.
+	Data,
+}
+
+impl ReferenceType {
+	/// Returns whether this reference type is mutable.
+	#[must_use]
+	pub const fn is_mutable(self) -> bool {
+		matches!(
+			self,
+			Self::Global | Self::Table | Self::Elements | Self::Memory | Self::Data
+		)
+	}
+}
+
+/// An external reference used by an instruction.
+#[derive(PartialEq, Eq, PartialOrd, Ord, Clone, Copy)]
+pub struct Reference {
+	/// The reference type.
+	pub kind: ReferenceType,
+	/// The reference index.
+	pub id: u16,
+}
+
+impl Reference {
+	const fn function(id: u16) -> Self {
+		Self {
+			kind: ReferenceType::Function,
+			id,
+		}
+	}
+
+	const fn global(id: u16) -> Self {
+		Self {
+			kind: ReferenceType::Global,
+			id,
+		}
+	}
+
+	const fn table(id: u16) -> Self {
+		Self {
+			kind: ReferenceType::Table,
+			id,
+		}
+	}
+
+	const fn elements(id: u16) -> Self {
+		Self {
+			kind: ReferenceType::Elements,
+			id,
+		}
+	}
+
+	const fn memory(id: u16) -> Self {
+		Self {
+			kind: ReferenceType::Memory,
+			id,
+		}
+	}
+
+	const fn data(id: u16) -> Self {
+		Self {
+			kind: ReferenceType::Data,
+			id,
+		}
+	}
+}
+
+impl Instruction {
+	/// Visits each external entity reference this instruction touches.
+	#[expect(
+		clippy::too_many_lines,
+		reason = "exhaustive match over instruction variants"
+	)]
+	pub fn for_each_reference<H: FnMut(Reference)>(self, mut handler: H) {
+		match self {
+			Self::LocalSet(_)
+			| Self::LocalBranch(_)
+			| Self::I32Constant(_)
+			| Self::I64Constant(_)
+			| Self::F32Constant(_)
+			| Self::F64Constant(_)
+			| Self::RefIsNull(_)
+			| Self::RefNull(_)
+			| Self::Call(_)
+			| Self::Unreachable
+			| Self::IntegerUnaryOperation(_)
+			| Self::IntegerBinaryOperation(_)
+			| Self::IntegerCompareOperation(_)
+			| Self::IntegerNarrow(_)
+			| Self::IntegerWiden(_)
+			| Self::IntegerExtend(_)
+			| Self::IntegerConvertToNumber(_)
+			| Self::IntegerTransmuteToNumber(_)
+			| Self::NumberUnaryOperation(_)
+			| Self::NumberBinaryOperation(_)
+			| Self::NumberCompareOperation(_)
+			| Self::NumberNarrow(_)
+			| Self::NumberWiden(_)
+			| Self::NumberTruncateToInteger(_)
+			| Self::NumberTransmuteToInteger(_) => {}
+
+			Self::RefFunction(RefFunction { function, .. }) => {
+				handler(Reference::function(function));
+			}
+			Self::GlobalGet(GlobalGet { source, .. }) => handler(Reference::global(source)),
+			Self::GlobalSet(GlobalSet { destination, .. }) => {
+				handler(Reference::global(destination));
+			}
+			Self::TableGet(TableGet { source, .. }) => handler(Reference::table(source.reference)),
+			Self::TableSet(TableSet { destination, .. })
+			| Self::TableFill(TableFill { destination, .. }) => {
+				handler(Reference::table(destination.reference));
+			}
+			Self::TableSize(TableSize { table, .. }) | Self::TableGrow(TableGrow { table, .. }) => {
+				handler(Reference::table(table));
+			}
+			Self::TableCopy(TableCopy {
+				destination,
+				source,
+				..
+			}) => {
+				handler(Reference::table(destination.reference));
+				handler(Reference::table(source.reference));
+			}
+			Self::TableInit(TableInit {
+				destination,
+				source,
+				..
+			}) => {
+				handler(Reference::table(destination.reference));
+				handler(Reference::elements(source.reference));
+			}
+			Self::ElementsDrop(ElementsDrop { source }) => handler(Reference::elements(source)),
+			Self::MemoryLoad(MemoryLoad { source, .. }) => {
+				handler(Reference::memory(source.reference));
+			}
+			Self::MemoryStore(MemoryStore { destination, .. })
+			| Self::MemoryFill(MemoryFill { destination, .. }) => {
+				handler(Reference::memory(destination.reference));
+			}
+			Self::MemorySize(MemorySize { memory, .. })
+			| Self::MemoryGrow(MemoryGrow { memory, .. }) => handler(Reference::memory(memory)),
+			Self::MemoryCopy(MemoryCopy {
+				destination,
+				source,
+				..
+			}) => {
+				handler(Reference::memory(destination.reference));
+				handler(Reference::memory(source.reference));
+			}
+			Self::MemoryInit(MemoryInit {
+				destination,
+				source,
+				..
+			}) => {
+				handler(Reference::memory(destination.reference));
+				handler(Reference::data(source.reference));
+			}
+			Self::DataDrop(DataDrop { source }) => handler(Reference::data(source)),
+		}
+	}
+}
