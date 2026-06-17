@@ -5,6 +5,9 @@ use arbitrary::{Arbitrary, Result, Unstructured};
 
 const OPERATORS: [char; 6] = ['>', '<', '+', '-', ',', '.'];
 
+const MAXIMUM_BLOCK_ITEMS: u32 = 256;
+const MAXIMUM_SOURCE_ITEMS: u32 = 4096;
+
 pub struct SupportedSource {
 	block: Block,
 }
@@ -17,7 +20,8 @@ impl Debug for SupportedSource {
 
 impl<'data> Arbitrary<'data> for SupportedSource {
 	fn arbitrary(u: &mut Unstructured<'data>) -> Result<Self> {
-		let block = Block::arbitrary(u)?;
+		let mut budget = MAXIMUM_SOURCE_ITEMS;
+		let block = Block::arbitrary(u, &mut budget)?;
 
 		Ok(Self { block })
 	}
@@ -38,21 +42,25 @@ struct Block {
 	items: Vec<Item>,
 }
 
-impl<'data> Arbitrary<'data> for Block {
-	fn arbitrary(u: &mut Unstructured<'data>) -> Result<Self> {
+impl Block {
+	fn arbitrary(unstructured: &mut Unstructured<'_>, budget: &mut u32) -> Result<Self> {
 		let mut items = Vec::new();
 
-		u.arbitrary_loop(None, None, |data| {
-			items.push(Item::arbitrary(data)?);
+		unstructured.arbitrary_loop(None, Some(MAXIMUM_BLOCK_ITEMS), |data| {
+			if *budget == 0 {
+				return Ok(ControlFlow::Break(()));
+			}
+
+			*budget -= 1;
+
+			items.push(Item::arbitrary(data, budget)?);
 
 			Ok(ControlFlow::Continue(()))
 		})?;
 
 		Ok(Self { items })
 	}
-}
 
-impl Block {
 	fn write(&self, source: &mut String) {
 		for item in &self.items {
 			item.write(source);
@@ -65,18 +73,16 @@ enum Item {
 	Loop(Block),
 }
 
-impl<'data> Arbitrary<'data> for Item {
-	fn arbitrary(u: &mut Unstructured<'data>) -> Result<Self> {
-		let variant = u.int_in_range(0..=OPERATORS.len())?;
+impl Item {
+	fn arbitrary(unstructured: &mut Unstructured<'_>, budget: &mut u32) -> Result<Self> {
+		let variant = unstructured.int_in_range(0..=OPERATORS.len())?;
 
 		match OPERATORS.get(variant) {
 			Some(&operator) => Ok(Self::Operator(operator)),
-			None => Block::arbitrary(u).map(Self::Loop),
+			None => Block::arbitrary(unstructured, budget).map(Self::Loop),
 		}
 	}
-}
 
-impl Item {
 	fn write(&self, source: &mut String) {
 		match self {
 			Self::Operator(operator) => source.push(*operator),
