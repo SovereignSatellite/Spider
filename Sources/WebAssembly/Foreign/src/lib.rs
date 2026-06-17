@@ -9,7 +9,6 @@ use alloc::{boxed::Box, sync::Arc, vec::Vec};
 use ir_graph::{Link, Node, foreign::Foreign};
 
 /// A resolved reference into the runtime-provided WebAssembly import registry.
-#[derive(Clone)]
 pub struct Import {
 	/// The WebAssembly import namespace (e.g. `"wasi_snapshot_preview1"`).
 	pub namespace: Arc<str>,
@@ -23,7 +22,7 @@ impl Import {
 	/// The port index for the imported value.
 	pub const RESULT_PORT: u16 = 0;
 
-	/// Adds an `Import` node to the graph.
+	/// Adds an `Import` node to the graph and returns the imported value.
 	pub fn add_into(nodes: &mut Vec<Node>, namespace: Arc<str>, identifier: Arc<str>) -> Link {
 		let Ok(id) = nodes.len().try_into() else {
 			unreachable!()
@@ -83,6 +82,13 @@ impl Foreign for Export {
 
 	fn result_count(&self) -> u16 {
 		Self::RESULT_COUNT
+	}
+
+	fn forwarded_operand(&self, port: u16) -> Option<Link> {
+		match port {
+			Self::STATE_PORT => Some(self.value),
+			_ => None,
+		}
 	}
 
 	fn for_each_outer(&self, handler: &mut dyn FnMut(Link)) {

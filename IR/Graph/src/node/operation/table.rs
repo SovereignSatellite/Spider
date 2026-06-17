@@ -80,6 +80,8 @@ impl TableGet {
 		(Link(id, Self::RESULT_PORT), Link(id, Self::STATE_PORT))
 	}
 
+	handle_forwarded!((STATE_PORT, source.reference));
+
 	handle_sources!((source, method));
 }
 
@@ -113,6 +115,8 @@ impl TableSet {
 		Link(id, Self::STATE_PORT)
 	}
 
+	handle_forwarded!((STATE_PORT, destination.reference));
+
 	handle_sources!((destination, method), (source, link));
 }
 
@@ -142,6 +146,8 @@ impl TableSize {
 
 		(Link(id, Self::RESULT_PORT), Link(id, Self::STATE_PORT))
 	}
+
+	handle_forwarded!((STATE_PORT, source));
 
 	handle_sources!((source, link));
 }
@@ -186,6 +192,8 @@ impl TableGrow {
 		(Link(id, Self::RESULT_PORT), Link(id, Self::STATE_PORT))
 	}
 
+	handle_forwarded!((STATE_PORT, destination));
+
 	handle_sources!((destination, link), (initializer, link), (size, link));
 }
 
@@ -226,6 +234,8 @@ impl TableFill {
 
 		Link(id, Self::STATE_PORT)
 	}
+
+	handle_forwarded!((STATE_PORT, destination.reference));
 
 	handle_sources!((destination, method), (source, link), (size, link));
 }
@@ -273,6 +283,11 @@ impl TableCopy {
 		)
 	}
 
+	handle_forwarded!(
+		(DESTINATION_STATE_PORT, destination.reference),
+		(SOURCE_STATE_PORT, source.reference)
+	);
+
 	handle_sources!((destination, method), (source, method), (size, link));
 }
 
@@ -300,6 +315,8 @@ impl TableDrop {
 
 		Link(id, Self::STATE_PORT)
 	}
+
+	handle_forwarded!((STATE_PORT, source));
 
 	handle_sources!((source, link));
 }

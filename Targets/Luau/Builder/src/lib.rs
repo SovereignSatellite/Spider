@@ -34,12 +34,18 @@ impl LuauBuilder {
 	}
 
 	/// Builds a `Luau` function.
+	#[expect(
+		clippy::significant_drop_tightening,
+		reason = "the lock guards the whole build: the policy precomputes over it, then the emitter walks it"
+	)]
 	pub fn run(&mut self, function: &Arc<Mutex<Function>>) -> expression::Function {
 		let guard = function.lock();
-		let scope = Arc::as_ptr(function) as usize;
+
+		self.policy.precompute(&guard.nodes);
+
 		let mut emitter = Emitter::new(&mut self.allocator, &self.policy);
 
-		emitter.emit_function(&guard, scope)
+		emitter.emit_function(&guard)
 	}
 }
 

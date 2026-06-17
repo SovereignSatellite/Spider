@@ -193,19 +193,28 @@ impl Print for Match {
 
 impl Print for Repeat {
 	fn print(&self, printer: &mut LuauPrinter, out: &mut dyn Write) -> Result<()> {
-		let Self { code, condition } = self;
+		let Self {
+			code,
+			condition,
+			rotation,
+		} = self;
 
 		printer.write_indent(out)?;
-		writeln!(out, "repeat")?;
+		writeln!(out, "while true do")?;
 
 		printer.indent();
 		code.print(printer, out)?;
+
+		printer.write_indent(out)?;
+		write!(out, "if (")?;
+		condition.print(printer, out)?;
+		writeln!(out, ") == 0 then break end")?;
+
+		rotation.print(printer, out)?;
 		printer.outdent();
 
 		printer.write_indent(out)?;
-		write!(out, "until (")?;
-		condition.print(printer, out)?;
-		writeln!(out, ") == 0")
+		writeln!(out, "end")
 	}
 }
 
@@ -234,19 +243,11 @@ impl Print for SwapAll {
 		for pair in locals.windows(2) {
 			printer.write_indent(out)?;
 
-			pair[0].print(printer, out)?;
-
-			write!(out, ", ")?;
-
-			pair[1].print(printer, out)?;
+			fmt_delimited([&pair[0], &pair[1]], printer, out)?;
 
 			write!(out, " = ")?;
 
-			pair[1].print(printer, out)?;
-
-			write!(out, ", ")?;
-
-			pair[0].print(printer, out)?;
+			fmt_delimited([&pair[1], &pair[0]], printer, out)?;
 
 			writeln!(out, ";")?;
 		}
@@ -277,7 +278,7 @@ impl Print for Call {
 
 		fmt_delimited(arguments, printer, out)?;
 
-		writeln!(out, ")")
+		writeln!(out, ");")
 	}
 }
 
@@ -289,7 +290,7 @@ impl Print for RuntimeCall {
 
 		fmt_runtime_call(name, arguments, printer, out)?;
 
-		writeln!(out)
+		writeln!(out, ";")
 	}
 }
 
@@ -301,9 +302,11 @@ impl Print for GlobalSet {
 		} = self;
 
 		printer.write_indent(out)?;
+		write!(out, "(")?;
+
 		destination.print(printer, out)?;
 
-		write!(out, "[1] = ")?;
+		write!(out, ")[1] = ")?;
 
 		source.print(printer, out)?;
 
@@ -356,7 +359,7 @@ impl Print for TableFill {
 
 		size.print(printer, out)?;
 
-		writeln!(out, ")")
+		writeln!(out, ");")
 	}
 }
 
@@ -383,7 +386,7 @@ impl Print for TableCopy {
 
 		size.print(printer, out)?;
 
-		writeln!(out, ")")
+		writeln!(out, ");")
 	}
 }
 
@@ -398,7 +401,7 @@ impl Print for TableDrop {
 
 		source.print(printer, out)?;
 
-		writeln!(out, ")")
+		writeln!(out, ");")
 	}
 }
 
@@ -421,7 +424,7 @@ impl Print for MemoryStore {
 
 		source.print(printer, out)?;
 
-		writeln!(out, ")")
+		writeln!(out, ");")
 	}
 }
 
@@ -448,7 +451,7 @@ impl Print for MemoryFill {
 
 		size.print(printer, out)?;
 
-		writeln!(out, ")")
+		writeln!(out, ");")
 	}
 }
 
@@ -475,7 +478,7 @@ impl Print for MemoryCopy {
 
 		size.print(printer, out)?;
 
-		writeln!(out, ")")
+		writeln!(out, ");")
 	}
 }
 
@@ -490,7 +493,7 @@ impl Print for MemoryDrop {
 
 		source.print(printer, out)?;
 
-		writeln!(out, ")")
+		writeln!(out, ");")
 	}
 }
 

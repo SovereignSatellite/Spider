@@ -9,3 +9,4 @@ workspace = true
 [dependencies]
 list.workspace = true
 parking_lot.workspace = true
+set.workspace = true

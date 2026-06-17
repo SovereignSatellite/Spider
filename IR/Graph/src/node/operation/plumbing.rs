@@ -38,6 +38,12 @@ impl Identity {
 			.unwrap_or_else(|_| unreachable!())
 	}
 
+	/// Returns the operand link the given output port forwards.
+	#[must_use]
+	pub fn forwarded_operand(&self, port: u16) -> Option<Link> {
+		self.sources.get(usize::from(port)).copied()
+	}
+
 	handle_sources!((sources, link_list));
 }
 
@@ -67,6 +73,12 @@ impl Fence {
 			.len()
 			.try_into()
 			.unwrap_or_else(|_| unreachable!())
+	}
+
+	/// Returns the operand link the given output port forwards.
+	#[must_use]
+	pub fn forwarded_operand(&self, port: u16) -> Option<Link> {
+		self.sources.get(usize::from(port)).copied()
 	}
 
 	handle_sources!((sources, link_list));

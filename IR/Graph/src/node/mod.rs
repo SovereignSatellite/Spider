@@ -7,10 +7,6 @@ use parking_lot::Mutex;
 #[macro_use]
 mod macros;
 
-pub mod foreign;
-pub mod operation;
-pub mod region;
-
 use self::{
 	foreign::Foreign,
 	operation::{
@@ -23,10 +19,29 @@ use self::{
 	},
 	region::{Function, Match, Repeat, branch, function, repeat},
 };
+use crate::Link;
 
 pub use self::region::Region;
 
-use crate::Link;
+pub mod foreign;
+pub mod operation;
+pub mod region;
+
+/// The structural role a node plays during a region walk.
+pub enum Shape<'node> {
+	/// An ordinary operation: operands in, output ports out.
+	Plain,
+	/// A nested function (closure) region container.
+	Function(&'node Arc<Mutex<Function>>),
+	/// A match (conditional) region container.
+	Match(&'node Arc<Mutex<Match>>),
+	/// A repeat (loop) region container.
+	Repeat(&'node Arc<Mutex<Repeat>>),
+	/// The results boundary of a branch region.
+	BranchResults(&'node branch::Results),
+	/// The results boundary of a repeat region.
+	RepeatResults(&'node repeat::Results),
+}
 
 /// A node in the data flow graph.
 #[derive(Default)]
@@ -333,9 +348,9 @@ impl Node {
 			Self::Match(arc) => arc.lock().result_count(),
 			Self::Repeat(arc) => arc.lock().result_count(),
 
-			Self::FunctionResults(_) | Self::BranchResults(_) | Self::RepeatResults(_) => 0,
-
 			Self::FunctionArguments(node) => node.result_count(),
+
+			Self::FunctionResults(_) | Self::BranchResults(_) | Self::RepeatResults(_) => 0,
 
 			Self::BranchArguments(node) => node.result_count(),
 
@@ -365,6 +380,143 @@ impl Node {
 			Self::MemoryFill(_) => MemoryFill::RESULT_COUNT,
 			Self::MemoryCopy(_) => MemoryCopy::RESULT_COUNT,
 			Self::MemoryDrop(_) => MemoryDrop::RESULT_COUNT,
+		}
+	}
+
+	/// Returns the operand link the given output port forwards.
+	#[must_use]
+	#[expect(clippy::too_many_lines, reason = "exhaustive match over node variants")]
+	pub fn forwarded_operand(&self, port: u16) -> Option<Link> {
+		match self {
+			Self::Function(_)
+			| Self::Match(_)
+			| Self::Repeat(_)
+			| Self::FunctionArguments(_)
+			| Self::FunctionResults(_)
+			| Self::BranchArguments(_)
+			| Self::BranchResults(_)
+			| Self::RepeatArguments(_)
+			| Self::RepeatResults(_)
+			| Self::Trap
+			| Self::Null
+			| Self::I32(_)
+			| Self::I64(_)
+			| Self::F32(_)
+			| Self::F64(_)
+			| Self::Apply(_)
+			| Self::RefIsNull(_)
+			| Self::IntegerUnaryOperation(_)
+			| Self::IntegerBinaryOperation(_)
+			| Self::IntegerCompareOperation(_)
+			| Self::IntegerNarrow(_)
+			| Self::IntegerWiden(_)
+			| Self::IntegerSignExtend(_)
+			| Self::IntegerConvertToNumber(_)
+			| Self::IntegerTransmuteToNumber(_)
+			| Self::NumberUnaryOperation(_)
+			| Self::NumberBinaryOperation(_)
+			| Self::NumberCompareOperation(_)
+			| Self::NumberNarrow(_)
+			| Self::NumberWiden(_)
+			| Self::NumberTruncateToInteger(_)
+			| Self::NumberTransmuteToInteger(_)
+			| Self::MutableNew(_)
+			| Self::Aggregate(_)
+			| Self::Extract(_)
+			| Self::TableNew(_)
+			| Self::MemoryNew(_) => None,
+
+			Self::Foreign(foreign) => foreign.forwarded_operand(port),
+
+			Self::Identity(node) => node.forwarded_operand(port),
+			Self::Fence(node) => node.forwarded_operand(port),
+
+			Self::MutableGet(node) => node.forwarded_operand(port),
+			Self::MutableSet(node) => node.forwarded_operand(port),
+
+			Self::TableGet(node) => node.forwarded_operand(port),
+			Self::TableSet(node) => node.forwarded_operand(port),
+			Self::TableSize(node) => node.forwarded_operand(port),
+			Self::TableGrow(node) => node.forwarded_operand(port),
+			Self::TableFill(node) => node.forwarded_operand(port),
+			Self::TableCopy(node) => node.forwarded_operand(port),
+			Self::TableDrop(node) => node.forwarded_operand(port),
+
+			Self::MemoryLoad(node) => node.forwarded_operand(port),
+			Self::MemoryStore(node) => node.forwarded_operand(port),
+			Self::MemorySize(node) => node.forwarded_operand(port),
+			Self::MemoryGrow(node) => node.forwarded_operand(port),
+			Self::MemoryFill(node) => node.forwarded_operand(port),
+			Self::MemoryCopy(node) => node.forwarded_operand(port),
+			Self::MemoryDrop(node) => node.forwarded_operand(port),
+		}
+	}
+
+	/// Returns the structural role this node plays during a region walk.
+	#[must_use]
+	#[expect(clippy::too_many_lines, reason = "exhaustive match over node variants")]
+	pub const fn shape(&self) -> Shape<'_> {
+		match self {
+			Self::Function(arc) => Shape::Function(arc),
+
+			Self::FunctionArguments(_)
+			| Self::FunctionResults(_)
+			| Self::BranchArguments(_)
+			| Self::RepeatArguments(_)
+			| Self::Foreign(_)
+			| Self::Trap
+			| Self::Null
+			| Self::I32(_)
+			| Self::I64(_)
+			| Self::F32(_)
+			| Self::F64(_)
+			| Self::Identity(_)
+			| Self::Fence(_)
+			| Self::Apply(_)
+			| Self::RefIsNull(_)
+			| Self::IntegerUnaryOperation(_)
+			| Self::IntegerBinaryOperation(_)
+			| Self::IntegerCompareOperation(_)
+			| Self::IntegerNarrow(_)
+			| Self::IntegerWiden(_)
+			| Self::IntegerSignExtend(_)
+			| Self::IntegerConvertToNumber(_)
+			| Self::IntegerTransmuteToNumber(_)
+			| Self::NumberUnaryOperation(_)
+			| Self::NumberBinaryOperation(_)
+			| Self::NumberCompareOperation(_)
+			| Self::NumberNarrow(_)
+			| Self::NumberWiden(_)
+			| Self::NumberTruncateToInteger(_)
+			| Self::NumberTransmuteToInteger(_)
+			| Self::MutableNew(_)
+			| Self::MutableGet(_)
+			| Self::MutableSet(_)
+			| Self::Aggregate(_)
+			| Self::Extract(_)
+			| Self::TableNew(_)
+			| Self::TableGet(_)
+			| Self::TableSet(_)
+			| Self::TableSize(_)
+			| Self::TableGrow(_)
+			| Self::TableFill(_)
+			| Self::TableCopy(_)
+			| Self::TableDrop(_)
+			| Self::MemoryNew(_)
+			| Self::MemoryLoad(_)
+			| Self::MemoryStore(_)
+			| Self::MemorySize(_)
+			| Self::MemoryGrow(_)
+			| Self::MemoryFill(_)
+			| Self::MemoryCopy(_)
+			| Self::MemoryDrop(_) => Shape::Plain,
+
+			Self::Match(arc) => Shape::Match(arc),
+			Self::Repeat(arc) => Shape::Repeat(arc),
+
+			Self::BranchResults(results) => Shape::BranchResults(results),
+
+			Self::RepeatResults(results) => Shape::RepeatResults(results),
 		}
 	}
 

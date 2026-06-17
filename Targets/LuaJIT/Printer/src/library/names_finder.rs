@@ -480,12 +480,12 @@ impl NeedsName for Expression {
 			| Self::BooleanToInteger(_)
 			| Self::RefIsNull(_) => "",
 
-			Self::RuntimeCall(runtime_call) => runtime_call.name,
-
 			Self::I32(i32) => i32.needs_name(),
 			Self::I64(i64) => i64.needs_name(),
 			Self::F32(f32) => f32.needs_name(),
 			Self::F64(f64) => f64.needs_name(),
+
+			Self::RuntimeCall(runtime_call) => runtime_call.name,
 
 			Self::IntegerUnaryOperation(integer_unary_operation) => {
 				integer_unary_operation.needs_name()

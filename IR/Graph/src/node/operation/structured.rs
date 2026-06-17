@@ -1,4 +1,4 @@
-//! Native structured data — aggregates and field extraction.
+//! Native structured data, aggregates and field extraction.
 
 #![expect(
 	unused_variables,

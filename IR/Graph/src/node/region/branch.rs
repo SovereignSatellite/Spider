@@ -1,4 +1,4 @@
-//! A branch region — one arm of a match dispatch.
+//! A branch region, one arm of a match dispatch.
 
 #![expect(
 	unused_variables,
@@ -64,25 +64,6 @@ impl Branch {
 		self.results().argument_count()
 	}
 
-	/// Returns the index of the results boundary node.
-	#[must_use]
-	pub fn results_index(&self) -> usize {
-		self.nodes
-			.iter()
-			.rposition(|node| matches!(node, Node::BranchResults(_)))
-			.unwrap_or_else(|| unreachable!())
-	}
-
-	/// Returns a reference to the results boundary node.
-	#[must_use]
-	pub fn results(&self) -> &Results {
-		if let Node::BranchResults(results) = &self.nodes[self.results_index()] {
-			results
-		} else {
-			unreachable!()
-		}
-	}
-
 	/// Returns a reference to the arguments boundary node.
 	#[must_use]
 	pub fn arguments(&self) -> &Arguments {
@@ -97,6 +78,25 @@ impl Branch {
 	pub fn arguments_mut(&mut self) -> &mut Arguments {
 		if let Node::BranchArguments(arguments) = &mut self.nodes[Self::ARGUMENTS_ID as usize] {
 			arguments
+		} else {
+			unreachable!()
+		}
+	}
+
+	/// Returns the index of the results boundary node.
+	#[must_use]
+	pub fn results_index(&self) -> usize {
+		self.nodes
+			.iter()
+			.rposition(|node| matches!(node, Node::BranchResults(_)))
+			.unwrap_or_else(|| unreachable!())
+	}
+
+	/// Returns a reference to the results boundary node.
+	#[must_use]
+	pub fn results(&self) -> &Results {
+		if let Node::BranchResults(results) = &self.nodes[self.results_index()] {
+			results
 		} else {
 			unreachable!()
 		}
