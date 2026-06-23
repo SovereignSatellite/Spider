@@ -2,13 +2,9 @@ use alloc::sync::Arc;
 use std::io::{Result, Write};
 
 use luau_tree::expression::{
-	Aggregate, BooleanToInteger, Call, Expression, Extract, Function, GlobalGet, GlobalNew,
-	IntegerBinaryOperation, IntegerCompareOperation, IntegerConvertToNumber, IntegerExtend,
-	IntegerNarrow, IntegerTransmuteToNumber, IntegerUnaryOperation, IntegerWiden, Local, Location,
-	Match, MemoryGrow, MemoryLoad, MemoryNew, MemorySize, Name, NumberBinaryOperation,
-	NumberCompareOperation, NumberNarrow, NumberTransmuteToInteger, NumberTruncateToInteger,
-	NumberUnaryOperation, NumberWiden, RefIsNull, RuntimeCall, TableGet, TableGrow, TableNew,
-	TableSize, number,
+	Aggregate, Apply, BooleanToInteger, BufferLength, Call, Expression, Extract, Function,
+	GlobalGet, GlobalNew, Index, Infix, Local, Match, MemoryNew, Name, Prefix, RefIsNull, TableNew,
+	TableSize, VectorX,
 };
 
 use super::{LuauPrinter, library::NeedsName as _, print::Print};
@@ -108,15 +104,27 @@ where
 	}
 }
 
-pub fn fmt_runtime_call(
-	name: &str,
+// A trailing argument that is itself a multi-value call (e.g. `from_bits_i64`)
+// would otherwise spill its extra results into the call; parenthesizing the
+// final argument collapses it to the single value the call position intends.
+fn fmt_arguments(
 	arguments: &[Expression],
 	printer: &mut LuauPrinter,
 	out: &mut dyn Write,
 ) -> Result<()> {
-	write!(out, "rt_{name}(")?;
+	let Some((last, leading)) = arguments.split_last() else {
+		return Ok(());
+	};
 
-	fmt_delimited(arguments, printer, out)?;
+	for argument in leading {
+		argument.print(printer, out)?;
+
+		write!(out, ", ")?;
+	}
+
+	write!(out, "(")?;
+
+	last.print(printer, out)?;
 
 	write!(out, ")")
 }
@@ -311,17 +319,39 @@ impl Print for Call {
 
 		write!(out, "(")?;
 
-		fmt_delimited(arguments, printer, out)?;
+		fmt_arguments(arguments, printer, out)?;
 
 		write!(out, ")")
 	}
 }
 
-impl Print for RuntimeCall {
+impl<const N: usize> Print for Apply<N> {
 	fn print(&self, printer: &mut LuauPrinter, out: &mut dyn Write) -> Result<()> {
-		let Self { name, arguments } = self;
+		write!(out, "{}(", self.name)?;
 
-		fmt_runtime_call(name, arguments, printer, out)
+		fmt_arguments(&self.arguments, printer, out)?;
+
+		write!(out, ")")
+	}
+}
+
+impl Print for Infix {
+	fn print(&self, printer: &mut LuauPrinter, out: &mut dyn Write) -> Result<()> {
+		let Self { operator, lhs, rhs } = self;
+
+		fmt_infix_operator(lhs, rhs, operator, printer, out)
+	}
+}
+
+impl Print for Prefix {
+	fn print(&self, printer: &mut LuauPrinter, out: &mut dyn Write) -> Result<()> {
+		let Self { operator, source } = self;
+
+		write!(out, "{operator}(")?;
+
+		source.print(printer, out)?;
+
+		write!(out, ")")
 	}
 }
 
@@ -346,293 +376,6 @@ impl Print for RefIsNull {
 		source.print(printer, out)?;
 
 		write!(out, ") == nil")
-	}
-}
-
-impl Print for IntegerUnaryOperation {
-	fn print(&self, printer: &mut LuauPrinter, out: &mut dyn Write) -> Result<()> {
-		let Self { source, .. } = self;
-
-		let intrinsic = self.needs_name();
-
-		write!(out, "rt_{intrinsic}(")?;
-
-		source.print(printer, out)?;
-
-		write!(out, ")")
-	}
-}
-
-impl Print for IntegerBinaryOperation {
-	fn print(&self, printer: &mut LuauPrinter, out: &mut dyn Write) -> Result<()> {
-		let Self { lhs, rhs, .. } = self;
-
-		let intrinsic = self.needs_name();
-
-		write!(out, "rt_{intrinsic}(")?;
-
-		lhs.print(printer, out)?;
-
-		write!(out, ", ")?;
-
-		rhs.print(printer, out)?;
-
-		write!(out, ")")
-	}
-}
-
-impl Print for IntegerCompareOperation {
-	fn print(&self, printer: &mut LuauPrinter, out: &mut dyn Write) -> Result<()> {
-		let Self { lhs, rhs, .. } = self;
-
-		let intrinsic = self.needs_name();
-
-		write!(out, "rt_{intrinsic}(")?;
-
-		lhs.print(printer, out)?;
-
-		write!(out, ", ")?;
-
-		rhs.print(printer, out)?;
-
-		write!(out, ")")
-	}
-}
-
-impl Print for IntegerNarrow {
-	fn print(&self, printer: &mut LuauPrinter, out: &mut dyn Write) -> Result<()> {
-		let Self { source } = self;
-
-		let intrinsic = self.needs_name();
-
-		write!(out, "rt_{intrinsic}(")?;
-
-		source.print(printer, out)?;
-
-		write!(out, ")")
-	}
-}
-
-impl Print for IntegerWiden {
-	fn print(&self, printer: &mut LuauPrinter, out: &mut dyn Write) -> Result<()> {
-		let Self { source } = self;
-
-		let intrinsic = self.needs_name();
-
-		write!(out, "rt_{intrinsic}(")?;
-
-		source.print(printer, out)?;
-
-		write!(out, ")")
-	}
-}
-
-impl Print for IntegerExtend {
-	fn print(&self, printer: &mut LuauPrinter, out: &mut dyn Write) -> Result<()> {
-		let Self { source, .. } = self;
-
-		let intrinsic = self.needs_name();
-
-		write!(out, "rt_{intrinsic}(")?;
-
-		source.print(printer, out)?;
-
-		write!(out, ")")
-	}
-}
-
-impl Print for IntegerConvertToNumber {
-	fn print(&self, printer: &mut LuauPrinter, out: &mut dyn Write) -> Result<()> {
-		let Self { source, .. } = self;
-
-		let intrinsic = self.needs_name();
-
-		write!(out, "rt_{intrinsic}(")?;
-
-		source.print(printer, out)?;
-
-		write!(out, ")")
-	}
-}
-
-impl Print for IntegerTransmuteToNumber {
-	fn print(&self, printer: &mut LuauPrinter, out: &mut dyn Write) -> Result<()> {
-		let Self { source, .. } = self;
-
-		let intrinsic = self.needs_name();
-
-		write!(out, "rt_{intrinsic}(")?;
-
-		source.print(printer, out)?;
-
-		write!(out, ")")
-	}
-}
-
-impl Print for NumberUnaryOperation {
-	fn print(&self, printer: &mut LuauPrinter, out: &mut dyn Write) -> Result<()> {
-		let Self {
-			source,
-			kind,
-			operator,
-		} = self;
-
-		if *kind == number::Type::F64 && *operator == number::UnaryOperator::Negate {
-			write!(out, "-(")?;
-
-			source.print(printer, out)?;
-
-			return write!(out, ")");
-		}
-
-		let intrinsic = self.needs_name();
-
-		write!(out, "rt_{intrinsic}(")?;
-
-		source.print(printer, out)?;
-
-		write!(out, ")")
-	}
-}
-
-impl Print for NumberBinaryOperation {
-	fn print(&self, printer: &mut LuauPrinter, out: &mut dyn Write) -> Result<()> {
-		let Self {
-			lhs,
-			rhs,
-			kind,
-			operator,
-		} = self;
-
-		if let Some(operator) = match operator {
-			number::BinaryOperator::Add => Some("+"),
-			number::BinaryOperator::Subtract => Some("-"),
-			number::BinaryOperator::Multiply => Some("*"),
-			number::BinaryOperator::Divide => Some("/"),
-
-			number::BinaryOperator::Minimum
-			| number::BinaryOperator::Maximum
-			| number::BinaryOperator::CopySign => None,
-		} && *kind == number::Type::F64
-		{
-			return fmt_infix_operator(lhs, rhs, operator, printer, out);
-		}
-
-		let intrinsic = self.needs_name();
-
-		write!(out, "rt_{intrinsic}(")?;
-
-		lhs.print(printer, out)?;
-
-		write!(out, ", ")?;
-
-		rhs.print(printer, out)?;
-
-		write!(out, ")")
-	}
-}
-
-impl Print for NumberCompareOperation {
-	fn print(&self, printer: &mut LuauPrinter, out: &mut dyn Write) -> Result<()> {
-		let Self {
-			lhs,
-			rhs,
-			kind,
-			operator,
-		} = self;
-
-		if *kind == number::Type::F64 {
-			let operator = match operator {
-				number::CompareOperator::Equal => "==",
-				number::CompareOperator::NotEqual => "~=",
-				number::CompareOperator::LessThan => "<",
-				number::CompareOperator::GreaterThan => ">",
-				number::CompareOperator::LessThanEqual => "<=",
-				number::CompareOperator::GreaterThanEqual => ">=",
-			};
-
-			return fmt_infix_operator(lhs, rhs, operator, printer, out);
-		}
-
-		let intrinsic = self.needs_name();
-
-		write!(out, "rt_{intrinsic}(")?;
-
-		lhs.print(printer, out)?;
-
-		write!(out, ", ")?;
-
-		rhs.print(printer, out)?;
-
-		write!(out, ")")
-	}
-}
-
-impl Print for NumberNarrow {
-	fn print(&self, printer: &mut LuauPrinter, out: &mut dyn Write) -> Result<()> {
-		let Self { source } = self;
-
-		let intrinsic = self.needs_name();
-
-		write!(out, "rt_{intrinsic}(")?;
-
-		source.print(printer, out)?;
-
-		write!(out, ")")
-	}
-}
-
-impl Print for NumberWiden {
-	fn print(&self, printer: &mut LuauPrinter, out: &mut dyn Write) -> Result<()> {
-		let Self { source } = self;
-
-		let intrinsic = self.needs_name();
-
-		write!(out, "rt_{intrinsic}(")?;
-
-		source.print(printer, out)?;
-
-		write!(out, ")")
-	}
-}
-
-impl Print for NumberTruncateToInteger {
-	fn print(&self, printer: &mut LuauPrinter, out: &mut dyn Write) -> Result<()> {
-		let Self { source, .. } = self;
-
-		let intrinsic = self.needs_name();
-
-		write!(out, "rt_{intrinsic}(")?;
-
-		source.print(printer, out)?;
-
-		write!(out, ")")
-	}
-}
-
-impl Print for NumberTransmuteToInteger {
-	fn print(&self, printer: &mut LuauPrinter, out: &mut dyn Write) -> Result<()> {
-		let Self { source, .. } = self;
-
-		let intrinsic = self.needs_name();
-
-		write!(out, "rt_{intrinsic}(")?;
-
-		source.print(printer, out)?;
-
-		write!(out, ")")
-	}
-}
-
-impl Print for Location {
-	fn print(&self, printer: &mut LuauPrinter, out: &mut dyn Write) -> Result<()> {
-		let Self { reference, offset } = self;
-
-		reference.print(printer, out)?;
-
-		write!(out, ", ")?;
-
-		offset.print(printer, out)
 	}
 }
 
@@ -688,6 +431,22 @@ impl Print for Extract {
 	}
 }
 
+impl Print for Index {
+	fn print(&self, printer: &mut LuauPrinter, out: &mut dyn Write) -> Result<()> {
+		let Self { source, offset } = self;
+
+		write!(out, "(")?;
+
+		source.print(printer, out)?;
+
+		write!(out, ")[")?;
+
+		offset.print(printer, out)?;
+
+		write!(out, "]")
+	}
+}
+
 impl Print for TableNew {
 	fn print(&self, printer: &mut LuauPrinter, out: &mut dyn Write) -> Result<()> {
 		let Self {
@@ -712,20 +471,6 @@ impl Print for TableNew {
 	}
 }
 
-impl Print for TableGet {
-	fn print(&self, printer: &mut LuauPrinter, out: &mut dyn Write) -> Result<()> {
-		let Self { source } = self;
-
-		let intrinsic = self.needs_name();
-
-		write!(out, "rt_{intrinsic}(")?;
-
-		source.print(printer, out)?;
-
-		write!(out, ")")
-	}
-}
-
 impl Print for TableSize {
 	fn print(&self, printer: &mut LuauPrinter, out: &mut dyn Write) -> Result<()> {
 		let Self { source } = self;
@@ -738,29 +483,27 @@ impl Print for TableSize {
 	}
 }
 
-impl Print for TableGrow {
+impl Print for BufferLength {
 	fn print(&self, printer: &mut LuauPrinter, out: &mut dyn Write) -> Result<()> {
-		let Self {
-			destination,
-			initializer,
-			size,
-		} = self;
+		let Self { source } = self;
 
-		let intrinsic = self.needs_name();
+		write!(out, "buffer.len((")?;
 
-		write!(out, "rt_{intrinsic}(")?;
+		source.print(printer, out)?;
 
-		destination.print(printer, out)?;
+		write!(out, ")[1])")
+	}
+}
 
-		write!(out, ", ")?;
+impl Print for VectorX {
+	fn print(&self, printer: &mut LuauPrinter, out: &mut dyn Write) -> Result<()> {
+		let Self { source } = self;
 
-		initializer.print(printer, out)?;
+		write!(out, "(")?;
 
-		write!(out, ", ")?;
+		source.print(printer, out)?;
 
-		size.print(printer, out)?;
-
-		write!(out, ")")
+		write!(out, ").x")
 	}
 }
 
@@ -784,57 +527,7 @@ impl Print for MemoryNew {
 	}
 }
 
-impl Print for MemoryLoad {
-	fn print(&self, printer: &mut LuauPrinter, out: &mut dyn Write) -> Result<()> {
-		let Self { source, .. } = self;
-
-		let intrinsic = self.needs_name();
-
-		write!(out, "rt_{intrinsic}(")?;
-
-		source.print(printer, out)?;
-
-		write!(out, ")")
-	}
-}
-
-impl Print for MemorySize {
-	fn print(&self, printer: &mut LuauPrinter, out: &mut dyn Write) -> Result<()> {
-		let Self { source } = self;
-
-		let intrinsic = self.needs_name();
-
-		write!(out, "rt_{intrinsic}(")?;
-
-		source.print(printer, out)?;
-
-		write!(out, ")")
-	}
-}
-
-impl Print for MemoryGrow {
-	fn print(&self, printer: &mut LuauPrinter, out: &mut dyn Write) -> Result<()> {
-		let Self { destination, size } = self;
-
-		let intrinsic = self.needs_name();
-
-		write!(out, "rt_{intrinsic}(")?;
-
-		destination.print(printer, out)?;
-
-		write!(out, ", ")?;
-
-		size.print(printer, out)?;
-
-		write!(out, ")")
-	}
-}
-
 impl Print for Expression {
-	#[expect(
-		clippy::too_many_lines,
-		reason = "exhaustive match over expression variants"
-	)]
 	fn print(&self, printer: &mut LuauPrinter, out: &mut dyn Write) -> Result<()> {
 		match self {
 			Self::Function(function) => function.print(printer, out),
@@ -848,56 +541,26 @@ impl Print for Expression {
 			Self::F64(f64) => f64.print(printer, out),
 			Self::String(string) => string.print(printer, out),
 			Self::Call(call) => call.print(printer, out),
-			Self::RuntimeCall(runtime_call) => runtime_call.print(printer, out),
+			Self::Apply0Arguments(apply) => apply.print(printer, out),
+			Self::Apply1Argument(apply) => apply.print(printer, out),
+			Self::Apply2Arguments(apply) => apply.print(printer, out),
+			Self::Apply3Arguments(apply) => apply.print(printer, out),
+			Self::Apply4Arguments(apply) => apply.print(printer, out),
+			Self::Apply5Arguments(apply) => apply.print(printer, out),
+			Self::Infix(infix) => infix.print(printer, out),
+			Self::Prefix(prefix) => prefix.print(printer, out),
 			Self::BooleanToInteger(boolean_to_integer) => boolean_to_integer.print(printer, out),
 			Self::RefIsNull(ref_is_null) => ref_is_null.print(printer, out),
-			Self::IntegerUnaryOperation(integer_unary_operation) => {
-				integer_unary_operation.print(printer, out)
-			}
-			Self::IntegerBinaryOperation(integer_binary_operation) => {
-				integer_binary_operation.print(printer, out)
-			}
-			Self::IntegerCompareOperation(integer_compare_operation) => {
-				integer_compare_operation.print(printer, out)
-			}
-			Self::IntegerNarrow(integer_narrow) => integer_narrow.print(printer, out),
-			Self::IntegerWiden(integer_widen) => integer_widen.print(printer, out),
-			Self::IntegerExtend(integer_extend) => integer_extend.print(printer, out),
-			Self::IntegerConvertToNumber(integer_convert_to_number) => {
-				integer_convert_to_number.print(printer, out)
-			}
-			Self::IntegerTransmuteToNumber(integer_transmute_to_number) => {
-				integer_transmute_to_number.print(printer, out)
-			}
-			Self::NumberUnaryOperation(number_unary_operation) => {
-				number_unary_operation.print(printer, out)
-			}
-			Self::NumberBinaryOperation(number_binary_operation) => {
-				number_binary_operation.print(printer, out)
-			}
-			Self::NumberCompareOperation(number_compare_operation) => {
-				number_compare_operation.print(printer, out)
-			}
-			Self::NumberNarrow(number_narrow) => number_narrow.print(printer, out),
-			Self::NumberWiden(number_widen) => number_widen.print(printer, out),
-			Self::NumberTruncateToInteger(number_truncate_to_integer) => {
-				number_truncate_to_integer.print(printer, out)
-			}
-			Self::NumberTransmuteToInteger(number_transmute_to_integer) => {
-				number_transmute_to_integer.print(printer, out)
-			}
 			Self::GlobalNew(global_new) => global_new.print(printer, out),
 			Self::GlobalGet(global_get) => global_get.print(printer, out),
 			Self::Aggregate(aggregate) => aggregate.print(printer, out),
 			Self::Extract(extract) => extract.print(printer, out),
 			Self::TableNew(table_new) => table_new.print(printer, out),
-			Self::TableGet(table_get) => table_get.print(printer, out),
 			Self::TableSize(table_size) => table_size.print(printer, out),
-			Self::TableGrow(table_grow) => table_grow.print(printer, out),
+			Self::Index(index) => index.print(printer, out),
 			Self::MemoryNew(memory_new) => memory_new.print(printer, out),
-			Self::MemoryLoad(memory_load) => memory_load.print(printer, out),
-			Self::MemorySize(memory_size) => memory_size.print(printer, out),
-			Self::MemoryGrow(memory_grow) => memory_grow.print(printer, out),
+			Self::BufferLength(buffer_length) => buffer_length.print(printer, out),
+			Self::VectorX(vector_x) => vector_x.print(printer, out),
 		}
 	}
 }
