@@ -45,6 +45,13 @@ impl Foreign for Ask {
 		Self::RESULT_COUNT
 	}
 
+	fn forwarded_operand(&self, port: u16) -> Option<Link> {
+		match port {
+			Self::STATE_PORT => Some(self.state),
+			_ => None,
+		}
+	}
+
 	fn for_each_outer(&self, handler: &mut dyn FnMut(Link)) {
 		handler(self.state);
 	}
@@ -89,6 +96,13 @@ impl Foreign for Tell {
 
 	fn result_count(&self) -> u16 {
 		Self::RESULT_COUNT
+	}
+
+	fn forwarded_operand(&self, port: u16) -> Option<Link> {
+		match port {
+			Self::STATE_PORT => Some(self.state),
+			_ => None,
+		}
 	}
 
 	fn for_each_outer(&self, handler: &mut dyn FnMut(Link)) {

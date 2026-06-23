@@ -24,8 +24,10 @@ pub struct Match {
 pub struct Repeat {
 	/// The loop body.
 	pub code: Sequence,
-	/// The loop condition expression.
+	/// The continuation condition; the loop exits when it evaluates to zero.
 	pub condition: Expression,
+	/// The carried-value rotation, run after the body on every continuing pass.
+	pub rotation: Sequence,
 }
 
 /// A local variable assignment.
@@ -36,9 +38,9 @@ pub struct Assign {
 	pub source: Expression,
 }
 
-/// A swap-all operation on locals.
+/// A cyclic swap of locals.
 pub struct SwapAll {
-	/// The locals to swap.
+	/// The locals to swap, in cycle order.
 	pub locals: Vec<Local>,
 }
 
@@ -147,7 +149,7 @@ pub enum Statement {
 
 	/// A local variable assignment.
 	Assign(Box<Assign>),
-	/// A swap-all operation.
+	/// A cyclic swap of locals.
 	SwapAll(Box<SwapAll>),
 
 	/// A function call.

@@ -3,28 +3,17 @@
 use ir_graph::{
 	Link, Node,
 	operation::{
-		Identity, LoadType, Location, MemoryLoad, MemoryStore, MutableGet, MutableNew, MutableSet,
-		StoreType, TableGet, TableSet,
+		LoadType, Location, MemoryLoad, MemoryStore, MutableGet, MutableNew, MutableSet, StoreType,
+		TableGet, TableSet,
 		integer::{
 			BinaryOperation as IntegerBinaryOperation, BinaryOperator as IntegerBinaryOperator,
 			Type as IntegerType,
 		},
 	},
+	tracer::identity_source,
 };
 
 use super::internal::Context;
-
-fn skip_identities(nodes: &[Node], mut link: Link) -> Link {
-	while let Node::Identity(Identity { sources }) = &nodes[usize::try_from(link.0).unwrap()] {
-		if let Some(&next) = sources.get(usize::from(link.1)) {
-			link = next;
-		} else {
-			break;
-		}
-	}
-
-	link
-}
 
 /// A newtype wrapper for implementing the ISLE `Context` trait on a region.
 pub struct RegionContext<'nodes>(pub &'nodes mut Vec<Node>);
@@ -35,7 +24,7 @@ impl RegionContext<'_> {
 	}
 
 	fn trace(&self, link: Link) -> Link {
-		skip_identities(self.0, link)
+		identity_source(self.0, link)
 	}
 }
 

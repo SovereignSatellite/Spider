@@ -45,24 +45,14 @@ impl Function {
 impl ExpressionMatch {
 	fn accept<T: Visitor>(&self, visitor: &mut T) -> ControlFlow<T::Output> {
 		let Self {
-			condition,
 			branches,
+			condition,
 		} = self;
 
 		condition.accept(visitor)?;
 		branches
 			.iter()
 			.try_for_each(|branch| branch.accept(visitor))
-	}
-}
-
-impl ExpressionRuntimeCall {
-	fn accept<T: Visitor>(&self, visitor: &mut T) -> ControlFlow<T::Output> {
-		let Self { arguments, .. } = self;
-
-		arguments
-			.iter()
-			.try_for_each(|argument| argument.accept(visitor))
 	}
 }
 
@@ -74,6 +64,16 @@ impl ExpressionCall {
 		} = self;
 
 		function.accept(visitor)?;
+		arguments
+			.iter()
+			.try_for_each(|argument| argument.accept(visitor))
+	}
+}
+
+impl ExpressionRuntimeCall {
+	fn accept<T: Visitor>(&self, visitor: &mut T) -> ControlFlow<T::Output> {
+		let Self { arguments, .. } = self;
+
 		arguments
 			.iter()
 			.try_for_each(|argument| argument.accept(visitor))
@@ -335,6 +335,9 @@ impl Expression {
 		visitor.visit_expression(self)?;
 
 		match self {
+			Self::Function(function) => function.accept(visitor),
+			Self::Match(inner) => inner.accept(visitor),
+
 			Self::Trap
 			| Self::Null
 			| Self::Local(_)
@@ -345,8 +348,6 @@ impl Expression {
 			| Self::String(_)
 			| Self::MemoryNew(_) => ControlFlow::Continue(()),
 
-			Self::Function(function) => function.accept(visitor),
-			Self::Match(inner) => inner.accept(visitor),
 			Self::Call(call) => call.accept(visitor),
 			Self::RuntimeCall(runtime_call) => runtime_call.accept(visitor),
 			Self::BooleanToInteger(boolean_to_integer) => boolean_to_integer.accept(visitor),
@@ -428,10 +429,15 @@ impl StatementMatch {
 
 impl Repeat {
 	fn accept<T: Visitor>(&self, visitor: &mut T) -> ControlFlow<T::Output> {
-		let Self { code, condition } = self;
+		let Self {
+			code,
+			condition,
+			rotation,
+		} = self;
 
 		code.accept(visitor)?;
-		condition.accept(visitor)
+		condition.accept(visitor)?;
+		rotation.accept(visitor)
 	}
 }
 
@@ -582,11 +588,10 @@ impl Statement {
 		visitor.visit_statement(self)?;
 
 		match self {
-			Self::SwapAll(_) => ControlFlow::Continue(()),
-
 			Self::Match(inner) => inner.accept(visitor),
 			Self::Repeat(repeat) => repeat.accept(visitor),
 			Self::Assign(assign) => assign.accept(visitor),
+			Self::SwapAll(_) => ControlFlow::Continue(()),
 			Self::Call(call) => call.accept(visitor),
 			Self::RuntimeCall(runtime_call) => runtime_call.accept(visitor),
 			Self::GlobalSet(global_set) => global_set.accept(visitor),

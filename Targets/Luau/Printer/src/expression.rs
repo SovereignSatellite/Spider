@@ -121,7 +121,7 @@ pub fn fmt_runtime_call(
 	write!(out, ")")
 }
 
-pub fn fmt_stack_enter(size: u16, printer: &LuauPrinter, out: &mut dyn Write) -> Result<()> {
+fn fmt_stack_enter(size: u16, printer: &LuauPrinter, out: &mut dyn Write) -> Result<()> {
 	if size == 0 {
 		return Ok(());
 	}
@@ -130,7 +130,7 @@ pub fn fmt_stack_enter(size: u16, printer: &LuauPrinter, out: &mut dyn Write) ->
 	writeln!(out, "local stack = stack_acquire({size})")
 }
 
-pub fn fmt_stack_leave(size: u16, printer: &LuauPrinter, out: &mut dyn Write) -> Result<()> {
+fn fmt_stack_leave(size: u16, printer: &LuauPrinter, out: &mut dyn Write) -> Result<()> {
 	if size == 0 {
 		return Ok(());
 	}
@@ -166,7 +166,7 @@ impl Print for Name {
 	}
 }
 
-pub fn fmt_locals(names: &[Name], printer: &mut LuauPrinter, out: &mut dyn Write) -> Result<()> {
+fn fmt_locals(names: &[Name], printer: &mut LuauPrinter, out: &mut dyn Write) -> Result<()> {
 	if names.is_empty() {
 		return Ok(());
 	}
@@ -234,8 +234,8 @@ impl Print for Function {
 impl Print for Match {
 	fn print(&self, printer: &mut LuauPrinter, out: &mut dyn Write) -> Result<()> {
 		let Self {
-			condition,
 			branches,
+			condition,
 		} = self;
 
 		if let [on_false, on_true] = branches.as_slice() {
@@ -243,14 +243,6 @@ impl Print for Match {
 		} else {
 			conditional::print_match(branches, condition, printer, out)
 		}
-	}
-}
-
-impl Print for RuntimeCall {
-	fn print(&self, printer: &mut LuauPrinter, out: &mut dyn Write) -> Result<()> {
-		let Self { name, arguments } = self;
-
-		fmt_runtime_call(name, arguments, printer, out)
 	}
 }
 
@@ -283,14 +275,6 @@ impl Print for f32 {
 	}
 }
 
-impl Print for Arc<str> {
-	fn print(&self, _printer: &mut LuauPrinter, out: &mut dyn Write) -> Result<()> {
-		let escaped = self.as_bytes().escape_ascii();
-
-		write!(out, "\"{escaped}\"")
-	}
-}
-
 impl Print for f64 {
 	fn print(&self, _printer: &mut LuauPrinter, out: &mut dyn Write) -> Result<()> {
 		if self.is_finite() {
@@ -308,6 +292,14 @@ impl Print for f64 {
 	}
 }
 
+impl Print for Arc<str> {
+	fn print(&self, _printer: &mut LuauPrinter, out: &mut dyn Write) -> Result<()> {
+		let escaped = self.as_bytes().escape_ascii();
+
+		write!(out, "\"{escaped}\"")
+	}
+}
+
 impl Print for Call {
 	fn print(&self, printer: &mut LuauPrinter, out: &mut dyn Write) -> Result<()> {
 		let Self {
@@ -322,6 +314,14 @@ impl Print for Call {
 		fmt_delimited(arguments, printer, out)?;
 
 		write!(out, ")")
+	}
+}
+
+impl Print for RuntimeCall {
+	fn print(&self, printer: &mut LuauPrinter, out: &mut dyn Write) -> Result<()> {
+		let Self { name, arguments } = self;
+
+		fmt_runtime_call(name, arguments, printer, out)
 	}
 }
 
@@ -652,9 +652,11 @@ impl Print for GlobalGet {
 	fn print(&self, printer: &mut LuauPrinter, out: &mut dyn Write) -> Result<()> {
 		let Self { source } = self;
 
+		write!(out, "(")?;
+
 		source.print(printer, out)?;
 
-		write!(out, "[1]")
+		write!(out, ")[1]")
 	}
 }
 
@@ -678,9 +680,11 @@ impl Print for Extract {
 	fn print(&self, printer: &mut LuauPrinter, out: &mut dyn Write) -> Result<()> {
 		let Self { source, index } = self;
 
+		write!(out, "(")?;
+
 		source.print(printer, out)?;
 
-		write!(out, "[{}]", index + 1)
+		write!(out, ")[{}]", index + 1)
 	}
 }
 
@@ -726,9 +730,11 @@ impl Print for TableSize {
 	fn print(&self, printer: &mut LuauPrinter, out: &mut dyn Write) -> Result<()> {
 		let Self { source } = self;
 
+		write!(out, "(")?;
+
 		source.print(printer, out)?;
 
-		write!(out, ".minimum")
+		write!(out, ").minimum")
 	}
 }
 

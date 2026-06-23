@@ -7,16 +7,37 @@ use parking_lot::Mutex;
 use set::Set;
 
 use ir_graph::{
-	Link, Node,
+	Link, Node, Shape,
 	region::{Match, Repeat},
+	tracer,
 };
-
-use crate::tracer;
 
 /// Moves invariant ports out of control flow regions.
 pub struct InvariantPortMover {
 	replacements: HashMap<Link, Link>,
 	visited: Set,
+}
+
+fn fixup_repeat_inner_references(repeat: &mut Repeat) {
+	let position = repeat.results_index();
+	let (inner, tail) = repeat.nodes.split_at_mut(position);
+	let Node::RepeatResults(results) = &tail[0] else {
+		unreachable!()
+	};
+
+	for node in inner.iter_mut() {
+		node.for_each_mut_outer(|link| {
+			if link.0 != 0 {
+				return;
+			}
+
+			let result = results.sources[usize::from(link.1)];
+
+			if result.0 == 0 && result.1 != link.1 {
+				*link = result;
+			}
+		});
+	}
 }
 
 impl InvariantPortMover {
@@ -29,7 +50,7 @@ impl InvariantPortMover {
 		}
 	}
 
-	fn redirected_or_self(&self, link: Link) -> Link {
+	fn resolve_replacement(&self, link: Link) -> Link {
 		self.replacements.get(&link).copied().unwrap_or(link)
 	}
 
@@ -39,7 +60,7 @@ impl InvariantPortMover {
 		for port in 0..guard.result_count() {
 			if let Some(origin) = tracer::trace_match(&guard, port) {
 				self.replacements
-					.insert(Link(id, port), self.redirected_or_self(origin));
+					.insert(Link(id, port), self.resolve_replacement(origin));
 			}
 		}
 	}
@@ -56,77 +77,25 @@ impl InvariantPortMover {
 			let canonical = u16::try_from(canonical).unwrap();
 
 			self.replacements
-				.insert(Link(id, port), self.redirected_or_self(origin));
+				.insert(Link(id, port), self.resolve_replacement(origin));
 
 			guard.results_mut().sources[usize::from(port)] = Link(0, canonical);
 		}
 	}
 
-	#[expect(clippy::too_many_lines, reason = "exhaustive match over node variants")]
 	fn process_all(&mut self, nodes: &[Node]) {
 		self.replacements.clear();
 
 		for (index, node) in nodes.iter().enumerate() {
 			let id = u32::try_from(index).unwrap();
 
-			match node {
-				Node::Function(_)
-				| Node::FunctionArguments(_)
-				| Node::FunctionResults(_)
-				| Node::BranchArguments(_)
-				| Node::BranchResults(_)
-				| Node::RepeatArguments(_)
-				| Node::RepeatResults(_)
-				| Node::Foreign(_)
-				| Node::Trap
-				| Node::Null
-				| Node::I32(_)
-				| Node::I64(_)
-				| Node::F32(_)
-				| Node::F64(_)
-				| Node::Identity(_)
-				| Node::Fence(_)
-				| Node::Apply(_)
-				| Node::RefIsNull(_)
-				| Node::IntegerUnaryOperation(_)
-				| Node::IntegerBinaryOperation(_)
-				| Node::IntegerCompareOperation(_)
-				| Node::IntegerNarrow(_)
-				| Node::IntegerWiden(_)
-				| Node::IntegerSignExtend(_)
-				| Node::IntegerConvertToNumber(_)
-				| Node::IntegerTransmuteToNumber(_)
-				| Node::NumberUnaryOperation(_)
-				| Node::NumberBinaryOperation(_)
-				| Node::NumberCompareOperation(_)
-				| Node::NumberNarrow(_)
-				| Node::NumberWiden(_)
-				| Node::NumberTruncateToInteger(_)
-				| Node::NumberTransmuteToInteger(_)
-				| Node::MutableNew(_)
-				| Node::MutableGet(_)
-				| Node::MutableSet(_)
-				| Node::Aggregate(_)
-				| Node::Extract(_)
-				| Node::TableNew(_)
-				| Node::TableGet(_)
-				| Node::TableSet(_)
-				| Node::TableSize(_)
-				| Node::TableGrow(_)
-				| Node::TableFill(_)
-				| Node::TableCopy(_)
-				| Node::TableDrop(_)
-				| Node::MemoryNew(_)
-				| Node::MemoryLoad(_)
-				| Node::MemoryStore(_)
-				| Node::MemorySize(_)
-				| Node::MemoryGrow(_)
-				| Node::MemoryFill(_)
-				| Node::MemoryCopy(_)
-				| Node::MemoryDrop(_) => {}
-
-				Node::Match(arc) => self.process_match(id, arc),
-				Node::Repeat(arc) => self.process_repeat(id, arc),
+			match node.shape() {
+				Shape::Plain
+				| Shape::Function(_)
+				| Shape::BranchResults(_)
+				| Shape::RepeatResults(_) => {}
+				Shape::Match(arc) => self.process_match(id, arc),
+				Shape::Repeat(arc) => self.process_repeat(id, arc),
 			}
 		}
 	}
@@ -137,28 +106,6 @@ impl InvariantPortMover {
 		}
 	}
 
-	fn fixup_repeat_inner_references(repeat: &mut Repeat) {
-		let position = repeat.results_index();
-		let (inner, tail) = repeat.nodes.split_at_mut(position);
-		let Node::RepeatResults(results) = &tail[0] else {
-			unreachable!()
-		};
-
-		for node in inner.iter_mut() {
-			node.for_each_mut_outer(|link| {
-				if link.0 != 0 {
-					return;
-				}
-
-				let result = results.sources[usize::from(link.1)];
-
-				if result.0 == 0 && result.1 != link.1 {
-					*link = result;
-				}
-			});
-		}
-	}
-
 	fn apply_all(&self, nodes: &mut [Node]) {
 		for node in nodes.iter_mut() {
 			node.for_each_mut_outer(|link| self.apply_single(link));
@@ -166,7 +113,7 @@ impl InvariantPortMover {
 
 		for node in nodes.iter() {
 			if let Node::Repeat(arc) = node {
-				Self::fixup_repeat_inner_references(&mut arc.lock());
+				fixup_repeat_inner_references(&mut arc.lock());
 			}
 		}
 	}

@@ -17,6 +17,13 @@ pub trait Foreign: Any {
 	/// Returns the number of output ports.
 	fn result_count(&self) -> u16;
 
+	/// Returns the operand link the given output port forwards.
+	fn forwarded_operand(&self, port: u16) -> Option<Link> {
+		let _ = port;
+
+		None
+	}
+
 	/// Calls `handler` for each outer link.
 	fn for_each_outer(&self, handler: &mut dyn FnMut(Link)) {
 		let _ = handler;

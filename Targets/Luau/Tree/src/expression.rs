@@ -22,10 +22,10 @@ pub struct Function {
 
 /// A conditional match expression.
 pub struct Match {
-	/// The condition expression.
-	pub condition: Expression,
 	/// The branch expressions.
 	pub branches: Vec<Expression>,
+	/// The condition expression.
+	pub condition: Expression,
 }
 
 /// A call to a named runtime function.

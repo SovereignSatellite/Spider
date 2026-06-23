@@ -1,7 +1,4 @@
-use ir_graph::{
-	Link,
-	operation::{self, StoreType},
-};
+use ir_graph::operation::StoreType;
 use luajit_tree::{
 	expression::{Expression, Local, Location},
 	statement::{
@@ -10,13 +7,14 @@ use luajit_tree::{
 	},
 };
 
-use super::{assignment_simplifier::AssignmentSimplifier, data_handler::DataHandler};
+use super::assignment_simplifier::AssignmentSimplifier;
 
 pub struct CodeHandler {
 	scopes: Vec<Vec<Statement>>,
 }
 
 impl CodeHandler {
+	#[must_use]
 	pub const fn new() -> Self {
 		Self { scopes: Vec::new() }
 	}
@@ -35,7 +33,7 @@ impl CodeHandler {
 		self.scopes.last_mut().unwrap().push(statement);
 	}
 
-	fn emit_match_statement(&mut self, condition: Expression, branches: Vec<Sequence>) {
+	pub fn emit_match(&mut self, condition: Expression, branches: Vec<Sequence>) {
 		let statement = Statement::Match(
 			Match {
 				branches,
@@ -47,28 +45,17 @@ impl CodeHandler {
 		self.push_statement(statement);
 	}
 
-	pub fn emit_match(
-		&mut self,
-		branches: Vec<Sequence>,
-		condition: Link,
-		scope: usize,
-		data_handler: &mut DataHandler,
-	) {
-		let condition = data_handler.load(scope, condition);
-		let condition = if branches.len() == 2 {
-			condition.into_boolean()
-		} else {
-			condition
-		};
-
-		self.emit_match_statement(condition, branches);
-	}
-
-	pub fn emit_repeat(&mut self, condition: Link, scope: usize, data_handler: &mut DataHandler) {
-		let condition = data_handler.load(scope, condition);
+	pub fn emit_repeat(&mut self, condition: Expression, rotation: Sequence) {
 		let code = self.pop_scope();
 
-		let statement = Statement::Repeat(Repeat { code, condition }.into());
+		let statement = Statement::Repeat(
+			Repeat {
+				code,
+				condition,
+				rotation,
+			}
+			.into(),
+		);
 
 		self.push_statement(statement);
 	}
@@ -93,45 +80,37 @@ impl CodeHandler {
 
 	pub fn emit_local_moves(&mut self, pairs: Vec<(Local, Local)>) {
 		let scope = self.scopes.last_mut().unwrap();
+		let mut simplifier = AssignmentSimplifier::new(pairs);
 
-		let mut handler = AssignmentSimplifier::new(pairs);
-
-		handler.find_all_assigns(|destination, source| {
+		simplifier.find_all_assigns(|destination, source| {
 			let source = Expression::Local(source);
-			let statement = Statement::Assign(
+
+			scope.push(Statement::Assign(
 				Assign {
 					destination,
 					source,
 				}
 				.into(),
-			);
-
-			scope.push(statement);
+			));
 		});
 
-		handler.find_all_swaps(|locals| {
+		simplifier.find_all_swaps(|locals| {
 			if locals.len() <= 1 {
 				return;
 			}
 
 			let locals = locals.to_vec();
-			let statement = Statement::SwapAll(SwapAll { locals }.into());
 
-			scope.push(statement);
+			scope.push(Statement::SwapAll(SwapAll { locals }.into()));
 		});
 	}
 
 	pub fn emit_call(
 		&mut self,
-		scope: usize,
-		node: &operation::Apply,
-		id: u32,
-		data_handler: &mut DataHandler,
+		function: Expression,
+		results: Vec<Local>,
+		arguments: Vec<Expression>,
 	) {
-		let function = data_handler.load(scope, node.function);
-		let arguments = data_handler.load_all(scope, &node.arguments);
-		let results = data_handler.load_result_locals(scope, id, node.result_count);
-
 		let statement = Statement::Call(
 			Call {
 				function,
