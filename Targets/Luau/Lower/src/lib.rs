@@ -1,12 +1,12 @@
-//! Luau-specific lowering of trivial IR operations.
+//! Luau-specific lowering of trivial IR operations into foreign-node trees.
 //!
-//! Runs as the injected pass inside the optimizer fixpoint, expanding trivial operations
-//! in place so the generic passes can compact and simplify the result.
+//! Runs as the injected pass inside the optimizer fixpoint: each trivial operation is
+//! expanded in place into a tree of [`luau_foreign`] nodes, and the generic passes then
+//! compact and simplify the result.
 
-use ir_graph::Region;
+pub use self::dispatch::apply;
 
-/// Lowers trivial operations in the region, reporting whether it changed anything.
-#[must_use]
-pub const fn apply(_region: &mut Region) -> bool {
-	false
-}
+mod dispatch;
+mod i32;
+mod i64;
+mod replace;
