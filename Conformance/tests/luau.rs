@@ -89,7 +89,10 @@ impl Luau {
 	}
 
 	fn format_source(&mut self, data: &[u8]) -> Result<()> {
-		let root = self.compiler.run(data, self.is_optimized);
+		let root = self
+			.compiler
+			.run(data, self.is_optimized, &mut luau_lower::apply);
+
 		let function = self.builder.run(&root);
 
 		NamesFinder::new(&mut self.references).run(&function);

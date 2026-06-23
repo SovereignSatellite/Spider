@@ -1,0 +1,10 @@
+[package]
+name = "luau-lower"
+version = "1.0.0"
+edition = "2024"
+
+[lints]
+workspace = true
+
+[dependencies]
+ir-graph.workspace = true

@@ -9,6 +9,7 @@ ir-pipeline.workspace = true
 luajit-builder.workspace = true
 luajit-printer.workspace = true
 luau-builder.workspace = true
+luau-lower.workspace = true
 luau-printer.workspace = true
 parking_lot.workspace = true
 web-assembly-lifter.workspace = true

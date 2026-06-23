@@ -25,6 +25,7 @@ use luajit_printer::{
 	library::{NamesFinder, Printer as LibraryPrinter, Sections as LibrarySections},
 };
 use luau_builder as _;
+use luau_lower as _;
 use luau_printer as _;
 
 use common::{compiler::Compiler, process, visitor::Visitor};
@@ -89,7 +90,7 @@ impl LuaJIT {
 	}
 
 	fn format_source(&mut self, data: &[u8]) -> Result<()> {
-		let root = self.compiler.run(data, self.is_optimized);
+		let root = self.compiler.run(data, self.is_optimized, &mut |_| false);
 		let function = self.builder.run(&root);
 
 		NamesFinder::new(&mut self.references).run(&function);

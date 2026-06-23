@@ -19,6 +19,7 @@ luajit-builder = { path = "Targets/LuaJIT/Builder" }
 luajit-printer = { path = "Targets/LuaJIT/Printer" }
 luau-builder = { path = "Targets/Luau/Builder" }
 luau-foreign = { path = "Targets/Luau/Foreign" }
+luau-lower = { path = "Targets/Luau/Lower" }
 luau-printer = { path = "Targets/Luau/Printer" }
 turing-machine-foreign = { path = "Sources/TuringMachine/Foreign" }
 web-assembly-foreign = { path = "Sources/WebAssembly/Foreign" }

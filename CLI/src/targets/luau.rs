@@ -11,9 +11,7 @@ use luau_printer::{
 use luau_tree::expression;
 
 fn build_function(root: &Arc<Mutex<Function>>) -> expression::Function {
-	let mut builder = LuauBuilder::new();
-
-	builder.run(root)
+	LuauBuilder::new().run(root)
 }
 
 fn print_library(function: &expression::Function, out: &mut dyn Write) -> std::io::Result<()> {

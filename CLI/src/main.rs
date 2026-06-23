@@ -21,13 +21,23 @@ fn lock_standard_output() -> BufWriter<StdoutLock<'static>> {
 	BufWriter::with_capacity(DEFAULT_BUFFER_SIZE, std::io::stdout().lock())
 }
 
-fn build_root(data: &[u8], should_optimize: bool, source: Source) -> Arc<Mutex<Function>> {
+fn build_root(
+	data: &[u8],
+	should_optimize: bool,
+	source: Source,
+	target: Target,
+) -> Arc<Mutex<Function>> {
 	let root = match source {
 		Source::TuringMachine => sources::from_turing_machine(data),
 		Source::WebAssembly => sources::from_web_assembly(data),
 	};
 
-	Optimizer::new().run(&root, should_optimize);
+	let mut optimizer = Optimizer::new();
+
+	match target {
+		Target::Luau => optimizer.run(&root, should_optimize, &mut luau_lower::apply),
+		Target::Json | Target::LuaJIT => optimizer.run(&root, should_optimize, &mut |_| false),
+	}
 
 	root
 }
@@ -53,7 +63,7 @@ fn compile(arguments: CompileArguments) {
 	} = arguments;
 
 	let data = std::fs::read(file).expect("failed to read file");
-	let root = build_root(&data, optimize, source);
+	let root = build_root(&data, optimize, source, target);
 
 	print_root(&root, target);
 }
