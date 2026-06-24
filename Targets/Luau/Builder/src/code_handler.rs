@@ -1,6 +1,6 @@
 use luau_tree::{
 	expression::{Expression, Local},
-	statement::{Assign, Call, GlobalSet, Match, Repeat, Sequence, SetIndex, Statement, SwapAll},
+	statement::{Assign, Call, Match, Repeat, Sequence, SetIndex, Statement, SwapAll},
 };
 
 use super::assignment_simplifier::AssignmentSimplifier;
@@ -103,18 +103,6 @@ impl CodeHandler {
 
 	pub fn emit_call(&mut self, results: Vec<Local>, call: Expression) {
 		let statement = Statement::Call(Call { results, call }.into());
-
-		self.push_statement(statement);
-	}
-
-	pub fn emit_mutable_set(&mut self, destination: Expression, source: Expression) {
-		let statement = Statement::GlobalSet(
-			GlobalSet {
-				destination,
-				source,
-			}
-			.into(),
-		);
 
 		self.push_statement(statement);
 	}

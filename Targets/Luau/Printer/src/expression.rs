@@ -2,9 +2,8 @@ use alloc::sync::Arc;
 use std::io::{Result, Write};
 
 use luau_tree::expression::{
-	Aggregate, Apply, BooleanToInteger, BufferLength, Call, Expression, Extract, Function,
-	GlobalGet, GlobalNew, Index, Infix, Local, Match, MemoryNew, Name, Prefix, RefIsNull, TableNew,
-	TableSize, VectorX,
+	Aggregate, Apply, BooleanToInteger, BufferLength, Call, Expression, Extract, Function, Index,
+	Infix, Local, Match, MemoryNew, Name, Prefix, RefIsNull, TableNew, TableSize, VectorX,
 };
 
 use super::{LuauPrinter, library::NeedsName as _, print::Print};
@@ -379,30 +378,6 @@ impl Print for RefIsNull {
 	}
 }
 
-impl Print for GlobalNew {
-	fn print(&self, printer: &mut LuauPrinter, out: &mut dyn Write) -> Result<()> {
-		let Self { initializer } = self;
-
-		write!(out, "{{ ")?;
-
-		initializer.print(printer, out)?;
-
-		write!(out, " }}")
-	}
-}
-
-impl Print for GlobalGet {
-	fn print(&self, printer: &mut LuauPrinter, out: &mut dyn Write) -> Result<()> {
-		let Self { source } = self;
-
-		write!(out, "(")?;
-
-		source.print(printer, out)?;
-
-		write!(out, ")[1]")
-	}
-}
-
 impl Print for Aggregate {
 	fn print(&self, printer: &mut LuauPrinter, out: &mut dyn Write) -> Result<()> {
 		let Self { fields } = self;
@@ -551,8 +526,6 @@ impl Print for Expression {
 			Self::Prefix(prefix) => prefix.print(printer, out),
 			Self::BooleanToInteger(boolean_to_integer) => boolean_to_integer.print(printer, out),
 			Self::RefIsNull(ref_is_null) => ref_is_null.print(printer, out),
-			Self::GlobalNew(global_new) => global_new.print(printer, out),
-			Self::GlobalGet(global_get) => global_get.print(printer, out),
 			Self::Aggregate(aggregate) => aggregate.print(printer, out),
 			Self::Extract(extract) => extract.print(printer, out),
 			Self::TableNew(table_new) => table_new.print(printer, out),

@@ -718,12 +718,14 @@ impl<'allocator, 'policy> Emitter<'allocator, 'policy> {
 		self.emit_or_defer(id, value);
 	}
 
+	// A mutable cell is a one-field aggregate, so a write to it sets index one.
 	fn handle_mutable_set(&mut self, id: u32, node: operation::MutableSet) {
 		let reference = self.bridge(id, operation::MutableSet::STATE_PORT, node.destination);
 		let destination = self.data_handler.load(self.region, reference);
 		let source = self.data_handler.load(self.region, node.source);
 
-		self.code_handler.emit_mutable_set(destination, source);
+		self.code_handler
+			.emit_set_index(destination, Expression::I32(1), source);
 	}
 
 	fn handle_table_get(&mut self, id: u32, node: operation::TableGet) {

@@ -12,9 +12,8 @@ use ir_graph::{
 use luau_foreign::BufferStore;
 use luau_tree::{
 	expression::{
-		Aggregate, Apply, BooleanToInteger, BufferLength, Expression, Extract, GlobalGet,
-		GlobalNew, Index, Infix, Local, Match, Name, Prefix, RefIsNull, TableNew, TableSize,
-		VectorX,
+		Aggregate, Apply, BooleanToInteger, BufferLength, Expression, Extract, Index, Infix, Local,
+		Match, Name, Prefix, RefIsNull, TableNew, TableSize, VectorX,
 	},
 	statement::Sequence,
 };
@@ -717,19 +716,20 @@ impl DataHandler {
 	}
 
 	pub fn build_mutable_new(&mut self, region: u32, node: operation::MutableNew) -> Expression {
-		let expression = GlobalNew {
-			initializer: self.load(region, node.initializer),
+		let expression = Aggregate {
+			fields: Vec::from([self.load(region, node.initializer)]),
 		};
 
-		Expression::GlobalNew(expression.into())
+		Expression::Aggregate(expression.into())
 	}
 
 	pub fn build_mutable_get(&mut self, region: u32, reference: Link) -> Expression {
-		let expression = GlobalGet {
+		let expression = Extract {
 			source: self.load(region, reference),
+			index: 0,
 		};
 
-		Expression::GlobalGet(expression.into())
+		Expression::Extract(expression.into())
 	}
 
 	pub fn build_aggregate(&mut self, region: u32, node: &operation::Aggregate) -> Expression {

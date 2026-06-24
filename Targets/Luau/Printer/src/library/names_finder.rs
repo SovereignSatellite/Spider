@@ -2,10 +2,10 @@ use core::ops::ControlFlow;
 
 use luau_tree::{
 	expression::{
-		Aggregate, Apply, BufferLength, Expression, Extract, Function, GlobalGet, GlobalNew, Index,
-		MemoryNew, TableNew, TableSize, VectorX,
+		Aggregate, Apply, BufferLength, Expression, Extract, Function, Index, MemoryNew, TableNew,
+		TableSize, VectorX,
 	},
-	statement::{GlobalSet, SetIndex, Statement},
+	statement::{SetIndex, Statement},
 	visitor::Visitor,
 };
 
@@ -46,18 +46,6 @@ impl NeedsName for f64 {
 impl<const N: usize> NeedsName for Apply<N> {
 	fn needs_name(&self) -> &'static str {
 		self.name.strip_prefix("rt_").unwrap_or(self.name)
-	}
-}
-
-impl NeedsName for GlobalNew {
-	fn needs_name(&self) -> &'static str {
-		""
-	}
-}
-
-impl NeedsName for GlobalGet {
-	fn needs_name(&self) -> &'static str {
-		""
 	}
 }
 
@@ -136,8 +124,6 @@ impl NeedsName for Expression {
 			Self::Apply4Arguments(apply) => apply.needs_name(),
 			Self::Apply5Arguments(apply) => apply.needs_name(),
 
-			Self::GlobalNew(global_new) => global_new.needs_name(),
-			Self::GlobalGet(global_get) => global_get.needs_name(),
 			Self::Aggregate(aggregate) => aggregate.needs_name(),
 			Self::Extract(extract) => extract.needs_name(),
 			Self::TableNew(table_new) => table_new.needs_name(),
@@ -147,12 +133,6 @@ impl NeedsName for Expression {
 			Self::BufferLength(buffer_length) => buffer_length.needs_name(),
 			Self::VectorX(vector_x) => vector_x.needs_name(),
 		}
-	}
-}
-
-impl NeedsName for GlobalSet {
-	fn needs_name(&self) -> &'static str {
-		""
 	}
 }
 
@@ -171,7 +151,6 @@ impl NeedsName for Statement {
 			| Self::SwapAll(_)
 			| Self::Call(_) => "",
 
-			Self::GlobalSet(global_set) => global_set.needs_name(),
 			Self::SetIndex(set_index) => set_index.needs_name(),
 		}
 	}

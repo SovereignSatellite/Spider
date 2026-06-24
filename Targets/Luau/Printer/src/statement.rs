@@ -1,8 +1,6 @@
 use std::io::{Result, Write};
 
-use luau_tree::statement::{
-	Assign, Call, GlobalSet, Match, Repeat, Sequence, SetIndex, Statement, SwapAll,
-};
+use luau_tree::statement::{Assign, Call, Match, Repeat, Sequence, SetIndex, Statement, SwapAll};
 
 use super::{LuauPrinter, expression::fmt_delimited, print::Print};
 
@@ -268,26 +266,6 @@ impl Print for Call {
 	}
 }
 
-impl Print for GlobalSet {
-	fn print(&self, printer: &mut LuauPrinter, out: &mut dyn Write) -> Result<()> {
-		let Self {
-			destination,
-			source,
-		} = self;
-
-		printer.write_indent(out)?;
-		write!(out, "(")?;
-
-		destination.print(printer, out)?;
-
-		write!(out, ")[1] = ")?;
-
-		source.print(printer, out)?;
-
-		writeln!(out, ";")
-	}
-}
-
 impl Print for SetIndex {
 	fn print(&self, printer: &mut LuauPrinter, out: &mut dyn Write) -> Result<()> {
 		let Self {
@@ -321,7 +299,6 @@ impl Print for Statement {
 			Self::Assign(assign) => assign.print(printer, out),
 			Self::SwapAll(swap_all) => swap_all.print(printer, out),
 			Self::Call(call) => call.print(printer, out),
-			Self::GlobalSet(global_set) => global_set.print(printer, out),
 			Self::SetIndex(set_index) => set_index.print(printer, out),
 		}
 	}

@@ -78,18 +78,6 @@ pub struct RefIsNull {
 	pub source: Expression,
 }
 
-/// A global variable creation.
-pub struct GlobalNew {
-	/// The initial value expression.
-	pub initializer: Expression,
-}
-
-/// A global variable read.
-pub struct GlobalGet {
-	/// The source expression.
-	pub source: Expression,
-}
-
 /// An aggregate construction.
 pub struct Aggregate {
 	/// The field values, in field order.
@@ -208,11 +196,6 @@ pub enum Expression {
 	/// A reference null check.
 	RefIsNull(Box<RefIsNull>),
 
-	/// A global variable creation.
-	GlobalNew(Box<GlobalNew>),
-	/// A global variable read.
-	GlobalGet(Box<GlobalGet>),
-
 	/// An aggregate construction.
 	Aggregate(Box<Aggregate>),
 	/// An aggregate field projection.
@@ -256,7 +239,6 @@ impl Expression {
 			| Self::String(_)
 			| Self::Infix(_)
 			| Self::Prefix(_)
-			| Self::GlobalNew(_)
 			| Self::Aggregate(_)
 			| Self::TableNew(_)
 			| Self::MemoryNew(_)
@@ -272,7 +254,6 @@ impl Expression {
 			| Self::Apply3Arguments(_)
 			| Self::Apply4Arguments(_)
 			| Self::Apply5Arguments(_)
-			| Self::GlobalGet(_)
 			| Self::Extract(_)
 			| Self::TableSize(_)
 			| Self::Index(_)
