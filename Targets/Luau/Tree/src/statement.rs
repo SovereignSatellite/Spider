@@ -2,9 +2,7 @@
 
 use alloc::{boxed::Box, vec::Vec};
 
-use super::expression::{Expression, Local, Location};
-
-pub use ir_graph::operation::StoreType;
+use super::expression::{Expression, Local};
 
 /// A sequence of statements.
 pub struct Sequence {
@@ -79,22 +77,12 @@ pub struct SwapAll {
 	pub locals: Vec<Local>,
 }
 
-/// A function call statement.
+/// A call statement binding its results: `r0, r1 = call;` (or just `call;`).
 pub struct Call {
-	/// The function expression.
-	pub function: Expression,
-	/// The result locals.
+	/// The result locals bound from the call, in port order.
 	pub results: Vec<Local>,
-	/// The argument expressions.
-	pub arguments: Vec<Expression>,
-}
-
-/// A call to a named runtime function, discarding any return value.
-pub struct RuntimeCall {
-	/// The runtime function name suffix (printed with `rt_` prefix).
-	pub name: &'static str,
-	/// The arguments passed to the function.
-	pub arguments: Vec<Expression>,
+	/// The call expression performed for its results and side effects.
+	pub call: Expression,
 }
 
 /// A global variable write.
@@ -105,74 +93,14 @@ pub struct GlobalSet {
 	pub source: Expression,
 }
 
-/// A table element write.
-pub struct TableSet {
-	/// The destination location.
-	pub destination: Location,
-	/// The source expression.
-	pub source: Expression,
-}
-
-/// A table fill operation.
-pub struct TableFill {
-	/// The destination location.
-	pub destination: Location,
-	/// The source expression.
-	pub source: Expression,
-	/// The size expression.
-	pub size: Expression,
-}
-
-/// A table copy operation.
-pub struct TableCopy {
-	/// The destination location.
-	pub destination: Location,
-	/// The source location.
-	pub source: Location,
-	/// The size expression.
-	pub size: Expression,
-}
-
-/// A table drop operation.
-pub struct TableDrop {
-	/// The source expression.
-	pub source: Expression,
-}
-
-/// A memory store operation.
-pub struct MemoryStore {
-	/// The destination location.
-	pub destination: Location,
-	/// The source expression.
-	pub source: Expression,
-	/// The store type.
-	pub kind: StoreType,
-}
-
-/// A memory fill operation.
-pub struct MemoryFill {
-	/// The destination location.
-	pub destination: Location,
-	/// The fill byte expression.
-	pub byte: Expression,
-	/// The size expression.
-	pub size: Expression,
-}
-
-/// A memory copy operation.
-pub struct MemoryCopy {
-	/// The destination location.
-	pub destination: Location,
-	/// The source location.
-	pub source: Location,
-	/// The size expression.
-	pub size: Expression,
-}
-
-/// A memory drop operation.
-pub struct MemoryDrop {
-	/// The source expression.
-	pub source: Expression,
+/// A table element write: `(table)[offset] = value`.
+pub struct SetIndex {
+	/// The destination table.
+	pub table: Expression,
+	/// The element offset.
+	pub offset: Expression,
+	/// The value being stored.
+	pub value: Expression,
 }
 
 /// A statement node.
@@ -187,29 +115,11 @@ pub enum Statement {
 	/// A cyclic swap of locals.
 	SwapAll(Box<SwapAll>),
 
-	/// A function call.
+	/// A call statement binding its results.
 	Call(Box<Call>),
-	/// A call to a named runtime function.
-	RuntimeCall(Box<RuntimeCall>),
 
 	/// A global variable write.
 	GlobalSet(Box<GlobalSet>),
-
 	/// A table element write.
-	TableSet(Box<TableSet>),
-	/// A table fill.
-	TableFill(Box<TableFill>),
-	/// A table copy.
-	TableCopy(Box<TableCopy>),
-	/// A table drop.
-	TableDrop(Box<TableDrop>),
-
-	/// A memory store.
-	MemoryStore(Box<MemoryStore>),
-	/// A memory fill.
-	MemoryFill(Box<MemoryFill>),
-	/// A memory copy.
-	MemoryCopy(Box<MemoryCopy>),
-	/// A memory drop.
-	MemoryDrop(Box<MemoryDrop>),
+	SetIndex(Box<SetIndex>),
 }

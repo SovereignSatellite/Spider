@@ -1,16 +1,10 @@
 use std::io::{Result, Write};
 
 use luau_tree::statement::{
-	Assign, Call, GlobalSet, Match, MemoryCopy, MemoryDrop, MemoryFill, MemoryStore, Repeat,
-	RuntimeCall, Sequence, Statement, SwapAll, TableCopy, TableDrop, TableFill, TableSet,
+	Assign, Call, GlobalSet, Match, Repeat, Sequence, SetIndex, Statement, SwapAll,
 };
 
-use super::{
-	LuauPrinter,
-	expression::{fmt_delimited, fmt_runtime_call},
-	library::NeedsName as _,
-	print::Print,
-};
+use super::{LuauPrinter, expression::fmt_delimited, print::Print};
 
 mod conditional {
 	use core::ops::Range;
@@ -258,11 +252,7 @@ impl Print for SwapAll {
 
 impl Print for Call {
 	fn print(&self, printer: &mut LuauPrinter, out: &mut dyn Write) -> Result<()> {
-		let Self {
-			function,
-			results,
-			arguments,
-		} = self;
+		let Self { results, call } = self;
 
 		printer.write_indent(out)?;
 
@@ -272,23 +262,7 @@ impl Print for Call {
 			write!(out, " = ")?;
 		}
 
-		function.print(printer, out)?;
-
-		write!(out, "(")?;
-
-		fmt_delimited(arguments, printer, out)?;
-
-		writeln!(out, ");")
-	}
-}
-
-impl Print for RuntimeCall {
-	fn print(&self, printer: &mut LuauPrinter, out: &mut dyn Write) -> Result<()> {
-		let Self { name, arguments } = self;
-
-		printer.write_indent(out)?;
-
-		fmt_runtime_call(name, arguments, printer, out)?;
+		call.print(printer, out)?;
 
 		writeln!(out, ";")
 	}
@@ -314,186 +288,28 @@ impl Print for GlobalSet {
 	}
 }
 
-impl Print for TableSet {
+impl Print for SetIndex {
 	fn print(&self, printer: &mut LuauPrinter, out: &mut dyn Write) -> Result<()> {
 		let Self {
-			destination,
-			source,
+			table,
+			offset,
+			value,
 		} = self;
 
-		let intrinsic = self.needs_name();
-
 		printer.write_indent(out)?;
-		write!(out, "rt_{intrinsic}(")?;
+		write!(out, "(")?;
 
-		destination.print(printer, out)?;
+		table.print(printer, out)?;
 
-		write!(out, ", ")?;
+		write!(out, ")[")?;
 
-		source.print(printer, out)?;
+		offset.print(printer, out)?;
 
-		writeln!(out, ");")
-	}
-}
+		write!(out, "] = ")?;
 
-impl Print for TableFill {
-	fn print(&self, printer: &mut LuauPrinter, out: &mut dyn Write) -> Result<()> {
-		let Self {
-			destination,
-			source,
-			size,
-		} = self;
+		value.print(printer, out)?;
 
-		let intrinsic = self.needs_name();
-
-		printer.write_indent(out)?;
-		write!(out, "rt_{intrinsic}(")?;
-
-		destination.print(printer, out)?;
-
-		write!(out, ", ")?;
-
-		source.print(printer, out)?;
-
-		write!(out, ", ")?;
-
-		size.print(printer, out)?;
-
-		writeln!(out, ");")
-	}
-}
-
-impl Print for TableCopy {
-	fn print(&self, printer: &mut LuauPrinter, out: &mut dyn Write) -> Result<()> {
-		let Self {
-			destination,
-			source,
-			size,
-		} = self;
-
-		let intrinsic = self.needs_name();
-
-		printer.write_indent(out)?;
-		write!(out, "rt_{intrinsic}(")?;
-
-		destination.print(printer, out)?;
-
-		write!(out, ", ")?;
-
-		source.print(printer, out)?;
-
-		write!(out, ", ")?;
-
-		size.print(printer, out)?;
-
-		writeln!(out, ");")
-	}
-}
-
-impl Print for TableDrop {
-	fn print(&self, printer: &mut LuauPrinter, out: &mut dyn Write) -> Result<()> {
-		let Self { source } = self;
-
-		let intrinsic = self.needs_name();
-
-		printer.write_indent(out)?;
-		write!(out, "rt_{intrinsic}(")?;
-
-		source.print(printer, out)?;
-
-		writeln!(out, ");")
-	}
-}
-
-impl Print for MemoryStore {
-	fn print(&self, printer: &mut LuauPrinter, out: &mut dyn Write) -> Result<()> {
-		let Self {
-			destination,
-			source,
-			..
-		} = self;
-
-		let intrinsic = self.needs_name();
-
-		printer.write_indent(out)?;
-		write!(out, "rt_{intrinsic}(")?;
-
-		destination.print(printer, out)?;
-
-		write!(out, ", ")?;
-
-		source.print(printer, out)?;
-
-		writeln!(out, ");")
-	}
-}
-
-impl Print for MemoryFill {
-	fn print(&self, printer: &mut LuauPrinter, out: &mut dyn Write) -> Result<()> {
-		let Self {
-			destination,
-			byte,
-			size,
-		} = self;
-
-		let intrinsic = self.needs_name();
-
-		printer.write_indent(out)?;
-		write!(out, "rt_{intrinsic}(")?;
-
-		destination.print(printer, out)?;
-
-		write!(out, ", ")?;
-
-		byte.print(printer, out)?;
-
-		write!(out, ", ")?;
-
-		size.print(printer, out)?;
-
-		writeln!(out, ");")
-	}
-}
-
-impl Print for MemoryCopy {
-	fn print(&self, printer: &mut LuauPrinter, out: &mut dyn Write) -> Result<()> {
-		let Self {
-			destination,
-			source,
-			size,
-		} = self;
-
-		let intrinsic = self.needs_name();
-
-		printer.write_indent(out)?;
-		write!(out, "rt_{intrinsic}(")?;
-
-		destination.print(printer, out)?;
-
-		write!(out, ", ")?;
-
-		source.print(printer, out)?;
-
-		write!(out, ", ")?;
-
-		size.print(printer, out)?;
-
-		writeln!(out, ");")
-	}
-}
-
-impl Print for MemoryDrop {
-	fn print(&self, printer: &mut LuauPrinter, out: &mut dyn Write) -> Result<()> {
-		let Self { source } = self;
-
-		let intrinsic = self.needs_name();
-
-		printer.write_indent(out)?;
-		write!(out, "rt_{intrinsic}(")?;
-
-		source.print(printer, out)?;
-
-		writeln!(out, ");")
+		writeln!(out, ";")
 	}
 }
 
@@ -505,16 +321,8 @@ impl Print for Statement {
 			Self::Assign(assign) => assign.print(printer, out),
 			Self::SwapAll(swap_all) => swap_all.print(printer, out),
 			Self::Call(call) => call.print(printer, out),
-			Self::RuntimeCall(runtime_call) => runtime_call.print(printer, out),
 			Self::GlobalSet(global_set) => global_set.print(printer, out),
-			Self::TableSet(table_set) => table_set.print(printer, out),
-			Self::TableFill(table_fill) => table_fill.print(printer, out),
-			Self::TableCopy(table_copy) => table_copy.print(printer, out),
-			Self::TableDrop(table_drop) => table_drop.print(printer, out),
-			Self::MemoryStore(memory_store) => memory_store.print(printer, out),
-			Self::MemoryFill(memory_fill) => memory_fill.print(printer, out),
-			Self::MemoryCopy(memory_copy) => memory_copy.print(printer, out),
-			Self::MemoryDrop(memory_drop) => memory_drop.print(printer, out),
+			Self::SetIndex(set_index) => set_index.print(printer, out),
 		}
 	}
 }

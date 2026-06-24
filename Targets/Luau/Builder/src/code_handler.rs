@@ -1,10 +1,6 @@
-use ir_graph::operation::StoreType;
 use luau_tree::{
-	expression::{Expression, Local, Location},
-	statement::{
-		Assign, Call, GlobalSet, Match, MemoryCopy, MemoryDrop, MemoryFill, MemoryStore, Repeat,
-		RuntimeCall, Sequence, Statement, SwapAll, TableCopy, TableDrop, TableFill, TableSet,
-	},
+	expression::{Expression, Local},
+	statement::{Assign, Call, GlobalSet, Match, Repeat, Sequence, SetIndex, Statement, SwapAll},
 };
 
 use super::assignment_simplifier::AssignmentSimplifier;
@@ -105,26 +101,8 @@ impl CodeHandler {
 		});
 	}
 
-	pub fn emit_call(
-		&mut self,
-		function: Expression,
-		results: Vec<Local>,
-		arguments: Vec<Expression>,
-	) {
-		let statement = Statement::Call(
-			Call {
-				function,
-				results,
-				arguments,
-			}
-			.into(),
-		);
-
-		self.push_statement(statement);
-	}
-
-	pub fn emit_runtime_call(&mut self, name: &'static str, arguments: Vec<Expression>) {
-		let statement = Statement::RuntimeCall(RuntimeCall { name, arguments }.into());
+	pub fn emit_call(&mut self, results: Vec<Local>, call: Expression) {
+		let statement = Statement::Call(Call { results, call }.into());
 
 		self.push_statement(statement);
 	}
@@ -141,96 +119,15 @@ impl CodeHandler {
 		self.push_statement(statement);
 	}
 
-	pub fn emit_table_set(&mut self, destination: Location, source: Expression) {
-		let statement = Statement::TableSet(
-			TableSet {
-				destination,
-				source,
+	pub fn emit_set_index(&mut self, table: Expression, offset: Expression, value: Expression) {
+		let statement = Statement::SetIndex(
+			SetIndex {
+				table,
+				offset,
+				value,
 			}
 			.into(),
 		);
-
-		self.push_statement(statement);
-	}
-
-	pub fn emit_table_fill(&mut self, destination: Location, source: Expression, size: Expression) {
-		let statement = Statement::TableFill(
-			TableFill {
-				destination,
-				source,
-				size,
-			}
-			.into(),
-		);
-
-		self.push_statement(statement);
-	}
-
-	pub fn emit_table_copy(&mut self, destination: Location, source: Location, size: Expression) {
-		let statement = Statement::TableCopy(
-			TableCopy {
-				destination,
-				source,
-				size,
-			}
-			.into(),
-		);
-
-		self.push_statement(statement);
-	}
-
-	pub fn emit_table_drop(&mut self, source: Expression) {
-		let statement = Statement::TableDrop(TableDrop { source }.into());
-
-		self.push_statement(statement);
-	}
-
-	pub fn emit_memory_store(
-		&mut self,
-		destination: Location,
-		source: Expression,
-		kind: StoreType,
-	) {
-		let statement = Statement::MemoryStore(
-			MemoryStore {
-				destination,
-				source,
-				kind,
-			}
-			.into(),
-		);
-
-		self.push_statement(statement);
-	}
-
-	pub fn emit_memory_fill(&mut self, destination: Location, byte: Expression, size: Expression) {
-		let statement = Statement::MemoryFill(
-			MemoryFill {
-				destination,
-				byte,
-				size,
-			}
-			.into(),
-		);
-
-		self.push_statement(statement);
-	}
-
-	pub fn emit_memory_copy(&mut self, destination: Location, source: Location, size: Expression) {
-		let statement = Statement::MemoryCopy(
-			MemoryCopy {
-				destination,
-				source,
-				size,
-			}
-			.into(),
-		);
-
-		self.push_statement(statement);
-	}
-
-	pub fn emit_memory_drop(&mut self, source: Expression) {
-		let statement = Statement::MemoryDrop(MemoryDrop { source }.into());
 
 		self.push_statement(statement);
 	}

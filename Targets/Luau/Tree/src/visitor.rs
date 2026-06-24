@@ -4,18 +4,13 @@ use core::ops::ControlFlow;
 
 use super::{
 	expression::{
-		Aggregate, BooleanToInteger, Call as ExpressionCall, Expression, Extract, Function,
-		GlobalGet, GlobalNew, IntegerBinaryOperation, IntegerCompareOperation,
-		IntegerConvertToNumber, IntegerExtend, IntegerNarrow, IntegerTransmuteToNumber,
-		IntegerUnaryOperation, IntegerWiden, Location, Match as ExpressionMatch, MemoryGrow,
-		MemoryLoad, MemorySize, NumberBinaryOperation, NumberCompareOperation, NumberNarrow,
-		NumberTransmuteToInteger, NumberTruncateToInteger, NumberUnaryOperation, NumberWiden,
-		RefIsNull, RuntimeCall as ExpressionRuntimeCall, TableGet, TableGrow, TableNew, TableSize,
+		Aggregate, Apply, BooleanToInteger, BufferLength, Call as ExpressionCall, Expression,
+		Extract, Function, GlobalGet, GlobalNew, Index, Infix, Match as ExpressionMatch, Prefix,
+		RefIsNull, TableNew, TableSize, VectorX,
 	},
 	statement::{
-		Assign, Call as StatementCall, GlobalSet, Match as StatementMatch, MemoryCopy, MemoryDrop,
-		MemoryFill, MemoryStore, Repeat, RuntimeCall as StatementRuntimeCall, Sequence, Statement,
-		TableCopy, TableDrop, TableFill, TableSet,
+		Assign, Call as StatementCall, GlobalSet, Match as StatementMatch, Repeat, Sequence,
+		SetIndex, Statement,
 	},
 };
 
@@ -70,13 +65,28 @@ impl ExpressionCall {
 	}
 }
 
-impl ExpressionRuntimeCall {
+impl<const N: usize> Apply<N> {
 	fn accept<T: Visitor>(&self, visitor: &mut T) -> ControlFlow<T::Output> {
-		let Self { arguments, .. } = self;
-
-		arguments
+		self.arguments
 			.iter()
 			.try_for_each(|argument| argument.accept(visitor))
+	}
+}
+
+impl Infix {
+	fn accept<T: Visitor>(&self, visitor: &mut T) -> ControlFlow<T::Output> {
+		let Self { lhs, rhs, .. } = self;
+
+		lhs.accept(visitor)?;
+		rhs.accept(visitor)
+	}
+}
+
+impl Prefix {
+	fn accept<T: Visitor>(&self, visitor: &mut T) -> ControlFlow<T::Output> {
+		let Self { source, .. } = self;
+
+		source.accept(visitor)
 	}
 }
 
@@ -93,139 +103,6 @@ impl RefIsNull {
 		let Self { source } = self;
 
 		source.accept(visitor)
-	}
-}
-
-impl IntegerUnaryOperation {
-	fn accept<T: Visitor>(&self, visitor: &mut T) -> ControlFlow<T::Output> {
-		let Self { source, .. } = self;
-
-		source.accept(visitor)
-	}
-}
-
-impl IntegerBinaryOperation {
-	fn accept<T: Visitor>(&self, visitor: &mut T) -> ControlFlow<T::Output> {
-		let Self { lhs, rhs, .. } = self;
-
-		lhs.accept(visitor)?;
-		rhs.accept(visitor)
-	}
-}
-
-impl IntegerCompareOperation {
-	fn accept<T: Visitor>(&self, visitor: &mut T) -> ControlFlow<T::Output> {
-		let Self { lhs, rhs, .. } = self;
-
-		lhs.accept(visitor)?;
-		rhs.accept(visitor)
-	}
-}
-
-impl IntegerNarrow {
-	fn accept<T: Visitor>(&self, visitor: &mut T) -> ControlFlow<T::Output> {
-		let Self { source } = self;
-
-		source.accept(visitor)
-	}
-}
-
-impl IntegerWiden {
-	fn accept<T: Visitor>(&self, visitor: &mut T) -> ControlFlow<T::Output> {
-		let Self { source } = self;
-
-		source.accept(visitor)
-	}
-}
-
-impl IntegerExtend {
-	fn accept<T: Visitor>(&self, visitor: &mut T) -> ControlFlow<T::Output> {
-		let Self { source, .. } = self;
-
-		source.accept(visitor)
-	}
-}
-
-impl IntegerConvertToNumber {
-	fn accept<T: Visitor>(&self, visitor: &mut T) -> ControlFlow<T::Output> {
-		let Self { source, .. } = self;
-
-		source.accept(visitor)
-	}
-}
-
-impl IntegerTransmuteToNumber {
-	fn accept<T: Visitor>(&self, visitor: &mut T) -> ControlFlow<T::Output> {
-		let Self { source, .. } = self;
-
-		source.accept(visitor)
-	}
-}
-
-impl NumberUnaryOperation {
-	fn accept<T: Visitor>(&self, visitor: &mut T) -> ControlFlow<T::Output> {
-		let Self { source, .. } = self;
-
-		source.accept(visitor)
-	}
-}
-
-impl NumberBinaryOperation {
-	fn accept<T: Visitor>(&self, visitor: &mut T) -> ControlFlow<T::Output> {
-		let Self { lhs, rhs, .. } = self;
-
-		lhs.accept(visitor)?;
-		rhs.accept(visitor)
-	}
-}
-
-impl NumberCompareOperation {
-	fn accept<T: Visitor>(&self, visitor: &mut T) -> ControlFlow<T::Output> {
-		let Self { lhs, rhs, .. } = self;
-
-		lhs.accept(visitor)?;
-		rhs.accept(visitor)
-	}
-}
-
-impl NumberNarrow {
-	fn accept<T: Visitor>(&self, visitor: &mut T) -> ControlFlow<T::Output> {
-		let Self { source } = self;
-
-		source.accept(visitor)
-	}
-}
-
-impl NumberWiden {
-	fn accept<T: Visitor>(&self, visitor: &mut T) -> ControlFlow<T::Output> {
-		let Self { source } = self;
-
-		source.accept(visitor)
-	}
-}
-
-impl NumberTruncateToInteger {
-	fn accept<T: Visitor>(&self, visitor: &mut T) -> ControlFlow<T::Output> {
-		let Self { source, .. } = self;
-
-		source.accept(visitor)
-	}
-}
-
-impl NumberTransmuteToInteger {
-	fn accept<T: Visitor>(&self, visitor: &mut T) -> ControlFlow<T::Output> {
-		let Self { source, .. } = self;
-
-		source.accept(visitor)
-	}
-}
-
-impl Location {
-	fn accept<T: Visitor>(&self, visitor: &mut T) -> ControlFlow<T::Output> {
-		let Self { reference, offset } = self;
-
-		reference.accept(visitor)?;
-		offset.accept(visitor)
 	}
 }
 
@@ -271,14 +148,6 @@ impl TableNew {
 	}
 }
 
-impl TableGet {
-	fn accept<T: Visitor>(&self, visitor: &mut T) -> ControlFlow<T::Output> {
-		let Self { source } = self;
-
-		source.accept(visitor)
-	}
-}
-
 impl TableSize {
 	fn accept<T: Visitor>(&self, visitor: &mut T) -> ControlFlow<T::Output> {
 		let Self { source } = self;
@@ -287,29 +156,16 @@ impl TableSize {
 	}
 }
 
-impl TableGrow {
+impl Index {
 	fn accept<T: Visitor>(&self, visitor: &mut T) -> ControlFlow<T::Output> {
-		let Self {
-			destination,
-			initializer,
-			size,
-		} = self;
+		let Self { source, offset } = self;
 
-		destination.accept(visitor)?;
-		initializer.accept(visitor)?;
-		size.accept(visitor)
+		source.accept(visitor)?;
+		offset.accept(visitor)
 	}
 }
 
-impl MemoryLoad {
-	fn accept<T: Visitor>(&self, visitor: &mut T) -> ControlFlow<T::Output> {
-		let Self { source, .. } = self;
-
-		source.accept(visitor)
-	}
-}
-
-impl MemorySize {
+impl BufferLength {
 	fn accept<T: Visitor>(&self, visitor: &mut T) -> ControlFlow<T::Output> {
 		let Self { source } = self;
 
@@ -317,20 +173,15 @@ impl MemorySize {
 	}
 }
 
-impl MemoryGrow {
+impl VectorX {
 	fn accept<T: Visitor>(&self, visitor: &mut T) -> ControlFlow<T::Output> {
-		let Self { destination, size } = self;
+		let Self { source } = self;
 
-		destination.accept(visitor)?;
-		size.accept(visitor)
+		source.accept(visitor)
 	}
 }
 
 impl Expression {
-	#[expect(
-		clippy::too_many_lines,
-		reason = "exhaustive match over expression variants"
-	)]
 	fn accept<T: Visitor>(&self, visitor: &mut T) -> ControlFlow<T::Output> {
 		visitor.visit_expression(self)?;
 
@@ -349,55 +200,25 @@ impl Expression {
 			| Self::MemoryNew(_) => ControlFlow::Continue(()),
 
 			Self::Call(call) => call.accept(visitor),
-			Self::RuntimeCall(runtime_call) => runtime_call.accept(visitor),
+			Self::Apply0Arguments(apply) => apply.accept(visitor),
+			Self::Apply1Argument(apply) => apply.accept(visitor),
+			Self::Apply2Arguments(apply) => apply.accept(visitor),
+			Self::Apply3Arguments(apply) => apply.accept(visitor),
+			Self::Apply4Arguments(apply) => apply.accept(visitor),
+			Self::Apply5Arguments(apply) => apply.accept(visitor),
+			Self::Infix(infix) => infix.accept(visitor),
+			Self::Prefix(prefix) => prefix.accept(visitor),
 			Self::BooleanToInteger(boolean_to_integer) => boolean_to_integer.accept(visitor),
 			Self::RefIsNull(ref_is_null) => ref_is_null.accept(visitor),
-			Self::IntegerUnaryOperation(integer_unary_operation) => {
-				integer_unary_operation.accept(visitor)
-			}
-			Self::IntegerBinaryOperation(integer_binary_operation) => {
-				integer_binary_operation.accept(visitor)
-			}
-			Self::IntegerCompareOperation(integer_compare_operation) => {
-				integer_compare_operation.accept(visitor)
-			}
-			Self::IntegerNarrow(integer_narrow) => integer_narrow.accept(visitor),
-			Self::IntegerWiden(integer_widen) => integer_widen.accept(visitor),
-			Self::IntegerExtend(integer_extend) => integer_extend.accept(visitor),
-			Self::IntegerConvertToNumber(integer_convert_to_number) => {
-				integer_convert_to_number.accept(visitor)
-			}
-			Self::IntegerTransmuteToNumber(integer_transmute_to_number) => {
-				integer_transmute_to_number.accept(visitor)
-			}
-			Self::NumberUnaryOperation(number_unary_operation) => {
-				number_unary_operation.accept(visitor)
-			}
-			Self::NumberBinaryOperation(number_binary_operation) => {
-				number_binary_operation.accept(visitor)
-			}
-			Self::NumberCompareOperation(number_compare_operation) => {
-				number_compare_operation.accept(visitor)
-			}
-			Self::NumberNarrow(number_narrow) => number_narrow.accept(visitor),
-			Self::NumberWiden(number_widen) => number_widen.accept(visitor),
-			Self::NumberTruncateToInteger(number_truncate_to_integer) => {
-				number_truncate_to_integer.accept(visitor)
-			}
-			Self::NumberTransmuteToInteger(number_transmute_to_integer) => {
-				number_transmute_to_integer.accept(visitor)
-			}
 			Self::GlobalNew(global_new) => global_new.accept(visitor),
 			Self::GlobalGet(global_get) => global_get.accept(visitor),
 			Self::Aggregate(aggregate) => aggregate.accept(visitor),
 			Self::Extract(extract) => extract.accept(visitor),
 			Self::TableNew(table_new) => table_new.accept(visitor),
-			Self::TableGet(table_get) => table_get.accept(visitor),
 			Self::TableSize(table_size) => table_size.accept(visitor),
-			Self::TableGrow(table_grow) => table_grow.accept(visitor),
-			Self::MemoryLoad(memory_load) => memory_load.accept(visitor),
-			Self::MemorySize(memory_size) => memory_size.accept(visitor),
-			Self::MemoryGrow(memory_grow) => memory_grow.accept(visitor),
+			Self::Index(index) => index.accept(visitor),
+			Self::BufferLength(buffer_length) => buffer_length.accept(visitor),
+			Self::VectorX(vector_x) => vector_x.accept(visitor),
 		}
 	}
 }
@@ -451,26 +272,9 @@ impl Assign {
 
 impl StatementCall {
 	fn accept<T: Visitor>(&self, visitor: &mut T) -> ControlFlow<T::Output> {
-		let Self {
-			function,
-			arguments,
-			..
-		} = self;
+		let Self { call, .. } = self;
 
-		function.accept(visitor)?;
-		arguments
-			.iter()
-			.try_for_each(|argument| argument.accept(visitor))
-	}
-}
-
-impl StatementRuntimeCall {
-	fn accept<T: Visitor>(&self, visitor: &mut T) -> ControlFlow<T::Output> {
-		let Self { arguments, .. } = self;
-
-		arguments
-			.iter()
-			.try_for_each(|argument| argument.accept(visitor))
+		call.accept(visitor)
 	}
 }
 
@@ -486,100 +290,17 @@ impl GlobalSet {
 	}
 }
 
-impl TableSet {
+impl SetIndex {
 	fn accept<T: Visitor>(&self, visitor: &mut T) -> ControlFlow<T::Output> {
 		let Self {
-			destination,
-			source,
+			table,
+			offset,
+			value,
 		} = self;
 
-		destination.accept(visitor)?;
-		source.accept(visitor)
-	}
-}
-
-impl TableFill {
-	fn accept<T: Visitor>(&self, visitor: &mut T) -> ControlFlow<T::Output> {
-		let Self {
-			destination,
-			source,
-			size,
-		} = self;
-
-		destination.accept(visitor)?;
-		source.accept(visitor)?;
-		size.accept(visitor)
-	}
-}
-
-impl TableCopy {
-	fn accept<T: Visitor>(&self, visitor: &mut T) -> ControlFlow<T::Output> {
-		let Self {
-			destination,
-			source,
-			size,
-		} = self;
-
-		destination.accept(visitor)?;
-		source.accept(visitor)?;
-		size.accept(visitor)
-	}
-}
-
-impl TableDrop {
-	fn accept<T: Visitor>(&self, visitor: &mut T) -> ControlFlow<T::Output> {
-		let Self { source } = self;
-
-		source.accept(visitor)
-	}
-}
-
-impl MemoryStore {
-	fn accept<T: Visitor>(&self, visitor: &mut T) -> ControlFlow<T::Output> {
-		let Self {
-			destination,
-			source,
-			..
-		} = self;
-
-		destination.accept(visitor)?;
-		source.accept(visitor)
-	}
-}
-
-impl MemoryFill {
-	fn accept<T: Visitor>(&self, visitor: &mut T) -> ControlFlow<T::Output> {
-		let Self {
-			destination,
-			byte,
-			size,
-		} = self;
-
-		destination.accept(visitor)?;
-		byte.accept(visitor)?;
-		size.accept(visitor)
-	}
-}
-
-impl MemoryCopy {
-	fn accept<T: Visitor>(&self, visitor: &mut T) -> ControlFlow<T::Output> {
-		let Self {
-			destination,
-			source,
-			size,
-		} = self;
-
-		destination.accept(visitor)?;
-		source.accept(visitor)?;
-		size.accept(visitor)
-	}
-}
-
-impl MemoryDrop {
-	fn accept<T: Visitor>(&self, visitor: &mut T) -> ControlFlow<T::Output> {
-		let Self { source } = self;
-
-		source.accept(visitor)
+		table.accept(visitor)?;
+		offset.accept(visitor)?;
+		value.accept(visitor)
 	}
 }
 
@@ -593,16 +314,8 @@ impl Statement {
 			Self::Assign(assign) => assign.accept(visitor),
 			Self::SwapAll(_) => ControlFlow::Continue(()),
 			Self::Call(call) => call.accept(visitor),
-			Self::RuntimeCall(runtime_call) => runtime_call.accept(visitor),
 			Self::GlobalSet(global_set) => global_set.accept(visitor),
-			Self::TableSet(table_set) => table_set.accept(visitor),
-			Self::TableFill(table_fill) => table_fill.accept(visitor),
-			Self::TableCopy(table_copy) => table_copy.accept(visitor),
-			Self::TableDrop(table_drop) => table_drop.accept(visitor),
-			Self::MemoryStore(memory_store) => memory_store.accept(visitor),
-			Self::MemoryFill(memory_fill) => memory_fill.accept(visitor),
-			Self::MemoryCopy(memory_copy) => memory_copy.accept(visitor),
-			Self::MemoryDrop(memory_drop) => memory_drop.accept(visitor),
+			Self::SetIndex(set_index) => set_index.accept(visitor),
 		}
 	}
 }
