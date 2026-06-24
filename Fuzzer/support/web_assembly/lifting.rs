@@ -16,7 +16,7 @@ pub fn lift(bytes: &[u8], should_optimize: bool) -> Arc<Mutex<Function>> {
 	{
 		let mut optimizer = Optimizer::new();
 
-		optimizer.run(&root, should_optimize);
+		optimizer.run(&root, should_optimize, &mut |_| false);
 	}
 
 	root

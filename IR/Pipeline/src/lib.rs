@@ -47,13 +47,13 @@ impl Optimizer {
 		applied
 	}
 
-	fn apply(&mut self, region: &mut Region) {
+	fn apply(&mut self, region: &mut Region, pass: &mut dyn FnMut(&mut Region) -> bool) {
 		loop {
 			self.topological_compactor.run(region);
 			self.invariant_port_mover.run(region.nodes_mut());
 			self.dead_port_eliminator.run(region.nodes_mut());
 
-			if !Self::apply_isle(region.nodes_mut()) {
+			if !Self::apply_isle(region.nodes_mut()) && !pass(region) {
 				break;
 			}
 
@@ -67,10 +67,18 @@ impl Optimizer {
 	}
 
 	/// Runs the optimization pipeline over every region in the function.
-	pub fn run(&mut self, function: &Arc<Mutex<Function>>, should_optimize: bool) {
+	///
+	/// `pass` runs each round once the generic passes settle, letting a target fold its own
+	/// lowering into the same fixpoint; it reports whether it changed the region.
+	pub fn run(
+		&mut self,
+		function: &Arc<Mutex<Function>>,
+		should_optimize: bool,
+		pass: &mut dyn FnMut(&mut Region) -> bool,
+	) {
 		region_driver::run_function(function, &mut |mut region| {
 			if should_optimize {
-				self.apply(&mut region);
+				self.apply(&mut region, pass);
 			}
 
 			self.finalize(&mut region);

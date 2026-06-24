@@ -2,7 +2,7 @@ use alloc::sync::Arc;
 
 use parking_lot::Mutex;
 
-use ir_graph::region::Function;
+use ir_graph::{Region, region::Function};
 use ir_pipeline::Optimizer;
 use web_assembly_lifter::WebAssemblyLifter;
 
@@ -19,10 +19,15 @@ impl Compiler {
 		}
 	}
 
-	pub fn run(&mut self, data: &[u8], should_optimize: bool) -> Arc<Mutex<Function>> {
+	pub fn run(
+		&mut self,
+		data: &[u8],
+		should_optimize: bool,
+		pass: &mut dyn FnMut(&mut Region) -> bool,
+	) -> Arc<Mutex<Function>> {
 		let function = self.lifter.run(data);
 
-		self.optimizer.run(&function, should_optimize);
+		self.optimizer.run(&function, should_optimize, pass);
 
 		function
 	}
