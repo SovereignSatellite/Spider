@@ -1,6 +1,10 @@
 //! Lowerings for table element reads and writes.
 
-use ir_graph::{Link, Node, operation::Location, region::Match};
+use ir_graph::{
+	Link, Node,
+	operation::{Location, TableGet, TableSet},
+	region::Match,
+};
 use luau_foreign::{BooleanToInteger, LuauLessThanEqual, TableLength, TableLoad, TableStore};
 
 use crate::replace;
@@ -9,17 +13,17 @@ use crate::replace;
 pub fn lower(nodes: &mut Vec<Node>, id: u32) -> bool {
 	let index = usize::try_from(id).unwrap();
 
-	if let Node::TableGet(node) = &nodes[index] {
-		let source = node.source;
-
+	if let &Node::TableGet(TableGet { source }) = &nodes[index] {
 		get(nodes, id, source);
 
 		return true;
 	}
 
-	if let Node::TableSet(node) = &nodes[index] {
-		let (destination, source) = (node.destination, node.source);
-
+	if let &Node::TableSet(TableSet {
+		destination,
+		source,
+	}) = &nodes[index]
+	{
 		set(nodes, id, destination, source);
 
 		return true;
