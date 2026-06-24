@@ -1,7 +1,9 @@
 //! Build script for generating ISLE visitor code.
 
-use std::path::Path;
-use std::{env, fs};
+use std::{
+	env, fs,
+	path::{Path, PathBuf},
+};
 
 use cranelift_isle::{codegen::CodegenOptions, compile::from_files};
 
@@ -13,8 +15,22 @@ static CODE_OPTIONS: CodegenOptions = CodegenOptions {
 	match_arm_split_threshold: None,
 };
 
+fn collect_isle_files(directory: &Path, files: &mut Vec<PathBuf>) {
+	for entry in fs::read_dir(directory).unwrap() {
+		let path = entry.unwrap().path();
+
+		if path.is_dir() {
+			collect_isle_files(&path, files);
+		} else {
+			files.push(path);
+		}
+	}
+}
+
 fn read_from_files(path: &Path) -> String {
-	let files = fs::read_dir(path).unwrap().map(|file| file.unwrap().path());
+	let mut files = Vec::new();
+
+	collect_isle_files(path, &mut files);
 
 	from_files(files, &CODE_OPTIONS).unwrap()
 }
