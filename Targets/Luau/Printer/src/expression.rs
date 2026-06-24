@@ -2,8 +2,8 @@ use alloc::sync::Arc;
 use std::io::{Result, Write};
 
 use luau_tree::expression::{
-	Aggregate, Apply, BooleanToInteger, BufferLength, Call, Expression, Extract, Function, Index,
-	Infix, Local, Match, MemoryNew, Name, Prefix, RefIsNull, TableNew, TableSize, VectorX,
+	Aggregate, Apply, BooleanToInteger, BufferLength, Call, Expression, Extract, Field, Function,
+	Index, Infix, Local, Match, MemoryNew, Name, Prefix, RefIsNull, TableNew,
 };
 
 use super::{LuauPrinter, library::NeedsName as _, print::Print};
@@ -406,6 +406,18 @@ impl Print for Extract {
 	}
 }
 
+impl Print for Field {
+	fn print(&self, printer: &mut LuauPrinter, out: &mut dyn Write) -> Result<()> {
+		let Self { source, name } = self;
+
+		write!(out, "(")?;
+
+		source.print(printer, out)?;
+
+		write!(out, ").{name}")
+	}
+}
+
 impl Print for Index {
 	fn print(&self, printer: &mut LuauPrinter, out: &mut dyn Write) -> Result<()> {
 		let Self { source, offset } = self;
@@ -446,18 +458,6 @@ impl Print for TableNew {
 	}
 }
 
-impl Print for TableSize {
-	fn print(&self, printer: &mut LuauPrinter, out: &mut dyn Write) -> Result<()> {
-		let Self { source } = self;
-
-		write!(out, "(")?;
-
-		source.print(printer, out)?;
-
-		write!(out, ").minimum")
-	}
-}
-
 impl Print for BufferLength {
 	fn print(&self, printer: &mut LuauPrinter, out: &mut dyn Write) -> Result<()> {
 		let Self { source } = self;
@@ -467,18 +467,6 @@ impl Print for BufferLength {
 		source.print(printer, out)?;
 
 		write!(out, ")[1])")
-	}
-}
-
-impl Print for VectorX {
-	fn print(&self, printer: &mut LuauPrinter, out: &mut dyn Write) -> Result<()> {
-		let Self { source } = self;
-
-		write!(out, "(")?;
-
-		source.print(printer, out)?;
-
-		write!(out, ").x")
 	}
 }
 
@@ -528,12 +516,11 @@ impl Print for Expression {
 			Self::RefIsNull(ref_is_null) => ref_is_null.print(printer, out),
 			Self::Aggregate(aggregate) => aggregate.print(printer, out),
 			Self::Extract(extract) => extract.print(printer, out),
+			Self::Field(field) => field.print(printer, out),
 			Self::TableNew(table_new) => table_new.print(printer, out),
-			Self::TableSize(table_size) => table_size.print(printer, out),
 			Self::Index(index) => index.print(printer, out),
 			Self::MemoryNew(memory_new) => memory_new.print(printer, out),
 			Self::BufferLength(buffer_length) => buffer_length.print(printer, out),
-			Self::VectorX(vector_x) => vector_x.print(printer, out),
 		}
 	}
 }

@@ -92,6 +92,14 @@ pub struct Extract {
 	pub index: u32,
 }
 
+/// A named field access: `(source).name`.
+pub struct Field {
+	/// The source expression.
+	pub source: Expression,
+	/// The accessed field name.
+	pub name: &'static str,
+}
+
 /// A table creation.
 pub struct TableNew {
 	/// The initial elements and their offsets.
@@ -100,12 +108,6 @@ pub struct TableNew {
 	pub minimum: u32,
 	/// The maximum element count.
 	pub maximum: u32,
-}
-
-/// A table size query.
-pub struct TableSize {
-	/// The source expression.
-	pub source: Expression,
 }
 
 /// A table element read: `(source)[offset]`.
@@ -119,12 +121,6 @@ pub struct Index {
 /// A memory size query.
 pub struct BufferLength {
 	/// The source memory expression.
-	pub source: Expression,
-}
-
-/// A vector's first-component projection: `(source).x`.
-pub struct VectorX {
-	/// The source vector expression.
 	pub source: Expression,
 }
 
@@ -200,11 +196,11 @@ pub enum Expression {
 	Aggregate(Box<Aggregate>),
 	/// An aggregate field projection.
 	Extract(Box<Extract>),
+	/// A named field access.
+	Field(Box<Field>),
 
 	/// A table creation.
 	TableNew(Box<TableNew>),
-	/// A table size query.
-	TableSize(Box<TableSize>),
 	/// A table element read.
 	Index(Box<Index>),
 
@@ -212,8 +208,6 @@ pub enum Expression {
 	MemoryNew(MemoryNew),
 	/// A memory size query.
 	BufferLength(Box<BufferLength>),
-	/// A vector's first-component projection.
-	VectorX(Box<VectorX>),
 }
 
 impl Expression {
@@ -241,8 +235,7 @@ impl Expression {
 			| Self::Prefix(_)
 			| Self::Aggregate(_)
 			| Self::TableNew(_)
-			| Self::MemoryNew(_)
-			| Self::VectorX(_) => unreachable!("integer `Expression` expected"),
+			| Self::MemoryNew(_) => unreachable!("integer `Expression` expected"),
 
 			Self::Match(_)
 			| Self::Local(_)
@@ -255,7 +248,7 @@ impl Expression {
 			| Self::Apply4Arguments(_)
 			| Self::Apply5Arguments(_)
 			| Self::Extract(_)
-			| Self::TableSize(_)
+			| Self::Field(_)
 			| Self::Index(_)
 			| Self::BufferLength(_) => self.into_boolean_unchecked(),
 

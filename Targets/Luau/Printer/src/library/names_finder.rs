@@ -2,8 +2,8 @@ use core::ops::ControlFlow;
 
 use luau_tree::{
 	expression::{
-		Aggregate, Apply, BufferLength, Expression, Extract, Function, Index, MemoryNew, TableNew,
-		TableSize, VectorX,
+		Aggregate, Apply, BufferLength, Expression, Extract, Field, Function, Index, MemoryNew,
+		TableNew,
 	},
 	statement::{SetIndex, Statement},
 	visitor::Visitor,
@@ -61,6 +61,12 @@ impl NeedsName for Extract {
 	}
 }
 
+impl NeedsName for Field {
+	fn needs_name(&self) -> &'static str {
+		""
+	}
+}
+
 impl NeedsName for Index {
 	fn needs_name(&self) -> &'static str {
 		""
@@ -73,12 +79,6 @@ impl NeedsName for TableNew {
 	}
 }
 
-impl NeedsName for TableSize {
-	fn needs_name(&self) -> &'static str {
-		"table_size"
-	}
-}
-
 impl NeedsName for MemoryNew {
 	fn needs_name(&self) -> &'static str {
 		"memory_new"
@@ -86,12 +86,6 @@ impl NeedsName for MemoryNew {
 }
 
 impl NeedsName for BufferLength {
-	fn needs_name(&self) -> &'static str {
-		""
-	}
-}
-
-impl NeedsName for VectorX {
 	fn needs_name(&self) -> &'static str {
 		""
 	}
@@ -126,12 +120,11 @@ impl NeedsName for Expression {
 
 			Self::Aggregate(aggregate) => aggregate.needs_name(),
 			Self::Extract(extract) => extract.needs_name(),
+			Self::Field(field) => field.needs_name(),
 			Self::TableNew(table_new) => table_new.needs_name(),
-			Self::TableSize(table_size) => table_size.needs_name(),
 			Self::Index(index) => index.needs_name(),
 			Self::MemoryNew(memory_new) => memory_new.needs_name(),
 			Self::BufferLength(buffer_length) => buffer_length.needs_name(),
-			Self::VectorX(vector_x) => vector_x.needs_name(),
 		}
 	}
 }
