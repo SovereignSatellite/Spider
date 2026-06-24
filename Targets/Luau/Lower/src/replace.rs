@@ -2,7 +2,10 @@
 
 use core::mem;
 
-use ir_graph::{Link, Node, operation::Identity};
+use ir_graph::{
+	Link, Node,
+	operation::{Fence, Identity},
+};
 
 fn replace_with_identity(nodes: &mut [Node], destination: u32, sources: &[Link]) {
 	let sources = sources.iter().copied().collect();
@@ -29,4 +32,16 @@ pub fn replace_node(nodes: &mut [Node], destination: u32, sources: &[Link]) {
 	} else {
 		replace_with_identity(nodes, destination, sources);
 	}
+}
+
+/// Replaces a read node, fencing its forwarded reference behind the loaded value.
+///
+/// A read forwards its reference unchanged as the state token; a bare replacement would
+/// let identity removal rewire a later write straight to that reference and drop the read
+/// from its ordering. The fence depends on the value and survives identity removal, so the
+/// write stays sequenced after the read.
+pub fn replace_read(nodes: &mut Vec<Node>, destination: u32, value: Link, reference: Link) {
+	let fence = Fence::add_into(nodes, [value, reference].into_iter().collect());
+
+	replace_node(nodes, destination, &[Link(fence, 0), Link(fence, 1)]);
 }
