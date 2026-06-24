@@ -2,7 +2,7 @@
 
 use ir_graph::{
 	Link, Node,
-	operation::{Extract, LoadType, Location, StoreType},
+	operation::{Extract, LoadType, Location, MemoryLoad, MemorySize, MemoryStore, StoreType},
 };
 use luau_foreign::{
 	Bit32ArShift, Bit32Or, BufferLength, BufferLoad, BufferStore, FromBitsI64, IntoBitsI64, LuauAdd,
@@ -30,25 +30,24 @@ const WRITE_F64: &str = "buffer_write_f64";
 pub fn lower(nodes: &mut Vec<Node>, id: u32) -> bool {
 	let index = usize::try_from(id).unwrap();
 
-	if let Node::MemoryLoad(node) = &nodes[index] {
-		let (source, kind) = (node.source, node.kind);
-
+	if let &Node::MemoryLoad(MemoryLoad { source, kind }) = &nodes[index] {
 		load(nodes, id, source, kind);
 
 		return true;
 	}
 
-	if let Node::MemoryStore(node) = &nodes[index] {
-		let (destination, source, kind) = (node.destination, node.source, node.kind);
-
+	if let &Node::MemoryStore(MemoryStore {
+		destination,
+		source,
+		kind,
+	}) = &nodes[index]
+	{
 		store(nodes, id, destination, source, kind);
 
 		return true;
 	}
 
-	if let Node::MemorySize(node) = &nodes[index] {
-		let source = node.source;
-
+	if let &Node::MemorySize(MemorySize { source }) = &nodes[index] {
 		size(nodes, id, source);
 
 		return true;

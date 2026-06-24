@@ -3,7 +3,7 @@
 use core::mem;
 
 use ir_graph::{
-	Link, Node,
+	Link, Node, list,
 	operation::{Fence, Identity},
 };
 
@@ -41,7 +41,7 @@ pub fn replace_node(nodes: &mut [Node], destination: u32, sources: &[Link]) {
 /// from its ordering. The fence depends on the value and survives identity removal, so the
 /// write stays sequenced after the read.
 pub fn replace_read(nodes: &mut Vec<Node>, destination: u32, value: Link, reference: Link) {
-	let fence = Fence::add_into(nodes, [value, reference].into_iter().collect());
+	let fence = Fence::add_into(nodes, list::resizable![value, reference]);
 
 	replace_node(nodes, destination, &[Link(fence, 0), Link(fence, 1)]);
 }
