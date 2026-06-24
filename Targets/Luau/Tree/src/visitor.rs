@@ -5,12 +5,12 @@ use core::ops::ControlFlow;
 use super::{
 	expression::{
 		Aggregate, Apply, BooleanToInteger, BufferLength, Call as ExpressionCall, Expression,
-		Extract, Function, GlobalGet, GlobalNew, Index, Infix, Match as ExpressionMatch, Prefix,
-		RefIsNull, TableNew, TableSize, VectorX,
+		Extract, Function, Index, Infix, Match as ExpressionMatch, Prefix, RefIsNull, TableNew,
+		TableSize, VectorX,
 	},
 	statement::{
-		Assign, Call as StatementCall, GlobalSet, Match as StatementMatch, Repeat, Sequence,
-		SetIndex, Statement,
+		Assign, Call as StatementCall, Match as StatementMatch, Repeat, Sequence, SetIndex,
+		Statement,
 	},
 };
 
@@ -106,22 +106,6 @@ impl RefIsNull {
 	}
 }
 
-impl GlobalNew {
-	fn accept<T: Visitor>(&self, visitor: &mut T) -> ControlFlow<T::Output> {
-		let Self { initializer } = self;
-
-		initializer.accept(visitor)
-	}
-}
-
-impl GlobalGet {
-	fn accept<T: Visitor>(&self, visitor: &mut T) -> ControlFlow<T::Output> {
-		let Self { source } = self;
-
-		source.accept(visitor)
-	}
-}
-
 impl Aggregate {
 	fn accept<T: Visitor>(&self, visitor: &mut T) -> ControlFlow<T::Output> {
 		let Self { fields } = self;
@@ -210,8 +194,6 @@ impl Expression {
 			Self::Prefix(prefix) => prefix.accept(visitor),
 			Self::BooleanToInteger(boolean_to_integer) => boolean_to_integer.accept(visitor),
 			Self::RefIsNull(ref_is_null) => ref_is_null.accept(visitor),
-			Self::GlobalNew(global_new) => global_new.accept(visitor),
-			Self::GlobalGet(global_get) => global_get.accept(visitor),
 			Self::Aggregate(aggregate) => aggregate.accept(visitor),
 			Self::Extract(extract) => extract.accept(visitor),
 			Self::TableNew(table_new) => table_new.accept(visitor),
@@ -278,18 +260,6 @@ impl StatementCall {
 	}
 }
 
-impl GlobalSet {
-	fn accept<T: Visitor>(&self, visitor: &mut T) -> ControlFlow<T::Output> {
-		let Self {
-			destination,
-			source,
-		} = self;
-
-		destination.accept(visitor)?;
-		source.accept(visitor)
-	}
-}
-
 impl SetIndex {
 	fn accept<T: Visitor>(&self, visitor: &mut T) -> ControlFlow<T::Output> {
 		let Self {
@@ -314,7 +284,6 @@ impl Statement {
 			Self::Assign(assign) => assign.accept(visitor),
 			Self::SwapAll(_) => ControlFlow::Continue(()),
 			Self::Call(call) => call.accept(visitor),
-			Self::GlobalSet(global_set) => global_set.accept(visitor),
 			Self::SetIndex(set_index) => set_index.accept(visitor),
 		}
 	}

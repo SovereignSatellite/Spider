@@ -85,14 +85,6 @@ pub struct Call {
 	pub call: Expression,
 }
 
-/// A global variable write.
-pub struct GlobalSet {
-	/// The destination expression.
-	pub destination: Expression,
-	/// The source expression.
-	pub source: Expression,
-}
-
 /// A table element write: `(table)[offset] = value`.
 pub struct SetIndex {
 	/// The destination table.
@@ -118,8 +110,6 @@ pub enum Statement {
 	/// A call statement binding its results.
 	Call(Box<Call>),
 
-	/// A global variable write.
-	GlobalSet(Box<GlobalSet>),
 	/// A table element write.
 	SetIndex(Box<SetIndex>),
 }
