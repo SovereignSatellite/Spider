@@ -2,9 +2,12 @@
 
 use core::mem;
 
-use ir_graph::{Link, Node, Region, operation::integer};
+use ir_graph::{
+	Link, Node, Region,
+	operation::{integer, number},
+};
 
-use crate::{i32 as lower_i32, i64 as lower_i64, replace};
+use crate::{f32 as lower_f32, f64 as lower_f64, i32 as lower_i32, i64 as lower_i64, replace};
 
 /// Lowers every trivial node in the region, reporting whether anything changed.
 pub fn apply(region: &mut Region) -> bool {
@@ -77,9 +80,6 @@ fn lower_node(nodes: &mut Vec<Node>, id: u32) -> bool {
 		| Node::IntegerSignExtend(_)
 		| Node::IntegerConvertToNumber(_)
 		| Node::IntegerTransmuteToNumber(_)
-		| Node::NumberUnaryOperation(_)
-		| Node::NumberBinaryOperation(_)
-		| Node::NumberCompareOperation(_)
 		| Node::NumberNarrow(_)
 		| Node::NumberWiden(_)
 		| Node::NumberTruncateToInteger(_)
@@ -88,6 +88,9 @@ fn lower_node(nodes: &mut Vec<Node>, id: u32) -> bool {
 		Node::IntegerUnaryOperation(operation) => Some(lower_integer_unary(nodes, *operation)),
 		Node::IntegerBinaryOperation(operation) => lower_integer_binary(nodes, *operation),
 		Node::IntegerCompareOperation(operation) => Some(lower_integer_compare(nodes, *operation)),
+		Node::NumberUnaryOperation(operation) => Some(lower_number_unary(nodes, *operation)),
+		Node::NumberBinaryOperation(operation) => Some(lower_number_binary(nodes, *operation)),
+		Node::NumberCompareOperation(operation) => Some(lower_number_compare(nodes, *operation)),
 	};
 
 	let lowered = result.is_some();
@@ -141,5 +144,46 @@ fn lower_integer_compare(nodes: &mut Vec<Node>, operation: integer::CompareOpera
 	match kind {
 		integer::Type::I32 => lower_i32::compare(nodes, lhs, rhs, operator),
 		integer::Type::I64 => lower_i64::compare(nodes, lhs, rhs, operator),
+	}
+}
+
+fn lower_number_unary(nodes: &mut Vec<Node>, operation: number::UnaryOperation) -> Link {
+	let number::UnaryOperation {
+		source,
+		kind,
+		operator,
+	} = operation;
+
+	match kind {
+		number::Type::F32 => lower_f32::unary(nodes, source, operator),
+		number::Type::F64 => lower_f64::unary(nodes, source, operator),
+	}
+}
+
+fn lower_number_binary(nodes: &mut Vec<Node>, operation: number::BinaryOperation) -> Link {
+	let number::BinaryOperation {
+		lhs,
+		rhs,
+		kind,
+		operator,
+	} = operation;
+
+	match kind {
+		number::Type::F32 => lower_f32::binary(nodes, lhs, rhs, operator),
+		number::Type::F64 => lower_f64::binary(nodes, lhs, rhs, operator),
+	}
+}
+
+fn lower_number_compare(nodes: &mut Vec<Node>, operation: number::CompareOperation) -> Link {
+	let number::CompareOperation {
+		lhs,
+		rhs,
+		kind,
+		operator,
+	} = operation;
+
+	match kind {
+		number::Type::F32 => lower_f32::compare(nodes, lhs, rhs, operator),
+		number::Type::F64 => lower_f64::compare(nodes, lhs, rhs, operator),
 	}
 }
