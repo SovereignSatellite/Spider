@@ -7,7 +7,9 @@ use ir_graph::{
 	operation::{integer, number},
 };
 
-use crate::{f32 as lower_f32, f64 as lower_f64, i32 as lower_i32, i64 as lower_i64, replace};
+use crate::{
+	convert, f32 as lower_f32, f64 as lower_f64, i32 as lower_i32, i64 as lower_i64, replace,
+};
 
 /// Lowers every trivial node in the region, reporting whether anything changed.
 pub fn apply(region: &mut Region) -> bool {
@@ -75,22 +77,38 @@ fn lower_node(nodes: &mut Vec<Node>, id: u32) -> bool {
 		| Node::MemoryFill(_)
 		| Node::MemoryCopy(_)
 		| Node::MemoryDrop(_)
-		| Node::IntegerNarrow(_)
-		| Node::IntegerWiden(_)
-		| Node::IntegerSignExtend(_)
-		| Node::IntegerConvertToNumber(_)
-		| Node::IntegerTransmuteToNumber(_)
-		| Node::NumberNarrow(_)
-		| Node::NumberWiden(_)
-		| Node::NumberTruncateToInteger(_)
-		| Node::NumberTransmuteToInteger(_) => None,
+		| Node::NumberTruncateToInteger(_) => None,
 
 		Node::IntegerUnaryOperation(operation) => Some(lower_integer_unary(nodes, *operation)),
 		Node::IntegerBinaryOperation(operation) => lower_integer_binary(nodes, *operation),
 		Node::IntegerCompareOperation(operation) => Some(lower_integer_compare(nodes, *operation)),
+		Node::IntegerNarrow(operation) => Some(convert::narrow_i64(nodes, operation.source)),
+		Node::IntegerWiden(operation) => Some(convert::widen_i32(nodes, operation.source)),
+		Node::IntegerSignExtend(operation) => Some(convert::sign_extend(
+			nodes,
+			operation.source,
+			operation.kind,
+		)),
+		Node::IntegerConvertToNumber(operation) => Some(convert::convert_to_number(
+			nodes,
+			operation.source,
+			operation.is_signed,
+			operation.to,
+			operation.from,
+		)),
+		Node::IntegerTransmuteToNumber(operation) => Some(convert::transmute_to_number(
+			operation.source,
+			operation.from,
+		)),
 		Node::NumberUnaryOperation(operation) => Some(lower_number_unary(nodes, *operation)),
 		Node::NumberBinaryOperation(operation) => Some(lower_number_binary(nodes, *operation)),
 		Node::NumberCompareOperation(operation) => Some(lower_number_compare(nodes, *operation)),
+		Node::NumberNarrow(operation) => Some(convert::narrow_f64(nodes, operation.source)),
+		Node::NumberWiden(operation) => Some(convert::widen_f32(nodes, operation.source)),
+		Node::NumberTransmuteToInteger(operation) => Some(convert::transmute_to_integer(
+			operation.source,
+			operation.from,
+		)),
 	};
 
 	let lowered = result.is_some();
