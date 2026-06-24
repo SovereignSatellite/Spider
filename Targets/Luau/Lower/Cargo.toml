@@ -8,3 +8,4 @@ workspace = true
 
 [dependencies]
 ir-graph.workspace = true
+luau-foreign.workspace = true
