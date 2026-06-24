@@ -44,14 +44,20 @@ fn classify_blocking_uses(node: &Node, states: &mut [UseState]) {
 	node.for_each_outer(|link| state_of(states, link).block());
 }
 
-// A match consumes its arguments as register transfers but reads its condition
-// as an `if`/`while` test expression, so the condition is an inlinable operand.
 fn classify_match_uses(matcher: &Match, states: &mut [UseState]) {
+	// Arguments are passed as register transfers, never inlinable operands.
 	for &argument in &matcher.arguments {
 		state_of(states, argument).block();
 	}
 
-	state_of(states, matcher.condition).observe(matcher.condition.1);
+	// The condition is read as a test expression, but an if-chain re-tests it at
+	// every internal node; only a two-branch match evaluates it once, so larger
+	// matches read it from a register instead.
+	if matcher.branches.len() <= 2 {
+		state_of(states, matcher.condition).observe(matcher.condition.1);
+	} else {
+		state_of(states, matcher.condition).block();
+	}
 }
 
 fn classify_uses(node: &Node, states: &mut [UseState]) {
