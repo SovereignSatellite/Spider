@@ -15,4 +15,5 @@ mod i64;
 mod memory;
 mod replace;
 mod round;
+mod table;
 mod truncate;
