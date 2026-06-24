@@ -6,6 +6,7 @@
 
 pub use self::dispatch::apply;
 
+mod convert;
 mod dispatch;
 mod f32;
 mod f64;
