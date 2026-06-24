@@ -8,8 +8,8 @@ use ir_graph::{
 };
 
 use crate::{
-	convert, f32 as lower_f32, f64 as lower_f64, i32 as lower_i32, i64 as lower_i64, replace,
-	truncate,
+	convert, f32 as lower_f32, f64 as lower_f64, i32 as lower_i32, i64 as lower_i64, memory,
+	replace, truncate,
 };
 
 /// Lowers every trivial node in the region, reporting whether anything changed.
@@ -23,7 +23,7 @@ pub fn apply(region: &mut Region) -> bool {
 	let mut changed = false;
 
 	for id in (0..length).rev() {
-		changed |= lower_node(nodes, id);
+		changed |= memory::lower(nodes, id) || lower_node(nodes, id);
 	}
 
 	changed
