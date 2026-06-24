@@ -9,6 +9,7 @@ use ir_graph::{
 
 use crate::{
 	convert, f32 as lower_f32, f64 as lower_f64, i32 as lower_i32, i64 as lower_i64, replace,
+	truncate,
 };
 
 /// Lowers every trivial node in the region, reporting whether anything changed.
@@ -76,8 +77,7 @@ fn lower_node(nodes: &mut Vec<Node>, id: u32) -> bool {
 		| Node::MemoryGrow(_)
 		| Node::MemoryFill(_)
 		| Node::MemoryCopy(_)
-		| Node::MemoryDrop(_)
-		| Node::NumberTruncateToInteger(_) => None,
+		| Node::MemoryDrop(_) => None,
 
 		Node::IntegerUnaryOperation(operation) => Some(lower_integer_unary(nodes, *operation)),
 		Node::IntegerBinaryOperation(operation) => lower_integer_binary(nodes, *operation),
@@ -105,6 +105,7 @@ fn lower_node(nodes: &mut Vec<Node>, id: u32) -> bool {
 		Node::NumberCompareOperation(operation) => Some(lower_number_compare(nodes, *operation)),
 		Node::NumberNarrow(operation) => Some(convert::narrow_f64(nodes, operation.source)),
 		Node::NumberWiden(operation) => Some(convert::widen_f32(nodes, operation.source)),
+		Node::NumberTruncateToInteger(operation) => truncate::to_integer(nodes, operation),
 		Node::NumberTransmuteToInteger(operation) => Some(convert::transmute_to_integer(
 			operation.source,
 			operation.from,

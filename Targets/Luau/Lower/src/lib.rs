@@ -14,3 +14,4 @@ mod i32;
 mod i64;
 mod replace;
 mod round;
+mod truncate;
