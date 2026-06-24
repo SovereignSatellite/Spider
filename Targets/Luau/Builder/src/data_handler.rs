@@ -12,8 +12,8 @@ use ir_graph::{
 use luau_foreign::BufferStore;
 use luau_tree::{
 	expression::{
-		Aggregate, Apply, BooleanToInteger, BufferLength, Expression, Extract, Index, Infix, Local,
-		Match, Name, Prefix, RefIsNull, TableNew, TableSize, VectorX,
+		Aggregate, Apply, BooleanToInteger, BufferLength, Expression, Extract, Field, Index, Infix,
+		Local, Match, Name, Prefix, RefIsNull, TableNew,
 	},
 	statement::Sequence,
 };
@@ -542,7 +542,7 @@ impl DataHandler {
 	pub fn build_vector_x(&mut self, region: u32, source: Link) -> Expression {
 		let source = self.load(region, source);
 
-		Expression::VectorX(VectorX { source }.into())
+		Expression::Field(Field { source, name: "x" }.into())
 	}
 
 	pub fn build_infix(
@@ -778,7 +778,13 @@ impl DataHandler {
 	pub fn build_table_length(&mut self, region: u32, source: Link) -> Expression {
 		let source = self.load(region, source);
 
-		Expression::TableSize(TableSize { source }.into())
+		Expression::Field(
+			Field {
+				source,
+				name: "minimum",
+			}
+			.into(),
+		)
 	}
 
 	pub fn build_index(&mut self, region: u32, source: Link, offset: Link) -> Expression {

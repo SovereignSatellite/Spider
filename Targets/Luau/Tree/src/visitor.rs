@@ -5,8 +5,8 @@ use core::ops::ControlFlow;
 use super::{
 	expression::{
 		Aggregate, Apply, BooleanToInteger, BufferLength, Call as ExpressionCall, Expression,
-		Extract, Function, Index, Infix, Match as ExpressionMatch, Prefix, RefIsNull, TableNew,
-		TableSize, VectorX,
+		Extract, Field, Function, Index, Infix, Match as ExpressionMatch, Prefix, RefIsNull,
+		TableNew,
 	},
 	statement::{
 		Assign, Call as StatementCall, Match as StatementMatch, Repeat, Sequence, SetIndex,
@@ -122,6 +122,14 @@ impl Extract {
 	}
 }
 
+impl Field {
+	fn accept<T: Visitor>(&self, visitor: &mut T) -> ControlFlow<T::Output> {
+		let Self { source, .. } = self;
+
+		source.accept(visitor)
+	}
+}
+
 impl TableNew {
 	fn accept<T: Visitor>(&self, visitor: &mut T) -> ControlFlow<T::Output> {
 		let Self { initializer, .. } = self;
@@ -129,14 +137,6 @@ impl TableNew {
 		initializer
 			.iter()
 			.try_for_each(|item| item.0.accept(visitor))
-	}
-}
-
-impl TableSize {
-	fn accept<T: Visitor>(&self, visitor: &mut T) -> ControlFlow<T::Output> {
-		let Self { source } = self;
-
-		source.accept(visitor)
 	}
 }
 
@@ -150,14 +150,6 @@ impl Index {
 }
 
 impl BufferLength {
-	fn accept<T: Visitor>(&self, visitor: &mut T) -> ControlFlow<T::Output> {
-		let Self { source } = self;
-
-		source.accept(visitor)
-	}
-}
-
-impl VectorX {
 	fn accept<T: Visitor>(&self, visitor: &mut T) -> ControlFlow<T::Output> {
 		let Self { source } = self;
 
@@ -196,11 +188,10 @@ impl Expression {
 			Self::RefIsNull(ref_is_null) => ref_is_null.accept(visitor),
 			Self::Aggregate(aggregate) => aggregate.accept(visitor),
 			Self::Extract(extract) => extract.accept(visitor),
+			Self::Field(field) => field.accept(visitor),
 			Self::TableNew(table_new) => table_new.accept(visitor),
-			Self::TableSize(table_size) => table_size.accept(visitor),
 			Self::Index(index) => index.accept(visitor),
 			Self::BufferLength(buffer_length) => buffer_length.accept(visitor),
-			Self::VectorX(vector_x) => vector_x.accept(visitor),
 		}
 	}
 }
