@@ -1,5 +1,6 @@
 #![expect(
 	clippy::absolute_paths,
+	clippy::cognitive_complexity,
 	clippy::collapsible_if,
 	clippy::equatable_if_let,
 	clippy::excessive_nesting,
@@ -10,6 +11,7 @@
 	clippy::wildcard_enum_match_arm,
 	dead_code,
 	non_snake_case,
+	unreachable_patterns,
 	unused_qualifications,
 	unused_variables,
 	reason = "generated ISLE code does not conform to workspace lint rules"
@@ -20,7 +22,10 @@ use ir_graph::{
 	list::{self, fixed::Fixed},
 	operation::{
 		LoadType, StoreType,
-		integer::{BinaryOperator as IntegerBinaryOperator, Type as IntegerType},
+		integer::{
+			BinaryOperator as IntegerBinaryOperator, CompareOperator as IntegerCompareOperator,
+			Type as IntegerType,
+		},
 	},
 };
 

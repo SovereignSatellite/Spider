@@ -20,6 +20,167 @@
 	(IntegerBinaryOperation lhs rhs (IntegerType.I32) (IntegerBinaryOperator.Subtract))
 )
 
+;; Node::IntegerBinaryOperation (IntegerType::I32, IntegerBinaryOperator::Multiply)
+(decl I32Mul (Link Link) Link)
+
+(extractor (I32Mul lhs rhs)
+	(IntegerBinaryOperation lhs rhs (IntegerType.I32) (IntegerBinaryOperator.Multiply))
+)
+
+;; Node::IntegerBinaryOperation (IntegerType::I32, IntegerBinaryOperator::And)
+(decl I32And (Link Link) Link)
+
+(extractor (I32And lhs rhs)
+	(IntegerBinaryOperation lhs rhs (IntegerType.I32) (IntegerBinaryOperator.And))
+)
+
+;; Node::IntegerBinaryOperation (IntegerType::I32, IntegerBinaryOperator::Or)
+(decl I32Or (Link Link) Link)
+
+(extractor (I32Or lhs rhs)
+	(IntegerBinaryOperation lhs rhs (IntegerType.I32) (IntegerBinaryOperator.Or))
+)
+
+;; Node::IntegerBinaryOperation (IntegerType::I32, IntegerBinaryOperator::ExclusiveOr)
+(decl I32Xor (Link Link) Link)
+
+(extractor (I32Xor lhs rhs)
+	(IntegerBinaryOperation lhs rhs (IntegerType.I32) (IntegerBinaryOperator.ExclusiveOr))
+)
+
+;; Node::IntegerBinaryOperation (IntegerType::I32, IntegerBinaryOperator::ShiftLeft)
+(decl I32Shl (Link Link) Link)
+
+(extractor (I32Shl lhs rhs)
+	(IntegerBinaryOperation lhs rhs (IntegerType.I32) (IntegerBinaryOperator.ShiftLeft))
+)
+
+;; Node::IntegerBinaryOperation (IntegerType::I32, IntegerBinaryOperator::ShiftRight arithmetic)
+(decl I32ShrS (Link Link) Link)
+
+(extractor (I32ShrS lhs rhs)
+	(IntegerBinaryOperation lhs rhs (IntegerType.I32) (IntegerBinaryOperator.ShiftRight true))
+)
+
+;; Node::IntegerBinaryOperation (IntegerType::I32, IntegerBinaryOperator::ShiftRight logical)
+(decl I32ShrU (Link Link) Link)
+
+(extractor (I32ShrU lhs rhs)
+	(IntegerBinaryOperation lhs rhs (IntegerType.I32) (IntegerBinaryOperator.ShiftRight false))
+)
+
+;; Node::IntegerBinaryOperation (IntegerType::I32, IntegerBinaryOperator::RotateLeft)
+(decl I32Rotl (Link Link) Link)
+
+(extractor (I32Rotl lhs rhs)
+	(IntegerBinaryOperation lhs rhs (IntegerType.I32) (IntegerBinaryOperator.RotateLeft))
+)
+
+;; Node::IntegerBinaryOperation (IntegerType::I32, IntegerBinaryOperator::RotateRight)
+(decl I32Rotr (Link Link) Link)
+
+(extractor (I32Rotr lhs rhs)
+	(IntegerBinaryOperation lhs rhs (IntegerType.I32) (IntegerBinaryOperator.RotateRight))
+)
+
+;; Node::IntegerBinaryOperation (IntegerType::I32, IntegerBinaryOperator::Divide signed)
+(decl I32DivS (Link Link) Link)
+
+(extractor (I32DivS lhs rhs)
+	(IntegerBinaryOperation lhs rhs (IntegerType.I32) (IntegerBinaryOperator.Divide true))
+)
+
+;; Node::IntegerBinaryOperation (IntegerType::I32, IntegerBinaryOperator::Divide unsigned)
+(decl I32DivU (Link Link) Link)
+
+(extractor (I32DivU lhs rhs)
+	(IntegerBinaryOperation lhs rhs (IntegerType.I32) (IntegerBinaryOperator.Divide false))
+)
+
+;; Node::IntegerBinaryOperation (IntegerType::I32, IntegerBinaryOperator::Remainder signed)
+(decl I32RemS (Link Link) Link)
+
+(extractor (I32RemS lhs rhs)
+	(IntegerBinaryOperation lhs rhs (IntegerType.I32) (IntegerBinaryOperator.Remainder true))
+)
+
+;; Node::IntegerBinaryOperation (IntegerType::I32, IntegerBinaryOperator::Remainder unsigned)
+(decl I32RemU (Link Link) Link)
+
+(extractor (I32RemU lhs rhs)
+	(IntegerBinaryOperation lhs rhs (IntegerType.I32) (IntegerBinaryOperator.Remainder false))
+)
+
+;; Node::IntegerCompareOperation (IntegerType::I32, IntegerCompareOperator::Equal)
+(decl I32Eq (Link Link) Link)
+
+(extractor (I32Eq lhs rhs)
+	(IntegerCompareOperation lhs rhs (IntegerType.I32) (IntegerCompareOperator.Equal))
+)
+
+;; Node::IntegerCompareOperation (IntegerType::I32, IntegerCompareOperator::NotEqual)
+(decl I32Ne (Link Link) Link)
+
+(extractor (I32Ne lhs rhs)
+	(IntegerCompareOperation lhs rhs (IntegerType.I32) (IntegerCompareOperator.NotEqual))
+)
+
+;; Node::IntegerCompareOperation (IntegerType::I32, IntegerCompareOperator::LessThan signed)
+(decl I32LtS (Link Link) Link)
+
+(extractor (I32LtS lhs rhs)
+	(IntegerCompareOperation lhs rhs (IntegerType.I32) (IntegerCompareOperator.LessThan true))
+)
+
+;; Node::IntegerCompareOperation (IntegerType::I32, IntegerCompareOperator::LessThan unsigned)
+(decl I32LtU (Link Link) Link)
+
+(extractor (I32LtU lhs rhs)
+	(IntegerCompareOperation lhs rhs (IntegerType.I32) (IntegerCompareOperator.LessThan false))
+)
+
+;; Node::IntegerCompareOperation (IntegerType::I32, IntegerCompareOperator::GreaterThan signed)
+(decl I32GtS (Link Link) Link)
+
+(extractor (I32GtS lhs rhs)
+	(IntegerCompareOperation lhs rhs (IntegerType.I32) (IntegerCompareOperator.GreaterThan true))
+)
+
+;; Node::IntegerCompareOperation (IntegerType::I32, IntegerCompareOperator::GreaterThan unsigned)
+(decl I32GtU (Link Link) Link)
+
+(extractor (I32GtU lhs rhs)
+	(IntegerCompareOperation lhs rhs (IntegerType.I32) (IntegerCompareOperator.GreaterThan false))
+)
+
+;; Node::IntegerCompareOperation (IntegerType::I32, IntegerCompareOperator::LessThanEqual signed)
+(decl I32LeS (Link Link) Link)
+
+(extractor (I32LeS lhs rhs)
+	(IntegerCompareOperation lhs rhs (IntegerType.I32) (IntegerCompareOperator.LessThanEqual true))
+)
+
+;; Node::IntegerCompareOperation (IntegerType::I32, IntegerCompareOperator::LessThanEqual unsigned)
+(decl I32LeU (Link Link) Link)
+
+(extractor (I32LeU lhs rhs)
+	(IntegerCompareOperation lhs rhs (IntegerType.I32) (IntegerCompareOperator.LessThanEqual false))
+)
+
+;; Node::IntegerCompareOperation (IntegerType::I32, IntegerCompareOperator::GreaterThanEqual signed)
+(decl I32GeS (Link Link) Link)
+
+(extractor (I32GeS lhs rhs)
+	(IntegerCompareOperation lhs rhs (IntegerType.I32) (IntegerCompareOperator.GreaterThanEqual true))
+)
+
+;; Node::IntegerCompareOperation (IntegerType::I32, IntegerCompareOperator::GreaterThanEqual unsigned)
+(decl I32GeU (Link Link) Link)
+
+(extractor (I32GeU lhs rhs)
+	(IntegerCompareOperation lhs rhs (IntegerType.I32) (IntegerCompareOperator.GreaterThanEqual false))
+)
+
 ;; Built-in `+`
 (decl pure raw_add_i32 (i32 i32) i32)
 (extern constructor raw_add_i32 raw_add_i32)
@@ -27,3 +188,95 @@
 ;; Built-in `-`
 (decl pure raw_sub_i32 (i32 i32) i32)
 (extern constructor raw_sub_i32 raw_sub_i32)
+
+;; Built-in `*`
+(decl pure raw_multiply_i32 (i32 i32) i32)
+(extern constructor raw_multiply_i32 raw_multiply_i32)
+
+;; Built-in `&`
+(decl pure raw_and_i32 (i32 i32) i32)
+(extern constructor raw_and_i32 raw_and_i32)
+
+;; Built-in `|`
+(decl pure raw_or_i32 (i32 i32) i32)
+(extern constructor raw_or_i32 raw_or_i32)
+
+;; Built-in `^`
+(decl pure raw_exclusive_or_i32 (i32 i32) i32)
+(extern constructor raw_exclusive_or_i32 raw_exclusive_or_i32)
+
+;; Built-in `<<`
+(decl pure raw_shift_left_i32 (i32 i32) i32)
+(extern constructor raw_shift_left_i32 raw_shift_left_i32)
+
+;; Built-in arithmetic `>>`
+(decl pure raw_shift_right_signed_i32 (i32 i32) i32)
+(extern constructor raw_shift_right_signed_i32 raw_shift_right_signed_i32)
+
+;; Built-in logical `>>`
+(decl pure raw_shift_right_unsigned_i32 (i32 i32) i32)
+(extern constructor raw_shift_right_unsigned_i32 raw_shift_right_unsigned_i32)
+
+;; Built-in rotate-left
+(decl pure raw_rotate_left_i32 (i32 i32) i32)
+(extern constructor raw_rotate_left_i32 raw_rotate_left_i32)
+
+;; Built-in rotate-right
+(decl pure raw_rotate_right_i32 (i32 i32) i32)
+(extern constructor raw_rotate_right_i32 raw_rotate_right_i32)
+
+;; Built-in signed `//`; declines on a trapping operand pair to preserve the trap
+(decl pure partial raw_divide_signed_i32 (i32 i32) i32)
+(extern constructor raw_divide_signed_i32 raw_divide_signed_i32)
+
+;; Built-in unsigned `//`; declines on divide-by-zero to preserve the trap
+(decl pure partial raw_divide_unsigned_i32 (i32 i32) i32)
+(extern constructor raw_divide_unsigned_i32 raw_divide_unsigned_i32)
+
+;; Built-in signed `%`; declines on a trapping operand pair to preserve the trap
+(decl pure partial raw_remainder_signed_i32 (i32 i32) i32)
+(extern constructor raw_remainder_signed_i32 raw_remainder_signed_i32)
+
+;; Built-in unsigned `%`; declines on divide-by-zero to preserve the trap
+(decl pure partial raw_remainder_unsigned_i32 (i32 i32) i32)
+(extern constructor raw_remainder_unsigned_i32 raw_remainder_unsigned_i32)
+
+;; Built-in `==`; i32 boolean result
+(decl pure raw_compare_equal_i32 (i32 i32) i32)
+(extern constructor raw_compare_equal_i32 raw_compare_equal_i32)
+
+;; Built-in `~=`; i32 boolean result
+(decl pure raw_compare_not_equal_i32 (i32 i32) i32)
+(extern constructor raw_compare_not_equal_i32 raw_compare_not_equal_i32)
+
+;; Built-in signed `<`; i32 boolean result
+(decl pure raw_compare_less_than_signed_i32 (i32 i32) i32)
+(extern constructor raw_compare_less_than_signed_i32 raw_compare_less_than_signed_i32)
+
+;; Built-in unsigned `<`; i32 boolean result
+(decl pure raw_compare_less_than_unsigned_i32 (i32 i32) i32)
+(extern constructor raw_compare_less_than_unsigned_i32 raw_compare_less_than_unsigned_i32)
+
+;; Built-in signed `>`; i32 boolean result
+(decl pure raw_compare_greater_than_signed_i32 (i32 i32) i32)
+(extern constructor raw_compare_greater_than_signed_i32 raw_compare_greater_than_signed_i32)
+
+;; Built-in unsigned `>`; i32 boolean result
+(decl pure raw_compare_greater_than_unsigned_i32 (i32 i32) i32)
+(extern constructor raw_compare_greater_than_unsigned_i32 raw_compare_greater_than_unsigned_i32)
+
+;; Built-in signed `<=`; i32 boolean result
+(decl pure raw_compare_less_than_equal_signed_i32 (i32 i32) i32)
+(extern constructor raw_compare_less_than_equal_signed_i32 raw_compare_less_than_equal_signed_i32)
+
+;; Built-in unsigned `<=`; i32 boolean result
+(decl pure raw_compare_less_than_equal_unsigned_i32 (i32 i32) i32)
+(extern constructor raw_compare_less_than_equal_unsigned_i32 raw_compare_less_than_equal_unsigned_i32)
+
+;; Built-in signed `>=`; i32 boolean result
+(decl pure raw_compare_greater_than_equal_signed_i32 (i32 i32) i32)
+(extern constructor raw_compare_greater_than_equal_signed_i32 raw_compare_greater_than_equal_signed_i32)
+
+;; Built-in unsigned `>=`; i32 boolean result
+(decl pure raw_compare_greater_than_equal_unsigned_i32 (i32 i32) i32)
+(extern constructor raw_compare_greater_than_equal_unsigned_i32 raw_compare_greater_than_equal_unsigned_i32)

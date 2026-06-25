@@ -12,3 +12,7 @@
 (decl IntegerBinaryOperation (Link Link IntegerType IntegerBinaryOperator) Link)
 (extern extractor IntegerBinaryOperation get_integer_binary_operation)
 (extern constructor IntegerBinaryOperation add_integer_binary_operation)
+
+;; Node::IntegerCompareOperation
+(decl IntegerCompareOperation (Link Link IntegerType IntegerCompareOperator) Link)
+(extern extractor IntegerCompareOperation get_integer_compare_operation)
