@@ -7,3 +7,44 @@
 (decl F64 (f64) Link)
 (extern extractor F64 get_f64)
 (extern constructor F64 add_f64)
+
+;; Node::NumberUnaryOperation
+(decl NumberUnaryOperation (Link NumberType NumberUnaryOperator) Link)
+(extern extractor NumberUnaryOperation get_number_unary_operation)
+(extern constructor NumberUnaryOperation add_number_unary_operation)
+
+;; Node::NumberUnaryOperation (NumberType::F32, NumberUnaryOperator::Negate)
+(decl F32Neg (Link) Link)
+
+(extractor (F32Neg source)
+	(NumberUnaryOperation source (NumberType.F32) (NumberUnaryOperator.Negate))
+)
+
+;; Node::NumberUnaryOperation (NumberType::F32, NumberUnaryOperator::Absolute)
+(decl F32Abs (Link) Link)
+
+(rule (F32Abs source)
+	(NumberUnaryOperation source (NumberType.F32) (NumberUnaryOperator.Absolute))
+)
+
+(extractor (F32Abs source)
+	(NumberUnaryOperation source (NumberType.F32) (NumberUnaryOperator.Absolute))
+)
+
+;; Node::NumberUnaryOperation (NumberType::F64, NumberUnaryOperator::Negate)
+(decl F64Neg (Link) Link)
+
+(extractor (F64Neg source)
+	(NumberUnaryOperation source (NumberType.F64) (NumberUnaryOperator.Negate))
+)
+
+;; Node::NumberUnaryOperation (NumberType::F64, NumberUnaryOperator::Absolute)
+(decl F64Abs (Link) Link)
+
+(rule (F64Abs source)
+	(NumberUnaryOperation source (NumberType.F64) (NumberUnaryOperator.Absolute))
+)
+
+(extractor (F64Abs source)
+	(NumberUnaryOperation source (NumberType.F64) (NumberUnaryOperator.Absolute))
+)
