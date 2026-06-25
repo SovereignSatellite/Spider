@@ -1,0 +1,19 @@
+;; Node::IntegerNarrow
+(decl IntegerNarrow (Link) Link)
+(extern extractor IntegerNarrow get_integer_narrow)
+
+;; Node::IntegerWiden
+(decl IntegerWiden (Link) Link)
+(extern extractor IntegerWiden get_integer_widen)
+
+;; Node::IntegerSignExtend wrapping an identical Node::IntegerSignExtend
+(decl SignExtendIdempotent (Link) Link)
+(extern extractor SignExtendIdempotent get_sign_extend_idempotent)
+
+;; Node::IntegerTransmuteToNumber wrapping a width-matched Node::NumberTransmuteToInteger
+(decl TransmuteIntRoundTrip (Link) Link)
+(extern extractor TransmuteIntRoundTrip get_transmute_int_round_trip)
+
+;; Node::NumberTransmuteToInteger wrapping a width-matched Node::IntegerTransmuteToNumber
+(decl TransmuteNumberRoundTrip (Link) Link)
+(extern extractor TransmuteNumberRoundTrip get_transmute_number_round_trip)
