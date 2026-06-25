@@ -52,6 +52,7 @@ impl Optimizer {
 				|| isle::simplify_memory(nodes, id)
 				|| isle::simplify_luau_bit32(nodes, id)
 				|| isle::simplify_luau_arithmetic(nodes, id)
+				|| isle::simplify_luau_compare(nodes, id)
 			{
 				applied = true;
 

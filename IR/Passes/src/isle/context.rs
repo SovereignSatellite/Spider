@@ -25,7 +25,8 @@ use luau_foreign::{
 use super::{
 	internal::Context,
 	luau::{
-		self, Bit32BinaryOperator, Bit32UnaryOperator, LuauArithmeticOperator, LuauUnaryOperator,
+		self, Bit32BinaryOperator, Bit32UnaryOperator, LuauArithmeticOperator, LuauBinaryOperator,
+		LuauCompareOperator, LuauUnaryOperator,
 	},
 };
 
@@ -729,6 +730,63 @@ impl Context for RegionContext<'_> {
 
 	fn raw_luau_negate(&mut self, arg0: f64) -> f64 {
 		-arg0
+	}
+
+	fn get_luau_binary_operation(
+		&mut self,
+		arg0: Link,
+	) -> Option<(Link, Link, LuauBinaryOperator)> {
+		let Node::Foreign(foreign) = self.at(arg0) else {
+			return None;
+		};
+		let (lhs, rhs, operator) = luau::luau_binary_operation(&**foreign)?;
+
+		Some((self.trace(lhs), self.trace(rhs), operator))
+	}
+
+	fn get_luau_compare_operation(
+		&mut self,
+		arg0: Link,
+	) -> Option<(Link, Link, LuauCompareOperator)> {
+		let Node::Foreign(foreign) = self.at(arg0) else {
+			return None;
+		};
+		let (lhs, rhs, operator) = luau::luau_compare_operation(&**foreign)?;
+
+		Some((self.trace(lhs), self.trace(rhs), operator))
+	}
+
+	fn get_boolean_to_integer(&mut self, arg0: Link) -> Option<Link> {
+		let Node::Foreign(foreign) = self.at(arg0) else {
+			return None;
+		};
+		let source = luau::boolean_to_integer(&**foreign)?;
+
+		Some(self.trace(source))
+	}
+
+	#[expect(
+		clippy::float_cmp,
+		reason = "Luau equality is an exact bit comparison, not an epsilon test"
+	)]
+	fn raw_luau_equal(&mut self, arg0: f64, arg1: f64) -> i32 {
+		i32::from(arg0 == arg1)
+	}
+
+	#[expect(
+		clippy::float_cmp,
+		reason = "Luau inequality is an exact bit comparison, not an epsilon test"
+	)]
+	fn raw_luau_not_equal(&mut self, arg0: f64, arg1: f64) -> i32 {
+		i32::from(arg0 != arg1)
+	}
+
+	fn raw_luau_less_than(&mut self, arg0: f64, arg1: f64) -> i32 {
+		i32::from(arg0 < arg1)
+	}
+
+	fn raw_luau_less_than_equal(&mut self, arg0: f64, arg1: f64) -> i32 {
+		i32::from(arg0 <= arg1)
 	}
 }
 
