@@ -1,5 +1,6 @@
 (decl partial SimplifyTable (Link) Links)
 
+;; Get(Set(value)) => value
 (rule
 	(SimplifyTable
 		(TableGet table @ (TableSet _ offset source) offset)

@@ -1,5 +1,6 @@
 (decl partial SimplifyMemory (Link) Links)
 
+;; Load(Store(value)) => value
 (rule
 	(SimplifyMemory
 		(I32Load memory @ (I32Store _ offset source) offset)
