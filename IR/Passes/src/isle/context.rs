@@ -3,8 +3,9 @@
 use ir_graph::{
 	Link, Node,
 	operation::{
-		LoadType, Location, MemoryLoad, MemoryStore, MutableGet, MutableNew, MutableSet, StoreType,
-		TableGet, TableSet,
+		IntegerNarrow, IntegerSignExtend, IntegerTransmuteToNumber, IntegerWiden, LoadType,
+		Location, MemoryLoad, MemoryStore, MutableGet, MutableNew, MutableSet,
+		NumberTransmuteToInteger, StoreType, TableGet, TableSet,
 		integer::{
 			BinaryOperation as IntegerBinaryOperation, BinaryOperator as IntegerBinaryOperator,
 			CompareOperation as IntegerCompareOperation, CompareOperator as IntegerCompareOperator,
@@ -423,6 +424,77 @@ impl Context for RegionContext<'_> {
 		}
 	}
 
+	fn get_integer_narrow(&mut self, arg0: Link) -> Option<Link> {
+		if let &Node::IntegerNarrow(IntegerNarrow { source }) = self.at(arg0) {
+			Some(self.trace(source))
+		} else {
+			None
+		}
+	}
+
+	fn get_integer_widen(&mut self, arg0: Link) -> Option<Link> {
+		if let &Node::IntegerWiden(IntegerWiden { source }) = self.at(arg0) {
+			Some(self.trace(source))
+		} else {
+			None
+		}
+	}
+
+	fn get_sign_extend_idempotent(&mut self, arg0: Link) -> Option<Link> {
+		let &Node::IntegerSignExtend(IntegerSignExtend {
+			source,
+			kind: outer,
+		}) = self.at(arg0)
+		else {
+			return None;
+		};
+		let &Node::IntegerSignExtend(IntegerSignExtend { kind: inner, .. }) =
+			self.at(self.trace(source))
+		else {
+			return None;
+		};
+
+		(outer == inner).then(|| self.trace(source))
+	}
+
+	fn get_transmute_int_round_trip(&mut self, arg0: Link) -> Option<Link> {
+		let &Node::IntegerTransmuteToNumber(IntegerTransmuteToNumber {
+			source,
+			from: integer,
+		}) = self.at(arg0)
+		else {
+			return None;
+		};
+		let &Node::NumberTransmuteToInteger(NumberTransmuteToInteger {
+			source: inner,
+			from: number,
+		}) = self.at(self.trace(source))
+		else {
+			return None;
+		};
+
+		is_transmute_width_matched(integer, number).then(|| self.trace(inner))
+	}
+
+	fn get_transmute_number_round_trip(&mut self, arg0: Link) -> Option<Link> {
+		let &Node::NumberTransmuteToInteger(NumberTransmuteToInteger {
+			source,
+			from: number,
+		}) = self.at(arg0)
+		else {
+			return None;
+		};
+		let &Node::IntegerTransmuteToNumber(IntegerTransmuteToNumber {
+			source: inner,
+			from: integer,
+		}) = self.at(self.trace(source))
+		else {
+			return None;
+		};
+
+		is_transmute_width_matched(integer, number).then(|| self.trace(inner))
+	}
+
 	fn get_number_unary_operation(
 		&mut self,
 		arg0: Link,
@@ -447,6 +519,13 @@ impl Context for RegionContext<'_> {
 	) -> Link {
 		NumberUnaryOperation::add_into(self.0, arg0, *arg1, *arg2)
 	}
+}
+
+const fn is_transmute_width_matched(integer: IntegerType, number: NumberType) -> bool {
+	matches!(
+		(integer, number),
+		(IntegerType::I32, NumberType::F32) | (IntegerType::I64, NumberType::F64)
+	)
 }
 
 fn shift_count_i64(count: i64) -> u32 {
