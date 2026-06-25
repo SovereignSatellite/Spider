@@ -5,7 +5,7 @@ use ir_graph::{
 	operation::{
 		Aggregate, Extract, IntegerNarrow, IntegerSignExtend, IntegerTransmuteToNumber,
 		IntegerWiden, LoadType, Location, MemoryLoad, MemoryStore, MutableGet, MutableNew,
-		MutableSet, NumberTransmuteToInteger, StoreType, TableGet, TableSet,
+		MutableSet, NumberTransmuteToInteger, RefIsNull, StoreType, TableGet, TableSet,
 		integer::{
 			BinaryOperation as IntegerBinaryOperation, BinaryOperator as IntegerBinaryOperator,
 			CompareOperation as IntegerCompareOperation, CompareOperator as IntegerCompareOperator,
@@ -508,6 +508,18 @@ impl Context for RegionContext<'_> {
 			.get(usize::try_from(index).unwrap())
 			.copied()
 			.map(|field| self.trace(field))
+	}
+
+	fn get_ref_is_null(&mut self, arg0: Link) -> Option<Link> {
+		if let &Node::RefIsNull(RefIsNull { source }) = self.at(arg0) {
+			Some(self.trace(source))
+		} else {
+			None
+		}
+	}
+
+	fn get_null(&mut self, arg0: Link) -> Option<()> {
+		matches!(self.at(arg0), Node::Null).then_some(())
 	}
 
 	fn get_number_unary_operation(
