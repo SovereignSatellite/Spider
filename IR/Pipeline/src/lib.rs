@@ -34,6 +34,12 @@ impl Optimizer {
 		let mut applied = false;
 		let len = nodes.len();
 
+		// The peephole engine has no inherent fixpoint bound: it relies on every rule being
+		// strictly shrinking. A non-shrinking rule would spin the inner loop forever, so a debug
+		// build allows a generous rewrite budget and asserts once it is exhausted.
+		#[cfg(debug_assertions)]
+		let mut rewrites_allowed = len.saturating_mul(64).saturating_add(1024);
+
 		for id in (0..len.try_into().unwrap()).rev() {
 			while isle::simplify_i32(nodes, id)
 				|| isle::simplify_mutable(nodes, id)
@@ -41,6 +47,16 @@ impl Optimizer {
 				|| isle::simplify_memory(nodes, id)
 			{
 				applied = true;
+
+				#[cfg(debug_assertions)]
+				{
+					assert!(
+						rewrites_allowed > 0,
+						"ISLE peephole did not converge; a non-shrinking rule is likely oscillating"
+					);
+
+					rewrites_allowed -= 1;
+				}
 			}
 		}
 
