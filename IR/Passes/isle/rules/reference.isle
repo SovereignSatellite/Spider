@@ -1,0 +1,10 @@
+(decl partial SimplifyReference (Link) Link)
+
+;; RefIsNull(Null) => 1
+(rule
+	(SimplifyReference
+		(RefIsNull (Null))
+	)
+
+	(I32 1)
+)
