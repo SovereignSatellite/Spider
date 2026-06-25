@@ -1,0 +1,559 @@
+(decl partial SimplifyI64 (Link) Link)
+
+;; (N + 0) => N
+(rule 3
+	(SimplifyI64
+		(I64Add lhs (I64 0))
+	)
+
+	lhs
+)
+
+;; (N - 0) => N
+(rule 3
+	(SimplifyI64
+		(I64Sub lhs (I64 0))
+	)
+
+	lhs
+)
+
+;; (N * 1) => N
+(rule 3
+	(SimplifyI64
+		(I64Mul lhs (I64 1))
+	)
+
+	lhs
+)
+
+;; (N * 0) => 0
+(rule 3
+	(SimplifyI64
+		(I64Mul _ (I64 0))
+	)
+
+	(I64 0)
+)
+
+;; (N & 0) => 0
+(rule 3
+	(SimplifyI64
+		(I64And _ (I64 0))
+	)
+
+	(I64 0)
+)
+
+;; (N & -1) => N
+(rule 3
+	(SimplifyI64
+		(I64And lhs (I64 -1))
+	)
+
+	lhs
+)
+
+;; (N | 0) => N
+(rule 3
+	(SimplifyI64
+		(I64Or lhs (I64 0))
+	)
+
+	lhs
+)
+
+;; (N | -1) => -1
+(rule 3
+	(SimplifyI64
+		(I64Or _ (I64 -1))
+	)
+
+	(I64 -1)
+)
+
+;; (N ^ 0) => N
+(rule 3
+	(SimplifyI64
+		(I64Xor lhs (I64 0))
+	)
+
+	lhs
+)
+
+;; (N << 0) => N
+(rule 3
+	(SimplifyI64
+		(I64Shl lhs (I64 0))
+	)
+
+	lhs
+)
+
+;; (N >> 0) => N (arithmetic)
+(rule 3
+	(SimplifyI64
+		(I64ShrS lhs (I64 0))
+	)
+
+	lhs
+)
+
+;; (N >> 0) => N (logical)
+(rule 3
+	(SimplifyI64
+		(I64ShrU lhs (I64 0))
+	)
+
+	lhs
+)
+
+;; rotl N by 0 => N
+(rule 3
+	(SimplifyI64
+		(I64Rotl lhs (I64 0))
+	)
+
+	lhs
+)
+
+;; rotr N by 0 => N
+(rule 3
+	(SimplifyI64
+		(I64Rotr lhs (I64 0))
+	)
+
+	lhs
+)
+
+;; (N / 1) => N (signed)
+(rule 3
+	(SimplifyI64
+		(I64DivS lhs (I64 1))
+	)
+
+	lhs
+)
+
+;; (N / 1) => N (unsigned)
+(rule 3
+	(SimplifyI64
+		(I64DivU lhs (I64 1))
+	)
+
+	lhs
+)
+
+;; (N % 1) => 0 (signed)
+(rule 3
+	(SimplifyI64
+		(I64RemS _ (I64 1))
+	)
+
+	(I64 0)
+)
+
+;; (N % 1) => 0 (unsigned)
+(rule 3
+	(SimplifyI64
+		(I64RemU _ (I64 1))
+	)
+
+	(I64 0)
+)
+
+;; (N - N) => 0
+(rule 4
+	(SimplifyI64
+		(I64Sub lhs lhs)
+	)
+
+	(I64 0)
+)
+
+;; (N & N) => N
+(rule 4
+	(SimplifyI64
+		(I64And lhs lhs)
+	)
+
+	lhs
+)
+
+;; (N | N) => N
+(rule 4
+	(SimplifyI64
+		(I64Or lhs lhs)
+	)
+
+	lhs
+)
+
+;; (N ^ N) => 0
+(rule 4
+	(SimplifyI64
+		(I64Xor lhs lhs)
+	)
+
+	(I64 0)
+)
+
+;; 0 - (0 - N) => N
+(rule 5
+	(SimplifyI64
+		(I64Sub (I64 0) (I64Sub (I64 0) lhs))
+	)
+
+	lhs
+)
+
+;; (K1 + K2) => K3
+(rule 2
+	(SimplifyI64
+		(I64Add (I64 lhs) (I64 rhs))
+	)
+
+	(I64 (raw_add_i64 lhs rhs))
+)
+
+;; (K1 - K2) => K3
+(rule 2
+	(SimplifyI64
+		(I64Sub (I64 lhs) (I64 rhs))
+	)
+
+	(I64 (raw_sub_i64 lhs rhs))
+)
+
+;; (K1 * K2) => K3
+(rule 2
+	(SimplifyI64
+		(I64Mul (I64 lhs) (I64 rhs))
+	)
+
+	(I64 (raw_multiply_i64 lhs rhs))
+)
+
+;; (K1 & K2) => K3
+(rule 2
+	(SimplifyI64
+		(I64And (I64 lhs) (I64 rhs))
+	)
+
+	(I64 (raw_and_i64 lhs rhs))
+)
+
+;; (K1 | K2) => K3
+(rule 2
+	(SimplifyI64
+		(I64Or (I64 lhs) (I64 rhs))
+	)
+
+	(I64 (raw_or_i64 lhs rhs))
+)
+
+;; (K1 ^ K2) => K3
+(rule 2
+	(SimplifyI64
+		(I64Xor (I64 lhs) (I64 rhs))
+	)
+
+	(I64 (raw_exclusive_or_i64 lhs rhs))
+)
+
+;; (K1 << K2) => K3
+(rule 2
+	(SimplifyI64
+		(I64Shl (I64 lhs) (I64 rhs))
+	)
+
+	(I64 (raw_shift_left_i64 lhs rhs))
+)
+
+;; (K1 >> K2) => K3 (arithmetic)
+(rule 2
+	(SimplifyI64
+		(I64ShrS (I64 lhs) (I64 rhs))
+	)
+
+	(I64 (raw_shift_right_signed_i64 lhs rhs))
+)
+
+;; (K1 >> K2) => K3 (logical)
+(rule 2
+	(SimplifyI64
+		(I64ShrU (I64 lhs) (I64 rhs))
+	)
+
+	(I64 (raw_shift_right_unsigned_i64 lhs rhs))
+)
+
+;; rotl K1 by K2 => K3
+(rule 2
+	(SimplifyI64
+		(I64Rotl (I64 lhs) (I64 rhs))
+	)
+
+	(I64 (raw_rotate_left_i64 lhs rhs))
+)
+
+;; rotr K1 by K2 => K3
+(rule 2
+	(SimplifyI64
+		(I64Rotr (I64 lhs) (I64 rhs))
+	)
+
+	(I64 (raw_rotate_right_i64 lhs rhs))
+)
+
+;; (K1 / K2) => K3 (signed; declines on divide-by-zero and INT_MIN / -1)
+(rule 2
+	(SimplifyI64
+		(I64DivS (I64 lhs) (I64 rhs))
+	)
+
+	(I64 (raw_divide_signed_i64 lhs rhs))
+)
+
+;; (K1 / K2) => K3 (unsigned; declines on divide-by-zero)
+(rule 2
+	(SimplifyI64
+		(I64DivU (I64 lhs) (I64 rhs))
+	)
+
+	(I64 (raw_divide_unsigned_i64 lhs rhs))
+)
+
+;; (K1 % K2) => K3 (signed; declines on divide-by-zero and INT_MIN % -1)
+(rule 2
+	(SimplifyI64
+		(I64RemS (I64 lhs) (I64 rhs))
+	)
+
+	(I64 (raw_remainder_signed_i64 lhs rhs))
+)
+
+;; (K1 % K2) => K3 (unsigned; declines on divide-by-zero)
+(rule 2
+	(SimplifyI64
+		(I64RemU (I64 lhs) (I64 rhs))
+	)
+
+	(I64 (raw_remainder_unsigned_i64 lhs rhs))
+)
+
+;; (N + K1) + K2 => N + (K1 + K2)
+(rule 1
+	(SimplifyI64
+		(I64Add
+			(I64Add lhs_1 rhs_1 @ (I64 _))
+			rhs_2 @ (I64 _)
+		)
+	)
+
+	(I64Add lhs_1 (I64Add rhs_1 rhs_2))
+)
+
+;; (N + K1) - K2 => N + (K1 - K2)
+(rule 1
+	(SimplifyI64
+		(I64Sub
+			(I64Add lhs_1 rhs_1 @ (I64 _))
+			rhs_2 @ (I64 _)
+		)
+	)
+
+	(I64Add lhs_1 (I64Sub rhs_1 rhs_2))
+)
+
+;; (N - K1) - K2 => N - (K1 + K2)
+(rule 1
+	(SimplifyI64
+		(I64Sub
+			(I64Sub lhs_1 rhs_1 @ (I64 _))
+			rhs_2 @ (I64 _)
+		)
+	)
+
+	(I64Sub lhs_1 (I64Add rhs_1 rhs_2))
+)
+
+;; (N == N) => 1
+(rule 6
+	(SimplifyI64
+		(I64Eq lhs lhs)
+	)
+
+	(I32 1)
+)
+
+;; (N ~= N) => 0
+(rule 6
+	(SimplifyI64
+		(I64Ne lhs lhs)
+	)
+
+	(I32 0)
+)
+
+;; (N < N) => 0 (signed)
+(rule 6
+	(SimplifyI64
+		(I64LtS lhs lhs)
+	)
+
+	(I32 0)
+)
+
+;; (N < N) => 0 (unsigned)
+(rule 6
+	(SimplifyI64
+		(I64LtU lhs lhs)
+	)
+
+	(I32 0)
+)
+
+;; (N > N) => 0 (signed)
+(rule 6
+	(SimplifyI64
+		(I64GtS lhs lhs)
+	)
+
+	(I32 0)
+)
+
+;; (N > N) => 0 (unsigned)
+(rule 6
+	(SimplifyI64
+		(I64GtU lhs lhs)
+	)
+
+	(I32 0)
+)
+
+;; (N <= N) => 1 (signed)
+(rule 6
+	(SimplifyI64
+		(I64LeS lhs lhs)
+	)
+
+	(I32 1)
+)
+
+;; (N <= N) => 1 (unsigned)
+(rule 6
+	(SimplifyI64
+		(I64LeU lhs lhs)
+	)
+
+	(I32 1)
+)
+
+;; (N >= N) => 1 (signed)
+(rule 6
+	(SimplifyI64
+		(I64GeS lhs lhs)
+	)
+
+	(I32 1)
+)
+
+;; (N >= N) => 1 (unsigned)
+(rule 6
+	(SimplifyI64
+		(I64GeU lhs lhs)
+	)
+
+	(I32 1)
+)
+
+;; (K1 == K2) => K3
+(rule 7
+	(SimplifyI64
+		(I64Eq (I64 lhs) (I64 rhs))
+	)
+
+	(I32 (raw_compare_equal_i64 lhs rhs))
+)
+
+;; (K1 ~= K2) => K3
+(rule 7
+	(SimplifyI64
+		(I64Ne (I64 lhs) (I64 rhs))
+	)
+
+	(I32 (raw_compare_not_equal_i64 lhs rhs))
+)
+
+;; (K1 < K2) => K3 (signed)
+(rule 7
+	(SimplifyI64
+		(I64LtS (I64 lhs) (I64 rhs))
+	)
+
+	(I32 (raw_compare_less_than_signed_i64 lhs rhs))
+)
+
+;; (K1 < K2) => K3 (unsigned)
+(rule 7
+	(SimplifyI64
+		(I64LtU (I64 lhs) (I64 rhs))
+	)
+
+	(I32 (raw_compare_less_than_unsigned_i64 lhs rhs))
+)
+
+;; (K1 > K2) => K3 (signed)
+(rule 7
+	(SimplifyI64
+		(I64GtS (I64 lhs) (I64 rhs))
+	)
+
+	(I32 (raw_compare_greater_than_signed_i64 lhs rhs))
+)
+
+;; (K1 > K2) => K3 (unsigned)
+(rule 7
+	(SimplifyI64
+		(I64GtU (I64 lhs) (I64 rhs))
+	)
+
+	(I32 (raw_compare_greater_than_unsigned_i64 lhs rhs))
+)
+
+;; (K1 <= K2) => K3 (signed)
+(rule 7
+	(SimplifyI64
+		(I64LeS (I64 lhs) (I64 rhs))
+	)
+
+	(I32 (raw_compare_less_than_equal_signed_i64 lhs rhs))
+)
+
+;; (K1 <= K2) => K3 (unsigned)
+(rule 7
+	(SimplifyI64
+		(I64LeU (I64 lhs) (I64 rhs))
+	)
+
+	(I32 (raw_compare_less_than_equal_unsigned_i64 lhs rhs))
+)
+
+;; (K1 >= K2) => K3 (signed)
+(rule 7
+	(SimplifyI64
+		(I64GeS (I64 lhs) (I64 rhs))
+	)
+
+	(I32 (raw_compare_greater_than_equal_signed_i64 lhs rhs))
+)
+
+;; (K1 >= K2) => K3 (unsigned)
+(rule 7
+	(SimplifyI64
+		(I64GeU (I64 lhs) (I64 rhs))
+	)
+
+	(I32 (raw_compare_greater_than_equal_unsigned_i64 lhs rhs))
+)
