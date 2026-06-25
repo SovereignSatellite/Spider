@@ -1,0 +1,3 @@
+;; Node::Extract wrapping a Node::Aggregate, yielding the selected field
+(decl ExtractOfAggregate (Link) Link)
+(extern extractor ExtractOfAggregate get_extract_of_aggregate)
