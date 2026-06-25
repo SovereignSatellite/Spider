@@ -45,6 +45,7 @@ impl Optimizer {
 				|| isle::simplify_i64(nodes, id)
 				|| isle::simplify_convert(nodes, id)
 				|| isle::simplify_float(nodes, id)
+				|| isle::simplify_aggregate(nodes, id)
 				|| isle::simplify_mutable(nodes, id)
 				|| isle::simplify_table(nodes, id)
 				|| isle::simplify_memory(nodes, id)

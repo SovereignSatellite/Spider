@@ -3,9 +3,9 @@
 use ir_graph::{
 	Link, Node,
 	operation::{
-		IntegerNarrow, IntegerSignExtend, IntegerTransmuteToNumber, IntegerWiden, LoadType,
-		Location, MemoryLoad, MemoryStore, MutableGet, MutableNew, MutableSet,
-		NumberTransmuteToInteger, StoreType, TableGet, TableSet,
+		Aggregate, Extract, IntegerNarrow, IntegerSignExtend, IntegerTransmuteToNumber,
+		IntegerWiden, LoadType, Location, MemoryLoad, MemoryStore, MutableGet, MutableNew,
+		MutableSet, NumberTransmuteToInteger, StoreType, TableGet, TableSet,
 		integer::{
 			BinaryOperation as IntegerBinaryOperation, BinaryOperator as IntegerBinaryOperator,
 			CompareOperation as IntegerCompareOperation, CompareOperator as IntegerCompareOperator,
@@ -493,6 +493,21 @@ impl Context for RegionContext<'_> {
 		};
 
 		is_transmute_width_matched(integer, number).then(|| self.trace(inner))
+	}
+
+	fn get_extract_of_aggregate(&mut self, arg0: Link) -> Option<Link> {
+		let &Node::Extract(Extract { source, index }) = self.at(arg0) else {
+			return None;
+		};
+		let source = self.trace(source);
+		let Node::Aggregate(Aggregate { fields }) = self.at(source) else {
+			return None;
+		};
+
+		fields
+			.get(usize::try_from(index).unwrap())
+			.copied()
+			.map(|field| self.trace(field))
 	}
 
 	fn get_number_unary_operation(
