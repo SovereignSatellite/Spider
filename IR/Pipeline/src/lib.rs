@@ -50,6 +50,7 @@ impl Optimizer {
 				|| isle::simplify_mutable(nodes, id)
 				|| isle::simplify_table(nodes, id)
 				|| isle::simplify_memory(nodes, id)
+				|| isle::simplify_luau_bit32(nodes, id)
 			{
 				applied = true;
 

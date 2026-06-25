@@ -18,8 +18,14 @@ use ir_graph::{
 	},
 	tracer::identity_source,
 };
+use luau_foreign::{
+	Bit32And, Bit32ArShift, Bit32LRotate, Bit32LShift, Bit32Or, Bit32RRotate, Bit32RShift, Bit32Xor,
+};
 
-use super::internal::Context;
+use super::{
+	internal::Context,
+	luau::{self, Bit32BinaryOperator, Bit32UnaryOperator},
+};
 
 /// A newtype wrapper for implementing the ISLE `Context` trait on a region.
 pub struct RegionContext<'nodes>(pub &'nodes mut Vec<Node>);
@@ -545,6 +551,95 @@ impl Context for RegionContext<'_> {
 		arg2: &NumberUnaryOperator,
 	) -> Link {
 		NumberUnaryOperation::add_into(self.0, arg0, *arg1, *arg2)
+	}
+
+	fn get_bit32_binary_operation(
+		&mut self,
+		arg0: Link,
+	) -> Option<(Link, Link, Bit32BinaryOperator)> {
+		let Node::Foreign(foreign) = self.at(arg0) else {
+			return None;
+		};
+		let (lhs, rhs, operator) = luau::bit32_binary_operation(&**foreign)?;
+
+		Some((self.trace(lhs), self.trace(rhs), operator))
+	}
+
+	fn add_bit32_binary_operation(
+		&mut self,
+		arg0: Link,
+		arg1: Link,
+		arg2: &Bit32BinaryOperator,
+	) -> Link {
+		match *arg2 {
+			Bit32BinaryOperator::And => Bit32And::add_into(self.0, arg0, arg1),
+			Bit32BinaryOperator::Or => Bit32Or::add_into(self.0, arg0, arg1),
+			Bit32BinaryOperator::ExclusiveOr => Bit32Xor::add_into(self.0, arg0, arg1),
+			Bit32BinaryOperator::ShiftLeft => Bit32LShift::add_into(self.0, arg0, arg1),
+			Bit32BinaryOperator::ShiftRightUnsigned => Bit32RShift::add_into(self.0, arg0, arg1),
+			Bit32BinaryOperator::ShiftRightSigned => Bit32ArShift::add_into(self.0, arg0, arg1),
+			Bit32BinaryOperator::RotateLeft => Bit32LRotate::add_into(self.0, arg0, arg1),
+			Bit32BinaryOperator::RotateRight => Bit32RRotate::add_into(self.0, arg0, arg1),
+		}
+	}
+
+	fn get_bit32_unary_operation(&mut self, arg0: Link) -> Option<(Link, Bit32UnaryOperator)> {
+		let Node::Foreign(foreign) = self.at(arg0) else {
+			return None;
+		};
+		let (source, operator) = luau::bit32_unary_operation(&**foreign)?;
+
+		Some((self.trace(source), operator))
+	}
+
+	fn get_bit32_canonical(&mut self, arg0: Link) -> Option<Link> {
+		let Node::Foreign(foreign) = self.at(arg0) else {
+			return None;
+		};
+
+		luau::is_bit32_canonical(&**foreign).then_some(arg0)
+	}
+
+	fn raw_luau_shift_left(&mut self, arg0: i32, arg1: i32) -> i32 {
+		let value = arg0.cast_unsigned();
+		let count = arg1.cast_unsigned();
+		let result = if count < 32 { value << count } else { 0 };
+
+		result.cast_signed()
+	}
+
+	fn raw_luau_shift_right_unsigned(&mut self, arg0: i32, arg1: i32) -> i32 {
+		let value = arg0.cast_unsigned();
+		let count = arg1.cast_unsigned();
+		let result = if count < 32 { value >> count } else { 0 };
+
+		result.cast_signed()
+	}
+
+	fn raw_luau_shift_right_signed(&mut self, arg0: i32, arg1: i32) -> i32 {
+		let count = arg1.cast_unsigned();
+
+		if count < 32 {
+			arg0 >> count
+		} else {
+			arg0 >> 31
+		}
+	}
+
+	fn raw_luau_shift_fusion(&mut self, arg0: i32, arg1: i32) -> Option<i32> {
+		let first = arg0.cast_unsigned();
+		let second = arg1.cast_unsigned();
+		let both_in_range = first < 32 && second < 32;
+
+		both_in_range.then(|| (first + second).cast_signed())
+	}
+
+	fn raw_bit32_count_leading_zeros(&mut self, arg0: i32) -> i32 {
+		arg0.cast_unsigned().leading_zeros().cast_signed()
+	}
+
+	fn raw_bit32_count_trailing_zeros(&mut self, arg0: i32) -> i32 {
+		arg0.cast_unsigned().trailing_zeros().cast_signed()
 	}
 }
 

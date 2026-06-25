@@ -6,14 +6,16 @@ use ir_graph::{Link, Node, operation::Identity};
 
 use self::internal::{
 	constructor_SimplifyAggregate, constructor_SimplifyConvert, constructor_SimplifyFloat,
-	constructor_SimplifyI32, constructor_SimplifyI64, constructor_SimplifyMemory,
-	constructor_SimplifyMutable, constructor_SimplifyReference, constructor_SimplifyTable,
+	constructor_SimplifyI32, constructor_SimplifyI64, constructor_SimplifyLuauBit32,
+	constructor_SimplifyMemory, constructor_SimplifyMutable, constructor_SimplifyReference,
+	constructor_SimplifyTable,
 };
 
 pub use self::context::RegionContext;
 
 mod context;
 mod internal;
+mod luau;
 
 fn replace_with_identity(nodes: &mut [Node], destination: u32, sources: &[Link]) {
 	let sources = sources.iter().copied().collect();
@@ -114,6 +116,15 @@ pub fn simplify_table(nodes: &mut Vec<Node>, id: u32) -> bool {
 pub fn simplify_memory(nodes: &mut Vec<Node>, id: u32) -> bool {
 	constructor_SimplifyMemory(&mut RegionContext(nodes), Link(id, 0)).is_some_and(|sources| {
 		replace_node(nodes, id, &sources.as_fixed());
+
+		true
+	})
+}
+
+/// Simplifies a Luau `bit32` operation at the given node ID.
+pub fn simplify_luau_bit32(nodes: &mut Vec<Node>, id: u32) -> bool {
+	constructor_SimplifyLuauBit32(&mut RegionContext(nodes), Link(id, 0)).is_some_and(|source| {
+		replace_node(nodes, id, &[source]);
 
 		true
 	})

@@ -1,0 +1,421 @@
+(type Bit32BinaryOperator extern
+	(enum
+		(And)
+		(Or)
+		(ExclusiveOr)
+		(ShiftLeft)
+		(ShiftRightUnsigned)
+		(ShiftRightSigned)
+		(RotateLeft)
+		(RotateRight)
+	)
+)
+
+(type Bit32UnaryOperator extern
+	(enum
+		(CountLeadingZeros)
+		(CountTrailingZeros)
+	)
+)
+
+;; Foreign bit32 binary operations, discriminated by operator
+(decl Bit32BinaryOperation (Link Link Bit32BinaryOperator) Link)
+(extern extractor Bit32BinaryOperation get_bit32_binary_operation)
+(extern constructor Bit32BinaryOperation add_bit32_binary_operation)
+
+;; Foreign bit32 unary operations, discriminated by operator
+(decl Bit32UnaryOperation (Link Bit32UnaryOperator) Link)
+(extern extractor Bit32UnaryOperation get_bit32_unary_operation)
+
+;; A foreign bit32 result, already normalized to [0, 2^32)
+(decl CanonicalBit32 (Link) Link)
+(extern extractor CanonicalBit32 get_bit32_canonical)
+
+;; Node::Foreign(luau_foreign::Bit32And)
+(decl Bit32And (Link Link) Link)
+
+(rule (Bit32And lhs rhs)
+	(Bit32BinaryOperation lhs rhs (Bit32BinaryOperator.And))
+)
+
+(extractor (Bit32And lhs rhs)
+	(Bit32BinaryOperation lhs rhs (Bit32BinaryOperator.And))
+)
+
+;; Node::Foreign(luau_foreign::Bit32Or)
+(decl Bit32Or (Link Link) Link)
+
+(rule (Bit32Or lhs rhs)
+	(Bit32BinaryOperation lhs rhs (Bit32BinaryOperator.Or))
+)
+
+(extractor (Bit32Or lhs rhs)
+	(Bit32BinaryOperation lhs rhs (Bit32BinaryOperator.Or))
+)
+
+;; Node::Foreign(luau_foreign::Bit32Xor)
+(decl Bit32Xor (Link Link) Link)
+
+(rule (Bit32Xor lhs rhs)
+	(Bit32BinaryOperation lhs rhs (Bit32BinaryOperator.ExclusiveOr))
+)
+
+(extractor (Bit32Xor lhs rhs)
+	(Bit32BinaryOperation lhs rhs (Bit32BinaryOperator.ExclusiveOr))
+)
+
+;; Node::Foreign(luau_foreign::Bit32LShift)
+(decl Bit32LShift (Link Link) Link)
+
+(rule (Bit32LShift lhs rhs)
+	(Bit32BinaryOperation lhs rhs (Bit32BinaryOperator.ShiftLeft))
+)
+
+(extractor (Bit32LShift lhs rhs)
+	(Bit32BinaryOperation lhs rhs (Bit32BinaryOperator.ShiftLeft))
+)
+
+;; Node::Foreign(luau_foreign::Bit32RShift)
+(decl Bit32RShift (Link Link) Link)
+
+(rule (Bit32RShift lhs rhs)
+	(Bit32BinaryOperation lhs rhs (Bit32BinaryOperator.ShiftRightUnsigned))
+)
+
+(extractor (Bit32RShift lhs rhs)
+	(Bit32BinaryOperation lhs rhs (Bit32BinaryOperator.ShiftRightUnsigned))
+)
+
+;; Node::Foreign(luau_foreign::Bit32ArShift)
+(decl Bit32ArShift (Link Link) Link)
+
+(rule (Bit32ArShift lhs rhs)
+	(Bit32BinaryOperation lhs rhs (Bit32BinaryOperator.ShiftRightSigned))
+)
+
+(extractor (Bit32ArShift lhs rhs)
+	(Bit32BinaryOperation lhs rhs (Bit32BinaryOperator.ShiftRightSigned))
+)
+
+;; Node::Foreign(luau_foreign::Bit32LRotate)
+(decl Bit32LRotate (Link Link) Link)
+
+(rule (Bit32LRotate lhs rhs)
+	(Bit32BinaryOperation lhs rhs (Bit32BinaryOperator.RotateLeft))
+)
+
+(extractor (Bit32LRotate lhs rhs)
+	(Bit32BinaryOperation lhs rhs (Bit32BinaryOperator.RotateLeft))
+)
+
+;; Node::Foreign(luau_foreign::Bit32RRotate)
+(decl Bit32RRotate (Link Link) Link)
+
+(rule (Bit32RRotate lhs rhs)
+	(Bit32BinaryOperation lhs rhs (Bit32BinaryOperator.RotateRight))
+)
+
+(extractor (Bit32RRotate lhs rhs)
+	(Bit32BinaryOperation lhs rhs (Bit32BinaryOperator.RotateRight))
+)
+
+;; Node::Foreign(luau_foreign::Bit32CountLz)
+(decl Bit32CountLz (Link) Link)
+
+(extractor (Bit32CountLz source)
+	(Bit32UnaryOperation source (Bit32UnaryOperator.CountLeadingZeros))
+)
+
+;; Node::Foreign(luau_foreign::Bit32CountRz)
+(decl Bit32CountRz (Link) Link)
+
+(extractor (Bit32CountRz source)
+	(Bit32UnaryOperation source (Bit32UnaryOperator.CountTrailingZeros))
+)
+
+;; Luau bit32.lshift; a count of 32 or more yields 0
+(decl pure raw_luau_shift_left (i32 i32) i32)
+(extern constructor raw_luau_shift_left raw_luau_shift_left)
+
+;; Luau bit32.rshift; a count of 32 or more yields 0
+(decl pure raw_luau_shift_right_unsigned (i32 i32) i32)
+(extern constructor raw_luau_shift_right_unsigned raw_luau_shift_right_unsigned)
+
+;; Luau bit32.arshift; a count of 32 or more fills with the sign bit
+(decl pure raw_luau_shift_right_signed (i32 i32) i32)
+(extern constructor raw_luau_shift_right_signed raw_luau_shift_right_signed)
+
+;; Luau bit32.countlz
+(decl pure raw_bit32_count_leading_zeros (i32) i32)
+(extern constructor raw_bit32_count_leading_zeros raw_bit32_count_leading_zeros)
+
+;; Luau bit32.countrz
+(decl pure raw_bit32_count_trailing_zeros (i32) i32)
+(extern constructor raw_bit32_count_trailing_zeros raw_bit32_count_trailing_zeros)
+
+;; The combined displacement of two fused shifts or rotates, declined unless both stay in [0, 32)
+(decl pure partial raw_luau_shift_fusion (i32 i32) i32)
+(extern constructor raw_luau_shift_fusion raw_luau_shift_fusion)
+
+(decl partial SimplifyLuauBit32 (Link) Link)
+
+;; bit32.band(bit32.band(N, K1), K2) => bit32.band(N, K1 & K2)
+(rule 5
+	(SimplifyLuauBit32
+		(Bit32And (Bit32And lhs_1 (I32 rhs_1)) (I32 rhs_2))
+	)
+
+	(Bit32And lhs_1 (I32 (raw_and_i32 rhs_1 rhs_2)))
+)
+
+;; bit32.bor(bit32.bor(N, K1), K2) => bit32.bor(N, K1 | K2)
+(rule 5
+	(SimplifyLuauBit32
+		(Bit32Or (Bit32Or lhs_1 (I32 rhs_1)) (I32 rhs_2))
+	)
+
+	(Bit32Or lhs_1 (I32 (raw_or_i32 rhs_1 rhs_2)))
+)
+
+;; bit32.bxor(bit32.bxor(N, K1), K2) => bit32.bxor(N, K1 ^ K2)
+(rule 5
+	(SimplifyLuauBit32
+		(Bit32Xor (Bit32Xor lhs_1 (I32 rhs_1)) (I32 rhs_2))
+	)
+
+	(Bit32Xor lhs_1 (I32 (raw_exclusive_or_i32 rhs_1 rhs_2)))
+)
+
+;; bit32.lshift(bit32.lshift(N, K1), K2) => bit32.lshift(N, K1 + K2)
+(rule 5
+	(SimplifyLuauBit32
+		(Bit32LShift (Bit32LShift lhs_1 (I32 rhs_1)) (I32 rhs_2))
+	)
+
+	(Bit32LShift lhs_1 (I32 (raw_luau_shift_fusion rhs_1 rhs_2)))
+)
+
+;; bit32.rshift(bit32.rshift(N, K1), K2) => bit32.rshift(N, K1 + K2)
+(rule 5
+	(SimplifyLuauBit32
+		(Bit32RShift (Bit32RShift lhs_1 (I32 rhs_1)) (I32 rhs_2))
+	)
+
+	(Bit32RShift lhs_1 (I32 (raw_luau_shift_fusion rhs_1 rhs_2)))
+)
+
+;; bit32.arshift(bit32.arshift(N, K1), K2) => bit32.arshift(N, K1 + K2)
+(rule 5
+	(SimplifyLuauBit32
+		(Bit32ArShift (Bit32ArShift lhs_1 (I32 rhs_1)) (I32 rhs_2))
+	)
+
+	(Bit32ArShift lhs_1 (I32 (raw_luau_shift_fusion rhs_1 rhs_2)))
+)
+
+;; bit32.lrotate(bit32.lrotate(N, K1), K2) => bit32.lrotate(N, K1 + K2)
+(rule 5
+	(SimplifyLuauBit32
+		(Bit32LRotate (Bit32LRotate lhs_1 (I32 rhs_1)) (I32 rhs_2))
+	)
+
+	(Bit32LRotate lhs_1 (I32 (raw_luau_shift_fusion rhs_1 rhs_2)))
+)
+
+;; bit32.rrotate(bit32.rrotate(N, K1), K2) => bit32.rrotate(N, K1 + K2)
+(rule 5
+	(SimplifyLuauBit32
+		(Bit32RRotate (Bit32RRotate lhs_1 (I32 rhs_1)) (I32 rhs_2))
+	)
+
+	(Bit32RRotate lhs_1 (I32 (raw_luau_shift_fusion rhs_1 rhs_2)))
+)
+
+;; bit32.band(K1, K2) => K3
+(rule 4
+	(SimplifyLuauBit32
+		(Bit32And (I32 lhs) (I32 rhs))
+	)
+
+	(I32 (raw_and_i32 lhs rhs))
+)
+
+;; bit32.bor(K1, K2) => K3
+(rule 4
+	(SimplifyLuauBit32
+		(Bit32Or (I32 lhs) (I32 rhs))
+	)
+
+	(I32 (raw_or_i32 lhs rhs))
+)
+
+;; bit32.bxor(K1, K2) => K3
+(rule 4
+	(SimplifyLuauBit32
+		(Bit32Xor (I32 lhs) (I32 rhs))
+	)
+
+	(I32 (raw_exclusive_or_i32 lhs rhs))
+)
+
+;; bit32.lshift(K1, K2) => K3
+(rule 4
+	(SimplifyLuauBit32
+		(Bit32LShift (I32 lhs) (I32 rhs))
+	)
+
+	(I32 (raw_luau_shift_left lhs rhs))
+)
+
+;; bit32.rshift(K1, K2) => K3
+(rule 4
+	(SimplifyLuauBit32
+		(Bit32RShift (I32 lhs) (I32 rhs))
+	)
+
+	(I32 (raw_luau_shift_right_unsigned lhs rhs))
+)
+
+;; bit32.arshift(K1, K2) => K3
+(rule 4
+	(SimplifyLuauBit32
+		(Bit32ArShift (I32 lhs) (I32 rhs))
+	)
+
+	(I32 (raw_luau_shift_right_signed lhs rhs))
+)
+
+;; bit32.lrotate(K1, K2) => K3
+(rule 4
+	(SimplifyLuauBit32
+		(Bit32LRotate (I32 lhs) (I32 rhs))
+	)
+
+	(I32 (raw_rotate_left_i32 lhs rhs))
+)
+
+;; bit32.rrotate(K1, K2) => K3
+(rule 4
+	(SimplifyLuauBit32
+		(Bit32RRotate (I32 lhs) (I32 rhs))
+	)
+
+	(I32 (raw_rotate_right_i32 lhs rhs))
+)
+
+;; bit32.countlz(K1) => K2
+(rule 6
+	(SimplifyLuauBit32
+		(Bit32CountLz (I32 source))
+	)
+
+	(I32 (raw_bit32_count_leading_zeros source))
+)
+
+;; bit32.countrz(K1) => K2
+(rule 6
+	(SimplifyLuauBit32
+		(Bit32CountRz (I32 source))
+	)
+
+	(I32 (raw_bit32_count_trailing_zeros source))
+)
+
+;; bit32.bxor(N, N) => 0
+(rule 3
+	(SimplifyLuauBit32
+		(Bit32Xor value value)
+	)
+
+	(I32 0)
+)
+
+;; bit32.band(N, 0) => 0
+(rule 2
+	(SimplifyLuauBit32
+		(Bit32And _ (I32 0))
+	)
+
+	(I32 0)
+)
+
+;; bit32.bor(N, -1) => -1
+(rule 2
+	(SimplifyLuauBit32
+		(Bit32Or _ (I32 -1))
+	)
+
+	(I32 -1)
+)
+
+;; bit32.band(canonical, -1) => canonical (the coercion is redundant)
+(rule 1
+	(SimplifyLuauBit32
+		(Bit32And (CanonicalBit32 inner) (I32 -1))
+	)
+
+	inner
+)
+
+;; bit32.bor(canonical, 0) => canonical (the coercion is redundant)
+(rule 1
+	(SimplifyLuauBit32
+		(Bit32Or (CanonicalBit32 inner) (I32 0))
+	)
+
+	inner
+)
+
+;; bit32.bxor(canonical, 0) => canonical (the coercion is redundant)
+(rule 1
+	(SimplifyLuauBit32
+		(Bit32Xor (CanonicalBit32 inner) (I32 0))
+	)
+
+	inner
+)
+
+;; bit32.lshift(canonical, 0) => canonical (the shift is the identity)
+(rule 1
+	(SimplifyLuauBit32
+		(Bit32LShift (CanonicalBit32 inner) (I32 0))
+	)
+
+	inner
+)
+
+;; bit32.rshift(canonical, 0) => canonical (the shift is the identity)
+(rule 1
+	(SimplifyLuauBit32
+		(Bit32RShift (CanonicalBit32 inner) (I32 0))
+	)
+
+	inner
+)
+
+;; bit32.arshift(canonical, 0) => canonical (the shift is the identity)
+(rule 1
+	(SimplifyLuauBit32
+		(Bit32ArShift (CanonicalBit32 inner) (I32 0))
+	)
+
+	inner
+)
+
+;; bit32.lrotate(canonical, 0) => canonical (the rotate is the identity)
+(rule 1
+	(SimplifyLuauBit32
+		(Bit32LRotate (CanonicalBit32 inner) (I32 0))
+	)
+
+	inner
+)
+
+;; bit32.rrotate(canonical, 0) => canonical (the rotate is the identity)
+(rule 1
+	(SimplifyLuauBit32
+		(Bit32RRotate (CanonicalBit32 inner) (I32 0))
+	)
+
+	inner
+)
