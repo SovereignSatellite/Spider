@@ -43,6 +43,7 @@ impl Optimizer {
 		for id in (0..len.try_into().unwrap()).rev() {
 			while isle::simplify_i32(nodes, id)
 				|| isle::simplify_i64(nodes, id)
+				|| isle::simplify_float(nodes, id)
 				|| isle::simplify_mutable(nodes, id)
 				|| isle::simplify_table(nodes, id)
 				|| isle::simplify_memory(nodes, id)

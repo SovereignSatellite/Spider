@@ -10,6 +10,10 @@ use ir_graph::{
 			CompareOperation as IntegerCompareOperation, CompareOperator as IntegerCompareOperator,
 			Type as IntegerType,
 		},
+		number::{
+			Type as NumberType, UnaryOperation as NumberUnaryOperation,
+			UnaryOperator as NumberUnaryOperator,
+		},
 	},
 	tracer::identity_source,
 };
@@ -417,6 +421,31 @@ impl Context for RegionContext<'_> {
 		} else {
 			None
 		}
+	}
+
+	fn get_number_unary_operation(
+		&mut self,
+		arg0: Link,
+	) -> Option<(Link, NumberType, NumberUnaryOperator)> {
+		if let &Node::NumberUnaryOperation(NumberUnaryOperation {
+			source,
+			kind,
+			operator,
+		}) = self.at(arg0)
+		{
+			Some((self.trace(source), kind, operator))
+		} else {
+			None
+		}
+	}
+
+	fn add_number_unary_operation(
+		&mut self,
+		arg0: Link,
+		arg1: &NumberType,
+		arg2: &NumberUnaryOperator,
+	) -> Link {
+		NumberUnaryOperation::add_into(self.0, arg0, *arg1, *arg2)
 	}
 }
 

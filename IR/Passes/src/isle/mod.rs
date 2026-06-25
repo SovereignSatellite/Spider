@@ -5,8 +5,8 @@ use core::mem;
 use ir_graph::{Link, Node, operation::Identity};
 
 use self::internal::{
-	constructor_SimplifyI32, constructor_SimplifyI64, constructor_SimplifyMemory,
-	constructor_SimplifyMutable, constructor_SimplifyTable,
+	constructor_SimplifyFloat, constructor_SimplifyI32, constructor_SimplifyI64,
+	constructor_SimplifyMemory, constructor_SimplifyMutable, constructor_SimplifyTable,
 };
 
 pub use self::context::RegionContext;
@@ -49,6 +49,15 @@ pub fn simplify_i32(nodes: &mut Vec<Node>, id: u32) -> bool {
 /// Simplifies an I64 operation at the given node ID.
 pub fn simplify_i64(nodes: &mut Vec<Node>, id: u32) -> bool {
 	constructor_SimplifyI64(&mut RegionContext(nodes), Link(id, 0)).is_some_and(|source| {
+		replace_node(nodes, id, &[source]);
+
+		true
+	})
+}
+
+/// Simplifies a floating-point operation at the given node ID.
+pub fn simplify_float(nodes: &mut Vec<Node>, id: u32) -> bool {
+	constructor_SimplifyFloat(&mut RegionContext(nodes), Link(id, 0)).is_some_and(|source| {
 		replace_node(nodes, id, &[source]);
 
 		true

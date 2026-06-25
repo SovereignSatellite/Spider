@@ -26,6 +26,7 @@ use ir_graph::{
 			BinaryOperator as IntegerBinaryOperator, CompareOperator as IntegerCompareOperator,
 			Type as IntegerType,
 		},
+		number::{Type as NumberType, UnaryOperator as NumberUnaryOperator},
 	},
 };
 
