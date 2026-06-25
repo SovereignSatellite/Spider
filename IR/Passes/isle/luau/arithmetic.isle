@@ -1,0 +1,165 @@
+;; Node::Foreign(luau_foreign::LuauNegate)
+(decl LuauNegate (Link) Link)
+
+(extractor (LuauNegate source)
+	(LuauUnaryOperation source (LuauUnaryOperator.Negate))
+)
+
+(type LuauArithmeticOperator extern
+	(enum
+		(Add)
+		(Subtract)
+		(Multiply)
+		(Divide)
+		(FloorDivide)
+		(Modulo)
+	)
+)
+
+;; Foreign Luau arithmetic operations, discriminated by operator
+(decl LuauArithmeticOperation (Link Link LuauArithmeticOperator) Link)
+(extern extractor LuauArithmeticOperation get_luau_arithmetic_operation)
+
+;; Node::Foreign(luau_foreign::LuauAdd)
+(decl LuauAdd (Link Link) Link)
+
+(extractor (LuauAdd lhs rhs)
+	(LuauArithmeticOperation lhs rhs (LuauArithmeticOperator.Add))
+)
+
+;; Node::Foreign(luau_foreign::LuauSubtract)
+(decl LuauSubtract (Link Link) Link)
+
+(extractor (LuauSubtract lhs rhs)
+	(LuauArithmeticOperation lhs rhs (LuauArithmeticOperator.Subtract))
+)
+
+;; Node::Foreign(luau_foreign::LuauMultiply)
+(decl LuauMultiply (Link Link) Link)
+
+(extractor (LuauMultiply lhs rhs)
+	(LuauArithmeticOperation lhs rhs (LuauArithmeticOperator.Multiply))
+)
+
+;; Node::Foreign(luau_foreign::LuauDivide)
+(decl LuauDivide (Link Link) Link)
+
+(extractor (LuauDivide lhs rhs)
+	(LuauArithmeticOperation lhs rhs (LuauArithmeticOperator.Divide))
+)
+
+;; Node::Foreign(luau_foreign::LuauFloorDivide)
+(decl LuauFloorDivide (Link Link) Link)
+
+(extractor (LuauFloorDivide lhs rhs)
+	(LuauArithmeticOperation lhs rhs (LuauArithmeticOperator.FloorDivide))
+)
+
+;; Node::Foreign(luau_foreign::LuauModulo)
+(decl LuauModulo (Link Link) Link)
+
+(extractor (LuauModulo lhs rhs)
+	(LuauArithmeticOperation lhs rhs (LuauArithmeticOperator.Modulo))
+)
+
+;; Luau `+`
+(decl pure raw_luau_add (f64 f64) f64)
+(extern constructor raw_luau_add raw_luau_add)
+
+;; Luau `-`
+(decl pure raw_luau_subtract (f64 f64) f64)
+(extern constructor raw_luau_subtract raw_luau_subtract)
+
+;; Luau `*`
+(decl pure raw_luau_multiply (f64 f64) f64)
+(extern constructor raw_luau_multiply raw_luau_multiply)
+
+;; Luau `/`
+(decl pure raw_luau_divide (f64 f64) f64)
+(extern constructor raw_luau_divide raw_luau_divide)
+
+;; Luau `//`
+(decl pure raw_luau_floor_divide (f64 f64) f64)
+(extern constructor raw_luau_floor_divide raw_luau_floor_divide)
+
+;; Luau `%`; sign follows the divisor
+(decl pure raw_luau_modulo (f64 f64) f64)
+(extern constructor raw_luau_modulo raw_luau_modulo)
+
+;; Luau unary `-`
+(decl pure raw_luau_negate (f64) f64)
+(extern constructor raw_luau_negate raw_luau_negate)
+
+(decl partial SimplifyLuauArithmetic (Link) Link)
+
+;; -(-N) => N
+(rule 2
+	(SimplifyLuauArithmetic
+		(LuauNegate (LuauNegate value))
+	)
+
+	value
+)
+
+;; -(K) => result
+(rule 1
+	(SimplifyLuauArithmetic
+		(LuauNegate (LuauNumber value))
+	)
+
+	(raw_luau_number_result (raw_luau_negate value))
+)
+
+;; (K1 + K2) => result
+(rule
+	(SimplifyLuauArithmetic
+		(LuauAdd (LuauNumber lhs) (LuauNumber rhs))
+	)
+
+	(raw_luau_number_result (raw_luau_add lhs rhs))
+)
+
+;; (K1 - K2) => result
+(rule
+	(SimplifyLuauArithmetic
+		(LuauSubtract (LuauNumber lhs) (LuauNumber rhs))
+	)
+
+	(raw_luau_number_result (raw_luau_subtract lhs rhs))
+)
+
+;; (K1 * K2) => result
+(rule
+	(SimplifyLuauArithmetic
+		(LuauMultiply (LuauNumber lhs) (LuauNumber rhs))
+	)
+
+	(raw_luau_number_result (raw_luau_multiply lhs rhs))
+)
+
+;; (K1 / K2) => result
+(rule
+	(SimplifyLuauArithmetic
+		(LuauDivide (LuauNumber lhs) (LuauNumber rhs))
+	)
+
+	(raw_luau_number_result (raw_luau_divide lhs rhs))
+)
+
+;; (K1 // K2) => result
+(rule
+	(SimplifyLuauArithmetic
+		(LuauFloorDivide (LuauNumber lhs) (LuauNumber rhs))
+	)
+
+	(raw_luau_number_result (raw_luau_floor_divide lhs rhs))
+)
+
+;; (K1 % K2) => result
+(rule
+	(SimplifyLuauArithmetic
+		(LuauModulo (LuauNumber lhs) (LuauNumber rhs))
+	)
+
+	(raw_luau_number_result (raw_luau_modulo lhs rhs))
+)
