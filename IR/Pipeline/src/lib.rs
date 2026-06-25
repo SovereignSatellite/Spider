@@ -54,6 +54,8 @@ impl Optimizer {
 				|| isle::simplify_luau_arithmetic(nodes, id)
 				|| isle::simplify_luau_compare(nodes, id)
 				|| isle::simplify_luau_math(nodes, id)
+				|| isle::simplify_luau_transmute(nodes, id)
+				|| isle::simplify_luau_wide(nodes, id)
 			{
 				applied = true;
 

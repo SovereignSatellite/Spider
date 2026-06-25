@@ -5,10 +5,10 @@ use core::any::Any;
 use ir_graph::Link;
 use luau_foreign::{
 	Bit32And, Bit32ArShift, Bit32CountLz, Bit32CountRz, Bit32LRotate, Bit32LShift, Bit32Or,
-	Bit32RRotate, Bit32RShift, Bit32Xor, BooleanToInteger, FlipMostSignificant, LuauAdd, LuauAnd,
-	LuauDivide, LuauEqual, LuauFloorDivide, LuauLessThan, LuauLessThanEqual, LuauModulo,
-	LuauMultiply, LuauNegate, LuauNotEqual, LuauOr, LuauSubtract, MathAbs, MathCeil, MathFloor,
-	MathFmod, MathMax, MathMin, MathModf, MathSqrt,
+	Bit32RRotate, Bit32RShift, Bit32Xor, BooleanToInteger, FlipMostSignificant, FromBitsI64,
+	IntoBitsI64, LuauAdd, LuauAnd, LuauDivide, LuauEqual, LuauFloorDivide, LuauLessThan,
+	LuauLessThanEqual, LuauModulo, LuauMultiply, LuauNegate, LuauNotEqual, LuauOr, LuauSubtract,
+	MathAbs, MathCeil, MathFloor, MathFmod, MathMax, MathMin, MathModf, MathSqrt,
 };
 
 /// The operator carried by a Luau `bit32` binary node.
@@ -187,4 +187,16 @@ pub fn boolean_to_integer(any: &dyn Any) -> Option<Link> {
 	let &BooleanToInteger { source } = any.downcast_ref::<BooleanToInteger>()?;
 
 	Some(source)
+}
+
+pub fn from_bits_i64(any: &dyn Any) -> Option<Link> {
+	let &FromBitsI64 { source } = any.downcast_ref::<FromBitsI64>()?;
+
+	Some(source)
+}
+
+pub fn into_bits_i64(any: &dyn Any) -> Option<(Link, Link)> {
+	let &IntoBitsI64 { lhs, rhs } = any.downcast_ref::<IntoBitsI64>()?;
+
+	Some((lhs, rhs))
 }
