@@ -1,0 +1,23 @@
+(type LuauUnaryOperator extern
+	(enum
+		(Negate)
+		(Absolute)
+		(SquareRoot)
+		(RoundDown)
+		(RoundUp)
+		(RoundToZero)
+		(FlipMostSignificant)
+	)
+)
+
+;; Foreign Luau unary value operations, discriminated by operator
+(decl LuauUnaryOperation (Link LuauUnaryOperator) Link)
+(extern extractor LuauUnaryOperation get_luau_unary_operation)
+
+;; A constant operand reaching Luau arithmetic, widened to its host number value
+(decl LuauNumber (f64) Link)
+(extern extractor LuauNumber constant_luau_number)
+
+;; A folded Luau number; declines when non-finite, narrowing an in-range integer to I32
+(decl pure partial raw_luau_number_result (f64) Link)
+(extern constructor raw_luau_number_result raw_luau_number_result)

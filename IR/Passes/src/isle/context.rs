@@ -24,7 +24,9 @@ use luau_foreign::{
 
 use super::{
 	internal::Context,
-	luau::{self, Bit32BinaryOperator, Bit32UnaryOperator},
+	luau::{
+		self, Bit32BinaryOperator, Bit32UnaryOperator, LuauArithmeticOperator, LuauUnaryOperator,
+	},
 };
 
 /// A newtype wrapper for implementing the ISLE `Context` trait on a region.
@@ -640,6 +642,93 @@ impl Context for RegionContext<'_> {
 
 	fn raw_bit32_count_trailing_zeros(&mut self, arg0: i32) -> i32 {
 		arg0.cast_unsigned().trailing_zeros().cast_signed()
+	}
+
+	fn get_luau_unary_operation(&mut self, arg0: Link) -> Option<(Link, LuauUnaryOperator)> {
+		let Node::Foreign(foreign) = self.at(arg0) else {
+			return None;
+		};
+		let (source, operator) = luau::luau_unary_operation(&**foreign)?;
+
+		Some((self.trace(source), operator))
+	}
+
+	fn get_luau_arithmetic_operation(
+		&mut self,
+		arg0: Link,
+	) -> Option<(Link, Link, LuauArithmeticOperator)> {
+		let Node::Foreign(foreign) = self.at(arg0) else {
+			return None;
+		};
+		let (lhs, rhs, operator) = luau::luau_arithmetic_operation(&**foreign)?;
+
+		Some((self.trace(lhs), self.trace(rhs), operator))
+	}
+
+	fn constant_luau_number(&mut self, arg0: Link) -> Option<f64> {
+		if let &Node::I32(value) = self.at(arg0) {
+			Some(f64::from(value.cast_unsigned()))
+		} else if let &Node::F64(value) = self.at(arg0) {
+			Some(value)
+		} else {
+			None
+		}
+	}
+
+	#[expect(
+		clippy::cast_possible_truncation,
+		clippy::cast_sign_loss,
+		reason = "the guard restricts the value to the exact, lossless u32 range"
+	)]
+	fn raw_luau_number_result(&mut self, arg0: f64) -> Option<Link> {
+		let is_exact_integer = arg0.fract() == 0.0_f64;
+		let is_in_word_range = (0.0_f64..=4_294_967_295.0_f64).contains(&arg0);
+		let is_negative_zero = arg0 == 0.0_f64 && arg0.is_sign_negative();
+
+		if !arg0.is_finite() {
+			None
+		} else if is_exact_integer && is_in_word_range && !is_negative_zero {
+			Some(self.add_i32((arg0 as u32).cast_signed()))
+		} else {
+			Some(self.add_f64(arg0))
+		}
+	}
+
+	fn raw_luau_add(&mut self, arg0: f64, arg1: f64) -> f64 {
+		arg0 + arg1
+	}
+
+	fn raw_luau_subtract(&mut self, arg0: f64, arg1: f64) -> f64 {
+		arg0 - arg1
+	}
+
+	fn raw_luau_multiply(&mut self, arg0: f64, arg1: f64) -> f64 {
+		arg0 * arg1
+	}
+
+	fn raw_luau_divide(&mut self, arg0: f64, arg1: f64) -> f64 {
+		arg0 / arg1
+	}
+
+	fn raw_luau_floor_divide(&mut self, arg0: f64, arg1: f64) -> f64 {
+		(arg0 / arg1).floor()
+	}
+
+	// Luau's `%` is sign-of-divisor, computed as a single-rounded fmod adjusted toward the divisor
+	// — not the multi-rounding `a - floor(a/b)*b`, which diverges in the low bits for fractions.
+	fn raw_luau_modulo(&mut self, arg0: f64, arg1: f64) -> f64 {
+		let remainder = arg0 % arg1;
+		let follows_wrong_sign = (remainder < 0.0_f64) != (arg1 < 0.0_f64);
+
+		if remainder != 0.0_f64 && follows_wrong_sign {
+			remainder + arg1
+		} else {
+			remainder
+		}
+	}
+
+	fn raw_luau_negate(&mut self, arg0: f64) -> f64 {
+		-arg0
 	}
 }
 
