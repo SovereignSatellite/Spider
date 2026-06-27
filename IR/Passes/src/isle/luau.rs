@@ -105,11 +105,23 @@ pub enum LuauCompareOperator {
 	LessThanEqual,
 }
 
-macro_rules! downcast_operation {
-	($any:expr, $($node:path => ($($field:ident),+) => $operator:expr),+ $(,)?) => {{
+macro_rules! downcast_binary {
+	($any:expr, $(($node:path, $operator:expr)),+ $(,)?) => {{
 		$(
-			if let Some(&$node { $($field),+ }) = $any.downcast_ref::<$node>() {
-				return Some(($($field,)+ $operator));
+			if let Some(&$node { lhs, rhs }) = $any.downcast_ref::<$node>() {
+				return Some((lhs, rhs, $operator));
+			}
+		)+
+
+		None
+	}};
+}
+
+macro_rules! downcast_unary {
+	($any:expr, $(($node:path, $operator:expr)),+ $(,)?) => {{
+		$(
+			if let Some(&$node { source }) = $any.downcast_ref::<$node>() {
+				return Some((source, $operator));
 			}
 		)+
 
@@ -118,22 +130,24 @@ macro_rules! downcast_operation {
 }
 
 pub fn bit32_binary_operation(any: &dyn Any) -> Option<(Link, Link, Bit32BinaryOperator)> {
-	downcast_operation!(any,
-		Bit32And => (lhs, rhs) => Bit32BinaryOperator::And,
-		Bit32Or => (lhs, rhs) => Bit32BinaryOperator::Or,
-		Bit32Xor => (lhs, rhs) => Bit32BinaryOperator::ExclusiveOr,
-		Bit32LShift => (lhs, rhs) => Bit32BinaryOperator::ShiftLeft,
-		Bit32RShift => (lhs, rhs) => Bit32BinaryOperator::ShiftRightUnsigned,
-		Bit32ArShift => (lhs, rhs) => Bit32BinaryOperator::ShiftRightSigned,
-		Bit32LRotate => (lhs, rhs) => Bit32BinaryOperator::RotateLeft,
-		Bit32RRotate => (lhs, rhs) => Bit32BinaryOperator::RotateRight,
+	downcast_binary!(
+		any,
+		(Bit32And, Bit32BinaryOperator::And),
+		(Bit32Or, Bit32BinaryOperator::Or),
+		(Bit32Xor, Bit32BinaryOperator::ExclusiveOr),
+		(Bit32LShift, Bit32BinaryOperator::ShiftLeft),
+		(Bit32RShift, Bit32BinaryOperator::ShiftRightUnsigned),
+		(Bit32ArShift, Bit32BinaryOperator::ShiftRightSigned),
+		(Bit32LRotate, Bit32BinaryOperator::RotateLeft),
+		(Bit32RRotate, Bit32BinaryOperator::RotateRight),
 	)
 }
 
 pub fn bit32_unary_operation(any: &dyn Any) -> Option<(Link, Bit32UnaryOperator)> {
-	downcast_operation!(any,
-		Bit32CountLz => (source) => Bit32UnaryOperator::CountLeadingZeros,
-		Bit32CountRz => (source) => Bit32UnaryOperator::CountTrailingZeros,
+	downcast_unary!(
+		any,
+		(Bit32CountLz, Bit32UnaryOperator::CountLeadingZeros),
+		(Bit32CountRz, Bit32UnaryOperator::CountTrailingZeros),
 	)
 }
 
@@ -142,44 +156,48 @@ pub fn is_bit32_canonical(any: &dyn Any) -> bool {
 }
 
 pub fn luau_unary_operation(any: &dyn Any) -> Option<(Link, LuauUnaryOperator)> {
-	downcast_operation!(any,
-		LuauNegate => (source) => LuauUnaryOperator::Negate,
-		MathAbs => (source) => LuauUnaryOperator::Absolute,
-		MathSqrt => (source) => LuauUnaryOperator::SquareRoot,
-		MathFloor => (source) => LuauUnaryOperator::RoundDown,
-		MathCeil => (source) => LuauUnaryOperator::RoundUp,
-		MathModf => (source) => LuauUnaryOperator::RoundToZero,
-		FlipMostSignificant => (source) => LuauUnaryOperator::FlipMostSignificant,
+	downcast_unary!(
+		any,
+		(LuauNegate, LuauUnaryOperator::Negate),
+		(MathAbs, LuauUnaryOperator::Absolute),
+		(MathSqrt, LuauUnaryOperator::SquareRoot),
+		(MathFloor, LuauUnaryOperator::RoundDown),
+		(MathCeil, LuauUnaryOperator::RoundUp),
+		(MathModf, LuauUnaryOperator::RoundToZero),
+		(FlipMostSignificant, LuauUnaryOperator::FlipMostSignificant),
 	)
 }
 
 pub fn luau_arithmetic_operation(any: &dyn Any) -> Option<(Link, Link, LuauArithmeticOperator)> {
-	downcast_operation!(any,
-		LuauAdd => (lhs, rhs) => LuauArithmeticOperator::Add,
-		LuauSubtract => (lhs, rhs) => LuauArithmeticOperator::Subtract,
-		LuauMultiply => (lhs, rhs) => LuauArithmeticOperator::Multiply,
-		LuauDivide => (lhs, rhs) => LuauArithmeticOperator::Divide,
-		LuauFloorDivide => (lhs, rhs) => LuauArithmeticOperator::FloorDivide,
-		LuauModulo => (lhs, rhs) => LuauArithmeticOperator::Modulo,
+	downcast_binary!(
+		any,
+		(LuauAdd, LuauArithmeticOperator::Add),
+		(LuauSubtract, LuauArithmeticOperator::Subtract),
+		(LuauMultiply, LuauArithmeticOperator::Multiply),
+		(LuauDivide, LuauArithmeticOperator::Divide),
+		(LuauFloorDivide, LuauArithmeticOperator::FloorDivide),
+		(LuauModulo, LuauArithmeticOperator::Modulo),
 	)
 }
 
 pub fn luau_binary_operation(any: &dyn Any) -> Option<(Link, Link, LuauBinaryOperator)> {
-	downcast_operation!(any,
-		MathMin => (lhs, rhs) => LuauBinaryOperator::Minimum,
-		MathMax => (lhs, rhs) => LuauBinaryOperator::Maximum,
-		MathFmod => (lhs, rhs) => LuauBinaryOperator::FloatModulo,
-		LuauAnd => (lhs, rhs) => LuauBinaryOperator::And,
-		LuauOr => (lhs, rhs) => LuauBinaryOperator::Or,
+	downcast_binary!(
+		any,
+		(MathMin, LuauBinaryOperator::Minimum),
+		(MathMax, LuauBinaryOperator::Maximum),
+		(MathFmod, LuauBinaryOperator::FloatModulo),
+		(LuauAnd, LuauBinaryOperator::And),
+		(LuauOr, LuauBinaryOperator::Or),
 	)
 }
 
 pub fn luau_compare_operation(any: &dyn Any) -> Option<(Link, Link, LuauCompareOperator)> {
-	downcast_operation!(any,
-		LuauEqual => (lhs, rhs) => LuauCompareOperator::Equal,
-		LuauNotEqual => (lhs, rhs) => LuauCompareOperator::NotEqual,
-		LuauLessThan => (lhs, rhs) => LuauCompareOperator::LessThan,
-		LuauLessThanEqual => (lhs, rhs) => LuauCompareOperator::LessThanEqual,
+	downcast_binary!(
+		any,
+		(LuauEqual, LuauCompareOperator::Equal),
+		(LuauNotEqual, LuauCompareOperator::NotEqual),
+		(LuauLessThan, LuauCompareOperator::LessThan),
+		(LuauLessThanEqual, LuauCompareOperator::LessThanEqual),
 	)
 }
 

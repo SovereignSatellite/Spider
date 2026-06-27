@@ -716,8 +716,7 @@ impl Context for RegionContext<'_> {
 		(arg0 / arg1).floor()
 	}
 
-	// Luau's `%` is sign-of-divisor, computed as a single-rounded fmod adjusted toward the divisor
-	// — not the multi-rounding `a - floor(a/b)*b`, which diverges in the low bits for fractions.
+	// Luau `%` takes the sign of the divisor, not the dividend.
 	fn raw_luau_modulo(&mut self, arg0: f64, arg1: f64) -> f64 {
 		let remainder = arg0 % arg1;
 		let follows_wrong_sign = (remainder < 0.0_f64) != (arg1 < 0.0_f64);
@@ -847,7 +846,8 @@ impl Context for RegionContext<'_> {
 		let (low, high) = luau::into_bits_i64(&**packer)?;
 		let low = self.trace(low);
 		let high = self.trace(high);
-		let is_same_unpacker = low.0 == high.0 && low.1 == 0 && high.1 == 1;
+		let is_same_unpacker =
+			low.0 == high.0 && low.1 == FromBitsI64::LOW_PORT && high.1 == FromBitsI64::HIGH_PORT;
 
 		if !is_same_unpacker {
 			return None;
@@ -862,13 +862,13 @@ impl Context for RegionContext<'_> {
 	}
 
 	fn raw_i64_low_word(&mut self, arg0: i64) -> i32 {
-		let [byte_0, byte_1, byte_2, byte_3, _, _, _, _] = arg0.to_le_bytes();
+		let [byte_0, byte_1, byte_2, byte_3, ..] = arg0.to_le_bytes();
 
 		i32::from_le_bytes([byte_0, byte_1, byte_2, byte_3])
 	}
 
 	fn raw_i64_high_word(&mut self, arg0: i64) -> i32 {
-		let [_, _, _, _, byte_4, byte_5, byte_6, byte_7] = arg0.to_le_bytes();
+		let [.., byte_4, byte_5, byte_6, byte_7] = arg0.to_le_bytes();
 
 		i32::from_le_bytes([byte_4, byte_5, byte_6, byte_7])
 	}
