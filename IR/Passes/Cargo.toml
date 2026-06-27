@@ -9,6 +9,7 @@ workspace = true
 [dependencies]
 hashbrown.workspace = true
 ir-graph.workspace = true
+luau-foreign.workspace = true
 parking_lot.workspace = true
 set.workspace = true
 
