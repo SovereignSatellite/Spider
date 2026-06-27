@@ -19,7 +19,8 @@ use ir_graph::{
 	tracer::identity_source,
 };
 use luau_foreign::{
-	Bit32And, Bit32ArShift, Bit32LRotate, Bit32LShift, Bit32Or, Bit32RRotate, Bit32RShift, Bit32Xor,
+	Bit32And, Bit32ArShift, Bit32LRotate, Bit32LShift, Bit32Or, Bit32RRotate, Bit32RShift,
+	Bit32Xor, FromBitsI64,
 };
 
 use super::{
@@ -819,6 +820,76 @@ impl Context for RegionContext<'_> {
 
 	fn raw_math_fmod(&mut self, arg0: f64, arg1: f64) -> f64 {
 		arg0 % arg1
+	}
+
+	fn get_from_bits_i64(&mut self, arg0: Link) -> Option<Link> {
+		let Node::Foreign(foreign) = self.at(arg0) else {
+			return None;
+		};
+		let source = luau::from_bits_i64(&**foreign)?;
+
+		Some(self.trace(source))
+	}
+
+	fn get_into_bits_i64(&mut self, arg0: Link) -> Option<(Link, Link)> {
+		let Node::Foreign(foreign) = self.at(arg0) else {
+			return None;
+		};
+		let (lhs, rhs) = luau::into_bits_i64(&**foreign)?;
+
+		Some((self.trace(lhs), self.trace(rhs)))
+	}
+
+	fn get_repacked_i64(&mut self, arg0: Link) -> Option<Link> {
+		let Node::Foreign(packer) = self.at(arg0) else {
+			return None;
+		};
+		let (low, high) = luau::into_bits_i64(&**packer)?;
+		let low = self.trace(low);
+		let high = self.trace(high);
+		let is_same_unpacker = low.0 == high.0 && low.1 == 0 && high.1 == 1;
+
+		if !is_same_unpacker {
+			return None;
+		}
+
+		let Node::Foreign(unpacker) = self.at(low) else {
+			return None;
+		};
+		let source = luau::from_bits_i64(&**unpacker)?;
+
+		Some(self.trace(source))
+	}
+
+	fn raw_i64_low_word(&mut self, arg0: i64) -> i32 {
+		let [byte_0, byte_1, byte_2, byte_3, _, _, _, _] = arg0.to_le_bytes();
+
+		i32::from_le_bytes([byte_0, byte_1, byte_2, byte_3])
+	}
+
+	fn raw_i64_high_word(&mut self, arg0: i64) -> i32 {
+		let [_, _, _, _, byte_4, byte_5, byte_6, byte_7] = arg0.to_le_bytes();
+
+		i32::from_le_bytes([byte_4, byte_5, byte_6, byte_7])
+	}
+
+	fn raw_i64_from_words(&mut self, arg0: i32, arg1: i32) -> i64 {
+		let [byte_0, byte_1, byte_2, byte_3] = arg0.to_le_bytes();
+		let [byte_4, byte_5, byte_6, byte_7] = arg1.to_le_bytes();
+
+		i64::from_le_bytes([
+			byte_0, byte_1, byte_2, byte_3, byte_4, byte_5, byte_6, byte_7,
+		])
+	}
+
+	fn split_low(&mut self, arg0: Link) -> Link {
+		FromBitsI64::add_into(self.0, arg0).0
+	}
+
+	fn flip_split_high(&mut self, arg0: Link) -> Link {
+		let high = Link(arg0.0, FromBitsI64::HIGH_PORT);
+
+		Bit32Xor::add_fast_into(self.0, high, 0x8000_0000)
 	}
 }
 
