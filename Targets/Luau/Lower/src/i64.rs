@@ -7,11 +7,14 @@ use ir_graph::{
 };
 use luau_foreign::{
 	Bit32And, Bit32ArShift, Bit32CountLz, Bit32CountRz, Bit32LShift, Bit32Or, Bit32RShift,
-	Bit32Xor, BooleanToInteger, FlipMostSignificant, FromBitsI64, IntoBitsI64, LuauAdd, LuauAnd,
-	LuauEqual, LuauLessThan, LuauLessThanEqual, LuauNotEqual, LuauOr, LuauSubtract,
+	Bit32Xor, BooleanToInteger, FlipMostSignificant, FromBitsI64, IntoBitsI64, LuauAdd, LuauEqual,
+	LuauLessThan, LuauLessThanEqual, LuauNotEqual, LuauSubtract,
 };
 
-use crate::i32 as lower_i32;
+use crate::{
+	boolean::{both, either},
+	i32 as lower_i32,
+};
 
 const WORD_BITS: i32 = 32;
 const SHIFT_MASK: u32 = 0x3F;
@@ -428,7 +431,7 @@ fn equal(nodes: &mut Vec<Node>, lhs: Link, rhs: Link) -> Link {
 	let low = LuauEqual::add_into(nodes, low_lhs, low_rhs);
 	let high = LuauEqual::add_into(nodes, high_lhs, high_rhs);
 
-	LuauAnd::add_into(nodes, low, high)
+	both(nodes, low, high)
 }
 
 fn not_equal(nodes: &mut Vec<Node>, lhs: Link, rhs: Link) -> Link {
@@ -437,7 +440,7 @@ fn not_equal(nodes: &mut Vec<Node>, lhs: Link, rhs: Link) -> Link {
 	let low = LuauNotEqual::add_into(nodes, low_lhs, low_rhs);
 	let high = LuauNotEqual::add_into(nodes, high_lhs, high_rhs);
 
-	LuauOr::add_into(nodes, low, high)
+	either(nodes, low, high)
 }
 
 fn flip_signed(nodes: &mut Vec<Node>, lhs: Link, rhs: Link, is_signed: bool) -> (Link, Link) {
@@ -465,9 +468,9 @@ fn order(
 	let high_less = LuauLessThan::add_into(nodes, high_lhs, high_rhs);
 	let high_equal = LuauEqual::add_into(nodes, high_lhs, high_rhs);
 	let low = low_order(nodes, low_lhs, low_rhs);
-	let tail = LuauAnd::add_into(nodes, high_equal, low);
+	let tail = both(nodes, high_equal, low);
 
-	LuauOr::add_into(nodes, high_less, tail)
+	either(nodes, high_less, tail)
 }
 
 fn less_than(nodes: &mut Vec<Node>, lhs: Link, rhs: Link, is_signed: bool) -> Link {

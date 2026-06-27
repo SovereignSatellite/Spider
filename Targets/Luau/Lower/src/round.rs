@@ -2,9 +2,10 @@
 
 use ir_graph::{Link, Node, region::Match};
 use luau_foreign::{
-	BooleanToInteger, LuauAdd, LuauAnd, LuauEqual, LuauLessThan, LuauModulo, LuauOr, LuauSubtract,
-	MathModf,
+	BooleanToInteger, LuauAdd, LuauEqual, LuauLessThan, LuauModulo, LuauSubtract, MathModf,
 };
+
+use crate::boolean::{both, either};
 
 const HALF: f64 = 0.5;
 
@@ -28,7 +29,7 @@ fn should_round_up(nodes: &mut Vec<Node>, remainder: Link, rounded: Link) -> Lin
 	let boundary = Node::add_f64_into(nodes, HALF);
 	let over = LuauLessThan::add_into(nodes, boundary, remainder);
 	let tie = is_tie(nodes, remainder, rounded);
-	let bump = LuauOr::add_into(nodes, over, tie);
+	let bump = either(nodes, over, tie);
 
 	BooleanToInteger::add_into(nodes, bump)
 }
@@ -38,7 +39,7 @@ fn is_tie(nodes: &mut Vec<Node>, remainder: Link, rounded: Link) -> Link {
 	let half = LuauEqual::add_into(nodes, remainder, boundary);
 	let odd = is_odd(nodes, rounded);
 
-	LuauAnd::add_into(nodes, half, odd)
+	both(nodes, half, odd)
 }
 
 fn is_odd(nodes: &mut Vec<Node>, rounded: Link) -> Link {
