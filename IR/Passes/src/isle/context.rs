@@ -788,6 +788,38 @@ impl Context for RegionContext<'_> {
 	fn raw_luau_less_than_equal(&mut self, arg0: f64, arg1: f64) -> i32 {
 		i32::from(arg0 <= arg1)
 	}
+
+	fn raw_math_absolute(&mut self, arg0: f64) -> f64 {
+		arg0.abs()
+	}
+
+	fn raw_math_square_root(&mut self, arg0: f64) -> f64 {
+		arg0.sqrt()
+	}
+
+	fn raw_math_floor(&mut self, arg0: f64) -> f64 {
+		arg0.floor()
+	}
+
+	fn raw_math_ceil(&mut self, arg0: f64) -> f64 {
+		arg0.ceil()
+	}
+
+	fn raw_math_modf(&mut self, arg0: f64) -> f64 {
+		arg0.trunc()
+	}
+
+	fn raw_luau_minimum(&mut self, arg0: f64, arg1: f64) -> f64 {
+		if arg1 < arg0 { arg1 } else { arg0 }
+	}
+
+	fn raw_luau_maximum(&mut self, arg0: f64, arg1: f64) -> f64 {
+		if arg1 > arg0 { arg1 } else { arg0 }
+	}
+
+	fn raw_math_fmod(&mut self, arg0: f64, arg1: f64) -> f64 {
+		arg0 % arg1
+	}
 }
 
 const fn is_transmute_width_matched(integer: IntegerType, number: NumberType) -> bool {
