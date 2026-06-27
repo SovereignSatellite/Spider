@@ -31,7 +31,8 @@ use ir_graph::{
 };
 
 use super::luau::{
-	Bit32BinaryOperator, Bit32UnaryOperator, LuauArithmeticOperator, LuauUnaryOperator,
+	Bit32BinaryOperator, Bit32UnaryOperator, LuauArithmeticOperator, LuauBinaryOperator,
+	LuauCompareOperator, LuauUnaryOperator,
 };
 
 include!(concat!(env!("OUT_DIR"), "/isle.rs"));

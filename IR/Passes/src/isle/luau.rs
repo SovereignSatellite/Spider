@@ -5,9 +5,10 @@ use core::any::Any;
 use ir_graph::Link;
 use luau_foreign::{
 	Bit32And, Bit32ArShift, Bit32CountLz, Bit32CountRz, Bit32LRotate, Bit32LShift, Bit32Or,
-	Bit32RRotate, Bit32RShift, Bit32Xor, FlipMostSignificant, LuauAdd, LuauDivide, LuauFloorDivide,
-	LuauModulo, LuauMultiply, LuauNegate, LuauSubtract, MathAbs, MathCeil, MathFloor, MathModf,
-	MathSqrt,
+	Bit32RRotate, Bit32RShift, Bit32Xor, BooleanToInteger, FlipMostSignificant, LuauAdd, LuauAnd,
+	LuauDivide, LuauEqual, LuauFloorDivide, LuauLessThan, LuauLessThanEqual, LuauModulo,
+	LuauMultiply, LuauNegate, LuauNotEqual, LuauOr, LuauSubtract, MathAbs, MathCeil, MathFloor,
+	MathFmod, MathMax, MathMin, MathModf, MathSqrt,
 };
 
 /// The operator carried by a Luau `bit32` binary node.
@@ -76,6 +77,34 @@ pub enum LuauArithmeticOperator {
 	Modulo,
 }
 
+/// The operator carried by a Luau binary value node.
+#[derive(Clone, Copy)]
+pub enum LuauBinaryOperator {
+	/// `math.min`.
+	Minimum,
+	/// `math.max`.
+	Maximum,
+	/// `math.fmod`.
+	FloatModulo,
+	/// The Lua `and` short-circuit operator.
+	And,
+	/// The Lua `or` short-circuit operator.
+	Or,
+}
+
+/// The operator carried by a Luau comparison value node.
+#[derive(Clone, Copy)]
+pub enum LuauCompareOperator {
+	/// The Lua `==` operator.
+	Equal,
+	/// The Lua `~=` operator.
+	NotEqual,
+	/// The Lua `<` operator.
+	LessThan,
+	/// The Lua `<=` operator.
+	LessThanEqual,
+}
+
 macro_rules! downcast_operation {
 	($any:expr, $($node:path => ($($field:ident),+) => $operator:expr),+ $(,)?) => {{
 		$(
@@ -133,4 +162,29 @@ pub fn luau_arithmetic_operation(any: &dyn Any) -> Option<(Link, Link, LuauArith
 		LuauFloorDivide => (lhs, rhs) => LuauArithmeticOperator::FloorDivide,
 		LuauModulo => (lhs, rhs) => LuauArithmeticOperator::Modulo,
 	)
+}
+
+pub fn luau_binary_operation(any: &dyn Any) -> Option<(Link, Link, LuauBinaryOperator)> {
+	downcast_operation!(any,
+		MathMin => (lhs, rhs) => LuauBinaryOperator::Minimum,
+		MathMax => (lhs, rhs) => LuauBinaryOperator::Maximum,
+		MathFmod => (lhs, rhs) => LuauBinaryOperator::FloatModulo,
+		LuauAnd => (lhs, rhs) => LuauBinaryOperator::And,
+		LuauOr => (lhs, rhs) => LuauBinaryOperator::Or,
+	)
+}
+
+pub fn luau_compare_operation(any: &dyn Any) -> Option<(Link, Link, LuauCompareOperator)> {
+	downcast_operation!(any,
+		LuauEqual => (lhs, rhs) => LuauCompareOperator::Equal,
+		LuauNotEqual => (lhs, rhs) => LuauCompareOperator::NotEqual,
+		LuauLessThan => (lhs, rhs) => LuauCompareOperator::LessThan,
+		LuauLessThanEqual => (lhs, rhs) => LuauCompareOperator::LessThanEqual,
+	)
+}
+
+pub fn boolean_to_integer(any: &dyn Any) -> Option<Link> {
+	let &BooleanToInteger { source } = any.downcast_ref::<BooleanToInteger>()?;
+
+	Some(source)
 }

@@ -14,6 +14,20 @@
 (decl LuauUnaryOperation (Link LuauUnaryOperator) Link)
 (extern extractor LuauUnaryOperation get_luau_unary_operation)
 
+(type LuauBinaryOperator extern
+	(enum
+		(Minimum)
+		(Maximum)
+		(FloatModulo)
+		(And)
+		(Or)
+	)
+)
+
+;; Foreign Luau binary value operations, discriminated by operator
+(decl LuauBinaryOperation (Link Link LuauBinaryOperator) Link)
+(extern extractor LuauBinaryOperation get_luau_binary_operation)
+
 ;; A constant operand reaching Luau arithmetic, widened to its host number value
 (decl LuauNumber (f64) Link)
 (extern extractor LuauNumber constant_luau_number)

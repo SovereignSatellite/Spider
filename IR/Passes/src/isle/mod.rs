@@ -7,8 +7,8 @@ use ir_graph::{Link, Node, operation::Identity};
 use self::internal::{
 	constructor_SimplifyAggregate, constructor_SimplifyConvert, constructor_SimplifyFloat,
 	constructor_SimplifyI32, constructor_SimplifyI64, constructor_SimplifyLuauArithmetic,
-	constructor_SimplifyLuauBit32, constructor_SimplifyMemory, constructor_SimplifyMutable,
-	constructor_SimplifyReference, constructor_SimplifyTable,
+	constructor_SimplifyLuauBit32, constructor_SimplifyLuauCompare, constructor_SimplifyMemory,
+	constructor_SimplifyMutable, constructor_SimplifyReference, constructor_SimplifyTable,
 };
 
 pub use self::context::RegionContext;
@@ -139,4 +139,13 @@ pub fn simplify_luau_arithmetic(nodes: &mut Vec<Node>, id: u32) -> bool {
 			true
 		},
 	)
+}
+
+/// Simplifies a Luau comparison operation at the given node ID.
+pub fn simplify_luau_compare(nodes: &mut Vec<Node>, id: u32) -> bool {
+	constructor_SimplifyLuauCompare(&mut RegionContext(nodes), Link(id, 0)).is_some_and(|source| {
+		replace_node(nodes, id, &[source]);
+
+		true
+	})
 }
