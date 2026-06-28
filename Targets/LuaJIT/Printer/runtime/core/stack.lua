@@ -24,10 +24,6 @@ end
 
 -- SECTION stack_release
 -- NEEDS stack_pool
-require("table.clear")
-
 local function stack_release(size_class, stack)
-	table.clear(stack)
-
 	table.insert(stack_pool[size_class], stack)
 end
