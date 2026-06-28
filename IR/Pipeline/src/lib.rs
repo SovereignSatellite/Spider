@@ -8,8 +8,8 @@ use parking_lot::Mutex;
 
 use ir_graph::{Node, Region, region::Function, region_driver};
 use ir_passes::{
-	dead_port_eliminator::DeadPortEliminator, identity, invariant_port_mover::InvariantPortMover,
-	isle, topological_compactor::TopologicalCompactor,
+	control_folder, dead_port_eliminator::DeadPortEliminator, identity,
+	invariant_port_mover::InvariantPortMover, isle, topological_compactor::TopologicalCompactor,
 };
 
 /// Composes the region-local passes into a fixpoint optimization loop.
@@ -80,7 +80,9 @@ impl Optimizer {
 			self.invariant_port_mover.run(region.nodes_mut());
 			self.dead_port_eliminator.run(region.nodes_mut());
 
-			if !Self::apply_isle(region.nodes_mut()) && !pass(region) {
+			let folded = control_folder::run(region.nodes_mut());
+
+			if !Self::apply_isle(region.nodes_mut()) && !folded && !pass(region) {
 				break;
 			}
 

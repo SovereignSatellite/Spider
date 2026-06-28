@@ -2,6 +2,7 @@
 
 extern crate alloc;
 
+pub mod control_folder;
 pub mod dead_port_eliminator;
 pub mod identity;
 pub mod invariant_port_mover;
