@@ -319,6 +319,32 @@ impl SlotFile {
 		);
 	}
 
+	fn handle_trapping_integer_binary_operation(
+		&mut self,
+		nodes: &mut Vec<Node>,
+		instruction: IntegerBinaryOperation,
+	) {
+		let IntegerBinaryOperation {
+			destination,
+			lhs,
+			rhs,
+			kind,
+			operator,
+		} = instruction;
+
+		let result = operation::integer::BinaryOperation::add_into(
+			nodes,
+			self.locals[usize::from(lhs)],
+			self.locals[usize::from(rhs)],
+			kind,
+			operator,
+		);
+		let fence = operation::Fence::add_into(nodes, list::resizable![self.trap, result]);
+
+		self.trap = Link(fence, 0);
+		self.locals[usize::from(destination)] = result;
+	}
+
 	fn handle_integer_compare_operation(
 		&mut self,
 		nodes: &mut Vec<Node>,
@@ -518,6 +544,34 @@ impl SlotFile {
 			to,
 			from,
 		);
+	}
+
+	fn handle_trapping_number_truncate_to_integer(
+		&mut self,
+		nodes: &mut Vec<Node>,
+		instruction: NumberTruncateToInteger,
+	) {
+		let NumberTruncateToInteger {
+			destination,
+			source,
+			is_signed,
+			is_saturating,
+			to,
+			from,
+		} = instruction;
+
+		let result = operation::NumberTruncateToInteger::add_into(
+			nodes,
+			self.locals[usize::from(source)],
+			is_signed,
+			is_saturating,
+			to,
+			from,
+		);
+		let fence = operation::Fence::add_into(nodes, list::resizable![self.trap, result]);
+
+		self.trap = Link(fence, 0);
+		self.locals[usize::from(destination)] = result;
 	}
 
 	fn handle_number_transmute_to_integer(
@@ -876,6 +930,14 @@ impl SlotFile {
 			Instruction::IntegerUnaryOperation(instruction) => {
 				self.handle_integer_unary_operation(nodes, instruction);
 			}
+			Instruction::IntegerBinaryOperation(
+				instruction @ IntegerBinaryOperation {
+					operator:
+						operation::integer::BinaryOperator::Divide { .. }
+						| operation::integer::BinaryOperator::Remainder { .. },
+					..
+				},
+			) => self.handle_trapping_integer_binary_operation(nodes, instruction),
 			Instruction::IntegerBinaryOperation(instruction) => {
 				self.handle_integer_binary_operation(nodes, instruction);
 			}
@@ -906,6 +968,12 @@ impl SlotFile {
 			}
 			Instruction::NumberNarrow(instruction) => self.handle_number_narrow(nodes, instruction),
 			Instruction::NumberWiden(instruction) => self.handle_number_widen(nodes, instruction),
+			Instruction::NumberTruncateToInteger(
+				instruction @ NumberTruncateToInteger {
+					is_saturating: false,
+					..
+				},
+			) => self.handle_trapping_number_truncate_to_integer(nodes, instruction),
 			Instruction::NumberTruncateToInteger(instruction) => {
 				self.handle_number_truncate_to_integer(nodes, instruction);
 			}
