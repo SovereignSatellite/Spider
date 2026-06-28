@@ -103,6 +103,12 @@ impl<'allocator, 'policy> Emitter<'allocator, 'policy> {
 	}
 
 	pub fn emit_function(&mut self, function: &Function) -> expression::Function {
+		assert!(
+			u32::from(function.argument_count) <= PHYSICAL_REGISTERS,
+			"argument count {} exceeds the physical register count {PHYSICAL_REGISTERS}",
+			function.argument_count
+		);
+
 		let (arena, peak) = self.allocator.run(self.policy, &function.nodes);
 
 		self.data_handler.install(arena);
