@@ -48,7 +48,7 @@ fn get(nodes: &mut Vec<Node>, id: u32, source: Location) {
 		|nodes, _arguments| vec![Node::add_trap_into(nodes)],
 	);
 
-	replace::replace_read(nodes, id, Link(matcher, 0), source.reference);
+	replace::replace_read(nodes, id, Link(matcher, 0), source.reference, &[Link(matcher, 0)]);
 }
 
 fn set(nodes: &mut Vec<Node>, id: u32, destination: Location, source: Link) {
