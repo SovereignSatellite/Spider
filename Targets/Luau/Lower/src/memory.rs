@@ -59,42 +59,66 @@ pub fn lower(nodes: &mut Vec<Node>, id: u32) -> bool {
 fn size(nodes: &mut Vec<Node>, id: u32, source: Link) {
 	let value = BufferLength::add_into(nodes, source);
 
-	replace::replace_read(nodes, id, value, source);
+	replace::replace_read(nodes, id, value, source, &[value]);
 }
 
 fn load(nodes: &mut Vec<Node>, id: u32, source: Location, kind: LoadType) {
 	let buffer = Extract::add_into(nodes, source.reference, 0);
-	let value = load_value(nodes, buffer, source.offset, kind);
 
-	replace::replace_read(nodes, id, value, source.reference);
+	let mut reads = Vec::new();
+	let value = load_value(nodes, buffer, source.offset, kind, &mut reads);
+
+	replace::replace_read(nodes, id, value, source.reference, &reads);
 }
 
-fn load_value(nodes: &mut Vec<Node>, buffer: Link, offset: Link, kind: LoadType) -> Link {
+fn load_value(
+	nodes: &mut Vec<Node>,
+	buffer: Link,
+	offset: Link,
+	kind: LoadType,
+	reads: &mut Vec<Link>,
+) -> Link {
 	match kind {
-		LoadType::I32_S8 => read_signed(nodes, buffer, offset, READ_I8),
-		LoadType::I32_U8 => read(nodes, buffer, offset, READ_U8),
-		LoadType::I32_S16 => read_signed(nodes, buffer, offset, READ_I16),
-		LoadType::I32_U16 => read(nodes, buffer, offset, READ_U16),
-		LoadType::I32 | LoadType::F32 => read(nodes, buffer, offset, READ_U32),
-		LoadType::I64_S8 => widen_read_signed(nodes, buffer, offset, READ_I8),
-		LoadType::I64_U8 => widen_read_unsigned(nodes, buffer, offset, READ_U8),
-		LoadType::I64_S16 => widen_read_signed(nodes, buffer, offset, READ_I16),
-		LoadType::I64_U16 => widen_read_unsigned(nodes, buffer, offset, READ_U16),
-		LoadType::I64_S32 => widen_read_signed(nodes, buffer, offset, READ_I32),
-		LoadType::I64_U32 => widen_read_unsigned(nodes, buffer, offset, READ_U32),
-		LoadType::I64 => load_long(nodes, buffer, offset),
-		LoadType::F64 => read(nodes, buffer, offset, READ_F64),
+		LoadType::I32_S8 => read_signed(nodes, buffer, offset, READ_I8, reads),
+		LoadType::I32_U8 => read(nodes, buffer, offset, READ_U8, reads),
+		LoadType::I32_S16 => read_signed(nodes, buffer, offset, READ_I16, reads),
+		LoadType::I32_U16 => read(nodes, buffer, offset, READ_U16, reads),
+		LoadType::I32 | LoadType::F32 => read(nodes, buffer, offset, READ_U32, reads),
+		LoadType::I64_S8 => widen_read_signed(nodes, buffer, offset, READ_I8, reads),
+		LoadType::I64_U8 => widen_read_unsigned(nodes, buffer, offset, READ_U8, reads),
+		LoadType::I64_S16 => widen_read_signed(nodes, buffer, offset, READ_I16, reads),
+		LoadType::I64_U16 => widen_read_unsigned(nodes, buffer, offset, READ_U16, reads),
+		LoadType::I64_S32 => widen_read_signed(nodes, buffer, offset, READ_I32, reads),
+		LoadType::I64_U32 => widen_read_unsigned(nodes, buffer, offset, READ_U32, reads),
+		LoadType::I64 => load_long(nodes, buffer, offset, reads),
+		LoadType::F64 => read(nodes, buffer, offset, READ_F64, reads),
 	}
 }
 
-fn read(nodes: &mut Vec<Node>, buffer: Link, offset: Link, name: &'static str) -> Link {
-	BufferLoad::add_into(nodes, name, buffer, offset)
+fn read(
+	nodes: &mut Vec<Node>,
+	buffer: Link,
+	offset: Link,
+	name: &'static str,
+	reads: &mut Vec<Link>,
+) -> Link {
+	let value = BufferLoad::add_into(nodes, name, buffer, offset);
+
+	reads.push(value);
+
+	value
 }
 
 // A signed-width read returns a Luau-negative number; folding it through `bit32` re-encodes
 // it as the two's-complement word the integer representation expects.
-fn read_signed(nodes: &mut Vec<Node>, buffer: Link, offset: Link, name: &'static str) -> Link {
-	let value = read(nodes, buffer, offset, name);
+fn read_signed(
+	nodes: &mut Vec<Node>,
+	buffer: Link,
+	offset: Link,
+	name: &'static str,
+	reads: &mut Vec<Link>,
+) -> Link {
+	let value = read(nodes, buffer, offset, name, reads);
 
 	Bit32Or::add_fast_into(nodes, value, 0)
 }
@@ -104,8 +128,9 @@ fn widen_read_signed(
 	buffer: Link,
 	offset: Link,
 	name: &'static str,
+	reads: &mut Vec<Link>,
 ) -> Link {
-	let low = read_signed(nodes, buffer, offset, name);
+	let low = read_signed(nodes, buffer, offset, name, reads);
 
 	widen_signed(nodes, low)
 }
@@ -115,8 +140,9 @@ fn widen_read_unsigned(
 	buffer: Link,
 	offset: Link,
 	name: &'static str,
+	reads: &mut Vec<Link>,
 ) -> Link {
-	let low = read(nodes, buffer, offset, name);
+	let low = read(nodes, buffer, offset, name, reads);
 
 	widen_unsigned(nodes, low)
 }
@@ -133,10 +159,15 @@ fn widen_signed(nodes: &mut Vec<Node>, low: Link) -> Link {
 	IntoBitsI64::add_into(nodes, low, high)
 }
 
-fn load_long(nodes: &mut Vec<Node>, buffer: Link, offset: Link) -> Link {
-	let low = read(nodes, buffer, offset, READ_U32);
+fn load_long(
+	nodes: &mut Vec<Node>,
+	buffer: Link,
+	offset: Link,
+	reads: &mut Vec<Link>,
+) -> Link {
+	let low = read(nodes, buffer, offset, READ_U32, reads);
 	let high_offset = LuauAdd::add_fast_into(nodes, offset, WORD_BYTES);
-	let high = read(nodes, buffer, high_offset, READ_U32);
+	let high = read(nodes, buffer, high_offset, READ_U32, reads);
 
 	IntoBitsI64::add_into(nodes, low, high)
 }
