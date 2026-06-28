@@ -52,9 +52,6 @@ define_binary_operation!(LuauNotEqual, "Luau.NotEqual");
 define_binary_operation!(LuauLessThan, "Luau.LessThan");
 define_binary_operation!(LuauLessThanEqual, "Luau.LessThanEqual");
 
-define_binary_operation!(LuauAnd, "Luau.And");
-define_binary_operation!(LuauOr, "Luau.Or");
-
 define_unary_operation!(BooleanToInteger, "Luau.BooleanToInteger");
 define_unary_operation!(FlipMostSignificant, "Luau.FlipMostSignificant");
 define_unary_operation!(FromBitsF32, "Transmute.FromBitsF32");

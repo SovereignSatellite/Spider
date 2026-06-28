@@ -1,17 +1,3 @@
-;; Node::Foreign(luau_foreign::LuauAnd)
-(decl LuauAnd (Link Link) Link)
-
-(extractor (LuauAnd lhs rhs)
-	(LuauBinaryOperation lhs rhs (LuauBinaryOperator.And))
-)
-
-;; Node::Foreign(luau_foreign::LuauOr)
-(decl LuauOr (Link Link) Link)
-
-(extractor (LuauOr lhs rhs)
-	(LuauBinaryOperation lhs rhs (LuauBinaryOperator.Or))
-)
-
 (type LuauCompareOperator extern
 	(enum
 		(Equal)
@@ -74,24 +60,6 @@
 (extern constructor raw_luau_less_than_equal raw_luau_less_than_equal)
 
 (decl partial SimplifyLuauCompare (Link) Link)
-
-;; (N and N) => N
-(rule 2
-	(SimplifyLuauCompare
-		(LuauAnd value value)
-	)
-
-	value
-)
-
-;; (N or N) => N
-(rule 2
-	(SimplifyLuauCompare
-		(LuauOr value value)
-	)
-
-	value
-)
 
 ;; (N < N) => 0
 (rule 1

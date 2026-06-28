@@ -7,10 +7,12 @@ use ir_graph::{
 };
 use luau_foreign::{
 	Bit32And, Bit32ArShift, Bit32CountLz, Bit32CountRz, Bit32LRotate, Bit32LShift, Bit32Or,
-	Bit32RRotate, Bit32RShift, Bit32Xor, BooleanToInteger, LuauAdd, LuauAnd, LuauDivide, LuauEqual,
+	Bit32RRotate, Bit32RShift, Bit32Xor, BooleanToInteger, LuauAdd, LuauDivide, LuauEqual,
 	LuauFloorDivide, LuauLessThan, LuauLessThanEqual, LuauModulo, LuauMultiply, LuauNotEqual,
-	LuauOr, LuauSubtract, MathFmod, MathModf,
+	LuauSubtract, MathFmod, MathModf,
 };
+
+use crate::boolean::{both, either};
 
 const SIGN_BIT: u32 = 0x8000_0000;
 const SHIFT_MASK: u32 = 0x1F;
@@ -229,7 +231,7 @@ fn unsigned_remainder(nodes: &mut Vec<Node>, lhs: Link, rhs: Link) -> Link {
 fn signed_division_traps(nodes: &mut Vec<Node>, lhs: Link, rhs: Link) -> Link {
 	let overflow = is_overflow(nodes, lhs, rhs);
 	let zero = is_zero(nodes, rhs);
-	let trapping = LuauOr::add_into(nodes, overflow, zero);
+	let trapping = either(nodes, overflow, zero);
 
 	BooleanToInteger::add_into(nodes, trapping)
 }
@@ -240,7 +242,7 @@ fn is_overflow(nodes: &mut Vec<Node>, lhs: Link, rhs: Link) -> Link {
 	let negative_one = Node::add_f64_into(nodes, NEGATIVE_ONE_BITS);
 	let at_negative_one = LuauEqual::add_into(nodes, rhs, negative_one);
 
-	LuauAnd::add_into(nodes, at_minimum, at_negative_one)
+	both(nodes, at_minimum, at_negative_one)
 }
 
 fn divisor_is_zero(nodes: &mut Vec<Node>, rhs: Link) -> Link {

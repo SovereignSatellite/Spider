@@ -13,10 +13,10 @@ use luau_foreign::{
 	Bit32And, Bit32ArShift, Bit32CountLz, Bit32CountRz, Bit32LRotate, Bit32LShift, Bit32Or,
 	Bit32RRotate, Bit32RShift, Bit32Xor, BooleanToInteger, BufferLength, BufferLoad, BufferStore,
 	FlipMostSignificant, FromBitsF32, FromBitsI64, IntoBitsF32, IntoBitsI64, IsPositive, LuauAdd,
-	LuauAnd, LuauDivide, LuauEqual, LuauFloorDivide, LuauLessThan, LuauLessThanEqual, LuauModulo,
-	LuauMultiply, LuauNegate, LuauNotEqual, LuauOr, LuauSubtract, MathAbs, MathCeil, MathFloor,
-	MathFmod, MathMax, MathMin, MathModf, MathSqrt, TableLength, TableLoad, TableStore,
-	VectorCreate, VectorX,
+	LuauDivide, LuauEqual, LuauFloorDivide, LuauLessThan, LuauLessThanEqual, LuauModulo,
+	LuauMultiply, LuauNegate, LuauNotEqual, LuauSubtract, MathAbs, MathCeil, MathFloor, MathFmod,
+	MathMax, MathMin, MathModf, MathSqrt, TableLength, TableLoad, TableStore, VectorCreate,
+	VectorX,
 };
 use luau_tree::{
 	expression::{self, Apply as ApplyExpression, Call as CallExpression, Expression, Local, Name},
@@ -522,12 +522,6 @@ impl<'allocator, 'policy> Emitter<'allocator, 'policy> {
 		} else if let Some(node) = any.downcast_ref::<LuauLessThanEqual>() {
 			self.data_handler
 				.build_infix(region, "<=", node.lhs, node.rhs)
-		} else if let Some(node) = any.downcast_ref::<LuauAnd>() {
-			self.data_handler
-				.build_infix(region, "and", node.lhs, node.rhs)
-		} else if let Some(node) = any.downcast_ref::<LuauOr>() {
-			self.data_handler
-				.build_infix(region, "or", node.lhs, node.rhs)
 		} else {
 			return None;
 		};

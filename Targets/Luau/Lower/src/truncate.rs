@@ -6,9 +6,11 @@ use ir_graph::{
 	region::Match,
 };
 use luau_foreign::{
-	Bit32Or, BooleanToInteger, FromBitsF32, LuauLessThan, LuauLessThanEqual, LuauNotEqual, LuauOr,
+	Bit32Or, BooleanToInteger, FromBitsF32, LuauLessThan, LuauLessThanEqual, LuauNotEqual,
 	MathFloor, MathModf,
 };
+
+use crate::boolean::either;
 
 const SIGNED_LIMIT: f64 = 2_147_483_648.0;
 const SIGNED_FLOOR: f64 = -2_147_483_648.0;
@@ -74,9 +76,9 @@ fn trap(nodes: &mut Vec<Node>, decoded: Link, is_signed: bool) -> Link {
 fn out_of_range(nodes: &mut Vec<Node>, value: Link, is_signed: bool) -> Link {
 	let above = above_limit(nodes, value, is_signed);
 	let below = below_floor(nodes, value, is_signed);
-	let outside = LuauOr::add_into(nodes, above, below);
+	let outside = either(nodes, above, below);
 	let not_a_number = LuauNotEqual::add_into(nodes, value, value);
-	let trapping = LuauOr::add_into(nodes, outside, not_a_number);
+	let trapping = either(nodes, outside, not_a_number);
 
 	BooleanToInteger::add_into(nodes, trapping)
 }
@@ -194,9 +196,9 @@ fn below_zero_or_nan(nodes: &mut Vec<Node>, source: Link) -> Link {
 	let boundary = Node::add_f64_into(nodes, UNSIGNED_FLOOR);
 	let below = LuauLessThanEqual::add_into(nodes, source, boundary);
 	let not_a_number = LuauNotEqual::add_into(nodes, source, source);
-	let either = LuauOr::add_into(nodes, below, not_a_number);
+	let below_or_nan = either(nodes, below, not_a_number);
 
-	BooleanToInteger::add_into(nodes, either)
+	BooleanToInteger::add_into(nodes, below_or_nan)
 }
 
 fn is_not_a_number(nodes: &mut Vec<Node>, source: Link) -> Link {

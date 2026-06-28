@@ -6,9 +6,9 @@ use ir_graph::Link;
 use luau_foreign::{
 	Bit32And, Bit32ArShift, Bit32CountLz, Bit32CountRz, Bit32LRotate, Bit32LShift, Bit32Or,
 	Bit32RRotate, Bit32RShift, Bit32Xor, BooleanToInteger, FlipMostSignificant, FromBitsI64,
-	IntoBitsI64, LuauAdd, LuauAnd, LuauDivide, LuauEqual, LuauFloorDivide, LuauLessThan,
-	LuauLessThanEqual, LuauModulo, LuauMultiply, LuauNegate, LuauNotEqual, LuauOr, LuauSubtract,
-	MathAbs, MathCeil, MathFloor, MathFmod, MathMax, MathMin, MathModf, MathSqrt,
+	IntoBitsI64, LuauAdd, LuauDivide, LuauEqual, LuauFloorDivide, LuauLessThan, LuauLessThanEqual,
+	LuauModulo, LuauMultiply, LuauNegate, LuauNotEqual, LuauSubtract, MathAbs, MathCeil, MathFloor,
+	MathFmod, MathMax, MathMin, MathModf, MathSqrt,
 };
 
 /// The operator carried by a Luau `bit32` binary node.
@@ -86,10 +86,6 @@ pub enum LuauBinaryOperator {
 	Maximum,
 	/// `math.fmod`.
 	FloatModulo,
-	/// The Lua `and` short-circuit operator.
-	And,
-	/// The Lua `or` short-circuit operator.
-	Or,
 }
 
 /// The operator carried by a Luau comparison value node.
@@ -186,8 +182,6 @@ pub fn luau_binary_operation(any: &dyn Any) -> Option<(Link, Link, LuauBinaryOpe
 		(MathMin, LuauBinaryOperator::Minimum),
 		(MathMax, LuauBinaryOperator::Maximum),
 		(MathFmod, LuauBinaryOperator::FloatModulo),
-		(LuauAnd, LuauBinaryOperator::And),
-		(LuauOr, LuauBinaryOperator::Or),
 	)
 }
 

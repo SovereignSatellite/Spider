@@ -5,6 +5,7 @@
 	clippy::equatable_if_let,
 	clippy::excessive_nesting,
 	clippy::match_ref_pats,
+	clippy::match_wildcard_for_single_variants,
 	clippy::needless_return,
 	clippy::too_many_lines,
 	clippy::trivially_copy_pass_by_ref,
