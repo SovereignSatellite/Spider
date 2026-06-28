@@ -19,7 +19,5 @@ end
 -- SECTION stack_release
 -- NEEDS stack_pool
 local function stack_release(size_class: number, stack)
-	table.clear(stack)
-
 	table.insert(stack_pool[size_class], stack)
 end
