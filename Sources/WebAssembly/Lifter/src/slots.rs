@@ -14,7 +14,7 @@ use web_assembly_graph::instruction::{
 	TableCopy, TableFill, TableGet, TableGrow, TableInit, TableSet, TableSize,
 };
 
-use super::{closure, dependencies::DependencyMap, function::LocalKind};
+use super::{dependencies::DependencyMap, function::LocalKind};
 
 const LOCAL_BASE: usize = Name::COUNT as usize;
 
@@ -82,11 +82,11 @@ impl SlotFile {
 		results
 	}
 
-	fn seed_dependencies_from_state(&mut self, nodes: &mut Vec<Node>, state: Link) {
+	fn seed_dependencies_from_closure(&mut self, nodes: &mut Vec<Node>, closure: Link) {
 		let Ok(count) = u32::try_from(self.dependencies.count()) else {
 			unreachable!()
 		};
-		let extracts = (0..count).map(|port| operation::Extract::add_into(nodes, state, port));
+		let extracts = (1..=count).map(|port| operation::Extract::add_into(nodes, closure, port));
 
 		self.dependencies.set_all_from(extracts);
 	}
@@ -114,7 +114,7 @@ impl SlotFile {
 		} = header;
 
 		self.dependencies.fill_keys(dependencies);
-		self.seed_dependencies_from_state(nodes, Link(arguments, 0));
+		self.seed_dependencies_from_closure(nodes, Link(arguments, 0));
 
 		let null = Node::add_null_into(nodes);
 		let parameters = (1..=to_port(argument_count)).map(|port| Link(arguments, port));
@@ -228,13 +228,13 @@ impl SlotFile {
 	fn handle_pre_call(
 		&mut self,
 		nodes: &mut Vec<Node>,
-		state: Link,
+		closure: Link,
 		from: u16,
 		to: u16,
 	) -> Vec<Link> {
 		let mut arguments = Vec::with_capacity(usize::from(to - from) + 2);
 
-		arguments.push(state);
+		arguments.push(closure);
 		arguments.extend_from_slice(&self.locals[usize::from(from)..usize::from(to)]);
 
 		self.create_fence(nodes);
@@ -263,9 +263,10 @@ impl SlotFile {
 			function: callee,
 		} = instruction;
 
-		let (function, state) = closure::split(nodes, self.locals[usize::from(callee)]);
+		let closure = self.locals[usize::from(callee)];
+		let function = operation::Extract::add_into(nodes, closure, 0);
 
-		let arguments = self.handle_pre_call(nodes, state, sources.0, sources.1);
+		let arguments = self.handle_pre_call(nodes, closure, sources.0, sources.1);
 
 		let call = operation::Apply::add_into(
 			nodes,

@@ -10,7 +10,7 @@ use web_assembly_liveness::{
 	references,
 };
 
-use super::{closure, entities::Entities, interval::IntervalLifter, slots::FunctionHeader};
+use super::{entities::Entities, interval::IntervalLifter, slots::FunctionHeader};
 
 #[derive(Clone, Copy)]
 pub enum LocalKind {
@@ -89,7 +89,6 @@ impl FunctionLifter {
 			unreachable!()
 		};
 
-		let state = Aggregate::add_into(nodes, captures);
 		let function = Function::add_into(nodes, total_argument_count, |inner_nodes, arguments| {
 			let header = FunctionHeader {
 				arguments,
@@ -104,7 +103,9 @@ impl FunctionLifter {
 				.run(inner_nodes, &self.graph, &self.locals, &header)
 		});
 
-		closure::wrap(nodes, function, state)
+		let closure = iter::once(function).chain(captures).collect();
+
+		Aggregate::add_into(nodes, closure)
 	}
 
 	#[expect(
