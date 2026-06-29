@@ -79,7 +79,7 @@ end
 
 -- SECTION call_closure
 function hn_call_closure(closure, ...)
-	return closure[1](closure[2], ...)
+	return closure[1](closure, ...)
 end
 
 -- SECTION report_failure

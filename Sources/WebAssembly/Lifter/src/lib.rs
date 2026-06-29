@@ -11,7 +11,9 @@ use wasmparser::FunctionBody;
 
 use ir_graph::{
 	Link, Node,
-	operation::{Fence, Location, MemoryNew, MutableNew, MutableSet, TableNew, TableSet},
+	operation::{
+		Apply, Extract, Fence, Location, MemoryNew, MutableNew, MutableSet, TableNew, TableSet,
+	},
 	region::Function,
 };
 use web_assembly_builder::Types;
@@ -28,7 +30,6 @@ use self::{
 	module::Module,
 };
 
-mod closure;
 mod constant_expression;
 mod dependencies;
 mod entities;
@@ -287,7 +288,8 @@ impl WebAssemblyLifter {
 
 			let initialization = self.lower_initialization(nodes, environment);
 			let trap = self.create_fence(nodes, Link(arguments, 0));
-			let apply = closure::apply(nodes, initialization, trap, 1);
+			let function = Extract::add_into(nodes, initialization, 0);
+			let apply = Apply::add_into(nodes, function, vec![initialization, trap], 1);
 
 			let mut states = self.emit_exports(nodes, environment);
 
