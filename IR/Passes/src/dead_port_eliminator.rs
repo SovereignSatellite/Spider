@@ -202,6 +202,8 @@ impl DeadPortEliminator {
 				| Node::BranchResults(_)
 				| Node::RepeatArguments(_)
 				| Node::RepeatResults(_)
+				| Node::Import(_)
+				| Node::Export(_)
 				| Node::Foreign(_)
 				| Node::Trap
 				| Node::Null

@@ -32,6 +32,8 @@ pub fn get_static(node: &Node) -> Option<&'static str> {
 		| Node::NumberBinaryOperation(_)
 		| Node::NumberCompareOperation(_) => return None,
 
+		Node::Import(_) => "Import",
+		Node::Export(_) => "Export",
 		Node::Foreign(foreign) => foreign.identifier(),
 		Node::Trap => "Trap",
 		Node::Null => "Null",
@@ -254,6 +256,8 @@ pub fn write(node: &Node, out: &mut dyn Write) -> Result<()> {
 		| Node::BranchResults(_)
 		| Node::RepeatArguments(_)
 		| Node::RepeatResults(_)
+		| Node::Import(_)
+		| Node::Export(_)
 		| Node::Foreign(_)
 		| Node::Trap
 		| Node::Null

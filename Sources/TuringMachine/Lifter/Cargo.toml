@@ -9,4 +9,3 @@ workspace = true
 [dependencies]
 ir-graph.workspace = true
 parking_lot.workspace = true
-turing-machine-foreign.workspace = true

@@ -1,24 +1,20 @@
 use alloc::sync::Arc;
-use core::any::Any;
 
 use parking_lot::Mutex;
 
 use ir_graph::{
 	Link, Node,
-	foreign::Foreign,
-	operation::{self, Apply},
+	operation::{self, Apply, Export},
 	region::{Branch, Function, Match, Repeat, repeat},
 };
 use luajit_tree::{
 	expression::{self, Expression, Local, Name},
 	statement::Sequence,
 };
-use turing_machine_foreign::Tell as TuringTell;
-use web_assembly_foreign::Export as WasmExport;
 
 use super::{
 	code_handler::CodeHandler,
-	data_handler::{DataHandler, build_foreign},
+	data_handler::{DataHandler, build_import},
 	policy::{LuaJITPolicy, PHYSICAL_REGISTERS},
 };
 
@@ -257,31 +253,12 @@ impl<'allocator, 'policy> Emitter<'allocator, 'policy> {
 		self.code_handler.emit_repeat(condition, rotation);
 	}
 
-	fn handle_wasm_export(&mut self, node: &WasmExport) {
+	fn handle_export(&mut self, node: &Export) {
 		let value = self.data_handler.load(self.region, node.value);
 		let identifier = Expression::String(Arc::clone(&node.identifier));
 
 		self.code_handler
 			.emit_runtime_call("export", vec![identifier, value]);
-	}
-
-	fn handle_turing_tell(&mut self, node: TuringTell) {
-		let character = self.data_handler.load(self.region, node.character);
-
-		self.code_handler
-			.emit_runtime_call("turing_tell", vec![character]);
-	}
-
-	fn handle_foreign(&mut self, nodes: &[Node], id: u32, foreign: &dyn Foreign) {
-		let any: &dyn Any = foreign;
-
-		if let Some(node) = any.downcast_ref::<WasmExport>() {
-			self.handle_wasm_export(node);
-		} else if let Some(&node) = any.downcast_ref::<TuringTell>() {
-			self.handle_turing_tell(node);
-		} else {
-			self.emit_expression(nodes, id);
-		}
 	}
 
 	fn handle_call(&mut self, id: u32, node: &Apply) {
@@ -307,6 +284,7 @@ impl<'allocator, 'policy> Emitter<'allocator, 'policy> {
 			| Node::BranchResults(_)
 			| Node::RepeatArguments(_)
 			| Node::RepeatResults(_)
+			| Node::Export(_)
 			| Node::Identity(_)
 			| Node::Fence(_)
 			| Node::Apply(_)
@@ -320,7 +298,9 @@ impl<'allocator, 'policy> Emitter<'allocator, 'policy> {
 			| Node::MemoryCopy(_)
 			| Node::MemoryDrop(_) => unreachable!("statements are never rebuilt as expressions"),
 
-			Node::Foreign(foreign) => build_foreign(foreign.as_ref()),
+			Node::Import(node) => build_import(node),
+
+			Node::Foreign(_) => unreachable!("the LuaJIT target consumes no foreign nodes"),
 
 			Node::Trap => Expression::Trap,
 			Node::Null => Expression::Null,
@@ -488,9 +468,10 @@ impl<'allocator, 'policy> Emitter<'allocator, 'policy> {
 
 			Node::RepeatResults(ref node) => self.handle_repeat_results(node),
 
-			Node::Foreign(ref node) => self.handle_foreign(nodes, id, node.as_ref()),
+			Node::Foreign(_) => unreachable!("the LuaJIT target consumes no foreign nodes"),
 
-			Node::Trap
+			Node::Import(_)
+			| Node::Trap
 			| Node::Null
 			| Node::I32(_)
 			| Node::I64(_)
@@ -525,6 +506,7 @@ impl<'allocator, 'policy> Emitter<'allocator, 'policy> {
 			| Node::MemorySize(_)
 			| Node::MemoryGrow(_) => self.emit_expression(nodes, id),
 
+			Node::Export(ref node) => self.handle_export(node),
 			Node::Apply(ref node) => self.handle_call(id, node),
 			Node::MutableSet(node) => self.handle_mutable_set(node),
 			Node::TableSet(node) => self.handle_table_set(node),

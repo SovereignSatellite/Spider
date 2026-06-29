@@ -10,11 +10,11 @@ use ir_graph::{
 	Link, Node,
 	list::resizable::Resizable,
 	operation::{
-		Fence, LoadType, Location, MemoryLoad, MemoryNew, MemoryStore, StoreType, integer,
+		Apply, Fence, Import, LoadType, Location, MemoryLoad, MemoryNew, MemoryStore, StoreType,
+		integer,
 	},
 	region::{Branch, Function, Match, Repeat},
 };
-use turing_machine_foreign::{Ask, Tell};
 
 const CELL_SIZE: u32 = 4;
 const MEMORY_SIZE: u32 = 1_024 * 4 * CELL_SIZE;
@@ -24,8 +24,8 @@ enum Operator {
 	OffsetSubtract,
 	MemoryAdd,
 	MemorySubtract,
-	Ask,
-	Tell,
+	Input,
+	Output,
 	Start,
 	End,
 }
@@ -39,8 +39,8 @@ impl TryFrom<char> for Operator {
 			'<' => Self::OffsetSubtract,
 			'+' => Self::MemoryAdd,
 			'-' => Self::MemorySubtract,
-			',' => Self::Ask,
-			'.' => Self::Tell,
+			',' => Self::Input,
+			'.' => Self::Output,
 			'[' => Self::Start,
 			']' => Self::End,
 
@@ -60,12 +60,16 @@ pub struct TuringMachineLifter {
 	io_state: Link,
 
 	operators: Vec<Operator>,
+
+	namespace: Arc<str>,
+	input_identifier: Arc<str>,
+	output_identifier: Arc<str>,
 }
 
 impl TuringMachineLifter {
 	/// Creates a new Turing machine lifter.
 	#[must_use]
-	pub const fn new() -> Self {
+	pub fn new() -> Self {
 		Self {
 			loads: Vec::new(),
 			store: Link::DANGLING,
@@ -74,6 +78,10 @@ impl TuringMachineLifter {
 			io_state: Link::DANGLING,
 
 			operators: Vec::new(),
+
+			namespace: Arc::from("turing"),
+			input_identifier: Arc::from("ask"),
+			output_identifier: Arc::from("tell"),
 		}
 	}
 
@@ -159,18 +167,31 @@ impl TuringMachineLifter {
 		self.emit_store(nodes, source);
 	}
 
-	fn handle_ask(&mut self, nodes: &mut Vec<Node>) {
-		let (character, next_state) = Ask::add_into(nodes, self.io_state);
+	fn handle_input(&mut self, nodes: &mut Vec<Node>) {
+		let function = Import::add_into(
+			nodes,
+			Arc::clone(&self.namespace),
+			Arc::clone(&self.input_identifier),
+		);
+		let call = Apply::add_into(nodes, function, vec![self.io_state], 2);
 
-		self.io_state = next_state;
+		self.io_state = Link(call, 0);
+
+		let character = Link(call, 1);
 
 		self.emit_store(nodes, character);
 	}
 
-	fn handle_tell(&mut self, nodes: &mut Vec<Node>) {
+	fn handle_output(&mut self, nodes: &mut Vec<Node>) {
 		let source = self.emit_load(nodes);
+		let function = Import::add_into(
+			nodes,
+			Arc::clone(&self.namespace),
+			Arc::clone(&self.output_identifier),
+		);
+		let call = Apply::add_into(nodes, function, vec![self.io_state, source], 1);
 
-		self.io_state = Tell::add_into(nodes, self.io_state, source);
+		self.io_state = Link(call, 0);
 	}
 
 	fn capture_state(&mut self, nodes: &mut Vec<Node>) -> Vec<Link> {
@@ -255,8 +276,8 @@ impl TuringMachineLifter {
 					self.handle_memory_operation(nodes, integer::BinaryOperator::Subtract);
 				}
 
-				Operator::Ask => self.handle_ask(nodes),
-				Operator::Tell => self.handle_tell(nodes),
+				Operator::Input => self.handle_input(nodes),
+				Operator::Output => self.handle_output(nodes),
 
 				Operator::Start => self.handle_block(nodes),
 				Operator::End => return,

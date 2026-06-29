@@ -11,7 +11,6 @@ ir-graph.workspace = true
 list.workspace = true
 parking_lot.workspace = true
 wasmparser.workspace = true
-web-assembly-foreign.workspace = true
 web-assembly-graph.workspace = true
 
 web-assembly-builder = { path = "../Builder" }

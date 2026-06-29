@@ -12,12 +12,12 @@ use wasmparser::FunctionBody;
 use ir_graph::{
 	Link, Node,
 	operation::{
-		Apply, Extract, Fence, Location, MemoryNew, MutableNew, MutableSet, TableNew, TableSet,
+		Apply, Export, Extract, Fence, Import, Location, MemoryNew, MutableNew, MutableSet,
+		TableNew, TableSet,
 	},
 	region::Function,
 };
 use web_assembly_builder::Types;
-use web_assembly_foreign::{Export, Import};
 
 use self::{
 	entities::Entities,

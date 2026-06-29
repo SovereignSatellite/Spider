@@ -98,9 +98,6 @@ impl Sections {
 	/// The stack core source.
 	pub const STACK_SOURCE: &str = include_str!("../../runtime/core/stack.luau");
 
-	/// The Turing machine source runtime.
-	pub const TURING_MACHINE_SOURCE: &str =
-		include_str!("../../runtime/source/turing_machine.luau");
 	/// The WebAssembly source runtime.
 	pub const WEB_ASSEMBLY_SOURCE: &str = include_str!("../../runtime/source/web_assembly.luau");
 
@@ -124,7 +121,6 @@ impl Sections {
 		sections.parse_from(Self::MEMORY_SOURCE);
 		sections.parse_from(Self::STACK_SOURCE);
 
-		sections.parse_from(Self::TURING_MACHINE_SOURCE);
 		sections.parse_from(Self::WEB_ASSEMBLY_SOURCE);
 
 		sections.resolve();
