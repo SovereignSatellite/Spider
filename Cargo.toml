@@ -21,8 +21,6 @@ luau-builder = { path = "Targets/Luau/Builder" }
 luau-foreign = { path = "Targets/Luau/Foreign" }
 luau-lower = { path = "Targets/Luau/Lower" }
 luau-printer = { path = "Targets/Luau/Printer" }
-turing-machine-foreign = { path = "Sources/TuringMachine/Foreign" }
-web-assembly-foreign = { path = "Sources/WebAssembly/Foreign" }
 web-assembly-graph = { path = "Sources/WebAssembly/Graph" }
 web-assembly-lifter = { path = "Sources/WebAssembly/Lifter" }
 

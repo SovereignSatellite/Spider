@@ -10,8 +10,6 @@ workspace = true
 hashbrown.workspace = true
 ir-graph.workspace = true
 parking_lot.workspace = true
-turing-machine-foreign.workspace = true
-web-assembly-foreign.workspace = true
 
 ir-allocator = { path = "../../../IR/Allocator" }
 luajit-tree = { path = "../Tree" }

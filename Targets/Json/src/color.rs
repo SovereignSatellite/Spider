@@ -17,7 +17,9 @@ impl Color {
 			Node::Match(_) | Node::BranchArguments(_) | Node::BranchResults(_) => Self::Green,
 			Node::Repeat(_) | Node::RepeatArguments(_) | Node::RepeatResults(_) => Self::Red,
 
-			Node::Foreign(_)
+			Node::Import(_)
+			| Node::Export(_)
+			| Node::Foreign(_)
 			| Node::Trap
 			| Node::Null
 			| Node::I32(_)

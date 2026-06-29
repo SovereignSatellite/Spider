@@ -3,10 +3,15 @@ use core::any::Any;
 
 use parking_lot::Mutex;
 
+use super::{
+	code_handler::CodeHandler,
+	data_handler::{DataHandler, build_import, build_match_expression, memory_store_name},
+	policy::{LuauPolicy, PHYSICAL_REGISTERS},
+};
 use ir_graph::{
 	Link, Node,
 	foreign::Foreign,
-	operation::{self, Apply},
+	operation::{self, Apply, Export},
 	region::{Branch, Function, Match, Repeat, repeat},
 };
 use luau_foreign::{
@@ -21,14 +26,6 @@ use luau_foreign::{
 use luau_tree::{
 	expression::{self, Apply as ApplyExpression, Call as CallExpression, Expression, Local, Name},
 	statement::Sequence,
-};
-use turing_machine_foreign::Tell as TuringTell;
-use web_assembly_foreign::Export as WasmExport;
-
-use super::{
-	code_handler::CodeHandler,
-	data_handler::{DataHandler, build_foreign, build_match_expression, memory_store_name},
-	policy::{LuauPolicy, PHYSICAL_REGISTERS},
 };
 
 pub struct Emitter<'allocator, 'policy> {
@@ -303,7 +300,7 @@ impl<'allocator, 'policy> Emitter<'allocator, 'policy> {
 		self.emit_transfer(&destinations, &node.sources);
 	}
 
-	fn handle_wasm_export(&mut self, node: &WasmExport) {
+	fn handle_export(&mut self, node: &Export) {
 		let value = self.data_handler.load(self.region, node.value);
 		let identifier = Expression::String(Arc::clone(&node.identifier));
 		let expression = ApplyExpression {
@@ -315,22 +312,10 @@ impl<'allocator, 'policy> Emitter<'allocator, 'policy> {
 			.emit_call(Vec::new(), Expression::Apply2Arguments(expression.into()));
 	}
 
-	fn handle_turing_tell(&mut self, node: TuringTell) {
-		let value =
-			self.data_handler
-				.build_apply_1(self.region, "rt_turing_tell", [node.character]);
-
-		self.code_handler.emit_call(Vec::new(), value);
-	}
-
 	fn handle_foreign(&mut self, nodes: &[Node], id: u32, foreign: &dyn Foreign) {
 		let any: &dyn Any = foreign;
 
-		if let Some(node) = any.downcast_ref::<WasmExport>() {
-			self.handle_wasm_export(node);
-		} else if let Some(&node) = any.downcast_ref::<TuringTell>() {
-			self.handle_turing_tell(node);
-		} else if let Some(&node) = any.downcast_ref::<BufferStore>() {
+		if let Some(&node) = any.downcast_ref::<BufferStore>() {
 			self.handle_buffer_store(id, node);
 		} else if let Some(&node) = any.downcast_ref::<TableStore>() {
 			self.handle_table_store(id, node);
@@ -401,7 +386,7 @@ impl<'allocator, 'policy> Emitter<'allocator, 'policy> {
 			return expression;
 		}
 
-		build_foreign(foreign)
+		unimplemented!("`{}` has no expression form", foreign.identifier())
 	}
 
 	fn value_vector(&mut self, any: &dyn Any) -> Option<Expression> {
@@ -630,6 +615,7 @@ impl<'allocator, 'policy> Emitter<'allocator, 'policy> {
 			| Node::BranchResults(_)
 			| Node::RepeatArguments(_)
 			| Node::RepeatResults(_)
+			| Node::Export(_)
 			| Node::Identity(_)
 			| Node::Fence(_)
 			| Node::Apply(_)
@@ -649,6 +635,8 @@ impl<'allocator, 'policy> Emitter<'allocator, 'policy> {
 			| Node::MemoryFill(_)
 			| Node::MemoryCopy(_)
 			| Node::MemoryDrop(_) => unreachable!("statements are never rebuilt as expressions"),
+
+			Node::Import(node) => build_import(node),
 
 			Node::Foreign(foreign) => self.value_foreign(foreign.as_ref()),
 
@@ -935,7 +923,8 @@ impl<'allocator, 'policy> Emitter<'allocator, 'policy> {
 
 			Node::Foreign(ref node) => self.handle_foreign(nodes, id, node.as_ref()),
 
-			Node::Trap
+			Node::Import(_)
+			| Node::Trap
 			| Node::Null
 			| Node::I32(_)
 			| Node::I64(_)
@@ -963,6 +952,7 @@ impl<'allocator, 'policy> Emitter<'allocator, 'policy> {
 			| Node::TableNew(_)
 			| Node::MemoryNew(_) => self.emit_expression(nodes, id),
 
+			Node::Export(ref node) => self.handle_export(node),
 			Node::Apply(ref node) => self.handle_call(id, node),
 			Node::MutableGet(node) => self.handle_mutable_get(id, node),
 			Node::MutableSet(node) => self.handle_mutable_set(id, node),

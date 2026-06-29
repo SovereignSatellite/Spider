@@ -46,6 +46,8 @@ fn lower_node(nodes: &mut Vec<Node>, id: u32) -> bool {
 		| Node::BranchResults(_)
 		| Node::RepeatArguments(_)
 		| Node::RepeatResults(_)
+		| Node::Import(_)
+		| Node::Export(_)
 		| Node::Foreign(_)
 		| Node::Trap
 		| Node::Null

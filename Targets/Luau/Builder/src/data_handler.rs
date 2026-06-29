@@ -1,13 +1,11 @@
 use alloc::sync::Arc;
-use core::any::Any;
 
 use hashbrown::HashMap;
 
 use ir_allocator::DEFERRED;
 use ir_graph::{
 	Link,
-	foreign::Foreign,
-	operation::{self, ExtendType, LoadType, StoreType, integer, number},
+	operation::{self, ExtendType, Import, LoadType, StoreType, integer, number},
 };
 use luau_foreign::BufferStore;
 use luau_tree::{
@@ -17,8 +15,6 @@ use luau_tree::{
 	},
 	statement::Sequence,
 };
-use turing_machine_foreign::Ask as TuringAsk;
-use web_assembly_foreign::Import as WasmImport;
 
 use super::policy::PHYSICAL_REGISTERS;
 
@@ -334,35 +330,19 @@ pub fn build_match_expression(condition: Expression, branches: Vec<Sequence>) ->
 	)
 }
 
-pub fn build_foreign(foreign: &dyn Foreign) -> Expression {
-	let any: &dyn Any = foreign;
+pub fn build_import(node: &Import) -> Expression {
+	let arguments = [
+		Expression::String(Arc::clone(&node.namespace)),
+		Expression::String(Arc::clone(&node.identifier)),
+	];
 
-	if let Some(node) = any.downcast_ref::<WasmImport>() {
-		let arguments = [
-			Expression::String(Arc::clone(&node.namespace)),
-			Expression::String(Arc::clone(&node.identifier)),
-		];
-
-		return Expression::Apply2Arguments(
-			Apply {
-				name: "rt_import",
-				arguments,
-			}
-			.into(),
-		);
-	}
-
-	if any.downcast_ref::<TuringAsk>().is_some() {
-		return Expression::Apply0Arguments(
-			Apply {
-				name: "rt_turing_ask",
-				arguments: [],
-			}
-			.into(),
-		);
-	}
-
-	unimplemented!("`{}` has no expression form", foreign.identifier())
+	Expression::Apply2Arguments(
+		Apply {
+			name: "rt_import",
+			arguments,
+		}
+		.into(),
+	)
 }
 
 pub struct DataHandler {

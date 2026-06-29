@@ -10,12 +10,12 @@ mod macros;
 use self::{
 	foreign::Foreign,
 	operation::{
-		Aggregate, Apply, Extract, Fence, Identity, IntegerConvertToNumber, IntegerNarrow,
-		IntegerSignExtend, IntegerTransmuteToNumber, IntegerWiden, MemoryCopy, MemoryDrop,
-		MemoryFill, MemoryGrow, MemoryLoad, MemoryNew, MemorySize, MemoryStore, MutableGet,
-		MutableNew, MutableSet, NumberNarrow, NumberTransmuteToInteger, NumberTruncateToInteger,
-		NumberWiden, RefIsNull, TableCopy, TableDrop, TableFill, TableGet, TableGrow, TableNew,
-		TableSet, TableSize, integer, number,
+		Aggregate, Apply, Export, Extract, Fence, Identity, Import, IntegerConvertToNumber,
+		IntegerNarrow, IntegerSignExtend, IntegerTransmuteToNumber, IntegerWiden, MemoryCopy,
+		MemoryDrop, MemoryFill, MemoryGrow, MemoryLoad, MemoryNew, MemorySize, MemoryStore,
+		MutableGet, MutableNew, MutableSet, NumberNarrow, NumberTransmuteToInteger,
+		NumberTruncateToInteger, NumberWiden, RefIsNull, TableCopy, TableDrop, TableFill, TableGet,
+		TableGrow, TableNew, TableSet, TableSize, integer, number,
 	},
 	region::{Function, Match, Repeat, branch, function, repeat},
 };
@@ -65,6 +65,11 @@ pub enum Node {
 	RepeatArguments(repeat::Arguments),
 	/// The boundary results of a repeat region.
 	RepeatResults(repeat::Results),
+
+	/// A host import that resolves a named runtime value.
+	Import(Import),
+	/// A host export that publishes a value under a named identifier.
+	Export(Export),
 
 	/// An operation outside the core computation universe.
 	Foreign(Box<dyn Foreign>),
@@ -194,6 +199,9 @@ macro_rules! for_each_visit {
 			Self::BranchResults(node) => node.$visit($handler),
 			Self::RepeatResults(node) => node.$visit($handler),
 
+			Self::Import(node) => node.$visit($handler),
+			Self::Export(node) => node.$visit($handler),
+
 			Self::Foreign(foreign) => foreign.$visit(&mut $handler),
 
 			Self::Identity(node) => node.$visit($handler),
@@ -317,6 +325,7 @@ impl Node {
 	pub fn result_count(&self) -> u16 {
 		match self {
 			Self::Function(_)
+			| Self::Import(_)
 			| Self::Trap
 			| Self::Null
 			| Self::I32(_)
@@ -355,6 +364,8 @@ impl Node {
 			Self::BranchArguments(node) => node.result_count(),
 
 			Self::RepeatArguments(node) => node.result_count(),
+
+			Self::Export(_) => Export::RESULT_COUNT,
 
 			Self::Foreign(foreign) => foreign.result_count(),
 
@@ -397,6 +408,7 @@ impl Node {
 			| Self::BranchResults(_)
 			| Self::RepeatArguments(_)
 			| Self::RepeatResults(_)
+			| Self::Import(_)
 			| Self::Trap
 			| Self::Null
 			| Self::I32(_)
@@ -425,6 +437,8 @@ impl Node {
 			| Self::Extract(_)
 			| Self::TableNew(_)
 			| Self::MemoryNew(_) => None,
+
+			Self::Export(node) => node.forwarded_operand(port),
 
 			Self::Foreign(foreign) => foreign.forwarded_operand(port),
 
@@ -463,6 +477,8 @@ impl Node {
 			| Self::FunctionResults(_)
 			| Self::BranchArguments(_)
 			| Self::RepeatArguments(_)
+			| Self::Import(_)
+			| Self::Export(_)
 			| Self::Foreign(_)
 			| Self::Trap
 			| Self::Null

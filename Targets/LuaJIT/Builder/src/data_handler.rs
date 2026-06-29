@@ -1,10 +1,9 @@
 use alloc::sync::Arc;
-use core::any::Any;
 
 use hashbrown::HashMap;
 
 use ir_allocator::DEFERRED;
-use ir_graph::{Link, foreign::Foreign, operation};
+use ir_graph::{Link, operation};
 use luajit_tree::expression::{
 	Aggregate, BooleanToInteger, Expression, Extract, GlobalGet, GlobalNew, IntegerBinaryOperation,
 	IntegerCompareOperation, IntegerConvertToNumber, IntegerExtend, IntegerNarrow,
@@ -13,8 +12,6 @@ use luajit_tree::expression::{
 	NumberTransmuteToInteger, NumberTruncateToInteger, NumberUnaryOperation, NumberWiden,
 	RefIsNull, RuntimeCall, TableGet, TableGrow, TableNew, TableSize,
 };
-use turing_machine_foreign::Ask as TuringAsk;
-use web_assembly_foreign::Import as WasmImport;
 
 use super::policy::PHYSICAL_REGISTERS;
 
@@ -36,31 +33,13 @@ fn build_runtime_call(name: &'static str, arguments: Vec<Expression>) -> Express
 	Expression::RuntimeCall(expression.into())
 }
 
-pub fn build_wasm_import(node: &WasmImport) -> Expression {
+pub fn build_import(node: &operation::Import) -> Expression {
 	let arguments = vec![
 		Expression::String(Arc::clone(&node.namespace)),
 		Expression::String(Arc::clone(&node.identifier)),
 	];
 
 	build_runtime_call("import", arguments)
-}
-
-pub fn build_turing_ask() -> Expression {
-	build_runtime_call("turing_ask", Vec::new())
-}
-
-pub fn build_foreign(foreign: &dyn Foreign) -> Expression {
-	let any: &dyn Any = foreign;
-
-	if let Some(node) = any.downcast_ref::<WasmImport>() {
-		return build_wasm_import(node);
-	}
-
-	if any.downcast_ref::<TuringAsk>().is_some() {
-		return build_turing_ask();
-	}
-
-	unimplemented!("`{}` has no expression form", foreign.identifier())
 }
 
 pub struct DataHandler {
