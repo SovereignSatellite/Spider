@@ -146,7 +146,10 @@ impl Single {
 			{
 				let mut edges = graph.successors(repetition);
 
-				if edges.next().is_some() && edges.next().is_some() && edges.next().is_none() {
+				if edges.next() == Some(exit)
+					&& edges.next() == Some(entry)
+					&& edges.next().is_none()
+				{
 					return Some(repetition);
 				}
 			}
