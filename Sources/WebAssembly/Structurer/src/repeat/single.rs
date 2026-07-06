@@ -183,9 +183,11 @@ impl Single {
 
 		for &entry in &self.temporary {
 			let assignment = graph.add_assignment(Name::B, 1);
+			let dead = graph.add_assignment(Name::C, u16::MAX);
 
 			graph.replace_edge(entry, selection, assignment);
-			graph.add_edge(assignment, latch);
+			graph.add_edge(assignment, dead);
+			graph.add_edge(dead, latch);
 		}
 	}
 
