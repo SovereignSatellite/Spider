@@ -117,10 +117,11 @@ impl SlotFile {
 		self.seed_dependencies_from_closure(nodes, Link(arguments, 0));
 
 		let null = Node::add_null_into(nodes);
+		let zero = Node::add_i32_into(nodes, 0);
 		let parameters = (1..=to_port(argument_count)).map(|port| Link(arguments, port));
 
 		self.locals.clear();
-		self.locals.extend(iter::repeat_n(null, LOCAL_BASE));
+		self.locals.extend(iter::repeat_n(zero, LOCAL_BASE));
 		self.locals.extend(parameters);
 		self.seed_declared_locals(nodes, local_kinds);
 
