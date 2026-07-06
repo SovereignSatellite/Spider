@@ -216,8 +216,9 @@ local function rt_load_f32(source, offset)
 end
 
 -- SECTION load_f64
--- NEEDS load_i64
--- NEEDS transmute_i64_to_f64
+-- NEEDS any_pointer_type
+-- NEEDS ffi_cast
+-- NEEDS u8_pointer_type
 local function rt_load_f64(source, offset)
 	if offset < 0 or offset + 8 > source.minimum then
 		error("out of bounds memory load")
