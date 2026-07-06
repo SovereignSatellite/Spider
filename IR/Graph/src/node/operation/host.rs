@@ -68,7 +68,5 @@ impl Export {
 		Link(id, Self::STATE_PORT)
 	}
 
-	handle_forwarded!((STATE_PORT, value));
-
 	handle_sources!((identifier, ignore), (value, link));
 }

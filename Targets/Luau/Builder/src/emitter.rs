@@ -167,9 +167,6 @@ impl<'allocator, 'policy> Emitter<'allocator, 'policy> {
 		self.code_handler.emit_local_moves(pairs);
 	}
 
-	// A node's forwarded state port carries its operand's value as the post-operation state.
-	// The operation then reads from the materialized state port, never the raw operand, so the
-	// builder owns the port whatever register the allocator gives it.
 	fn bridge(&mut self, id: u32, state_port: u16, source: Link) -> Link {
 		let state_link = Link(id, state_port);
 		let destination = self.data_handler.local_of(self.region, state_link);
@@ -300,8 +297,9 @@ impl<'allocator, 'policy> Emitter<'allocator, 'policy> {
 		self.emit_transfer(&destinations, &node.sources);
 	}
 
-	fn handle_export(&mut self, node: &Export) {
-		let value = self.data_handler.load(self.region, node.value);
+	fn handle_export(&mut self, id: u32, node: &Export) {
+		let state = self.bridge(id, Export::STATE_PORT, node.value);
+		let value = self.data_handler.load(self.region, state);
 		let identifier = Expression::String(Arc::clone(&node.identifier));
 		let expression = ApplyExpression {
 			name: "rt_export",
@@ -952,7 +950,7 @@ impl<'allocator, 'policy> Emitter<'allocator, 'policy> {
 			| Node::TableNew(_)
 			| Node::MemoryNew(_) => self.emit_expression(nodes, id),
 
-			Node::Export(ref node) => self.handle_export(node),
+			Node::Export(ref node) => self.handle_export(id, node),
 			Node::Apply(ref node) => self.handle_call(id, node),
 			Node::MutableGet(node) => self.handle_mutable_get(id, node),
 			Node::MutableSet(node) => self.handle_mutable_set(id, node),

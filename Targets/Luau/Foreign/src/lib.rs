@@ -212,10 +212,6 @@ impl Foreign for BufferStore {
 		1
 	}
 
-	fn forwarded_operand(&self, port: u16) -> Option<Link> {
-		(port == Self::STATE_PORT).then_some(self.reference)
-	}
-
 	fn for_each_outer(&self, handler: &mut dyn FnMut(Link)) {
 		handler(self.reference);
 		handler(self.offset);
@@ -309,10 +305,6 @@ impl Foreign for TableStore {
 
 	fn result_count(&self) -> u16 {
 		1
-	}
-
-	fn forwarded_operand(&self, port: u16) -> Option<Link> {
-		(port == Self::STATE_PORT).then_some(self.reference)
 	}
 
 	fn for_each_outer(&self, handler: &mut dyn FnMut(Link)) {

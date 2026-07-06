@@ -130,8 +130,6 @@ impl MemoryLoad {
 		(Link(id, Self::RESULT_PORT), Link(id, Self::STATE_PORT))
 	}
 
-	handle_forwarded!((STATE_PORT, source.reference));
-
 	handle_sources!((source, method), (kind, ignore));
 }
 
@@ -202,8 +200,6 @@ impl MemoryStore {
 		Link(id, Self::STATE_PORT)
 	}
 
-	handle_forwarded!((STATE_PORT, destination.reference));
-
 	handle_sources!((destination, method), (source, link), (kind, ignore));
 }
 
@@ -233,8 +229,6 @@ impl MemorySize {
 
 		(Link(id, Self::RESULT_PORT), Link(id, Self::STATE_PORT))
 	}
-
-	handle_forwarded!((STATE_PORT, source));
 
 	handle_sources!((source, link));
 }
@@ -267,8 +261,6 @@ impl MemoryGrow {
 
 		(Link(id, Self::RESULT_PORT), Link(id, Self::STATE_PORT))
 	}
-
-	handle_forwarded!((STATE_PORT, destination));
 
 	handle_sources!((destination, link), (size, link));
 }
@@ -305,8 +297,6 @@ impl MemoryFill {
 
 		Link(id, Self::STATE_PORT)
 	}
-
-	handle_forwarded!((STATE_PORT, destination.reference));
 
 	handle_sources!((destination, method), (byte, link), (size, link));
 }
@@ -354,11 +344,6 @@ impl MemoryCopy {
 		)
 	}
 
-	handle_forwarded!(
-		(DESTINATION_STATE_PORT, destination.reference),
-		(SOURCE_STATE_PORT, source.reference)
-	);
-
 	handle_sources!((destination, method), (source, method), (size, link));
 }
 
@@ -386,8 +371,6 @@ impl MemoryDrop {
 
 		Link(id, Self::STATE_PORT)
 	}
-
-	handle_forwarded!((STATE_PORT, source));
 
 	handle_sources!((source, link));
 }

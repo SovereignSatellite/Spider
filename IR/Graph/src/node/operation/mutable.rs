@@ -52,8 +52,6 @@ impl MutableGet {
 		(Link(id, Self::RESULT_PORT), Link(id, Self::STATE_PORT))
 	}
 
-	handle_forwarded!((STATE_PORT, source));
-
 	handle_sources!((source, link));
 }
 
@@ -86,8 +84,6 @@ impl MutableSet {
 
 		Link(id, Self::STATE_PORT)
 	}
-
-	handle_forwarded!((STATE_PORT, destination));
 
 	handle_sources!((destination, link), (source, link));
 }
