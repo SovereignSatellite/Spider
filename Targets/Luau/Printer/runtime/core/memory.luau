@@ -216,7 +216,7 @@ local function rt_store_i64(destination: Memory, offset: number, source: number)
 end
 
 -- SECTION store_f32
--- NEEDS buffer_write_f32
+-- NEEDS buffer_write_u32
 -- NEEDS memory_type
 local function rt_store_f32(destination: Memory, offset: number, source: number)
 	buffer_write_u32(destination[1], offset, source)

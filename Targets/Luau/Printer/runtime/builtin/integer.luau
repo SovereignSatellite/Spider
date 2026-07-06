@@ -115,6 +115,7 @@ end
 
 -- SECTION raw_shift_left_i64
 -- NEEDS bit32_lshift
+-- NEEDS bit32_or
 -- NEEDS bit32_rshift
 -- NEEDS from_bits_i64
 -- NEEDS into_bits_i64
@@ -137,6 +138,7 @@ end
 -- SECTION raw_shift_right_s64
 -- NEEDS bit32_arshift
 -- NEEDS bit32_lshift
+-- NEEDS bit32_or
 -- NEEDS bit32_rshift
 -- NEEDS from_bits_i64
 -- NEEDS into_bits_i64
@@ -158,6 +160,7 @@ end
 
 -- SECTION raw_shift_right_u64
 -- NEEDS bit32_lshift
+-- NEEDS bit32_or
 -- NEEDS bit32_rshift
 -- NEEDS from_bits_i64
 -- NEEDS into_bits_i64

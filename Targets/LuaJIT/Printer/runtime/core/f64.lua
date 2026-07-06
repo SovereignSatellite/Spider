@@ -136,7 +136,6 @@ local function rt_divide_f64(lhs, rhs)
 end
 
 -- SECTION minimum_f64
--- NEEDS bit_and
 -- NEEDS from_bits_f64
 -- NEEDS into_bits_f64
 -- NEEDS math_min
@@ -156,7 +155,6 @@ local function rt_minimum_f64(lhs, rhs)
 end
 
 -- SECTION maximum_f64
--- NEEDS bit_and
 -- NEEDS from_bits_f64
 -- NEEDS into_bits_f64
 -- NEEDS math_max
