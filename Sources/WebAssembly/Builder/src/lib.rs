@@ -1,9 +1,5 @@
 //! WebAssembly control flow builder for converting operators into structured IR.
 
-#![no_std]
-
-extern crate alloc;
-
 use wasmparser::{BlockType, OperatorsReader};
 
 use web_assembly_graph::ControlFlowGraph;

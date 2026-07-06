@@ -8,5 +8,6 @@ workspace = true
 
 [dependencies]
 hashbrown.workspace = true
+stacker.workspace = true
 
 luau-tree = { path = "../Tree" }

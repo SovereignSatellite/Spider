@@ -1,7 +1,5 @@
 //! Stack-based builder for managing WebAssembly operand stack and control flow levels.
 
-use alloc::vec::Vec;
-
 use list::resizable::Resizable;
 use wasmparser::{BlockType, FuncType};
 

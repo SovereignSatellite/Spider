@@ -492,7 +492,7 @@ impl Print for MemoryNew {
 
 impl Print for Expression {
 	fn print(&self, printer: &mut LuauPrinter, out: &mut dyn Write) -> Result<()> {
-		match self {
+		stacker::maybe_grow(crate::STACK_RED_ZONE, crate::STACK_SEGMENT, || match self {
 			Self::Function(function) => function.print(printer, out),
 			Self::Match(inner) => inner.print(printer, out),
 			Self::Trap => write!(out, "error('unreachable code')"),
@@ -521,6 +521,6 @@ impl Print for Expression {
 			Self::Index(index) => index.print(printer, out),
 			Self::MemoryNew(memory_new) => memory_new.print(printer, out),
 			Self::BufferLength(buffer_length) => buffer_length.print(printer, out),
-		}
+		})
 	}
 }

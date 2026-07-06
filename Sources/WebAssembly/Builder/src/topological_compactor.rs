@@ -1,9 +1,11 @@
 //! Eliminates unreachable blocks and sorts the survivors in reverse post-order.
 
-use alloc::vec::Vec;
 use core::mem;
 
 use web_assembly_graph::BasicBlock;
+
+const STACK_RED_ZONE: usize = 64 * 1024;
+const STACK_SEGMENT: usize = 1024 * 1024;
 
 /// Eliminate unreachable blocks and compact the remainder in reverse
 /// post-order.
@@ -33,9 +35,11 @@ impl TopologicalCompactor {
 
 		let block = mem::take(&mut blocks[id]);
 
-		for &successor in block.successors.iter().rev() {
-			self.handle_block(blocks, successor);
-		}
+		stacker::maybe_grow(STACK_RED_ZONE, STACK_SEGMENT, || {
+			for &successor in block.successors.iter().rev() {
+				self.handle_block(blocks, successor);
+			}
+		});
 
 		self.ids[id] = self.blocks.len().try_into().unwrap();
 

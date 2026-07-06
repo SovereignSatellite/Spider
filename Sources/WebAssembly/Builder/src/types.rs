@@ -1,7 +1,5 @@
 //! WebAssembly type information for function signatures and block types.
 
-use alloc::vec::Vec;
-
 use wasmparser::{BlockType, FuncType, RecGroup, SectionLimited, SubType};
 
 /// WebAssembly type information.

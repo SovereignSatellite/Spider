@@ -18,6 +18,9 @@ mod statement;
 /// Runtime library section management.
 pub mod library;
 
+const STACK_RED_ZONE: usize = 64 * 1024;
+const STACK_SEGMENT: usize = 1024 * 1024;
+
 /// Prints a `Luau` function into a writer.
 pub struct LuauPrinter {
 	names: HashMap<Name, Arc<str>>,

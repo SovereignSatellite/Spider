@@ -5,7 +5,6 @@
 	reason = "CFG instruction constructors mirror their struct fields"
 )]
 
-use alloc::vec::Vec;
 use core::{iter, mem};
 
 use list::resizable::Resizable;

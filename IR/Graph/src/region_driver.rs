@@ -5,19 +5,24 @@ use alloc::sync::Arc;
 use parking_lot::Mutex;
 
 use crate::{
-	Node, Region,
+	Node, Region, Shape,
 	node::region::{Branch, Function, Match, Repeat},
 };
+
+const STACK_RED_ZONE: usize = 64 * 1024;
+const STACK_SEGMENT: usize = 1024 * 1024;
 
 fn run_region<H>(region: Region, handler: &mut H)
 where
 	H: FnMut(Region),
 {
-	for node in region.nodes() {
-		run_node(node, handler);
-	}
+	stacker::maybe_grow(STACK_RED_ZONE, STACK_SEGMENT, || {
+		for node in region.nodes() {
+			run_node(node, handler);
+		}
 
-	handler(region);
+		handler(region);
+	});
 }
 
 /// Visits every region in the function, deepest first.
@@ -60,70 +65,14 @@ where
 }
 
 /// Visits every region reachable from `node`, deepest first.
-#[expect(clippy::too_many_lines, reason = "exhaustive match over node variants")]
 pub fn run_node<H>(node: &Node, handler: &mut H)
 where
 	H: FnMut(Region),
 {
-	match node {
-		Node::Function(region) => run_function(region, handler),
-		Node::Match(region) => run_match(region, handler),
-		Node::Repeat(region) => run_repeat(region, handler),
-
-		Node::FunctionArguments(_)
-		| Node::FunctionResults(_)
-		| Node::BranchArguments(_)
-		| Node::BranchResults(_)
-		| Node::RepeatArguments(_)
-		| Node::RepeatResults(_)
-		| Node::Import(_)
-		| Node::Export(_)
-		| Node::Foreign(_)
-		| Node::Trap
-		| Node::Null
-		| Node::I32(_)
-		| Node::I64(_)
-		| Node::F32(_)
-		| Node::F64(_)
-		| Node::Identity(_)
-		| Node::Fence(_)
-		| Node::Apply(_)
-		| Node::RefIsNull(_)
-		| Node::IntegerUnaryOperation(_)
-		| Node::IntegerBinaryOperation(_)
-		| Node::IntegerCompareOperation(_)
-		| Node::IntegerNarrow(_)
-		| Node::IntegerWiden(_)
-		| Node::IntegerSignExtend(_)
-		| Node::IntegerConvertToNumber(_)
-		| Node::IntegerTransmuteToNumber(_)
-		| Node::NumberUnaryOperation(_)
-		| Node::NumberBinaryOperation(_)
-		| Node::NumberCompareOperation(_)
-		| Node::NumberNarrow(_)
-		| Node::NumberWiden(_)
-		| Node::NumberTruncateToInteger(_)
-		| Node::NumberTransmuteToInteger(_)
-		| Node::MutableNew(_)
-		| Node::MutableGet(_)
-		| Node::MutableSet(_)
-		| Node::Aggregate(_)
-		| Node::Extract(_)
-		| Node::TableNew(_)
-		| Node::TableGet(_)
-		| Node::TableSet(_)
-		| Node::TableSize(_)
-		| Node::TableGrow(_)
-		| Node::TableFill(_)
-		| Node::TableCopy(_)
-		| Node::TableDrop(_)
-		| Node::MemoryNew(_)
-		| Node::MemoryLoad(_)
-		| Node::MemoryStore(_)
-		| Node::MemorySize(_)
-		| Node::MemoryGrow(_)
-		| Node::MemoryFill(_)
-		| Node::MemoryCopy(_)
-		| Node::MemoryDrop(_) => {}
+	match node.shape() {
+		Shape::Plain | Shape::BranchResults(_) | Shape::RepeatResults(_) => {}
+		Shape::Function(region) => run_function(region, handler),
+		Shape::Match(region) => run_match(region, handler),
+		Shape::Repeat(region) => run_repeat(region, handler),
 	}
 }

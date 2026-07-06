@@ -1,7 +1,5 @@
 //! Statement types for the Luau tree.
 
-use alloc::{boxed::Box, vec::Vec};
-
 use super::expression::{Expression, Local};
 
 /// A sequence of statements.
