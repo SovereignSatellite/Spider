@@ -6,7 +6,7 @@ use alloc::sync::Arc;
 
 use parking_lot::Mutex;
 
-use ir_graph::{Node, Region, region::Function, region_driver};
+use ir_graph::{Region, region::Function, region_driver};
 use ir_passes::{
 	control_folder, dead_port_eliminator::DeadPortEliminator, identity,
 	invariant_port_mover::InvariantPortMover, isle, topological_compactor::TopologicalCompactor,
@@ -30,60 +30,30 @@ impl Optimizer {
 		}
 	}
 
-	fn apply_isle(nodes: &mut Vec<Node>) -> bool {
-		let mut applied = false;
-		let len = nodes.len();
-
-		// The peephole engine has no inherent fixpoint bound: it relies on every rule being
-		// strictly shrinking. A non-shrinking rule would spin the inner loop forever, so a debug
-		// build allows a generous rewrite budget and asserts once it is exhausted.
-		#[cfg(debug_assertions)]
-		let mut rewrites_allowed = len.saturating_mul(64).saturating_add(1024);
-
-		for id in (0..len.try_into().unwrap()).rev() {
-			while isle::simplify_i32(nodes, id)
-				|| isle::simplify_i64(nodes, id)
-				|| isle::simplify_convert(nodes, id)
-				|| isle::simplify_float(nodes, id)
-				|| isle::simplify_aggregate(nodes, id)
-				|| isle::simplify_reference(nodes, id)
-				|| isle::simplify_mutable(nodes, id)
-				|| isle::simplify_table(nodes, id)
-				|| isle::simplify_memory(nodes, id)
-				|| isle::simplify_luau_bit32(nodes, id)
-				|| isle::simplify_luau_arithmetic(nodes, id)
-				|| isle::simplify_luau_compare(nodes, id)
-				|| isle::simplify_luau_math(nodes, id)
-				|| isle::simplify_luau_transmute(nodes, id)
-				|| isle::simplify_luau_wide(nodes, id)
-			{
-				applied = true;
-
-				#[cfg(debug_assertions)]
-				{
-					assert!(
-						rewrites_allowed > 0,
-						"ISLE peephole did not converge; a non-shrinking rule is likely oscillating"
-					);
-
-					rewrites_allowed -= 1;
-				}
-			}
-		}
-
-		applied
-	}
-
 	fn apply(&mut self, region: &mut Region, pass: &mut dyn FnMut(&mut Region) -> bool) {
+		#[cfg(debug_assertions)]
+		let mut iterations_allowed = region.nodes().len().saturating_mul(64).saturating_add(1024);
+
 		loop {
 			self.topological_compactor.run(region);
 			self.invariant_port_mover.run(region.nodes_mut());
 			self.dead_port_eliminator.run(region.nodes_mut());
 
 			let folded = control_folder::run(region.nodes_mut());
+			let simplified = isle::run(region.nodes_mut());
 
-			if !Self::apply_isle(region.nodes_mut()) && !folded && !pass(region) {
+			if !folded && !simplified && !pass(region) {
 				break;
+			}
+
+			#[cfg(debug_assertions)]
+			{
+				assert!(
+					iterations_allowed > 0,
+					"optimizer did not converge; a non-shrinking rewrite is likely oscillating"
+				);
+
+				iterations_allowed -= 1;
 			}
 
 			identity::remove(region.nodes_mut());

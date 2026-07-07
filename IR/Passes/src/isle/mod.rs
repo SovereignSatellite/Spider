@@ -2,15 +2,18 @@
 
 use ir_graph::{Link, Node, operation::Identity};
 
-use self::internal::{
-	constructor_SimplifyAggregate, constructor_SimplifyConvert, constructor_SimplifyFloat,
-	constructor_SimplifyI32, constructor_SimplifyI64, constructor_SimplifyLuauArithmetic,
-	constructor_SimplifyLuauBit32, constructor_SimplifyLuauCompare, constructor_SimplifyLuauMath,
-	constructor_SimplifyLuauTransmute, constructor_SimplifyLuauWide, constructor_SimplifyMemory,
-	constructor_SimplifyMutable, constructor_SimplifyReference, constructor_SimplifyTable,
+use self::{
+	context::RegionContext,
+	internal::{
+		Links, constructor_SimplifyAggregate, constructor_SimplifyConvert,
+		constructor_SimplifyFloat, constructor_SimplifyI32, constructor_SimplifyI64,
+		constructor_SimplifyLuauArithmetic, constructor_SimplifyLuauBit32,
+		constructor_SimplifyLuauCompare, constructor_SimplifyLuauMath,
+		constructor_SimplifyLuauTransmute, constructor_SimplifyLuauWide,
+		constructor_SimplifyMemory, constructor_SimplifyMutable, constructor_SimplifyReference,
+		constructor_SimplifyTable,
+	},
 };
-
-pub use self::context::RegionContext;
 
 mod context;
 mod internal;
@@ -22,141 +25,73 @@ fn replace_node(nodes: &mut [Node], destination: u32, sources: &[Link]) {
 	nodes[usize::try_from(destination).unwrap()] = Node::Identity(Identity { sources });
 }
 
-/// Simplifies an I32 operation at the given node ID.
-pub fn simplify_i32(nodes: &mut Vec<Node>, id: u32) -> bool {
-	constructor_SimplifyI32(&mut RegionContext(nodes), Link(id, 0)).is_some_and(|source| {
+fn simplify_single<Constructor>(nodes: &mut Vec<Node>, id: u32, constructor: Constructor) -> bool
+where
+	Constructor: FnOnce(&mut RegionContext<'_>, Link) -> Option<Link>,
+{
+	constructor(&mut RegionContext(nodes), Link(id, 0)).is_some_and(|source| {
 		replace_node(nodes, id, &[source]);
 
 		true
 	})
 }
 
-/// Simplifies an I64 operation at the given node ID.
-pub fn simplify_i64(nodes: &mut Vec<Node>, id: u32) -> bool {
-	constructor_SimplifyI64(&mut RegionContext(nodes), Link(id, 0)).is_some_and(|source| {
-		replace_node(nodes, id, &[source]);
-
-		true
-	})
-}
-
-/// Simplifies a conversion operation at the given node ID.
-pub fn simplify_convert(nodes: &mut Vec<Node>, id: u32) -> bool {
-	constructor_SimplifyConvert(&mut RegionContext(nodes), Link(id, 0)).is_some_and(|source| {
-		replace_node(nodes, id, &[source]);
-
-		true
-	})
-}
-
-/// Simplifies a floating-point operation at the given node ID.
-pub fn simplify_float(nodes: &mut Vec<Node>, id: u32) -> bool {
-	constructor_SimplifyFloat(&mut RegionContext(nodes), Link(id, 0)).is_some_and(|source| {
-		replace_node(nodes, id, &[source]);
-
-		true
-	})
-}
-
-/// Simplifies an aggregate operation at the given node ID.
-pub fn simplify_aggregate(nodes: &mut Vec<Node>, id: u32) -> bool {
-	constructor_SimplifyAggregate(&mut RegionContext(nodes), Link(id, 0)).is_some_and(|source| {
-		replace_node(nodes, id, &[source]);
-
-		true
-	})
-}
-
-/// Simplifies a reference operation at the given node ID.
-pub fn simplify_reference(nodes: &mut Vec<Node>, id: u32) -> bool {
-	constructor_SimplifyReference(&mut RegionContext(nodes), Link(id, 0)).is_some_and(|source| {
-		replace_node(nodes, id, &[source]);
-
-		true
-	})
-}
-
-/// Simplifies a mutable-cell operation at the given node ID.
-pub fn simplify_mutable(nodes: &mut Vec<Node>, id: u32) -> bool {
-	constructor_SimplifyMutable(&mut RegionContext(nodes), Link(id, 0)).is_some_and(|sources| {
+fn simplify_multi<Constructor>(nodes: &mut Vec<Node>, id: u32, constructor: Constructor) -> bool
+where
+	Constructor: FnOnce(&mut RegionContext<'_>, Link) -> Option<Links>,
+{
+	constructor(&mut RegionContext(nodes), Link(id, 0)).is_some_and(|sources| {
 		replace_node(nodes, id, &sources.as_fixed());
 
 		true
 	})
 }
 
-/// Simplifies a table operation at the given node ID.
-pub fn simplify_table(nodes: &mut Vec<Node>, id: u32) -> bool {
-	constructor_SimplifyTable(&mut RegionContext(nodes), Link(id, 0)).is_some_and(|sources| {
-		replace_node(nodes, id, &sources.as_fixed());
-
-		true
+fn simplify(nodes: &mut Vec<Node>, id: u32) -> bool {
+	simplify_single(nodes, id, |context, link| {
+		constructor_SimplifyI32(context, link)
+	}) || simplify_single(nodes, id, |context, link| {
+		constructor_SimplifyI64(context, link)
+	}) || simplify_single(nodes, id, |context, link| {
+		constructor_SimplifyConvert(context, link)
+	}) || simplify_single(nodes, id, |context, link| {
+		constructor_SimplifyFloat(context, link)
+	}) || simplify_single(nodes, id, |context, link| {
+		constructor_SimplifyAggregate(context, link)
+	}) || simplify_single(nodes, id, |context, link| {
+		constructor_SimplifyReference(context, link)
+	}) || simplify_multi(nodes, id, |context, link| {
+		constructor_SimplifyMutable(context, link)
+	}) || simplify_multi(nodes, id, |context, link| {
+		constructor_SimplifyTable(context, link)
+	}) || simplify_multi(nodes, id, |context, link| {
+		constructor_SimplifyMemory(context, link)
+	}) || simplify_single(nodes, id, |context, link| {
+		constructor_SimplifyLuauBit32(context, link)
+	}) || simplify_single(nodes, id, |context, link| {
+		constructor_SimplifyLuauArithmetic(context, link)
+	}) || simplify_single(nodes, id, |context, link| {
+		constructor_SimplifyLuauCompare(context, link)
+	}) || simplify_single(nodes, id, |context, link| {
+		constructor_SimplifyLuauMath(context, link)
+	}) || simplify_single(nodes, id, |context, link| {
+		constructor_SimplifyLuauTransmute(context, link)
+	}) || simplify_multi(nodes, id, |context, link| {
+		constructor_SimplifyLuauWide(context, link)
 	})
 }
 
-/// Simplifies a memory operation at the given node ID.
-pub fn simplify_memory(nodes: &mut Vec<Node>, id: u32) -> bool {
-	constructor_SimplifyMemory(&mut RegionContext(nodes), Link(id, 0)).is_some_and(|sources| {
-		replace_node(nodes, id, &sources.as_fixed());
+/// Sweeps every node once, reporting whether any rule fired.
+pub fn run(nodes: &mut Vec<Node>) -> bool {
+	let mut applied = false;
 
-		true
-	})
-}
+	let Ok(last) = u32::try_from(nodes.len()) else {
+		unreachable!()
+	};
 
-/// Simplifies a Luau `bit32` operation at the given node ID.
-pub fn simplify_luau_bit32(nodes: &mut Vec<Node>, id: u32) -> bool {
-	constructor_SimplifyLuauBit32(&mut RegionContext(nodes), Link(id, 0)).is_some_and(|source| {
-		replace_node(nodes, id, &[source]);
+	for id in (0..last).rev() {
+		applied |= simplify(nodes, id);
+	}
 
-		true
-	})
-}
-
-/// Simplifies a Luau arithmetic operation at the given node ID.
-pub fn simplify_luau_arithmetic(nodes: &mut Vec<Node>, id: u32) -> bool {
-	constructor_SimplifyLuauArithmetic(&mut RegionContext(nodes), Link(id, 0)).is_some_and(
-		|source| {
-			replace_node(nodes, id, &[source]);
-
-			true
-		},
-	)
-}
-
-/// Simplifies a Luau comparison operation at the given node ID.
-pub fn simplify_luau_compare(nodes: &mut Vec<Node>, id: u32) -> bool {
-	constructor_SimplifyLuauCompare(&mut RegionContext(nodes), Link(id, 0)).is_some_and(|source| {
-		replace_node(nodes, id, &[source]);
-
-		true
-	})
-}
-
-/// Simplifies a Luau math operation at the given node ID.
-pub fn simplify_luau_math(nodes: &mut Vec<Node>, id: u32) -> bool {
-	constructor_SimplifyLuauMath(&mut RegionContext(nodes), Link(id, 0)).is_some_and(|source| {
-		replace_node(nodes, id, &[source]);
-
-		true
-	})
-}
-
-/// Simplifies a single-result Luau transmute operation at the given node ID.
-pub fn simplify_luau_transmute(nodes: &mut Vec<Node>, id: u32) -> bool {
-	constructor_SimplifyLuauTransmute(&mut RegionContext(nodes), Link(id, 0)).is_some_and(
-		|source| {
-			replace_node(nodes, id, &[source]);
-
-			true
-		},
-	)
-}
-
-/// Simplifies a multi-result Luau foreign operation at the given node ID.
-pub fn simplify_luau_wide(nodes: &mut Vec<Node>, id: u32) -> bool {
-	constructor_SimplifyLuauWide(&mut RegionContext(nodes), Link(id, 0)).is_some_and(|sources| {
-		replace_node(nodes, id, &sources.as_fixed());
-
-		true
-	})
+	applied
 }
