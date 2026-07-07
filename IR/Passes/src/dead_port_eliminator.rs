@@ -1,20 +1,21 @@
 //! Dead port elimination.
 
 use alloc::sync::Arc;
+use core::mem;
 
-use hashbrown::HashMap;
 use parking_lot::Mutex;
-use set::Set;
 
 use ir_graph::{
-	Link, Node,
+	Link, Node, Shape,
 	region::{Branch, Match, Repeat},
 };
 
+const UNMARKED: u16 = 0;
+const MARKED: u16 = 1;
+const DEAD: u16 = u16::MAX;
+
 /// Eliminates unused ports from control flow region nodes.
 pub struct DeadPortEliminator {
-	replacements: HashMap<Link, Link>,
-	live: Set,
 	remap: Vec<u16>,
 }
 
@@ -27,17 +28,18 @@ fn set_branch_argument_counts(branches: &[Arc<Mutex<Branch>>], argument_count: u
 impl DeadPortEliminator {
 	/// Creates a new dead port eliminator.
 	#[must_use]
-	pub fn new() -> Self {
-		Self {
-			replacements: HashMap::new(),
-			live: Set::new(),
-			remap: Vec::new(),
-		}
+	pub const fn new() -> Self {
+		Self { remap: Vec::new() }
+	}
+
+	fn begin(&mut self, length: u16) {
+		self.remap.clear();
+		self.remap.resize(length.into(), UNMARKED);
 	}
 
 	fn mark_use(&mut self, boundary: u32, link: Link) {
 		if link.0 == boundary {
-			self.live.grow_insert(link.1.into());
+			self.remap[usize::from(link.1)] = MARKED;
 		}
 	}
 
@@ -47,35 +49,27 @@ impl DeadPortEliminator {
 		}
 	}
 
-	fn mark_external(&mut self, id: u32, nodes: &[Node]) {
-		self.live.clear();
-		self.mark_nodes(nodes, id);
-	}
-
 	fn mark_branches(&mut self, branches: &[Arc<Mutex<Branch>>]) {
-		self.live.clear();
-
 		for branch in branches {
 			let guard = branch.lock();
 
-			self.mark_nodes(&guard.nodes, 0);
+			self.mark_nodes(&guard.nodes, Branch::ARGUMENTS_ID);
 		}
 	}
 
-	fn build_remap(&mut self, length: u16) -> bool {
-		self.remap.clear();
-		self.remap.resize(length.into(), u16::MAX);
-
+	fn build_remap(&mut self) -> bool {
 		let mut cursor = 0_u16;
 
-		for old in 0..usize::from(length) {
-			if self.live.contains(old) {
-				self.remap[old] = cursor;
+		for slot in &mut self.remap {
+			if *slot == MARKED {
+				*slot = cursor;
 				cursor += 1;
+			} else {
+				*slot = DEAD;
 			}
 		}
 
-		cursor != length
+		usize::from(cursor) != self.remap.len()
 	}
 
 	fn remap_link(&self, boundary: u32, link: &mut Link) {
@@ -85,7 +79,7 @@ impl DeadPortEliminator {
 
 		link.1 = self.remap[usize::from(link.1)];
 
-		debug_assert_ne!(link.1, u16::MAX, "link port must not be dangling");
+		debug_assert_ne!(link.1, DEAD, "link port must not be dangling");
 	}
 
 	fn remap_nodes(&self, nodes: &mut [Node], boundary: u32) {
@@ -97,39 +91,33 @@ impl DeadPortEliminator {
 	fn trim_slots(&self, slots: &mut Vec<Link>) {
 		let mut iter = self.remap.iter().copied();
 
-		slots.retain(|_| iter.next().unwrap() != u16::MAX);
+		slots.retain(|_| iter.next().unwrap() != DEAD);
 	}
 
-	fn record_outer_remap(&mut self, id: u32) {
-		for (old, &new) in self.remap.iter().enumerate() {
-			let old = u16::try_from(old).unwrap();
+	fn process_match_outputs(
+		&mut self,
+		id: u32,
+		arc: &Arc<Mutex<Match>>,
+		nodes: &mut [Node],
+	) -> bool {
+		self.begin(arc.lock().result_count());
+		self.mark_nodes(nodes, id);
 
-			if new != u16::MAX && new != old {
-				self.replacements.insert(Link(id, old), Link(id, new));
-			}
-		}
-	}
-
-	fn process_match_outputs(&mut self, id: u32, matcher: &Match) {
-		if !self.build_remap(matcher.result_count()) {
-			return;
+		if !self.build_remap() {
+			return false;
 		}
 
-		for branch in &matcher.branches {
-			let mut guard = branch.lock();
+		let guard = arc.lock();
 
-			self.trim_slots(&mut guard.results_mut().sources);
+		for branch in &guard.branches {
+			self.trim_slots(&mut branch.lock().results_mut().sources);
 		}
 
-		self.record_outer_remap(id);
-	}
+		drop(guard);
 
-	fn remap_branch_inputs(&self, branches: &[Arc<Mutex<Branch>>]) {
-		for branch in branches {
-			let mut guard = branch.lock();
+		self.remap_nodes(nodes, id);
 
-			self.remap_nodes(&mut guard.nodes, 0);
-		}
+		true
 	}
 
 	fn trim_match_arguments(&self, matcher: &mut Match) {
@@ -138,24 +126,31 @@ impl DeadPortEliminator {
 		set_branch_argument_counts(&matcher.branches, matcher.argument_count());
 	}
 
-	fn process_match_inputs(&mut self, matcher: &mut Match) {
-		self.mark_branches(&matcher.branches);
-
-		if !self.build_remap(matcher.argument_count()) {
-			return;
-		}
-
-		self.remap_branch_inputs(&matcher.branches);
-		self.trim_match_arguments(matcher);
-	}
-
-	fn process_match(&mut self, id: u32, arc: &Arc<Mutex<Match>>, nodes: &[Node]) {
-		self.mark_external(id, nodes);
-
+	fn process_match_inputs(&mut self, arc: &Arc<Mutex<Match>>) -> bool {
 		let mut guard = arc.lock();
 
-		self.process_match_outputs(id, &guard);
-		self.process_match_inputs(&mut guard);
+		self.begin(guard.argument_count());
+		self.mark_branches(&guard.branches);
+
+		if !self.build_remap() {
+			return false;
+		}
+
+		for branch in &guard.branches {
+			self.remap_nodes(&mut branch.lock().nodes, Branch::ARGUMENTS_ID);
+		}
+
+		self.trim_match_arguments(&mut guard);
+		drop(guard);
+
+		true
+	}
+
+	fn process_match(&mut self, id: u32, arc: &Arc<Mutex<Match>>, nodes: &mut [Node]) -> bool {
+		let trimmed_outputs = self.process_match_outputs(id, arc, nodes);
+		let trimmed_inputs = self.process_match_inputs(arc);
+
+		trimmed_outputs || trimmed_inputs
 	}
 
 	fn trim_repeat_ports(&self, repeat: &mut Repeat) {
@@ -165,112 +160,78 @@ impl DeadPortEliminator {
 		self.trim_slots(&mut repeat.results_mut().sources);
 	}
 
-	fn process_repeat(&mut self, id: u32, arc: &Arc<Mutex<Repeat>>, nodes: &[Node]) {
-		self.mark_external(id, nodes);
+	fn mark_repeat_interior(&mut self, repeat: &Repeat) {
+		let position = repeat.results_index();
 
-		let mut guard = arc.lock();
-
-		self.mark_nodes(&guard.nodes, 0);
-
-		if !self.build_remap(guard.result_count()) {
-			return;
+		for (index, node) in repeat.nodes.iter().enumerate() {
+			if index != position {
+				node.for_each_outer(|link| self.mark_use(Repeat::ARGUMENTS_ID, link));
+			}
 		}
 
-		self.remap_nodes(&mut guard.nodes, 0);
-		self.trim_repeat_ports(&mut guard);
+		let results = repeat.results();
 
-		drop(guard);
+		self.mark_use(Repeat::ARGUMENTS_ID, results.condition);
 
-		self.record_outer_remap(id);
-	}
-
-	#[expect(clippy::too_many_lines, reason = "exhaustive match over node variants")]
-	fn process_all(&mut self, nodes: &[Node]) {
-		self.replacements.clear();
-
-		for (index, node) in nodes.iter().enumerate() {
-			let id = u32::try_from(index).unwrap();
-
-			match node {
-				Node::Match(arc) => self.process_match(id, arc, nodes),
-				Node::Repeat(arc) => self.process_repeat(id, arc, nodes),
-
-				Node::Function(_)
-				| Node::FunctionArguments(_)
-				| Node::FunctionResults(_)
-				| Node::BranchArguments(_)
-				| Node::BranchResults(_)
-				| Node::RepeatArguments(_)
-				| Node::RepeatResults(_)
-				| Node::Import(_)
-				| Node::Export(_)
-				| Node::Foreign(_)
-				| Node::Trap
-				| Node::Null
-				| Node::I32(_)
-				| Node::I64(_)
-				| Node::F32(_)
-				| Node::F64(_)
-				| Node::Identity(_)
-				| Node::Fence(_)
-				| Node::Apply(_)
-				| Node::RefIsNull(_)
-				| Node::IntegerUnaryOperation(_)
-				| Node::IntegerBinaryOperation(_)
-				| Node::IntegerCompareOperation(_)
-				| Node::IntegerNarrow(_)
-				| Node::IntegerWiden(_)
-				| Node::IntegerSignExtend(_)
-				| Node::IntegerConvertToNumber(_)
-				| Node::IntegerTransmuteToNumber(_)
-				| Node::NumberUnaryOperation(_)
-				| Node::NumberBinaryOperation(_)
-				| Node::NumberCompareOperation(_)
-				| Node::NumberNarrow(_)
-				| Node::NumberWiden(_)
-				| Node::NumberTruncateToInteger(_)
-				| Node::NumberTransmuteToInteger(_)
-				| Node::MutableNew(_)
-				| Node::MutableGet(_)
-				| Node::MutableSet(_)
-				| Node::Aggregate(_)
-				| Node::Extract(_)
-				| Node::TableNew(_)
-				| Node::TableGet(_)
-				| Node::TableSet(_)
-				| Node::TableSize(_)
-				| Node::TableGrow(_)
-				| Node::TableFill(_)
-				| Node::TableCopy(_)
-				| Node::TableDrop(_)
-				| Node::MemoryNew(_)
-				| Node::MemoryLoad(_)
-				| Node::MemoryStore(_)
-				| Node::MemorySize(_)
-				| Node::MemoryGrow(_)
-				| Node::MemoryFill(_)
-				| Node::MemoryCopy(_)
-				| Node::MemoryDrop(_) => {}
+		// A diagonal source feeds the carry only to itself and never counts as a use.
+		for (column, &source) in (0_u16..).zip(&results.sources) {
+			if source != Link(Repeat::ARGUMENTS_ID, column) {
+				self.mark_use(Repeat::ARGUMENTS_ID, source);
 			}
 		}
 	}
 
-	fn apply_single(&self, link: &mut Link) {
-		if let Some(&new) = self.replacements.get(link) {
-			*link = new;
+	fn process_repeat(&mut self, id: u32, arc: &Arc<Mutex<Repeat>>, nodes: &mut [Node]) -> bool {
+		self.begin(arc.lock().result_count());
+		self.mark_nodes(nodes, id);
+
+		let mut guard = arc.lock();
+
+		self.mark_repeat_interior(&guard);
+
+		if !self.build_remap() {
+			return false;
 		}
+
+		// Trimming precedes the remap so a dying diagonal is gone before it would dangle.
+		self.trim_repeat_ports(&mut guard);
+		self.remap_nodes(&mut guard.nodes, Repeat::ARGUMENTS_ID);
+
+		drop(guard);
+
+		self.remap_nodes(nodes, id);
+
+		true
 	}
 
-	fn apply_all(&self, nodes: &mut [Node]) {
-		for node in nodes.iter_mut() {
-			node.for_each_mut_outer(|link| self.apply_single(link));
-		}
+	fn process(&mut self, nodes: &mut [Node], index: usize) -> bool {
+		let id = u32::try_from(index).unwrap();
+		let node = mem::take(&mut nodes[index]);
+
+		let trimmed = match node.shape() {
+			Shape::Plain
+			| Shape::Function(_)
+			| Shape::BranchResults(_)
+			| Shape::RepeatResults(_) => false,
+			Shape::Match(arc) => self.process_match(id, arc, nodes),
+			Shape::Repeat(arc) => self.process_repeat(id, arc, nodes),
+		};
+
+		nodes[index] = node;
+
+		trimmed
 	}
 
-	/// Runs the dead port elimination pass on the region.
-	pub fn run(&mut self, nodes: &mut [Node]) {
-		self.process_all(nodes);
-		self.apply_all(nodes);
+	/// Runs the dead port elimination pass on the region, reporting whether any
+	/// port was trimmed.
+	pub fn run(&mut self, nodes: &mut [Node]) -> bool {
+		let mut trimmed = false;
+
+		for index in 0..nodes.len() {
+			trimmed |= self.process(nodes, index);
+		}
+
+		trimmed
 	}
 }
 
