@@ -1,7 +1,5 @@
 //! ISLE-based peephole optimizations.
 
-use core::mem;
-
 use ir_graph::{Link, Node, operation::Identity};
 
 use self::internal::{
@@ -18,27 +16,10 @@ mod context;
 mod internal;
 mod luau;
 
-fn replace_with_identity(nodes: &mut [Node], destination: u32, sources: &[Link]) {
+fn replace_node(nodes: &mut [Node], destination: u32, sources: &[Link]) {
 	let sources = sources.iter().copied().collect();
 
 	nodes[usize::try_from(destination).unwrap()] = Node::Identity(Identity { sources });
-}
-
-fn replace_with_direct(nodes: &mut [Node], destination: u32, source: u32) {
-	let source = mem::take(&mut nodes[usize::try_from(source).unwrap()]);
-
-	nodes[usize::try_from(destination).unwrap()] = source;
-}
-
-fn replace_node(nodes: &mut [Node], destination: u32, sources: &[Link]) {
-	if let &[source] = sources
-		&& source.1 == 0
-		&& source.0 > destination
-	{
-		replace_with_direct(nodes, destination, source.0);
-	} else {
-		replace_with_identity(nodes, destination, sources);
-	}
 }
 
 /// Simplifies an I32 operation at the given node ID.

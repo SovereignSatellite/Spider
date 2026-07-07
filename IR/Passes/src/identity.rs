@@ -2,19 +2,10 @@
 
 use core::mem;
 
-use ir_graph::{Link, Node, Region, list, operation::Identity};
-
-fn route_to_source(nodes: &[Node], from: &mut Link) {
-	let id = usize::try_from(from.0).unwrap();
-	let port = usize::from(from.1);
-
-	if let Node::Identity(Identity { sources }) = &nodes[id] {
-		*from = sources[port];
-	}
-}
+use ir_graph::{Link, Node, Region, list, operation::Identity, tracer::identity_source};
 
 fn route_all_to_source(nodes: &[Node], node: &mut Node) {
-	node.for_each_mut_outer(|from| route_to_source(nodes, from));
+	node.for_each_mut_outer(|from| *from = identity_source(nodes, *from));
 }
 
 /// Removes all identity nodes from the region.
