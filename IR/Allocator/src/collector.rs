@@ -1,5 +1,5 @@
-//! The interval collector: one walk producing exact value intervals, affinity
-//! hints, and the per-port arena bindings.
+//! The interval collector: one walk producing exact value intervals, copy
+//! edges, and the per-port arena bindings.
 
 use alloc::{sync::Arc, vec::Vec};
 use core::mem;
@@ -9,7 +9,6 @@ use parking_lot::Mutex;
 use ir_graph::{
 	Link, Node, Shape,
 	region::{Branch, Function, Match, Repeat, branch, repeat},
-	tracer::trace_match,
 };
 
 use crate::{
@@ -18,11 +17,13 @@ use crate::{
 	value::{self, Value},
 };
 
-/// Collects exact value intervals and affinity hints for one emitted function.
+/// Collects exact value intervals and copy edges for one emitted function.
 pub struct Collector {
 	values: Vec<Value>,
 	arena: Arena,
 	binding_stack: Vec<u32>,
+	branch_values: Vec<u32>,
+	copies: Vec<(u32, u32)>,
 	nodes_start: usize,
 	clock: u32,
 }
@@ -34,6 +35,8 @@ impl Collector {
 			values: Vec::new(),
 			arena: Arena::new(),
 			binding_stack: Vec::new(),
+			branch_values: Vec::new(),
+			copies: Vec::new(),
 			nodes_start: 0,
 			clock: 0,
 		}
@@ -65,13 +68,6 @@ impl Collector {
 		id
 	}
 
-	fn set_affinity(&mut self, value: u32, affinity: u32) {
-		if value != affinity {
-			self.values[usize::try_from(value).unwrap()].affinity = affinity;
-			self.values[usize::try_from(affinity).unwrap()].is_reserved = true;
-		}
-	}
-
 	fn observe(&mut self, policy: &dyn Policy, nodes: &[Node], link: Link) {
 		let node = &nodes[usize::try_from(link.0).unwrap()];
 
@@ -92,8 +88,9 @@ impl Collector {
 		}
 	}
 
-	// Deferral elides only the value port; a forwarded state token on a later port
-	// still binds, so the node's result count is irrelevant.
+	// Deferral elides only the value port; a live state token on a later port
+	// still mints. A hinted port is its own value seeded by a copy from its
+	// operand, which coalescing usually collapses.
 	fn port_entry(
 		&mut self,
 		policy: &dyn Policy,
@@ -102,12 +99,18 @@ impl Collector {
 		port: u16,
 	) -> u32 {
 		if !materialized && port == 0 {
-			DEFERRED
-		} else if let Some(operand) = node.forwarded_operand(port) {
-			self.read_port(operand)
-		} else {
-			self.mint(policy.kind(node, port))
+			return DEFERRED;
 		}
+
+		let value = self.mint(policy.kind(node, port));
+
+		if let Some(operand) = policy.reuse_hint(node, port) {
+			let source = self.read_port(operand);
+
+			self.copies.push((source, value));
+		}
+
+		value
 	}
 
 	fn emit_ports(&mut self, policy: &dyn Policy, materialized: bool, id: u32, node: &Node) {
@@ -146,35 +149,12 @@ impl Collector {
 		}
 	}
 
-	// A fresh, branch-local result (id at or above `branch_base`) with no affinity yet
-	// prefers its column's previous-arm register, so the per-arm result transfer
-	// coalesces away. Forwarded ancestors and values already coalescing inward keep
-	// their own register.
-	fn should_coalesce_result(&self, value: u32, previous: u32, branch_base: u32) -> bool {
-		previous != value::NONE
-			&& value >= branch_base
-			&& self.values[usize::try_from(value).unwrap()].affinity == value::NONE
-	}
-
-	fn coalesce_branch_result(&mut self, slot: usize, source: Link, branch_base: u32) {
-		let value = self.read_port(source);
-		let previous = self.binding_stack[slot];
-
-		if self.should_coalesce_result(value, previous, branch_base) {
-			self.set_affinity(value, previous);
-		}
-
-		self.binding_stack[slot] = value;
-	}
-
-	fn coalesce_branch_results(
-		&mut self,
-		results: &branch::Results,
-		sources_start: usize,
-		branch_base: u32,
-	) {
+	fn record_branch_results(&mut self, results: &branch::Results, sources_start: usize) {
 		for (column, &source) in results.sources.iter().enumerate() {
-			self.coalesce_branch_result(sources_start + column, source, branch_base);
+			let value = self.read_port(source);
+
+			self.binding_stack[sources_start + column] = value;
+			self.branch_values.push(value);
 		}
 	}
 
@@ -189,23 +169,30 @@ impl Collector {
 		let saved_nodes = self.enter_region(&guard.nodes);
 
 		self.bind_branch_arguments(arguments_start, sources_start);
-
-		// Values minted by this branch's walk are its own; lower ids are forwarded
-		// ancestors that must not be coalesced into a match-local register.
-		let branch_base = u32::try_from(self.values.len()).unwrap();
-
 		self.walk(policy, &guard.nodes);
-		self.coalesce_branch_results(guard.results(), sources_start, branch_base);
+		self.record_branch_results(guard.results(), sources_start);
 
 		drop(guard);
 
 		self.nodes_start = saved_nodes;
 	}
 
-	fn uniform_column(&self, matcher: &Match, column: usize) -> Option<u32> {
-		let origin = trace_match(matcher, u16::try_from(column).unwrap())?;
+	// A pass-through column, where every arm hands the same value, needs no
+	// special case: unify folds the port onto that single source outright.
+	fn record_branch_handoffs(
+		&mut self,
+		arm_count: usize,
+		result_count: usize,
+		column: usize,
+		result: u32,
+	) {
+		let base = self.branch_values.len() - arm_count * result_count;
 
-		Some(self.read_port(origin))
+		for arm in 0..arm_count {
+			let source = self.branch_values[base + arm * result_count + column];
+
+			self.copies.push((source, result));
+		}
 	}
 
 	fn push_match_arguments(&mut self, matcher: &Match) -> usize {
@@ -218,20 +205,6 @@ impl Collector {
 		arguments_start
 	}
 
-	fn mint_match_result(
-		&mut self,
-		policy: &dyn Policy,
-		node: &Node,
-		port: u16,
-		source: u32,
-	) -> u32 {
-		let result = self.mint(policy.kind(node, port));
-
-		self.set_affinity(result, source);
-
-		result
-	}
-
 	fn bind_match_results(
 		&mut self,
 		policy: &dyn Policy,
@@ -241,23 +214,20 @@ impl Collector {
 	) {
 		let node = &nodes[usize::try_from(id).unwrap()];
 		let result_count = usize::from(matcher.result_count());
+		let arm_count = matcher.branches.len();
 
-		// The branches left their result sources as the top of the binding stack.
-		let sources_start = self.binding_stack.len() - result_count;
+		// The branches left their per-arm column values atop `branch_values`.
+		let branch_values_start = self.branch_values.len() - arm_count * result_count;
 
 		for column in 0..result_count {
 			let port = u16::try_from(column).unwrap();
+			let result = self.mint(policy.kind(node, port));
 
-			let entry = if let Some(source) = self.uniform_column(matcher, column) {
-				source
-			} else {
-				let source = self.binding_stack[sources_start + column];
-
-				self.mint_match_result(policy, node, port, source)
-			};
-
-			self.bind_port(Link(id, port), entry);
+			self.record_branch_handoffs(arm_count, result_count, column, result);
+			self.bind_port(Link(id, port), result);
 		}
+
+		self.branch_values.truncate(branch_values_start);
 	}
 
 	fn visit_match(
@@ -292,12 +262,15 @@ impl Collector {
 		self.binding_stack.truncate(arguments_start);
 	}
 
-	fn mint_repeat_carries(&mut self, policy: &dyn Policy, node: &Node, seeds: &[Link]) {
-		for (port, &seed) in (0_u16..).zip(seeds) {
+	// Each carry is seeded by a copy edge from its outer source. An invariant
+	// carry needs no special case: the seed stays its only source, so unify
+	// folds the carry onto it.
+	fn mint_repeat_carries(&mut self, policy: &dyn Policy, node: &Node, repeat: &Repeat) {
+		for (port, &seed) in (0_u16..).zip(&repeat.arguments) {
 			let source = self.read_port(seed);
 			let carry = self.mint(policy.kind(node, port));
 
-			self.set_affinity(carry, source);
+			self.copies.push((source, carry));
 			self.binding_stack.push(carry);
 		}
 	}
@@ -327,7 +300,7 @@ impl Collector {
 
 		self.observe_sources(policy, nodes, &guard.arguments);
 		self.clock += 1;
-		self.mint_repeat_carries(policy, node, &guard.arguments);
+		self.mint_repeat_carries(policy, node, &guard);
 		self.clock += 1;
 
 		let saved_nodes = self.enter_region(&guard.nodes);
@@ -345,9 +318,6 @@ impl Collector {
 		self.binding_stack.truncate(carries_start);
 	}
 
-	// Each rotation source prefers the carry it feeds, so the rotation transfer
-	// coalesces away. Recording the source over its carry lets the enclosing
-	// repeat bind its output ports to the sources they carry.
 	fn record_repeat_rotation(&mut self, sources: &[Link]) {
 		let carries_base = self.binding_stack.len() - sources.len();
 
@@ -355,11 +325,15 @@ impl Collector {
 			let carry = self.binding_stack[carries_base + index];
 			let producer = self.read_port(source);
 
-			self.set_affinity(producer, carry);
+			self.copies.push((producer, carry));
 			self.binding_stack[carries_base + index] = producer;
 		}
 	}
 
+	// A carry's interval ends at its last read, so by the rotation a later value
+	// may hold its register. This is sound because the rotation is one parallel
+	// copy, only carries cross iterations, and the emitted break precedes the
+	// rotation, so exit paths never see its clobbers.
 	fn visit_repeat_results(
 		&mut self,
 		policy: &dyn Policy,
@@ -399,6 +373,10 @@ impl Collector {
 		&self.values
 	}
 
+	pub fn copies(&self) -> &[(u32, u32)] {
+		&self.copies
+	}
+
 	// Each emitted function keeps its own arena because a parent reads its arena
 	// while a nested function is being emitted.
 	pub fn resolve(&mut self, assignments: &[u32]) -> (Arena, u32) {
@@ -409,9 +387,6 @@ impl Collector {
 		(mem::take(&mut self.arena), peak)
 	}
 
-	// The sweeper pins values 0..`parameter_count` to registers 0..`parameter_count`,
-	// which is sound only because the argument ports are minted as exactly those
-	// first values, in port order, never deferred or forwarded away.
 	fn parameters_pin_to_argument_ports(&self, nodes: &[Node]) -> bool {
 		let arguments = &nodes[Function::ARGUMENTS_ID as usize];
 
@@ -424,6 +399,8 @@ impl Collector {
 		self.values.clear();
 		self.arena.clear();
 		self.binding_stack.clear();
+		self.branch_values.clear();
+		self.copies.clear();
 		self.nodes_start = 0;
 		self.clock = 0;
 	}

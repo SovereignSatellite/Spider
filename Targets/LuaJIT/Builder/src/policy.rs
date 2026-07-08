@@ -1,7 +1,7 @@
 use core::ptr::from_ref;
 
 use ir_allocator::Policy;
-use ir_graph::{Node, Shape};
+use ir_graph::{Link, Node, Shape};
 
 pub const PHYSICAL_REGISTERS: u32 = 100;
 
@@ -76,7 +76,7 @@ impl LuaJITPolicy {
 		});
 
 		for port in 0..node.result_count() {
-			if let Some(operand) = node.forwarded_operand(port) {
+			if let Some(operand) = ir_allocator::reuse_hint(node, port) {
 				states[usize::try_from(operand.0).unwrap()] = UseState::Blocked;
 			}
 		}
@@ -84,7 +84,7 @@ impl LuaJITPolicy {
 
 	fn is_inlinable(node: &Node) -> bool {
 		// A boundary argument is bound to a register the emitter reads directly, a
-		// call emits as a statement, and a forwarded port-0 carries an operand's
+		// call emits as a statement, and a hinted port-0 carries an operand's
 		// value rather than one of its own, so none folds into an expression.
 		!matches!(
 			node,
@@ -93,7 +93,7 @@ impl LuaJITPolicy {
 				| Node::RepeatArguments(_)
 				| Node::Apply(_)
 		) && matches!(node.shape(), Shape::Plain)
-			&& node.forwarded_operand(0).is_none()
+			&& ir_allocator::reuse_hint(node, 0).is_none()
 	}
 
 	fn descend(&mut self, node: &Node) {
@@ -125,5 +125,9 @@ impl Policy for LuaJITPolicy {
 		let address = from_ref(node) as usize;
 
 		self.deferred.binary_search(&address).is_err()
+	}
+
+	fn reuse_hint(&self, node: &Node, port: u16) -> Option<Link> {
+		ir_allocator::reuse_hint(node, port)
 	}
 }

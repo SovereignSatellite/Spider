@@ -77,16 +77,3 @@ macro_rules! handle_sources {
 		handle_mut_visitor!(for_each_mut_outer, $crate::Link, handle_mut_argument_source, ( $( ($field, $action) ),* ));
 	};
 }
-
-macro_rules! handle_forwarded {
-	($( ($port:ident, $($field:ident).+) ),*) => {
-		/// Returns the operand link the given output port forwards.
-		#[must_use]
-		pub const fn forwarded_operand(&self, port: u16) -> Option<$crate::Link> {
-			match port {
-				$( Self::$port => Some(self.$($field).+), )*
-				_ => None,
-			}
-		}
-	};
-}

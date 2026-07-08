@@ -1,7 +1,8 @@
-use core::ptr::from_ref;
+use core::{any::Any, ptr::from_ref};
 
 use ir_allocator::Policy;
 use ir_graph::{Link, Node, Shape, region::Match};
+use luau_foreign::{BufferStore, TableStore};
 
 pub const PHYSICAL_REGISTERS: u32 = 100;
 
@@ -60,6 +61,25 @@ fn classify_match_uses(matcher: &Match, states: &mut [UseState]) {
 	}
 }
 
+// The allocator's core hint map extended with this target's foreign ports.
+fn reuse_hint_of(node: &Node, port: u16) -> Option<Link> {
+	if let Node::Foreign(foreign) = node {
+		let any: &dyn Any = foreign.as_ref();
+
+		if let Some(store) = any.downcast_ref::<BufferStore>() {
+			return (port == BufferStore::STATE_PORT).then_some(store.reference);
+		}
+
+		if let Some(store) = any.downcast_ref::<TableStore>() {
+			return (port == TableStore::STATE_PORT).then_some(store.reference);
+		}
+
+		return None;
+	}
+
+	ir_allocator::reuse_hint(node, port)
+}
+
 fn classify_uses(node: &Node, states: &mut [UseState]) {
 	match node.shape() {
 		Shape::Plain => classify_plain_uses(node, states),
@@ -70,8 +90,10 @@ fn classify_uses(node: &Node, states: &mut [UseState]) {
 		Shape::Match(arc) => classify_match_uses(&arc.lock(), states),
 	}
 
+	// The emitter copies each hinted port from its operand at the node's site,
+	// so the operand must sit in a register there, never inlined.
 	for port in 0..node.result_count() {
-		if let Some(operand) = node.forwarded_operand(port) {
+		if let Some(operand) = reuse_hint_of(node, port) {
 			state_of(states, operand).block();
 		}
 	}
@@ -79,7 +101,7 @@ fn classify_uses(node: &Node, states: &mut [UseState]) {
 
 fn is_inlinable(node: &Node) -> bool {
 	// A boundary argument is bound to a register the emitter reads directly, a
-	// call emits as a statement, and a forwarded port-0 carries an operand's
+	// call emits as a statement, and a hinted port-0 carries an operand's
 	// value rather than one of its own, so none folds into an expression.
 	!matches!(
 		node,
@@ -88,7 +110,7 @@ fn is_inlinable(node: &Node) -> bool {
 			| Node::RepeatArguments(_)
 			| Node::Apply(_)
 	) && matches!(node.shape(), Shape::Plain)
-		&& node.forwarded_operand(0).is_none()
+		&& reuse_hint_of(node, 0).is_none()
 }
 
 pub struct LuauPolicy {
@@ -174,5 +196,9 @@ impl Policy for LuauPolicy {
 		let address = from_ref(node) as usize;
 
 		self.deferred.binary_search(&address).is_err()
+	}
+
+	fn reuse_hint(&self, node: &Node, port: u16) -> Option<Link> {
+		reuse_hint_of(node, port)
 	}
 }

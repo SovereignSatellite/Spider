@@ -157,6 +157,15 @@ impl<'allocator, 'policy> Emitter<'allocator, 'policy> {
 		self.code_handler.emit_local_moves(pairs);
 	}
 
+	fn bridge(&mut self, id: u32, state_port: u16, source: Link) -> Link {
+		let state_link = Link(id, state_port);
+		let destination = self.data_handler.local_of(self.region, state_link);
+
+		self.emit_transfer(&[destination], &[source]);
+
+		state_link
+	}
+
 	fn handle_branch(
 		&mut self,
 		branch_arc: &Arc<Mutex<Branch>>,
@@ -253,8 +262,9 @@ impl<'allocator, 'policy> Emitter<'allocator, 'policy> {
 		self.code_handler.emit_repeat(condition, rotation);
 	}
 
-	fn handle_export(&mut self, node: &Export) {
-		let value = self.data_handler.load(self.region, node.value);
+	fn handle_export(&mut self, id: u32, node: &Export) {
+		let state = self.bridge(id, Export::STATE_PORT, node.value);
+		let value = self.data_handler.load(self.region, state);
 		let identifier = Expression::String(Arc::clone(&node.identifier));
 
 		self.code_handler
@@ -506,7 +516,7 @@ impl<'allocator, 'policy> Emitter<'allocator, 'policy> {
 			| Node::MemorySize(_)
 			| Node::MemoryGrow(_) => self.emit_expression(nodes, id),
 
-			Node::Export(ref node) => self.handle_export(node),
+			Node::Export(ref node) => self.handle_export(id, node),
 			Node::Apply(ref node) => self.handle_call(id, node),
 			Node::MutableSet(node) => self.handle_mutable_set(node),
 			Node::TableSet(node) => self.handle_table_set(node),
