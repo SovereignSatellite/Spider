@@ -17,6 +17,9 @@ mod data_handler;
 mod emitter;
 mod policy;
 
+const STACK_RED_ZONE: usize = 64 * 1024;
+const STACK_SEGMENT: usize = 1024 * 1024;
+
 /// Builds a `Luau` function from an IR function.
 pub struct LuauBuilder {
 	allocator: ir_allocator::Allocator,

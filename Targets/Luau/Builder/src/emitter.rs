@@ -28,9 +28,6 @@ use luau_tree::{
 	statement::Sequence,
 };
 
-const STACK_RED_ZONE: usize = 64 * 1024;
-const STACK_SEGMENT: usize = 1024 * 1024;
-
 pub struct Emitter<'allocator, 'policy> {
 	allocator: &'allocator mut ir_allocator::Allocator,
 	policy: &'policy LuauPolicy,
@@ -975,7 +972,7 @@ impl<'allocator, 'policy> Emitter<'allocator, 'policy> {
 	}
 
 	fn handle_nodes(&mut self, nodes: &[Node]) {
-		stacker::maybe_grow(STACK_RED_ZONE, STACK_SEGMENT, || {
+		stacker::maybe_grow(crate::STACK_RED_ZONE, crate::STACK_SEGMENT, || {
 			for (id, node) in nodes.iter().enumerate() {
 				let id = id.try_into().unwrap();
 

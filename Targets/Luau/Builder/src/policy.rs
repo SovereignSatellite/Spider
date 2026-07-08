@@ -139,9 +139,11 @@ impl LuauPolicy {
 	}
 
 	fn collect_deferrals(&mut self, nodes: &[Node]) {
-		self.mark_use_states(nodes);
-		self.record_deferred(nodes);
-		self.descend_into_children(nodes);
+		stacker::maybe_grow(crate::STACK_RED_ZONE, crate::STACK_SEGMENT, || {
+			self.mark_use_states(nodes);
+			self.record_deferred(nodes);
+			self.descend_into_children(nodes);
+		});
 	}
 
 	fn mark_use_states(&mut self, nodes: &[Node]) {
