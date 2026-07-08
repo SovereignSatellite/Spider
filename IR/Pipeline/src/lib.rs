@@ -6,7 +6,7 @@ use alloc::sync::Arc;
 
 use parking_lot::Mutex;
 
-use ir_graph::{Region, region::Function, region_driver};
+use ir_graph::{Region, Shape, region::Function, region_driver};
 use ir_passes::{
 	control_folder, dead_port_eliminator::DeadPortEliminator, identity,
 	invariant_port_mover::InvariantPortMover, isle, topological_compactor::TopologicalCompactor,
@@ -35,9 +35,7 @@ impl Optimizer {
 		let mut iterations_allowed = region.nodes().len().saturating_mul(64).saturating_add(1024);
 
 		loop {
-			self.topological_compactor.run(region);
 			self.invariant_port_mover.run(region.nodes_mut());
-			self.dead_port_eliminator.run(region.nodes_mut());
 
 			let folded = control_folder::run(region.nodes_mut());
 			let simplified = isle::run(region.nodes_mut());
@@ -65,6 +63,37 @@ impl Optimizer {
 		self.topological_compactor.run(region);
 	}
 
+	fn trim_children(&mut self, region: &Region) {
+		for node in region.nodes() {
+			match node.shape() {
+				Shape::Plain | Shape::BranchResults(_) | Shape::RepeatResults(_) => {}
+				Shape::Function(child) => {
+					self.trim_tree(Region::Function(Mutex::lock_arc(child)));
+				}
+				Shape::Match(child) => {
+					for branch in &child.lock().branches {
+						self.trim_tree(Region::Branch(Mutex::lock_arc(branch)));
+					}
+				}
+				Shape::Repeat(child) => {
+					self.trim_tree(Region::Repeat(Mutex::lock_arc(child)));
+				}
+			}
+		}
+	}
+
+	fn trim_tree(&mut self, mut region: Region) {
+		loop {
+			self.trim_children(&region);
+
+			self.topological_compactor.run(&mut region);
+
+			if !self.dead_port_eliminator.run(region.nodes_mut()) {
+				return;
+			}
+		}
+	}
+
 	/// Runs the optimization pipeline over every region in the function.
 	///
 	/// `pass` runs each round once the generic passes settle, letting a target fold its own
@@ -82,6 +111,8 @@ impl Optimizer {
 
 			self.finalize(&mut region);
 		});
+
+		self.trim_tree(Region::Function(Mutex::lock_arc(function)));
 	}
 }
 
