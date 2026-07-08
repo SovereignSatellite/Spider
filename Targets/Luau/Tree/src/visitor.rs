@@ -31,9 +31,11 @@ impl Function {
 	pub fn accept<T: Visitor>(&self, visitor: &mut T) -> ControlFlow<T::Output> {
 		let Self { code, returns, .. } = self;
 
-		code.accept(visitor)?;
+		code.accept_unbounded(visitor)?;
 
-		returns.iter().try_for_each(|inner| inner.accept(visitor))
+		returns
+			.iter()
+			.try_for_each(|inner| inner.accept_unbounded(visitor))
 	}
 }
 
@@ -44,10 +46,10 @@ impl ExpressionMatch {
 			condition,
 		} = self;
 
-		condition.accept(visitor)?;
+		condition.accept_unbounded(visitor)?;
 		branches
 			.iter()
-			.try_for_each(|branch| branch.accept(visitor))
+			.try_for_each(|branch| branch.accept_unbounded(visitor))
 	}
 }
 
@@ -58,10 +60,10 @@ impl ExpressionCall {
 			arguments,
 		} = self;
 
-		function.accept(visitor)?;
+		function.accept_unbounded(visitor)?;
 		arguments
 			.iter()
-			.try_for_each(|argument| argument.accept(visitor))
+			.try_for_each(|argument| argument.accept_unbounded(visitor))
 	}
 }
 
@@ -69,7 +71,7 @@ impl<const N: usize> Apply<N> {
 	fn accept<T: Visitor>(&self, visitor: &mut T) -> ControlFlow<T::Output> {
 		self.arguments
 			.iter()
-			.try_for_each(|argument| argument.accept(visitor))
+			.try_for_each(|argument| argument.accept_unbounded(visitor))
 	}
 }
 
@@ -77,8 +79,8 @@ impl Infix {
 	fn accept<T: Visitor>(&self, visitor: &mut T) -> ControlFlow<T::Output> {
 		let Self { lhs, rhs, .. } = self;
 
-		lhs.accept(visitor)?;
-		rhs.accept(visitor)
+		lhs.accept_unbounded(visitor)?;
+		rhs.accept_unbounded(visitor)
 	}
 }
 
@@ -86,7 +88,7 @@ impl Prefix {
 	fn accept<T: Visitor>(&self, visitor: &mut T) -> ControlFlow<T::Output> {
 		let Self { source, .. } = self;
 
-		source.accept(visitor)
+		source.accept_unbounded(visitor)
 	}
 }
 
@@ -94,7 +96,7 @@ impl BooleanToInteger {
 	fn accept<T: Visitor>(&self, visitor: &mut T) -> ControlFlow<T::Output> {
 		let Self { source } = self;
 
-		source.accept(visitor)
+		source.accept_unbounded(visitor)
 	}
 }
 
@@ -102,7 +104,7 @@ impl RefIsNull {
 	fn accept<T: Visitor>(&self, visitor: &mut T) -> ControlFlow<T::Output> {
 		let Self { source } = self;
 
-		source.accept(visitor)
+		source.accept_unbounded(visitor)
 	}
 }
 
@@ -110,7 +112,9 @@ impl Aggregate {
 	fn accept<T: Visitor>(&self, visitor: &mut T) -> ControlFlow<T::Output> {
 		let Self { fields } = self;
 
-		fields.iter().try_for_each(|field| field.accept(visitor))
+		fields
+			.iter()
+			.try_for_each(|field| field.accept_unbounded(visitor))
 	}
 }
 
@@ -118,7 +122,7 @@ impl Extract {
 	fn accept<T: Visitor>(&self, visitor: &mut T) -> ControlFlow<T::Output> {
 		let Self { source, .. } = self;
 
-		source.accept(visitor)
+		source.accept_unbounded(visitor)
 	}
 }
 
@@ -126,7 +130,7 @@ impl Field {
 	fn accept<T: Visitor>(&self, visitor: &mut T) -> ControlFlow<T::Output> {
 		let Self { source, .. } = self;
 
-		source.accept(visitor)
+		source.accept_unbounded(visitor)
 	}
 }
 
@@ -136,7 +140,7 @@ impl TableNew {
 
 		initializer
 			.iter()
-			.try_for_each(|item| item.0.accept(visitor))
+			.try_for_each(|item| item.0.accept_unbounded(visitor))
 	}
 }
 
@@ -144,8 +148,8 @@ impl Index {
 	fn accept<T: Visitor>(&self, visitor: &mut T) -> ControlFlow<T::Output> {
 		let Self { source, offset } = self;
 
-		source.accept(visitor)?;
-		offset.accept(visitor)
+		source.accept_unbounded(visitor)?;
+		offset.accept_unbounded(visitor)
 	}
 }
 
@@ -153,15 +157,19 @@ impl BufferLength {
 	fn accept<T: Visitor>(&self, visitor: &mut T) -> ControlFlow<T::Output> {
 		let Self { source } = self;
 
-		source.accept(visitor)
+		source.accept_unbounded(visitor)
 	}
 }
 
 impl Expression {
+	fn accept_unbounded<T: Visitor>(&self, visitor: &mut T) -> ControlFlow<T::Output> {
+		stacker::maybe_grow(0x1_0000, 0x10_0000, || self.accept(visitor))
+	}
+
 	fn accept<T: Visitor>(&self, visitor: &mut T) -> ControlFlow<T::Output> {
 		visitor.visit_expression(self)?;
 
-		stacker::maybe_grow(0x1_0000, 0x10_0000, || match self {
+		match self {
 			Self::Function(function) => function.accept(visitor),
 			Self::Match(inner) => inner.accept(visitor),
 
@@ -192,19 +200,21 @@ impl Expression {
 			Self::TableNew(table_new) => table_new.accept(visitor),
 			Self::Index(index) => index.accept(visitor),
 			Self::BufferLength(buffer_length) => buffer_length.accept(visitor),
-		})
+		}
 	}
 }
 
 impl Sequence {
+	fn accept_unbounded<T: Visitor>(&self, visitor: &mut T) -> ControlFlow<T::Output> {
+		stacker::maybe_grow(0x1_0000, 0x10_0000, || self.accept(visitor))
+	}
+
 	fn accept<T: Visitor>(&self, visitor: &mut T) -> ControlFlow<T::Output> {
 		let Self { statements } = self;
 
-		stacker::maybe_grow(0x1_0000, 0x10_0000, || {
-			statements
-				.iter()
-				.try_for_each(|statement| statement.accept(visitor))
-		})
+		statements
+			.iter()
+			.try_for_each(|statement| statement.accept(visitor))
 	}
 }
 
@@ -217,9 +227,9 @@ impl StatementMatch {
 
 		branches
 			.iter()
-			.try_for_each(|branch| branch.accept(visitor))?;
+			.try_for_each(|branch| branch.accept_unbounded(visitor))?;
 
-		condition.accept(visitor)
+		condition.accept_unbounded(visitor)
 	}
 }
 
@@ -231,9 +241,9 @@ impl Repeat {
 			rotation,
 		} = self;
 
-		code.accept(visitor)?;
-		condition.accept(visitor)?;
-		rotation.accept(visitor)
+		code.accept_unbounded(visitor)?;
+		condition.accept_unbounded(visitor)?;
+		rotation.accept_unbounded(visitor)
 	}
 }
 
@@ -241,7 +251,7 @@ impl Assign {
 	fn accept<T: Visitor>(&self, visitor: &mut T) -> ControlFlow<T::Output> {
 		let Self { source, .. } = self;
 
-		source.accept(visitor)
+		source.accept_unbounded(visitor)
 	}
 }
 
@@ -249,7 +259,7 @@ impl StatementCall {
 	fn accept<T: Visitor>(&self, visitor: &mut T) -> ControlFlow<T::Output> {
 		let Self { call, .. } = self;
 
-		call.accept(visitor)
+		call.accept_unbounded(visitor)
 	}
 }
 
@@ -261,9 +271,9 @@ impl SetIndex {
 			value,
 		} = self;
 
-		table.accept(visitor)?;
-		offset.accept(visitor)?;
-		value.accept(visitor)
+		table.accept_unbounded(visitor)?;
+		offset.accept_unbounded(visitor)?;
+		value.accept_unbounded(visitor)
 	}
 }
 

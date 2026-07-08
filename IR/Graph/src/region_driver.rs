@@ -9,17 +9,22 @@ use crate::{
 	node::region::{Branch, Function, Match, Repeat},
 };
 
+fn run_region_unbounded<H>(region: Region, handler: &mut H)
+where
+	H: FnMut(Region),
+{
+	stacker::maybe_grow(0x1_0000, 0x10_0000, || run_region(region, handler));
+}
+
 fn run_region<H>(region: Region, handler: &mut H)
 where
 	H: FnMut(Region),
 {
-	stacker::maybe_grow(0x1_0000, 0x10_0000, || {
-		for node in region.nodes() {
-			run_node(node, handler);
-		}
+	for node in region.nodes() {
+		run_node(node, handler);
+	}
 
-		handler(region);
-	});
+	handler(region);
 }
 
 /// Visits every region in the function, deepest first.
@@ -29,7 +34,7 @@ where
 {
 	let guard = Mutex::lock_arc(function);
 
-	run_region(Region::Function(guard), handler);
+	run_region_unbounded(Region::Function(guard), handler);
 }
 
 fn run_branch<H>(region: &Arc<Mutex<Branch>>, handler: &mut H)
@@ -38,7 +43,7 @@ where
 {
 	let guard = Mutex::lock_arc(region);
 
-	run_region(Region::Branch(guard), handler);
+	run_region_unbounded(Region::Branch(guard), handler);
 }
 
 fn run_match<H>(region: &Arc<Mutex<Match>>, handler: &mut H)
@@ -58,7 +63,7 @@ where
 {
 	let guard = Mutex::lock_arc(region);
 
-	run_region(Region::Repeat(guard), handler);
+	run_region_unbounded(Region::Repeat(guard), handler);
 }
 
 /// Visits every region reachable from `node`, deepest first.

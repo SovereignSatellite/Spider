@@ -245,21 +245,22 @@ impl TuringMachineLifter {
 		})
 	}
 
+	fn handle_block_unbounded(&mut self, nodes: &mut Vec<Node>) {
+		stacker::maybe_grow(0x1_0000, 0x10_0000, || self.handle_block(nodes));
+	}
+
 	fn handle_block(&mut self, nodes: &mut Vec<Node>) {
-		stacker::maybe_grow(0x1_0000, 0x10_0000, || {
-			let condition = self.emit_condition(nodes);
-			let arguments = self.capture_state(nodes);
+		let condition = self.emit_condition(nodes);
+		let arguments = self.capture_state(nodes);
 
-			let match_id =
-				Match::add_into(nodes, arguments, condition, |parent, argument_count| {
-					let false_branch = self.create_false_branch(parent, argument_count);
-					let true_branch = self.create_true_branch(parent, argument_count);
+		let match_id = Match::add_into(nodes, arguments, condition, |parent, argument_count| {
+			let false_branch = self.create_false_branch(parent, argument_count);
+			let true_branch = self.create_true_branch(parent, argument_count);
 
-					vec![false_branch, true_branch]
-				});
-
-			self.rebind_state(match_id);
+			vec![false_branch, true_branch]
 		});
+
+		self.rebind_state(match_id);
 	}
 
 	fn handle_code(&mut self, nodes: &mut Vec<Node>) {
@@ -282,7 +283,7 @@ impl TuringMachineLifter {
 				Operator::Input => self.handle_input(nodes),
 				Operator::Output => self.handle_output(nodes),
 
-				Operator::Start => self.handle_block(nodes),
+				Operator::Start => self.handle_block_unbounded(nodes),
 				Operator::End => return,
 			}
 		}
