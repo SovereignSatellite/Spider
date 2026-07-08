@@ -134,16 +134,18 @@ impl LuauPolicy {
 	pub fn precompute(&mut self, nodes: &[Node]) {
 		self.deferred.clear();
 
-		self.collect_deferrals(nodes);
+		self.collect_deferrals_unbounded(nodes);
 		self.deferred.sort_unstable();
 	}
 
+	fn collect_deferrals_unbounded(&mut self, nodes: &[Node]) {
+		stacker::maybe_grow(0x1_0000, 0x10_0000, || self.collect_deferrals(nodes));
+	}
+
 	fn collect_deferrals(&mut self, nodes: &[Node]) {
-		stacker::maybe_grow(crate::STACK_RED_ZONE, crate::STACK_SEGMENT, || {
-			self.mark_use_states(nodes);
-			self.record_deferred(nodes);
-			self.descend_into_children(nodes);
-		});
+		self.mark_use_states(nodes);
+		self.record_deferred(nodes);
+		self.descend_into_children(nodes);
 	}
 
 	fn mark_use_states(&mut self, nodes: &[Node]) {
@@ -172,15 +174,15 @@ impl LuauPolicy {
 	fn descend(&mut self, node: &Node) {
 		match node.shape() {
 			Shape::Plain | Shape::BranchResults(_) | Shape::RepeatResults(_) => {}
-			Shape::Function(arc) => self.collect_deferrals(&arc.lock().nodes),
+			Shape::Function(arc) => self.collect_deferrals_unbounded(&arc.lock().nodes),
 			Shape::Match(arc) => {
 				let matcher = arc.lock();
 
 				for branch in &matcher.branches {
-					self.collect_deferrals(&branch.lock().nodes);
+					self.collect_deferrals_unbounded(&branch.lock().nodes);
 				}
 			}
-			Shape::Repeat(arc) => self.collect_deferrals(&arc.lock().nodes),
+			Shape::Repeat(arc) => self.collect_deferrals_unbounded(&arc.lock().nodes),
 		}
 	}
 }

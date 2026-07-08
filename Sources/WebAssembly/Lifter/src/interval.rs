@@ -12,9 +12,6 @@ use web_assembly_liveness::locals::Locals;
 
 use super::slots::{FunctionHeader, SlotFile};
 
-const STACK_RED_ZONE: usize = 64 * 1024;
-const STACK_SEGMENT: usize = 1024 * 1024;
-
 #[derive(Clone, Copy)]
 struct Body<'function> {
 	graph: &'function ControlFlowGraph,
@@ -139,27 +136,29 @@ impl IntervalLifter {
 		diamond.merge
 	}
 
+	fn lift_unit_unbounded(&mut self, nodes: &mut Vec<Node>, body: Body<'_>, first: u16) -> u16 {
+		stacker::maybe_grow(0x1_0000, 0x10_0000, || self.lift_unit(nodes, body, first))
+	}
+
 	fn lift_unit(&mut self, nodes: &mut Vec<Node>, body: Body<'_>, first: u16) -> u16 {
-		stacker::maybe_grow(STACK_RED_ZONE, STACK_SEGMENT, || {
-			if let Some(latch) = body.graph.find_repeat_end(first) {
-				return self.lift_loop(nodes, body, first, latch);
-			}
+		if let Some(latch) = body.graph.find_repeat_end(first) {
+			return self.lift_loop(nodes, body, first, latch);
+		}
 
-			self.slots.run(nodes, body.graph.instructions(first));
+		self.slots.run(nodes, body.graph.instructions(first));
 
-			if body.graph.is_branch_start(first) {
-				return self.lift_match(nodes, body, first);
-			}
+		if body.graph.is_branch_start(first) {
+			return self.lift_match(nodes, body, first);
+		}
 
-			first + 1
-		})
+		first + 1
 	}
 
 	fn lift_interval(&mut self, nodes: &mut Vec<Node>, body: Body<'_>, range: Range<u16>) {
 		let mut first = range.start;
 
 		while first < range.end {
-			first = self.lift_unit(nodes, body, first);
+			first = self.lift_unit_unbounded(nodes, body, first);
 		}
 
 		debug_assert_eq!(first, range.end, "units must tile the interval exactly");

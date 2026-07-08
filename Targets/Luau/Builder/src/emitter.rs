@@ -125,7 +125,7 @@ impl<'allocator, 'policy> Emitter<'allocator, 'policy> {
 		self.next_region = 1;
 		self.code_handler.push_scope();
 
-		self.handle_nodes(&function.nodes);
+		self.handle_nodes_unbounded(&function.nodes);
 
 		let arguments = collect_argument_names(function.argument_count);
 		let locals = fast_locals_for(peak, function.argument_count);
@@ -190,7 +190,7 @@ impl<'allocator, 'policy> Emitter<'allocator, 'policy> {
 		self.region = branch_region;
 		self.code_handler.push_scope();
 
-		self.handle_nodes(&branch.nodes);
+		self.handle_nodes_unbounded(&branch.nodes);
 
 		self.emit_transfer(result_locals, &branch.results().sources);
 
@@ -258,7 +258,7 @@ impl<'allocator, 'policy> Emitter<'allocator, 'policy> {
 		self.region = repeat_region;
 		self.code_handler.push_scope();
 
-		self.handle_nodes(&repeat.nodes);
+		self.handle_nodes_unbounded(&repeat.nodes);
 
 		drop(repeat);
 
@@ -971,13 +971,15 @@ impl<'allocator, 'policy> Emitter<'allocator, 'policy> {
 		}
 	}
 
-	fn handle_nodes(&mut self, nodes: &[Node]) {
-		stacker::maybe_grow(crate::STACK_RED_ZONE, crate::STACK_SEGMENT, || {
-			for (id, node) in nodes.iter().enumerate() {
-				let id = id.try_into().unwrap();
+	fn handle_nodes_unbounded(&mut self, nodes: &[Node]) {
+		stacker::maybe_grow(0x1_0000, 0x10_0000, || self.handle_nodes(nodes));
+	}
 
-				self.handle_node(nodes, id, node);
-			}
-		});
+	fn handle_nodes(&mut self, nodes: &[Node]) {
+		for (id, node) in nodes.iter().enumerate() {
+			let id = id.try_into().unwrap();
+
+			self.handle_node(nodes, id, node);
+		}
 	}
 }

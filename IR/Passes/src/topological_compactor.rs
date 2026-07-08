@@ -4,9 +4,6 @@ use core::mem;
 
 use ir_graph::{Node, Region};
 
-const STACK_RED_ZONE: usize = 64 * 1024;
-const STACK_SEGMENT: usize = 1024 * 1024;
-
 /// Eliminate unreachable nodes and compact the remainder in dependency order.
 pub struct TopologicalCompactor {
 	nodes: Vec<Node>,
@@ -32,7 +29,7 @@ impl TopologicalCompactor {
 
 		let node = mem::take(&mut nodes[id]);
 
-		stacker::maybe_grow(STACK_RED_ZONE, STACK_SEGMENT, || {
+		stacker::maybe_grow(0x1_0000, 0x10_0000, || {
 			node.for_each_outer(|link| self.handle_node(nodes, link.0));
 		});
 

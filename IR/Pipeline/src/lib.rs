@@ -12,9 +12,6 @@ use ir_passes::{
 	invariant_port_mover::InvariantPortMover, isle, topological_compactor::TopologicalCompactor,
 };
 
-const STACK_RED_ZONE: usize = 64 * 1024;
-const STACK_SEGMENT: usize = 1024 * 1024;
-
 /// Composes the region-local passes into a fixpoint optimization loop.
 pub struct Optimizer {
 	topological_compactor: TopologicalCompactor,
@@ -71,27 +68,25 @@ impl Optimizer {
 			match node.shape() {
 				Shape::Plain | Shape::BranchResults(_) | Shape::RepeatResults(_) => {}
 				Shape::Function(child) => {
-					self.trim_tree(Region::Function(Mutex::lock_arc(child)));
+					self.trim_tree_unbounded(Region::Function(Mutex::lock_arc(child)));
 				}
 				Shape::Match(child) => {
 					for branch in &child.lock().branches {
-						self.trim_tree(Region::Branch(Mutex::lock_arc(branch)));
+						self.trim_tree_unbounded(Region::Branch(Mutex::lock_arc(branch)));
 					}
 				}
 				Shape::Repeat(child) => {
-					self.trim_tree(Region::Repeat(Mutex::lock_arc(child)));
+					self.trim_tree_unbounded(Region::Repeat(Mutex::lock_arc(child)));
 				}
 			}
 		}
 	}
 
-	fn trim_tree(&mut self, region: Region) {
-		stacker::maybe_grow(STACK_RED_ZONE, STACK_SEGMENT, || {
-			self.trim_tree_grown(region);
-		});
+	fn trim_tree_unbounded(&mut self, region: Region) {
+		stacker::maybe_grow(0x1_0000, 0x10_0000, || self.trim_tree(region));
 	}
 
-	fn trim_tree_grown(&mut self, mut region: Region) {
+	fn trim_tree(&mut self, mut region: Region) {
 		loop {
 			self.trim_children(&region);
 
@@ -121,7 +116,7 @@ impl Optimizer {
 			self.finalize(&mut region);
 		});
 
-		self.trim_tree(Region::Function(Mutex::lock_arc(function)));
+		self.trim_tree_unbounded(Region::Function(Mutex::lock_arc(function)));
 	}
 }
 

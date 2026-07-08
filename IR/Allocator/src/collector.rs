@@ -17,9 +17,6 @@ use crate::{
 	value::{self, Value},
 };
 
-const STACK_RED_ZONE: usize = 64 * 1024;
-const STACK_SEGMENT: usize = 1024 * 1024;
-
 /// Collects exact value intervals and copy edges for one emitted function.
 pub struct Collector {
 	values: Vec<Value>,
@@ -75,7 +72,7 @@ impl Collector {
 		let node = &nodes[usize::try_from(link.0).unwrap()];
 
 		if !policy.should_materialize(node) {
-			stacker::maybe_grow(STACK_RED_ZONE, STACK_SEGMENT, || {
+			stacker::maybe_grow(0x1_0000, 0x10_0000, || {
 				node.for_each_outer(|operand| self.observe(policy, nodes, operand));
 			});
 
@@ -174,7 +171,7 @@ impl Collector {
 		let saved_nodes = self.enter_region(&guard.nodes);
 
 		self.bind_branch_arguments(arguments_start, sources_start);
-		self.walk(policy, &guard.nodes);
+		self.walk_unbounded(policy, &guard.nodes);
 		self.record_branch_results(guard.results(), sources_start);
 
 		drop(guard);
@@ -311,7 +308,7 @@ impl Collector {
 		let saved_nodes = self.enter_region(&guard.nodes);
 
 		self.bind_repeat_carries(Repeat::ARGUMENTS_ID, carries_start, carry_count);
-		self.walk(policy, &guard.nodes);
+		self.walk_unbounded(policy, &guard.nodes);
 
 		drop(guard);
 
@@ -351,14 +348,16 @@ impl Collector {
 		self.clock += 2;
 	}
 
-	fn walk(&mut self, policy: &dyn Policy, nodes: &[Node]) {
-		stacker::maybe_grow(STACK_RED_ZONE, STACK_SEGMENT, || {
-			for (id, node) in nodes.iter().enumerate() {
-				let id = u32::try_from(id).unwrap();
+	fn walk_unbounded(&mut self, policy: &dyn Policy, nodes: &[Node]) {
+		stacker::maybe_grow(0x1_0000, 0x10_0000, || self.walk(policy, nodes));
+	}
 
-				self.visit(policy, nodes, id, node);
-			}
-		});
+	fn walk(&mut self, policy: &dyn Policy, nodes: &[Node]) {
+		for (id, node) in nodes.iter().enumerate() {
+			let id = u32::try_from(id).unwrap();
+
+			self.visit(policy, nodes, id, node);
+		}
 	}
 
 	fn visit(&mut self, policy: &dyn Policy, nodes: &[Node], id: u32, node: &Node) {
@@ -416,7 +415,7 @@ impl Collector {
 		self.reset();
 
 		self.enter_region(nodes);
-		self.walk(policy, nodes);
+		self.walk_unbounded(policy, nodes);
 
 		debug_assert!(
 			self.parameters_pin_to_argument_ports(nodes),

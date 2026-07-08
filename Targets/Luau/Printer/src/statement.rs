@@ -306,7 +306,7 @@ impl Print for Statement {
 
 impl Print for Sequence {
 	fn print(&self, printer: &mut LuauPrinter, out: &mut dyn Write) -> Result<()> {
-		stacker::maybe_grow(crate::STACK_RED_ZONE, crate::STACK_SEGMENT, || {
+		stacker::maybe_grow(0x1_0000, 0x10_0000, || {
 			self.statements
 				.iter()
 				.try_for_each(|statement| statement.print(printer, out))
