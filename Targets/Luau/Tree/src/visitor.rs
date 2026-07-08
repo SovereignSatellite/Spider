@@ -161,7 +161,7 @@ impl Expression {
 	fn accept<T: Visitor>(&self, visitor: &mut T) -> ControlFlow<T::Output> {
 		visitor.visit_expression(self)?;
 
-		match self {
+		stacker::maybe_grow(crate::STACK_RED_ZONE, crate::STACK_SEGMENT, || match self {
 			Self::Function(function) => function.accept(visitor),
 			Self::Match(inner) => inner.accept(visitor),
 
@@ -192,7 +192,7 @@ impl Expression {
 			Self::TableNew(table_new) => table_new.accept(visitor),
 			Self::Index(index) => index.accept(visitor),
 			Self::BufferLength(buffer_length) => buffer_length.accept(visitor),
-		}
+		})
 	}
 }
 
@@ -200,9 +200,11 @@ impl Sequence {
 	fn accept<T: Visitor>(&self, visitor: &mut T) -> ControlFlow<T::Output> {
 		let Self { statements } = self;
 
-		statements
-			.iter()
-			.try_for_each(|statement| statement.accept(visitor))
+		stacker::maybe_grow(crate::STACK_RED_ZONE, crate::STACK_SEGMENT, || {
+			statements
+				.iter()
+				.try_for_each(|statement| statement.accept(visitor))
+		})
 	}
 }
 

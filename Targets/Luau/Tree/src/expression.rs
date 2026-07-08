@@ -1,6 +1,6 @@
 //! Expression types for the Luau tree.
 
-use alloc::{boxed::Box, sync::Arc, vec::Vec};
+use alloc::sync::Arc;
 
 use super::statement::Sequence;
 

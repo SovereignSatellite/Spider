@@ -10,6 +10,7 @@ workspace = true
 ir-graph.workspace = true
 list.workspace = true
 parking_lot.workspace = true
+stacker.workspace = true
 wasmparser.workspace = true
 web-assembly-graph.workspace = true
 

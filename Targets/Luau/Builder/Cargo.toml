@@ -11,6 +11,7 @@ hashbrown.workspace = true
 ir-graph.workspace = true
 luau-foreign.workspace = true
 parking_lot.workspace = true
+stacker.workspace = true
 
 ir-allocator = { path = "../../../IR/Allocator" }
 luau-tree = { path = "../Tree" }
