@@ -4,9 +4,6 @@ use core::mem;
 
 use web_assembly_graph::BasicBlock;
 
-const STACK_RED_ZONE: usize = 64 * 1024;
-const STACK_SEGMENT: usize = 1024 * 1024;
-
 /// Eliminate unreachable blocks and compact the remainder in reverse
 /// post-order.
 pub struct TopologicalCompactor {
@@ -35,7 +32,7 @@ impl TopologicalCompactor {
 
 		let block = mem::take(&mut blocks[id]);
 
-		stacker::maybe_grow(STACK_RED_ZONE, STACK_SEGMENT, || {
+		stacker::maybe_grow(0x1_0000, 0x10_0000, || {
 			for &successor in block.successors.iter().rev() {
 				self.handle_block(blocks, successor);
 			}

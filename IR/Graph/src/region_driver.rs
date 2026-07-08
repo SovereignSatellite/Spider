@@ -9,14 +9,11 @@ use crate::{
 	node::region::{Branch, Function, Match, Repeat},
 };
 
-const STACK_RED_ZONE: usize = 64 * 1024;
-const STACK_SEGMENT: usize = 1024 * 1024;
-
 fn run_region<H>(region: Region, handler: &mut H)
 where
 	H: FnMut(Region),
 {
-	stacker::maybe_grow(STACK_RED_ZONE, STACK_SEGMENT, || {
+	stacker::maybe_grow(0x1_0000, 0x10_0000, || {
 		for node in region.nodes() {
 			run_node(node, handler);
 		}

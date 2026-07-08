@@ -19,9 +19,6 @@ use ir_graph::{
 const CELL_SIZE: u32 = 4;
 const MEMORY_SIZE: u32 = 1_024 * 4 * CELL_SIZE;
 
-const STACK_RED_ZONE: usize = 64 * 1024;
-const STACK_SEGMENT: usize = 1024 * 1024;
-
 enum Operator {
 	OffsetAdd,
 	OffsetSubtract,
@@ -249,7 +246,7 @@ impl TuringMachineLifter {
 	}
 
 	fn handle_block(&mut self, nodes: &mut Vec<Node>) {
-		stacker::maybe_grow(STACK_RED_ZONE, STACK_SEGMENT, || {
+		stacker::maybe_grow(0x1_0000, 0x10_0000, || {
 			let condition = self.emit_condition(nodes);
 			let arguments = self.capture_state(nodes);
 

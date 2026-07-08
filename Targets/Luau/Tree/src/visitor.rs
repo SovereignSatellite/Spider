@@ -161,7 +161,7 @@ impl Expression {
 	fn accept<T: Visitor>(&self, visitor: &mut T) -> ControlFlow<T::Output> {
 		visitor.visit_expression(self)?;
 
-		stacker::maybe_grow(crate::STACK_RED_ZONE, crate::STACK_SEGMENT, || match self {
+		stacker::maybe_grow(0x1_0000, 0x10_0000, || match self {
 			Self::Function(function) => function.accept(visitor),
 			Self::Match(inner) => inner.accept(visitor),
 
@@ -200,7 +200,7 @@ impl Sequence {
 	fn accept<T: Visitor>(&self, visitor: &mut T) -> ControlFlow<T::Output> {
 		let Self { statements } = self;
 
-		stacker::maybe_grow(crate::STACK_RED_ZONE, crate::STACK_SEGMENT, || {
+		stacker::maybe_grow(0x1_0000, 0x10_0000, || {
 			statements
 				.iter()
 				.try_for_each(|statement| statement.accept(visitor))

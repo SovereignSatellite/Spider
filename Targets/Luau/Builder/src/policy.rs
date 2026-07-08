@@ -139,7 +139,7 @@ impl LuauPolicy {
 	}
 
 	fn collect_deferrals(&mut self, nodes: &[Node]) {
-		stacker::maybe_grow(crate::STACK_RED_ZONE, crate::STACK_SEGMENT, || {
+		stacker::maybe_grow(0x1_0000, 0x10_0000, || {
 			self.mark_use_states(nodes);
 			self.record_deferred(nodes);
 			self.descend_into_children(nodes);

@@ -972,7 +972,7 @@ impl<'allocator, 'policy> Emitter<'allocator, 'policy> {
 	}
 
 	fn handle_nodes(&mut self, nodes: &[Node]) {
-		stacker::maybe_grow(crate::STACK_RED_ZONE, crate::STACK_SEGMENT, || {
+		stacker::maybe_grow(0x1_0000, 0x10_0000, || {
 			for (id, node) in nodes.iter().enumerate() {
 				let id = id.try_into().unwrap();
 

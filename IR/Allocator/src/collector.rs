@@ -17,9 +17,6 @@ use crate::{
 	value::{self, Value},
 };
 
-const STACK_RED_ZONE: usize = 64 * 1024;
-const STACK_SEGMENT: usize = 1024 * 1024;
-
 /// Collects exact value intervals and copy edges for one emitted function.
 pub struct Collector {
 	values: Vec<Value>,
@@ -75,7 +72,7 @@ impl Collector {
 		let node = &nodes[usize::try_from(link.0).unwrap()];
 
 		if !policy.should_materialize(node) {
-			stacker::maybe_grow(STACK_RED_ZONE, STACK_SEGMENT, || {
+			stacker::maybe_grow(0x1_0000, 0x10_0000, || {
 				node.for_each_outer(|operand| self.observe(policy, nodes, operand));
 			});
 
@@ -352,7 +349,7 @@ impl Collector {
 	}
 
 	fn walk(&mut self, policy: &dyn Policy, nodes: &[Node]) {
-		stacker::maybe_grow(STACK_RED_ZONE, STACK_SEGMENT, || {
+		stacker::maybe_grow(0x1_0000, 0x10_0000, || {
 			for (id, node) in nodes.iter().enumerate() {
 				let id = u32::try_from(id).unwrap();
 

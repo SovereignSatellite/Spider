@@ -12,9 +12,6 @@ use web_assembly_liveness::locals::Locals;
 
 use super::slots::{FunctionHeader, SlotFile};
 
-const STACK_RED_ZONE: usize = 64 * 1024;
-const STACK_SEGMENT: usize = 1024 * 1024;
-
 #[derive(Clone, Copy)]
 struct Body<'function> {
 	graph: &'function ControlFlowGraph,
@@ -140,7 +137,7 @@ impl IntervalLifter {
 	}
 
 	fn lift_unit(&mut self, nodes: &mut Vec<Node>, body: Body<'_>, first: u16) -> u16 {
-		stacker::maybe_grow(STACK_RED_ZONE, STACK_SEGMENT, || {
+		stacker::maybe_grow(0x1_0000, 0x10_0000, || {
 			if let Some(latch) = body.graph.find_repeat_end(first) {
 				return self.lift_loop(nodes, body, first, latch);
 			}
