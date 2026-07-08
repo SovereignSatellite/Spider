@@ -19,6 +19,9 @@ use ir_graph::{
 const CELL_SIZE: u32 = 4;
 const MEMORY_SIZE: u32 = 1_024 * 4 * CELL_SIZE;
 
+const STACK_RED_ZONE: usize = 64 * 1024;
+const STACK_SEGMENT: usize = 1024 * 1024;
+
 enum Operator {
 	OffsetAdd,
 	OffsetSubtract,
@@ -246,17 +249,20 @@ impl TuringMachineLifter {
 	}
 
 	fn handle_block(&mut self, nodes: &mut Vec<Node>) {
-		let condition = self.emit_condition(nodes);
-		let arguments = self.capture_state(nodes);
+		stacker::maybe_grow(STACK_RED_ZONE, STACK_SEGMENT, || {
+			let condition = self.emit_condition(nodes);
+			let arguments = self.capture_state(nodes);
 
-		let match_id = Match::add_into(nodes, arguments, condition, |parent, argument_count| {
-			let false_branch = self.create_false_branch(parent, argument_count);
-			let true_branch = self.create_true_branch(parent, argument_count);
+			let match_id =
+				Match::add_into(nodes, arguments, condition, |parent, argument_count| {
+					let false_branch = self.create_false_branch(parent, argument_count);
+					let true_branch = self.create_true_branch(parent, argument_count);
 
-			vec![false_branch, true_branch]
+					vec![false_branch, true_branch]
+				});
+
+			self.rebind_state(match_id);
 		});
-
-		self.rebind_state(match_id);
 	}
 
 	fn handle_code(&mut self, nodes: &mut Vec<Node>) {
