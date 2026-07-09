@@ -9,7 +9,7 @@ use parking_lot::Mutex;
 use ir_graph::{Region, Shape, region::Function, region_driver};
 use ir_passes::{
 	motion::InvariantPortMover,
-	normalize::{DeadPortEliminator, TopologicalCompactor, identity},
+	normalize::{ConstantIsolator, DeadPortEliminator, TopologicalCompactor, identity},
 	simplify::{CommonNodeEliminator, control_folder, isle},
 };
 
@@ -18,6 +18,7 @@ pub struct Optimizer {
 	topological_compactor: TopologicalCompactor,
 	invariant_port_mover: InvariantPortMover,
 	common_node_eliminator: CommonNodeEliminator,
+	constant_isolator: ConstantIsolator,
 	dead_port_eliminator: DeadPortEliminator,
 }
 
@@ -29,6 +30,7 @@ impl Optimizer {
 			topological_compactor: TopologicalCompactor::new(),
 			invariant_port_mover: InvariantPortMover::new(),
 			common_node_eliminator: CommonNodeEliminator::new(),
+			constant_isolator: ConstantIsolator::new(),
 			dead_port_eliminator: DeadPortEliminator::new(),
 		}
 	}
@@ -64,6 +66,7 @@ impl Optimizer {
 
 	fn finalize(&mut self, region: &mut Region) {
 		identity::insert(region);
+		self.constant_isolator.run(region.nodes_mut());
 		self.topological_compactor.run(region);
 	}
 
