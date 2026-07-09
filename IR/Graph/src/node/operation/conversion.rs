@@ -64,7 +64,7 @@ impl IntegerWiden {
 	non_camel_case_types,
 	reason = "variants encode source/target type pairs"
 )]
-#[derive(PartialEq, Eq, Clone, Copy, Debug)]
+#[derive(PartialEq, Eq, Hash, Clone, Copy, Debug)]
 pub enum ExtendType {
 	/// Extends a signed 8-bit value to a 32-bit integer.
 	I32_S8,

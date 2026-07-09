@@ -8,7 +8,7 @@
 use crate::{Link, Node};
 
 /// Floating-point types.
-#[derive(PartialEq, Eq, Clone, Copy, Debug)]
+#[derive(PartialEq, Eq, Hash, Clone, Copy, Debug)]
 pub enum Type {
 	/// A 32-bit float.
 	F32,
@@ -17,7 +17,7 @@ pub enum Type {
 }
 
 /// Unary operators for floating-point values.
-#[derive(PartialEq, Eq, Clone, Copy, Debug)]
+#[derive(PartialEq, Eq, Hash, Clone, Copy, Debug)]
 pub enum UnaryOperator {
 	/// Absolute value.
 	Absolute,
@@ -72,7 +72,7 @@ impl UnaryOperation {
 }
 
 /// Binary operators for floating-point arithmetic.
-#[derive(PartialEq, Eq, Clone, Copy, Debug)]
+#[derive(PartialEq, Eq, Hash, Clone, Copy, Debug)]
 pub enum BinaryOperator {
 	/// Addition.
 	Add,
@@ -131,7 +131,7 @@ impl BinaryOperation {
 }
 
 /// Comparison operators for floating-point values.
-#[derive(PartialEq, Eq, Clone, Copy, Debug)]
+#[derive(PartialEq, Eq, Hash, Clone, Copy, Debug)]
 pub enum CompareOperator {
 	/// Equality.
 	Equal,
