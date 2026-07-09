@@ -8,7 +8,7 @@
 use crate::{Link, Node};
 
 /// Integer types.
-#[derive(PartialEq, Eq, Clone, Copy, Debug)]
+#[derive(PartialEq, Eq, Hash, Clone, Copy, Debug)]
 pub enum Type {
 	/// A 32-bit integer.
 	I32,
@@ -17,7 +17,7 @@ pub enum Type {
 }
 
 /// Unary operators for integers.
-#[derive(PartialEq, Eq, Clone, Copy, Debug)]
+#[derive(PartialEq, Eq, Hash, Clone, Copy, Debug)]
 pub enum UnaryOperator {
 	/// Population count.
 	CountOnes,
@@ -64,7 +64,7 @@ impl UnaryOperation {
 }
 
 /// Binary operators for integer arithmetic.
-#[derive(PartialEq, Eq, Clone, Copy, Debug)]
+#[derive(PartialEq, Eq, Hash, Clone, Copy, Debug)]
 pub enum BinaryOperator {
 	/// Addition.
 	Add,
@@ -142,7 +142,7 @@ impl BinaryOperation {
 }
 
 /// Comparison operators for integers.
-#[derive(PartialEq, Eq, Clone, Copy, Debug)]
+#[derive(PartialEq, Eq, Hash, Clone, Copy, Debug)]
 pub enum CompareOperator {
 	/// Equality.
 	Equal,

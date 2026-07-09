@@ -10,13 +10,14 @@ use ir_graph::{Region, Shape, region::Function, region_driver};
 use ir_passes::{
 	motion::InvariantPortMover,
 	normalize::{DeadPortEliminator, TopologicalCompactor, identity},
-	simplify::{control_folder, isle},
+	simplify::{CommonNodeEliminator, control_folder, isle},
 };
 
 /// Composes the region-local passes into a fixpoint optimization loop.
 pub struct Optimizer {
 	topological_compactor: TopologicalCompactor,
 	invariant_port_mover: InvariantPortMover,
+	common_node_eliminator: CommonNodeEliminator,
 	dead_port_eliminator: DeadPortEliminator,
 }
 
@@ -27,6 +28,7 @@ impl Optimizer {
 		Self {
 			topological_compactor: TopologicalCompactor::new(),
 			invariant_port_mover: InvariantPortMover::new(),
+			common_node_eliminator: CommonNodeEliminator::new(),
 			dead_port_eliminator: DeadPortEliminator::new(),
 		}
 	}
@@ -40,8 +42,9 @@ impl Optimizer {
 
 			let folded = control_folder::run(region.nodes_mut());
 			let simplified = isle::run(region.nodes_mut());
+			let merged = self.common_node_eliminator.run(region.nodes_mut());
 
-			if !folded && !simplified && !pass(region) {
+			if !folded && !simplified && !merged && !pass(region) {
 				break;
 			}
 
