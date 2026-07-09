@@ -8,8 +8,9 @@ use parking_lot::Mutex;
 
 use ir_graph::{Region, Shape, region::Function, region_driver};
 use ir_passes::{
-	control_folder, dead_port_eliminator::DeadPortEliminator, identity,
-	invariant_port_mover::InvariantPortMover, isle, topological_compactor::TopologicalCompactor,
+	motion::InvariantPortMover,
+	normalize::{DeadPortEliminator, TopologicalCompactor, identity},
+	simplify::{control_folder, isle},
 };
 
 /// Composes the region-local passes into a fixpoint optimization loop.

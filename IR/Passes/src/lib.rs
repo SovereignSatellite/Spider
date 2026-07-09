@@ -2,10 +2,7 @@
 
 extern crate alloc;
 
-pub mod control_folder;
-pub mod dead_port_eliminator;
-pub mod identity;
-pub mod invariant_port_mover;
-pub mod isle;
-pub mod successor_finder;
-pub mod topological_compactor;
+pub mod analysis;
+pub mod motion;
+pub mod normalize;
+pub mod simplify;
