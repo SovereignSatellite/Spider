@@ -2,6 +2,7 @@
 	clippy::absolute_paths,
 	clippy::cognitive_complexity,
 	clippy::collapsible_if,
+	clippy::collapsible_match,
 	clippy::equatable_if_let,
 	clippy::excessive_nesting,
 	clippy::match_ref_pats,
