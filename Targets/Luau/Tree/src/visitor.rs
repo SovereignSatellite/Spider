@@ -4,9 +4,8 @@ use core::ops::ControlFlow;
 
 use super::{
 	expression::{
-		Aggregate, Apply, BooleanToInteger, BufferLength, Call as ExpressionCall, Expression,
-		Extract, Field, Function, Index, Infix, Match as ExpressionMatch, Prefix, RefIsNull,
-		TableNew,
+		Aggregate, Apply, BooleanToInteger, Call as ExpressionCall, Expression, Extract, Field,
+		Function, Index, Infix, Match as ExpressionMatch, MemoryNew, Prefix, RefIsNull, TableNew,
 	},
 	statement::{
 		Assign, Call as StatementCall, Match as StatementMatch, Repeat, Sequence, SetIndex,
@@ -153,11 +152,11 @@ impl Index {
 	}
 }
 
-impl BufferLength {
+impl MemoryNew {
 	fn accept<T: Visitor>(&self, visitor: &mut T) -> ControlFlow<T::Output> {
-		let Self { source } = self;
+		let Self { size, .. } = self;
 
-		source.accept_unbounded(visitor)
+		size.accept_unbounded(visitor)
 	}
 }
 
@@ -180,8 +179,7 @@ impl Expression {
 			| Self::I64(_)
 			| Self::F32(_)
 			| Self::F64(_)
-			| Self::String(_)
-			| Self::MemoryNew(_) => ControlFlow::Continue(()),
+			| Self::String(_) => ControlFlow::Continue(()),
 
 			Self::Call(call) => call.accept(visitor),
 			Self::Apply0Arguments(apply) => apply.accept(visitor),
@@ -199,7 +197,7 @@ impl Expression {
 			Self::Field(field) => field.accept(visitor),
 			Self::TableNew(table_new) => table_new.accept(visitor),
 			Self::Index(index) => index.accept(visitor),
-			Self::BufferLength(buffer_length) => buffer_length.accept(visitor),
+			Self::MemoryNew(memory_new) => memory_new.accept(visitor),
 		}
 	}
 }

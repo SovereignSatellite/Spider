@@ -2,8 +2,8 @@ use alloc::sync::Arc;
 use std::io::{Result, Write};
 
 use luau_tree::expression::{
-	Aggregate, Apply, BooleanToInteger, BufferLength, Call, Expression, Extract, Field, Function,
-	Index, Infix, Local, Match, MemoryNew, Name, Prefix, RefIsNull, TableNew,
+	Aggregate, Apply, BooleanToInteger, Call, Expression, Extract, Field, Function, Index, Infix,
+	Local, Match, MemoryNew, Name, Prefix, RefIsNull, TableNew,
 };
 
 use super::{LuauPrinter, library::NeedsName as _, print::Print};
@@ -458,25 +458,9 @@ impl Print for TableNew {
 	}
 }
 
-impl Print for BufferLength {
-	fn print(&self, printer: &mut LuauPrinter, out: &mut dyn Write) -> Result<()> {
-		let Self { source } = self;
-
-		write!(out, "buffer.len((")?;
-
-		source.print(printer, out)?;
-
-		write!(out, ")[1])")
-	}
-}
-
 impl Print for MemoryNew {
-	fn print(&self, _printer: &mut LuauPrinter, out: &mut dyn Write) -> Result<()> {
-		let Self {
-			initializer,
-			minimum,
-			maximum,
-		} = self;
+	fn print(&self, printer: &mut LuauPrinter, out: &mut dyn Write) -> Result<()> {
+		let Self { initializer, size } = self;
 
 		let intrinsic = self.needs_name();
 
@@ -486,7 +470,11 @@ impl Print for MemoryNew {
 			write!(out, "[{offset}] = \"{}\", ", data.escape_ascii())?;
 		}
 
-		write!(out, "}}, {minimum}, {maximum})")
+		write!(out, "}}, ")?;
+
+		size.print(printer, out)?;
+
+		write!(out, ")")
 	}
 }
 
@@ -520,7 +508,6 @@ impl Print for Expression {
 			Self::TableNew(table_new) => table_new.print(printer, out),
 			Self::Index(index) => index.print(printer, out),
 			Self::MemoryNew(memory_new) => memory_new.print(printer, out),
-			Self::BufferLength(buffer_length) => buffer_length.print(printer, out),
 		})
 	}
 }

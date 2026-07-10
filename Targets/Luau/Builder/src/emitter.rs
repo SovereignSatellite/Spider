@@ -16,7 +16,7 @@ use ir_graph::{
 };
 use luau_foreign::{
 	Bit32And, Bit32ArShift, Bit32CountLz, Bit32CountRz, Bit32LRotate, Bit32LShift, Bit32Or,
-	Bit32RRotate, Bit32RShift, Bit32Xor, BooleanToInteger, BufferLength, BufferLoad, BufferStore,
+	Bit32RRotate, Bit32RShift, Bit32Xor, BooleanToInteger, BufferLoad, BufferStore,
 	FlipMostSignificant, FromBitsF32, FromBitsI64, IntoBitsF32, IntoBitsI64, IsPositive, LuauAdd,
 	LuauDivide, LuauEqual, LuauFloorDivide, LuauLessThan, LuauLessThanEqual, LuauModulo,
 	LuauMultiply, LuauNegate, LuauNotEqual, LuauSubtract, MathAbs, MathCeil, MathFloor, MathFmod,
@@ -429,10 +429,6 @@ impl<'allocator, 'policy> Emitter<'allocator, 'policy> {
 			));
 		}
 
-		if let Some(node) = any.downcast_ref::<BufferLength>() {
-			return Some(self.data_handler.build_buffer_length(region, node.source));
-		}
-
 		None
 	}
 
@@ -627,8 +623,6 @@ impl<'allocator, 'policy> Emitter<'allocator, 'policy> {
 			| Node::TableCopy(_)
 			| Node::TableDrop(_)
 			| Node::MemoryLoad(_)
-			| Node::MemorySize(_)
-			| Node::MemoryGrow(_)
 			| Node::MemoryStore(_)
 			| Node::MemoryFill(_)
 			| Node::MemoryCopy(_)
@@ -693,7 +687,7 @@ impl<'allocator, 'policy> Emitter<'allocator, 'policy> {
 
 			Node::TableNew(node) => self.data_handler.build_table_new(self.region, node),
 
-			Node::MemoryNew(node) => Expression::MemoryNew(node.clone()),
+			Node::MemoryNew(node) => self.data_handler.build_memory_new(self.region, node),
 		}
 	}
 
@@ -831,22 +825,6 @@ impl<'allocator, 'policy> Emitter<'allocator, 'policy> {
 		self.code_handler.emit_call(Vec::new(), value);
 	}
 
-	fn handle_memory_size(&mut self, id: u32, node: operation::MemorySize) {
-		let reference = self.bridge(id, operation::MemorySize::STATE_PORT, node.source);
-		let value = self.data_handler.build_memory_size(self.region, reference);
-
-		self.emit_or_defer(id, value);
-	}
-
-	fn handle_memory_grow(&mut self, id: u32, node: operation::MemoryGrow) {
-		let reference = self.bridge(id, operation::MemoryGrow::STATE_PORT, node.destination);
-		let value = self
-			.data_handler
-			.build_memory_grow(self.region, reference, node.size);
-
-		self.emit_or_defer(id, value);
-	}
-
 	fn handle_memory_fill(&mut self, id: u32, node: operation::MemoryFill) {
 		let reference = self.bridge(
 			id,
@@ -889,12 +867,7 @@ impl<'allocator, 'policy> Emitter<'allocator, 'policy> {
 	}
 
 	fn handle_memory_drop(&mut self, id: u32, node: operation::MemoryDrop) {
-		let reference = self.bridge(id, operation::MemoryDrop::STATE_PORT, node.source);
-		let value = self
-			.data_handler
-			.build_apply_1(self.region, "rt_memory_drop", [reference]);
-
-		self.code_handler.emit_call(Vec::new(), value);
+		self.bridge(id, operation::MemoryDrop::STATE_PORT, node.source);
 	}
 
 	#[expect(clippy::too_many_lines, reason = "exhaustive match over node variants")]
@@ -963,8 +936,6 @@ impl<'allocator, 'policy> Emitter<'allocator, 'policy> {
 			Node::TableDrop(node) => self.handle_table_drop(id, node),
 			Node::MemoryLoad(node) => self.handle_memory_load(id, node),
 			Node::MemoryStore(node) => self.handle_memory_store(id, node),
-			Node::MemorySize(node) => self.handle_memory_size(id, node),
-			Node::MemoryGrow(node) => self.handle_memory_grow(id, node),
 			Node::MemoryFill(node) => self.handle_memory_fill(id, node),
 			Node::MemoryCopy(node) => self.handle_memory_copy(id, node),
 			Node::MemoryDrop(node) => self.handle_memory_drop(id, node),

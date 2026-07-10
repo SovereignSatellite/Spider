@@ -12,8 +12,8 @@ use wasmparser::FunctionBody;
 use ir_graph::{
 	Link, Node,
 	operation::{
-		Apply, Export, Extract, Fence, Import, Location, MemoryNew, MutableNew, MutableSet,
-		TableNew, TableSet,
+		Aggregate, Apply, Export, Extract, Fence, Import, Location, MemoryNew, MutableNew,
+		MutableSet, TableNew, TableSet,
 	},
 	region::Function,
 };
@@ -41,10 +41,37 @@ mod module;
 mod slots;
 mod synthesis;
 
+const MEMORY_CONTENT_FIELD: u32 = 0;
+const MEMORY_SIZE_FIELD: u32 = 1;
+const MEMORY_MAXIMUM_FIELD: u32 = 2;
+
 fn add_mutable_from_null(nodes: &mut Vec<Node>) -> Link {
 	let null = Node::add_null_into(nodes);
 
 	MutableNew::add_into(nodes, null)
+}
+
+fn create_memory(
+	nodes: &mut Vec<Node>,
+	initializer: Vec<(Arc<[u8]>, u32)>,
+	size: u32,
+	maximum: u32,
+) -> Link {
+	let size = Node::add_i32_into(nodes, size.cast_signed());
+	let maximum = Node::add_i32_into(nodes, maximum.cast_signed());
+
+	let content = MemoryNew::add_into(nodes, initializer, size);
+	let content = MutableNew::add_into(nodes, content);
+	let size = MutableNew::add_into(nodes, size);
+
+	Aggregate::add_into(nodes, vec![content, size, maximum])
+}
+
+fn create_data(nodes: &mut Vec<Node>, initializer: Arc<[u8]>) -> Link {
+	let size = Node::add_i32_into(nodes, initializer.len().try_into().unwrap());
+	let content = MemoryNew::add_into(nodes, vec![(initializer, 0)], size);
+
+	MutableNew::add_into(nodes, content)
 }
 
 impl ElementItemPlan {
@@ -178,21 +205,18 @@ impl WebAssemblyLifter {
 		);
 
 		self.entities.memories.extend(
-			environment.memories.iter().map(|memory| {
-				MemoryNew::add_into(nodes, Vec::new(), memory.minimum, memory.maximum)
-			}),
+			environment
+				.memories
+				.iter()
+				.map(|memory| create_memory(nodes, Vec::new(), memory.minimum, memory.maximum)),
 		);
 
-		self.entities
-			.datas
-			.extend(environment.datas.iter().map(|data| {
-				let bytes = Arc::clone(&data.bytes);
-				let Ok(size) = u32::try_from(data.bytes.len()) else {
-					unreachable!()
-				};
-
-				MemoryNew::add_into(nodes, vec![(bytes, 0)], size, size)
-			}));
+		self.entities.datas.extend(
+			environment
+				.datas
+				.iter()
+				.map(|data| create_data(nodes, Arc::clone(&data.bytes))),
+		);
 
 		self.entities.elements.extend(
 			environment

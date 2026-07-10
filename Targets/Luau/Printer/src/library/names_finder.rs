@@ -2,8 +2,7 @@ use core::ops::ControlFlow;
 
 use luau_tree::{
 	expression::{
-		Aggregate, Apply, BufferLength, Expression, Extract, Field, Function, Index, MemoryNew,
-		TableNew,
+		Aggregate, Apply, Expression, Extract, Field, Function, Index, MemoryNew, TableNew,
 	},
 	statement::{SetIndex, Statement},
 	visitor::Visitor,
@@ -85,12 +84,6 @@ impl NeedsName for MemoryNew {
 	}
 }
 
-impl NeedsName for BufferLength {
-	fn needs_name(&self) -> &'static str {
-		""
-	}
-}
-
 impl NeedsName for Expression {
 	fn needs_name(&self) -> &'static str {
 		match self {
@@ -124,7 +117,6 @@ impl NeedsName for Expression {
 			Self::TableNew(table_new) => table_new.needs_name(),
 			Self::Index(index) => index.needs_name(),
 			Self::MemoryNew(memory_new) => memory_new.needs_name(),
-			Self::BufferLength(buffer_length) => buffer_length.needs_name(),
 		}
 	}
 }

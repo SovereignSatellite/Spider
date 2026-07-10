@@ -12,10 +12,10 @@ use self::{
 	operation::{
 		Aggregate, Apply, Export, Extract, Fence, Identity, Import, IntegerConvertToNumber,
 		IntegerNarrow, IntegerSignExtend, IntegerTransmuteToNumber, IntegerWiden, MemoryCopy,
-		MemoryDrop, MemoryFill, MemoryGrow, MemoryLoad, MemoryNew, MemorySize, MemoryStore,
-		MutableGet, MutableNew, MutableSet, NumberNarrow, NumberTransmuteToInteger,
-		NumberTruncateToInteger, NumberWiden, RefIsNull, TableCopy, TableDrop, TableFill, TableGet,
-		TableGrow, TableNew, TableSet, TableSize, integer, number,
+		MemoryDrop, MemoryFill, MemoryLoad, MemoryNew, MemoryStore, MutableGet, MutableNew,
+		MutableSet, NumberNarrow, NumberTransmuteToInteger, NumberTruncateToInteger, NumberWiden,
+		RefIsNull, TableCopy, TableDrop, TableFill, TableGet, TableGrow, TableNew, TableSet,
+		TableSize, integer, number,
 	},
 	region::{Function, Match, Repeat, branch, function, repeat},
 };
@@ -166,10 +166,6 @@ pub enum Node {
 	MemoryLoad(MemoryLoad),
 	/// A memory store.
 	MemoryStore(MemoryStore),
-	/// A memory size query.
-	MemorySize(MemorySize),
-	/// A memory grow.
-	MemoryGrow(MemoryGrow),
 	/// A memory fill.
 	MemoryFill(MemoryFill),
 	/// A memory copy.
@@ -239,8 +235,6 @@ macro_rules! for_each_visit {
 			Self::MemoryNew(node) => node.$visit($handler),
 			Self::MemoryLoad(node) => node.$visit($handler),
 			Self::MemoryStore(node) => node.$visit($handler),
-			Self::MemorySize(node) => node.$visit($handler),
-			Self::MemoryGrow(node) => node.$visit($handler),
 			Self::MemoryFill(node) => node.$visit($handler),
 			Self::MemoryCopy(node) => node.$visit($handler),
 			Self::MemoryDrop(node) => node.$visit($handler),
@@ -386,8 +380,6 @@ impl Node {
 
 			Self::MemoryLoad(_) => MemoryLoad::RESULT_COUNT,
 			Self::MemoryStore(_) => MemoryStore::RESULT_COUNT,
-			Self::MemorySize(_) => MemorySize::RESULT_COUNT,
-			Self::MemoryGrow(_) => MemoryGrow::RESULT_COUNT,
 			Self::MemoryFill(_) => MemoryFill::RESULT_COUNT,
 			Self::MemoryCopy(_) => MemoryCopy::RESULT_COUNT,
 			Self::MemoryDrop(_) => MemoryDrop::RESULT_COUNT,
@@ -449,8 +441,6 @@ impl Node {
 			| Self::MemoryNew(_)
 			| Self::MemoryLoad(_)
 			| Self::MemoryStore(_)
-			| Self::MemorySize(_)
-			| Self::MemoryGrow(_)
 			| Self::MemoryFill(_)
 			| Self::MemoryCopy(_)
 			| Self::MemoryDrop(_) => Shape::Plain,

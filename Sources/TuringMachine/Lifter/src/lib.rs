@@ -88,7 +88,9 @@ impl TuringMachineLifter {
 	fn create_memory(&mut self, nodes: &mut Vec<Node>) {
 		self.loads.clear();
 
-		self.store = MemoryNew::add_into(nodes, Vec::new(), MEMORY_SIZE, MEMORY_SIZE);
+		let size = Node::add_i32_into(nodes, MEMORY_SIZE.try_into().unwrap());
+
+		self.store = MemoryNew::add_into(nodes, Vec::new(), size);
 		self.offset = Node::add_i32_into(nodes, 0);
 	}
 

@@ -1,8 +1,8 @@
 use std::io::{Result, Write};
 
 use luajit_tree::statement::{
-	Assign, Call, GlobalSet, Match, MemoryCopy, MemoryDrop, MemoryFill, MemoryStore, Repeat,
-	RuntimeCall, Sequence, Statement, SwapAll, TableCopy, TableDrop, TableFill, TableSet,
+	Assign, Call, GlobalSet, Match, MemoryCopy, MemoryFill, MemoryStore, Repeat, RuntimeCall,
+	Sequence, Statement, SwapAll, TableCopy, TableDrop, TableFill, TableSet,
 };
 
 use super::{
@@ -507,21 +507,6 @@ impl Print for MemoryCopy {
 	}
 }
 
-impl Print for MemoryDrop {
-	fn print(&self, printer: &mut LuaJITPrinter, out: &mut dyn Write) -> Result<()> {
-		let Self { source } = self;
-
-		let intrinsic = self.needs_name();
-
-		printer.write_indent(out)?;
-		write!(out, "rt_{intrinsic}(")?;
-
-		source.print(printer, out)?;
-
-		writeln!(out, ");")
-	}
-}
-
 impl Print for Statement {
 	fn print(&self, printer: &mut LuaJITPrinter, out: &mut dyn Write) -> Result<()> {
 		match self {
@@ -539,7 +524,6 @@ impl Print for Statement {
 			Self::MemoryStore(memory_store) => memory_store.print(printer, out),
 			Self::MemoryFill(memory_fill) => memory_fill.print(printer, out),
 			Self::MemoryCopy(memory_copy) => memory_copy.print(printer, out),
-			Self::MemoryDrop(memory_drop) => memory_drop.print(printer, out),
 		}
 	}
 }

@@ -7,8 +7,8 @@ use ir_graph::{Link, operation};
 use luajit_tree::expression::{
 	Aggregate, BooleanToInteger, Expression, Extract, GlobalGet, GlobalNew, IntegerBinaryOperation,
 	IntegerCompareOperation, IntegerConvertToNumber, IntegerExtend, IntegerNarrow,
-	IntegerTransmuteToNumber, IntegerUnaryOperation, IntegerWiden, Local, Location, MemoryGrow,
-	MemoryLoad, MemorySize, Name, NumberBinaryOperation, NumberCompareOperation, NumberNarrow,
+	IntegerTransmuteToNumber, IntegerUnaryOperation, IntegerWiden, Local, Location, MemoryLoad,
+	MemoryNew, Name, NumberBinaryOperation, NumberCompareOperation, NumberNarrow,
 	NumberTransmuteToInteger, NumberTruncateToInteger, NumberUnaryOperation, NumberWiden,
 	RefIsNull, RuntimeCall, TableGet, TableGrow, TableNew, TableSize,
 };
@@ -340,9 +340,9 @@ impl DataHandler {
 		Expression::GlobalNew(expression.into())
 	}
 
-	pub fn build_mutable_get(&mut self, region: u32, node: operation::MutableGet) -> Expression {
+	pub fn build_mutable_get(&mut self, region: u32, reference: Link) -> Expression {
 		let expression = GlobalGet {
-			source: self.load(region, node.source),
+			source: self.load(region, reference),
 		};
 
 		Expression::GlobalGet(expression.into())
@@ -405,31 +405,25 @@ impl DataHandler {
 		Expression::TableGrow(expression.into())
 	}
 
-	pub fn build_memory_load(&mut self, region: u32, node: operation::MemoryLoad) -> Expression {
-		let source = self.load_location(region, node.source);
+	pub fn build_memory_load(
+		&mut self,
+		region: u32,
+		reference: Link,
+		offset: Link,
+		kind: operation::LoadType,
+	) -> Expression {
+		let source = self.load_location(region, operation::Location { reference, offset });
 
-		Expression::MemoryLoad(
-			MemoryLoad {
-				source,
-				kind: node.kind,
-			}
-			.into(),
-		)
+		Expression::MemoryLoad(MemoryLoad { source, kind }.into())
 	}
 
-	pub fn build_memory_size(&mut self, region: u32, node: operation::MemorySize) -> Expression {
-		let source = self.load(region, node.source);
-
-		Expression::MemorySize(MemorySize { source }.into())
-	}
-
-	pub fn build_memory_grow(&mut self, region: u32, node: operation::MemoryGrow) -> Expression {
-		let expression = MemoryGrow {
-			destination: self.load(region, node.destination),
+	pub fn build_memory_new(&mut self, region: u32, node: &operation::MemoryNew) -> Expression {
+		let expression = MemoryNew {
+			initializer: node.initializer.clone(),
 			size: self.load(region, node.size),
 		};
 
-		Expression::MemoryGrow(expression.into())
+		Expression::MemoryNew(expression.into())
 	}
 }
 

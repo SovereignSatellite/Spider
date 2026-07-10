@@ -85,12 +85,6 @@ pub fn reuse_hint(node: &Node, port: u16) -> Option<Link> {
 		Node::MemoryStore(node) => {
 			(port == operation::MemoryStore::STATE_PORT).then_some(node.destination.reference)
 		}
-		Node::MemorySize(node) => {
-			(port == operation::MemorySize::STATE_PORT).then_some(node.source)
-		}
-		Node::MemoryGrow(node) => {
-			(port == operation::MemoryGrow::STATE_PORT).then_some(node.destination)
-		}
 		Node::MemoryFill(node) => {
 			(port == operation::MemoryFill::STATE_PORT).then_some(node.destination.reference)
 		}

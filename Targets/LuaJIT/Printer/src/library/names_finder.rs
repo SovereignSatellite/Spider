@@ -10,14 +10,13 @@ use luajit_tree::{
 		Aggregate, Expression, ExtendType, Extract, Function, GlobalGet, GlobalNew,
 		IntegerBinaryOperation, IntegerCompareOperation, IntegerConvertToNumber, IntegerExtend,
 		IntegerNarrow, IntegerTransmuteToNumber, IntegerUnaryOperation, IntegerWiden, LoadType,
-		MemoryGrow, MemoryLoad, MemoryNew, MemorySize, NumberBinaryOperation,
-		NumberCompareOperation, NumberNarrow, NumberTransmuteToInteger, NumberTruncateToInteger,
-		NumberUnaryOperation, NumberWiden, TableGet, TableGrow, TableNew, TableSize, integer,
-		number,
+		MemoryLoad, MemoryNew, NumberBinaryOperation, NumberCompareOperation, NumberNarrow,
+		NumberTransmuteToInteger, NumberTruncateToInteger, NumberUnaryOperation, NumberWiden,
+		TableGet, TableGrow, TableNew, TableSize, integer, number,
 	},
 	statement::{
-		GlobalSet, MemoryCopy, MemoryDrop, MemoryFill, MemoryStore, Statement, StoreType,
-		TableCopy, TableDrop, TableFill, TableSet,
+		GlobalSet, MemoryCopy, MemoryFill, MemoryStore, Statement, StoreType, TableCopy, TableDrop,
+		TableFill, TableSet,
 	},
 	visitor::Visitor,
 };
@@ -456,18 +455,6 @@ impl NeedsName for MemoryLoad {
 	}
 }
 
-impl NeedsName for MemorySize {
-	fn needs_name(&self) -> &'static str {
-		"memory_size"
-	}
-}
-
-impl NeedsName for MemoryGrow {
-	fn needs_name(&self) -> &'static str {
-		"memory_grow"
-	}
-}
-
 impl NeedsName for Expression {
 	fn needs_name(&self) -> &'static str {
 		match self {
@@ -532,8 +519,6 @@ impl NeedsName for Expression {
 			Self::TableGrow(table_grow) => table_grow.needs_name(),
 			Self::MemoryNew(memory_new) => memory_new.needs_name(),
 			Self::MemoryLoad(memory_load) => memory_load.needs_name(),
-			Self::MemorySize(memory_size) => memory_size.needs_name(),
-			Self::MemoryGrow(memory_grow) => memory_grow.needs_name(),
 		}
 	}
 }
@@ -598,12 +583,6 @@ impl NeedsName for MemoryCopy {
 	}
 }
 
-impl NeedsName for MemoryDrop {
-	fn needs_name(&self) -> &'static str {
-		"memory_drop"
-	}
-}
-
 impl NeedsName for Statement {
 	fn needs_name(&self) -> &'static str {
 		match self {
@@ -623,7 +602,6 @@ impl NeedsName for Statement {
 			Self::MemoryStore(memory_store) => memory_store.needs_name(),
 			Self::MemoryFill(memory_fill) => memory_fill.needs_name(),
 			Self::MemoryCopy(memory_copy) => memory_copy.needs_name(),
-			Self::MemoryDrop(memory_drop) => memory_drop.needs_name(),
 		}
 	}
 }

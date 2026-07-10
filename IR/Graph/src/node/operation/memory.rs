@@ -2,7 +2,6 @@
 
 #![expect(
 	unused_variables,
-	unused_mut,
 	reason = "macro-generated visitors may not consume every field"
 )]
 
@@ -26,40 +25,30 @@ impl Location {
 	handle_sources!((reference, link), (offset, link));
 }
 
-/// A memory creation node.
+/// A memory creation node yielding a fixed-size memory, or `Null` when the
+/// allocation fails.
 #[derive(Clone)]
 pub struct MemoryNew {
-	/// The initial data segments and their offsets.
+	/// The initial contents and their offsets.
 	pub initializer: Vec<(Arc<[u8]>, u32)>,
-	/// The minimum number of pages.
-	pub minimum: u32,
-	/// The maximum number of pages.
-	pub maximum: u32,
+	/// The size in bytes.
+	pub size: Link,
 }
 
 impl MemoryNew {
 	/// Adds a memory creation node to the graph.
-	pub fn add_into(
-		nodes: &mut Vec<Node>,
-		initializer: Vec<(Arc<[u8]>, u32)>,
-		minimum: u32,
-		maximum: u32,
-	) -> Link {
+	pub fn add_into(nodes: &mut Vec<Node>, initializer: Vec<(Arc<[u8]>, u32)>, size: Link) -> Link {
 		let Ok(id) = nodes.len().try_into() else {
 			unreachable!()
 		};
-		let node = Node::MemoryNew(Self {
-			initializer,
-			minimum,
-			maximum,
-		});
+		let node = Node::MemoryNew(Self { initializer, size });
 
 		nodes.push(node);
 
 		Link(id, 0)
 	}
 
-	handle_sources!((initializer, ignore), (minimum, ignore), (maximum, ignore));
+	handle_sources!((initializer, ignore), (size, link));
 }
 
 /// Source and target type pairs for memory loads.
@@ -203,68 +192,6 @@ impl MemoryStore {
 	handle_sources!((destination, method), (source, link), (kind, ignore));
 }
 
-/// A memory size query node.
-#[derive(Clone, Copy)]
-pub struct MemorySize {
-	/// The memory being queried.
-	pub source: Link,
-}
-
-impl MemorySize {
-	/// The number of output ports.
-	pub const RESULT_COUNT: u16 = 2;
-	/// The port index for the result value.
-	pub const RESULT_PORT: u16 = 0;
-	/// The port index for the state token.
-	pub const STATE_PORT: u16 = 1;
-
-	/// Adds a memory size query node to the graph.
-	pub fn add_into(nodes: &mut Vec<Node>, source: Link) -> (Link, Link) {
-		let Ok(id) = nodes.len().try_into() else {
-			unreachable!()
-		};
-		let node = Node::MemorySize(Self { source });
-
-		nodes.push(node);
-
-		(Link(id, Self::RESULT_PORT), Link(id, Self::STATE_PORT))
-	}
-
-	handle_sources!((source, link));
-}
-
-/// A memory grow node.
-#[derive(Clone, Copy)]
-pub struct MemoryGrow {
-	/// The memory being grown.
-	pub destination: Link,
-	/// The number of pages to grow by.
-	pub size: Link,
-}
-
-impl MemoryGrow {
-	/// The number of output ports.
-	pub const RESULT_COUNT: u16 = 2;
-	/// The port index for the result value.
-	pub const RESULT_PORT: u16 = 0;
-	/// The port index for the state token.
-	pub const STATE_PORT: u16 = 1;
-
-	/// Adds a memory grow node to the graph.
-	pub fn add_into(nodes: &mut Vec<Node>, destination: Link, size: Link) -> (Link, Link) {
-		let Ok(id) = nodes.len().try_into() else {
-			unreachable!()
-		};
-		let node = Node::MemoryGrow(Self { destination, size });
-
-		nodes.push(node);
-
-		(Link(id, Self::RESULT_PORT), Link(id, Self::STATE_PORT))
-	}
-
-	handle_sources!((destination, link), (size, link));
-}
-
 /// A memory fill node.
 #[derive(Clone, Copy)]
 pub struct MemoryFill {
@@ -347,7 +274,7 @@ impl MemoryCopy {
 	handle_sources!((destination, method), (source, method), (size, link));
 }
 
-/// A memory drop node.
+/// A memory deallocation node.
 #[derive(Clone, Copy)]
 pub struct MemoryDrop {
 	/// The memory being dropped.

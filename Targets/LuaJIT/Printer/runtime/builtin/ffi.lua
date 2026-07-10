@@ -13,10 +13,10 @@ local i64_type = ffi.typeof("int64_t")
 -- NEEDS ffi
 local u64_type = ffi.typeof("uint64_t")
 
--- SECTION c_realloc
+-- SECTION c_calloc
 -- NEEDS ffi
 ffi.cdef([[
-void *realloc(void *ptr, size_t size);
+void *calloc(size_t count, size_t size);
 ]])
 
 -- SECTION c_free
@@ -59,8 +59,7 @@ local any_pointer_type = ffi.typeof("union Any *")
 ffi.cdef([[
 struct Memory {
     union Any *data;
-    uint32_t minimum;
-    uint32_t maximum;
+    uint32_t size;
 };
 ]])
 

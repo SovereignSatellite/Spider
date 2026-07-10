@@ -212,8 +212,6 @@ impl JsonPrinter {
 				| Node::MemoryNew(_)
 				| Node::MemoryLoad(_)
 				| Node::MemoryStore(_)
-				| Node::MemorySize(_)
-				| Node::MemoryGrow(_)
 				| Node::MemoryFill(_)
 				| Node::MemoryCopy(_)
 				| Node::MemoryDrop(_) => {}

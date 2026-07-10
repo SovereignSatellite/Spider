@@ -298,11 +298,13 @@ impl<'allocator, 'policy> Emitter<'allocator, 'policy> {
 			| Node::Identity(_)
 			| Node::Fence(_)
 			| Node::Apply(_)
+			| Node::MutableGet(_)
 			| Node::MutableSet(_)
 			| Node::TableSet(_)
 			| Node::TableFill(_)
 			| Node::TableCopy(_)
 			| Node::TableDrop(_)
+			| Node::MemoryLoad(_)
 			| Node::MemoryStore(_)
 			| Node::MemoryFill(_)
 			| Node::MemoryCopy(_)
@@ -361,7 +363,6 @@ impl<'allocator, 'policy> Emitter<'allocator, 'policy> {
 				.build_number_transmute_to_integer(self.region, *node),
 
 			Node::MutableNew(node) => self.data_handler.build_mutable_new(self.region, *node),
-			Node::MutableGet(node) => self.data_handler.build_mutable_get(self.region, *node),
 
 			Node::Aggregate(node) => self.data_handler.build_aggregate(self.region, node),
 			Node::Extract(node) => self.data_handler.build_extract(self.region, *node),
@@ -371,15 +372,20 @@ impl<'allocator, 'policy> Emitter<'allocator, 'policy> {
 			Node::TableSize(node) => self.data_handler.build_table_size(self.region, *node),
 			Node::TableGrow(node) => self.data_handler.build_table_grow(self.region, *node),
 
-			Node::MemoryNew(node) => Expression::MemoryNew(node.clone()),
-			Node::MemoryLoad(node) => self.data_handler.build_memory_load(self.region, *node),
-			Node::MemorySize(node) => self.data_handler.build_memory_size(self.region, *node),
-			Node::MemoryGrow(node) => self.data_handler.build_memory_grow(self.region, *node),
+			Node::MemoryNew(node) => self.data_handler.build_memory_new(self.region, node),
 		}
 	}
 
-	fn handle_mutable_set(&mut self, node: operation::MutableSet) {
-		let destination = self.data_handler.load(self.region, node.destination);
+	fn handle_mutable_get(&mut self, id: u32, node: operation::MutableGet) {
+		let reference = self.bridge(id, operation::MutableGet::STATE_PORT, node.source);
+		let value = self.data_handler.build_mutable_get(self.region, reference);
+
+		self.emit_or_defer(id, value);
+	}
+
+	fn handle_mutable_set(&mut self, id: u32, node: operation::MutableSet) {
+		let destination = self.bridge(id, operation::MutableSet::STATE_PORT, node.destination);
+		let destination = self.data_handler.load(self.region, destination);
 		let source = self.data_handler.load(self.region, node.source);
 
 		self.code_handler.emit_mutable_set(destination, source);
@@ -420,41 +426,89 @@ impl<'allocator, 'policy> Emitter<'allocator, 'policy> {
 		self.code_handler.emit_table_drop(source);
 	}
 
-	fn handle_memory_store(&mut self, node: operation::MemoryStore) {
-		let destination = self
-			.data_handler
-			.load_location(self.region, node.destination);
+	fn handle_memory_load(&mut self, id: u32, node: operation::MemoryLoad) {
+		let reference = self.bridge(id, operation::MemoryLoad::STATE_PORT, node.source.reference);
+		let value = self.data_handler.build_memory_load(
+			self.region,
+			reference,
+			node.source.offset,
+			node.kind,
+		);
+
+		self.emit_or_defer(id, value);
+	}
+
+	fn handle_memory_store(&mut self, id: u32, node: operation::MemoryStore) {
+		let reference = self.bridge(
+			id,
+			operation::MemoryStore::STATE_PORT,
+			node.destination.reference,
+		);
+		let destination = self.data_handler.load_location(
+			self.region,
+			operation::Location {
+				reference,
+				..node.destination
+			},
+		);
 		let source = self.data_handler.load(self.region, node.source);
 
 		self.code_handler
 			.emit_memory_store(destination, source, node.kind);
 	}
 
-	fn handle_memory_fill(&mut self, node: operation::MemoryFill) {
-		let destination = self
-			.data_handler
-			.load_location(self.region, node.destination);
+	fn handle_memory_fill(&mut self, id: u32, node: operation::MemoryFill) {
+		let reference = self.bridge(
+			id,
+			operation::MemoryFill::STATE_PORT,
+			node.destination.reference,
+		);
+		let destination = self.data_handler.load_location(
+			self.region,
+			operation::Location {
+				reference,
+				..node.destination
+			},
+		);
 		let byte = self.data_handler.load(self.region, node.byte);
 		let size = self.data_handler.load(self.region, node.size);
 
 		self.code_handler.emit_memory_fill(destination, byte, size);
 	}
 
-	fn handle_memory_copy(&mut self, node: operation::MemoryCopy) {
-		let destination = self
-			.data_handler
-			.load_location(self.region, node.destination);
-		let source = self.data_handler.load_location(self.region, node.source);
+	fn handle_memory_copy(&mut self, id: u32, node: operation::MemoryCopy) {
+		let destination = Link(id, operation::MemoryCopy::DESTINATION_STATE_PORT);
+		let source = Link(id, operation::MemoryCopy::SOURCE_STATE_PORT);
+		let destination_local = self.data_handler.local_of(self.region, destination);
+		let source_local = self.data_handler.local_of(self.region, source);
+
+		self.emit_transfer(
+			&[destination_local, source_local],
+			&[node.destination.reference, node.source.reference],
+		);
+
+		let destination = self.data_handler.load_location(
+			self.region,
+			operation::Location {
+				reference: destination,
+				..node.destination
+			},
+		);
+		let source = self.data_handler.load_location(
+			self.region,
+			operation::Location {
+				reference: source,
+				..node.source
+			},
+		);
 		let size = self.data_handler.load(self.region, node.size);
 
 		self.code_handler
 			.emit_memory_copy(destination, source, size);
 	}
 
-	fn handle_memory_drop(&mut self, node: operation::MemoryDrop) {
-		let source = self.data_handler.load(self.region, node.source);
-
-		self.code_handler.emit_memory_drop(source);
+	fn handle_memory_drop(&mut self, id: u32, node: operation::MemoryDrop) {
+		self.bridge(id, operation::MemoryDrop::STATE_PORT, node.source);
 	}
 
 	#[expect(clippy::too_many_lines, reason = "exhaustive match over node variants")]
@@ -504,29 +558,27 @@ impl<'allocator, 'policy> Emitter<'allocator, 'policy> {
 			| Node::NumberTruncateToInteger(_)
 			| Node::NumberTransmuteToInteger(_)
 			| Node::MutableNew(_)
-			| Node::MutableGet(_)
 			| Node::Aggregate(_)
 			| Node::Extract(_)
 			| Node::TableNew(_)
 			| Node::TableGet(_)
 			| Node::TableSize(_)
 			| Node::TableGrow(_)
-			| Node::MemoryNew(_)
-			| Node::MemoryLoad(_)
-			| Node::MemorySize(_)
-			| Node::MemoryGrow(_) => self.emit_expression(nodes, id),
+			| Node::MemoryNew(_) => self.emit_expression(nodes, id),
 
 			Node::Export(ref node) => self.handle_export(id, node),
 			Node::Apply(ref node) => self.handle_call(id, node),
-			Node::MutableSet(node) => self.handle_mutable_set(node),
+			Node::MutableGet(node) => self.handle_mutable_get(id, node),
+			Node::MutableSet(node) => self.handle_mutable_set(id, node),
 			Node::TableSet(node) => self.handle_table_set(node),
 			Node::TableFill(node) => self.handle_table_fill(node),
 			Node::TableCopy(node) => self.handle_table_copy(node),
 			Node::TableDrop(node) => self.handle_table_drop(node),
-			Node::MemoryStore(node) => self.handle_memory_store(node),
-			Node::MemoryFill(node) => self.handle_memory_fill(node),
-			Node::MemoryCopy(node) => self.handle_memory_copy(node),
-			Node::MemoryDrop(node) => self.handle_memory_drop(node),
+			Node::MemoryLoad(node) => self.handle_memory_load(id, node),
+			Node::MemoryStore(node) => self.handle_memory_store(id, node),
+			Node::MemoryFill(node) => self.handle_memory_fill(id, node),
+			Node::MemoryCopy(node) => self.handle_memory_copy(id, node),
+			Node::MemoryDrop(node) => self.handle_memory_drop(id, node),
 		}
 	}
 
