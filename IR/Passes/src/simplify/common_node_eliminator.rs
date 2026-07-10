@@ -52,6 +52,11 @@ macro_rules! foreign_binary_signatures {
 /// same value, because they perform the same operation on the same operands.
 #[derive(PartialEq, Eq, Hash, Clone, Copy)]
 enum Signature {
+	Null,
+	I32(i32),
+	I64(i64),
+	F32(u32),
+	F64(u64),
 	RefIsNull(Link),
 	IntegerUnary(integer::UnaryOperator, integer::Type, Link),
 	IntegerBinary(BinaryOperator, integer::Type, Link, Link),
@@ -201,11 +206,6 @@ impl Signature {
 			| Node::Import(_)
 			| Node::Export(_)
 			| Node::Trap
-			| Node::Null
-			| Node::I32(_)
-			| Node::I64(_)
-			| Node::F32(_)
-			| Node::F64(_)
 			| Node::Identity(_)
 			| Node::Fence(_)
 			| Node::Apply(_)
@@ -231,6 +231,11 @@ impl Signature {
 			| Node::MemoryDrop(_) => None,
 
 			Node::Foreign(foreign) => Self::foreign(foreign.as_ref()),
+			Node::Null => Some(Self::Null),
+			Node::I32(value) => Some(Self::I32(*value)),
+			Node::I64(value) => Some(Self::I64(*value)),
+			Node::F32(value) => Some(Self::F32(value.to_bits())),
+			Node::F64(value) => Some(Self::F64(value.to_bits())),
 			Node::RefIsNull(operation) => Some(Self::RefIsNull(operation.source)),
 			Node::IntegerUnaryOperation(operation) => Some(Self::IntegerUnary(
 				operation.operator,
