@@ -134,12 +134,6 @@ pub struct MemoryCopy {
 	pub size: Expression,
 }
 
-/// A memory drop operation.
-pub struct MemoryDrop {
-	/// The source expression.
-	pub source: Expression,
-}
-
 /// A statement node.
 pub enum Statement {
 	/// A conditional match.
@@ -175,6 +169,4 @@ pub enum Statement {
 	MemoryFill(Box<MemoryFill>),
 	/// A memory copy.
 	MemoryCopy(Box<MemoryCopy>),
-	/// A memory drop.
-	MemoryDrop(Box<MemoryDrop>),
 }

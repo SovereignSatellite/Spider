@@ -4,8 +4,6 @@ use alloc::sync::Arc;
 
 use super::statement::Sequence;
 
-pub use ir_graph::operation::MemoryNew;
-
 /// A function definition.
 pub struct Function {
 	/// The argument names.
@@ -118,10 +116,13 @@ pub struct Index {
 	pub offset: Expression,
 }
 
-/// A memory size query.
-pub struct BufferLength {
-	/// The source memory expression.
-	pub source: Expression,
+/// A memory creation yielding a fixed-size memory, or `nil` when the
+/// allocation fails.
+pub struct MemoryNew {
+	/// The initial contents and their offsets.
+	pub initializer: Vec<(Arc<[u8]>, u32)>,
+	/// The size in bytes.
+	pub size: Expression,
 }
 
 /// A binary operator application: `(lhs) operator (rhs)`.
@@ -205,9 +206,7 @@ pub enum Expression {
 	Index(Box<Index>),
 
 	/// A memory creation.
-	MemoryNew(MemoryNew),
-	/// A memory size query.
-	BufferLength(Box<BufferLength>),
+	MemoryNew(Box<MemoryNew>),
 }
 
 impl Expression {
@@ -249,8 +248,7 @@ impl Expression {
 			| Self::Apply5Arguments(_)
 			| Self::Extract(_)
 			| Self::Field(_)
-			| Self::Index(_)
-			| Self::BufferLength(_) => self.into_boolean_unchecked(),
+			| Self::Index(_) => self.into_boolean_unchecked(),
 
 			Self::Trap | Self::RefIsNull(_) => self,
 

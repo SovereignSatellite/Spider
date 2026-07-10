@@ -10,8 +10,8 @@ use ir_graph::{
 use luau_foreign::BufferStore;
 use luau_tree::{
 	expression::{
-		Aggregate, Apply, BooleanToInteger, BufferLength, Expression, Extract, Field, Index, Infix,
-		Local, Match, Name, Prefix, RefIsNull, TableNew,
+		Aggregate, Apply, BooleanToInteger, Expression, Extract, Field, Index, Infix, Local, Match,
+		MemoryNew, Name, Prefix, RefIsNull, TableNew,
 	},
 	statement::Sequence,
 };
@@ -479,15 +479,8 @@ impl DataHandler {
 		reference: Link,
 		node: BufferStore,
 	) -> Expression {
-		let buffer = self.build_extract(
-			region,
-			operation::Extract {
-				source: reference,
-				index: 0,
-			},
-		);
 		let arguments = [
-			buffer,
+			self.load(region, reference),
 			self.load(region, node.offset),
 			self.load(region, node.value),
 		];
@@ -497,12 +490,6 @@ impl DataHandler {
 		};
 
 		Expression::Apply3Arguments(expression.into())
-	}
-
-	pub fn build_buffer_length(&mut self, region: u32, source: Link) -> Expression {
-		let source = self.load(region, source);
-
-		Expression::BufferLength(BufferLength { source }.into())
 	}
 
 	pub fn build_vector_create(&mut self, region: u32, source: Link) -> Expression {
@@ -793,12 +780,13 @@ impl DataHandler {
 		self.build_apply_2(region, memory_load_name(kind), [reference, offset])
 	}
 
-	pub fn build_memory_size(&mut self, region: u32, reference: Link) -> Expression {
-		self.build_apply_1(region, "rt_memory_size", [reference])
-	}
+	pub fn build_memory_new(&mut self, region: u32, node: &operation::MemoryNew) -> Expression {
+		let expression = MemoryNew {
+			initializer: node.initializer.clone(),
+			size: self.load(region, node.size),
+		};
 
-	pub fn build_memory_grow(&mut self, region: u32, reference: Link, size: Link) -> Expression {
-		self.build_apply_2(region, "rt_memory_grow", [reference, size])
+		Expression::MemoryNew(expression.into())
 	}
 }
 

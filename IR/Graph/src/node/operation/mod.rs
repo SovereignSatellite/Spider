@@ -22,8 +22,8 @@ pub use self::{
 	},
 	host::{Export, Import},
 	memory::{
-		LoadType, Location, MemoryCopy, MemoryDrop, MemoryFill, MemoryGrow, MemoryLoad, MemoryNew,
-		MemorySize, MemoryStore, StoreType,
+		LoadType, Location, MemoryCopy, MemoryDrop, MemoryFill, MemoryLoad, MemoryNew, MemoryStore,
+		StoreType,
 	},
 	mutable::{MutableGet, MutableNew, MutableSet},
 	plumbing::{Apply, Fence, Identity, RefIsNull},

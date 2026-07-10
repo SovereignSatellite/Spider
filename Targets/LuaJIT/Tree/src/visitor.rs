@@ -7,15 +7,15 @@ use super::{
 		Aggregate, BooleanToInteger, Call as ExpressionCall, Expression, Extract, Function,
 		GlobalGet, GlobalNew, IntegerBinaryOperation, IntegerCompareOperation,
 		IntegerConvertToNumber, IntegerExtend, IntegerNarrow, IntegerTransmuteToNumber,
-		IntegerUnaryOperation, IntegerWiden, Location, MemoryGrow, MemoryLoad, MemorySize,
+		IntegerUnaryOperation, IntegerWiden, Location, MemoryLoad, MemoryNew,
 		NumberBinaryOperation, NumberCompareOperation, NumberNarrow, NumberTransmuteToInteger,
 		NumberTruncateToInteger, NumberUnaryOperation, NumberWiden, RefIsNull,
 		RuntimeCall as ExpressionRuntimeCall, TableGet, TableGrow, TableNew, TableSize,
 	},
 	statement::{
-		Assign, Call as StatementCall, GlobalSet, Match, MemoryCopy, MemoryDrop, MemoryFill,
-		MemoryStore, Repeat, RuntimeCall as StatementRuntimeCall, Sequence, Statement, TableCopy,
-		TableDrop, TableFill, TableSet,
+		Assign, Call as StatementCall, GlobalSet, Match, MemoryCopy, MemoryFill, MemoryStore,
+		Repeat, RuntimeCall as StatementRuntimeCall, Sequence, Statement, TableCopy, TableDrop,
+		TableFill, TableSet,
 	},
 };
 
@@ -295,19 +295,10 @@ impl MemoryLoad {
 	}
 }
 
-impl MemorySize {
+impl MemoryNew {
 	fn accept<T: Visitor>(&self, visitor: &mut T) -> ControlFlow<T::Output> {
-		let Self { source } = self;
+		let Self { size, .. } = self;
 
-		source.accept(visitor)
-	}
-}
-
-impl MemoryGrow {
-	fn accept<T: Visitor>(&self, visitor: &mut T) -> ControlFlow<T::Output> {
-		let Self { destination, size } = self;
-
-		destination.accept(visitor)?;
 		size.accept(visitor)
 	}
 }
@@ -330,8 +321,7 @@ impl Expression {
 			| Self::I64(_)
 			| Self::F32(_)
 			| Self::F64(_)
-			| Self::String(_)
-			| Self::MemoryNew(_) => ControlFlow::Continue(()),
+			| Self::String(_) => ControlFlow::Continue(()),
 
 			Self::Call(call) => call.accept(visitor),
 			Self::RuntimeCall(runtime_call) => runtime_call.accept(visitor),
@@ -380,9 +370,8 @@ impl Expression {
 			Self::TableGet(table_get) => table_get.accept(visitor),
 			Self::TableSize(table_size) => table_size.accept(visitor),
 			Self::TableGrow(table_grow) => table_grow.accept(visitor),
+			Self::MemoryNew(memory_new) => memory_new.accept(visitor),
 			Self::MemoryLoad(memory_load) => memory_load.accept(visitor),
-			Self::MemorySize(memory_size) => memory_size.accept(visitor),
-			Self::MemoryGrow(memory_grow) => memory_grow.accept(visitor),
 		}
 	}
 }
@@ -560,14 +549,6 @@ impl MemoryCopy {
 	}
 }
 
-impl MemoryDrop {
-	fn accept<T: Visitor>(&self, visitor: &mut T) -> ControlFlow<T::Output> {
-		let Self { source } = self;
-
-		source.accept(visitor)
-	}
-}
-
 impl Statement {
 	fn accept<T: Visitor>(&self, visitor: &mut T) -> ControlFlow<T::Output> {
 		visitor.visit_statement(self)?;
@@ -587,7 +568,6 @@ impl Statement {
 			Self::MemoryStore(memory_store) => memory_store.accept(visitor),
 			Self::MemoryFill(memory_fill) => memory_fill.accept(visitor),
 			Self::MemoryCopy(memory_copy) => memory_copy.accept(visitor),
-			Self::MemoryDrop(memory_drop) => memory_drop.accept(visitor),
 		}
 	}
 }

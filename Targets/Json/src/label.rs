@@ -65,8 +65,6 @@ pub fn get_static(node: &Node) -> Option<&'static str> {
 		Node::MemoryNew(_) => "Memory New",
 		Node::MemoryLoad(_) => "Memory Load",
 		Node::MemoryStore(_) => "Memory Store",
-		Node::MemorySize(_) => "Memory Size",
-		Node::MemoryGrow(_) => "Memory Grow",
 		Node::MemoryFill(_) => "Memory Fill",
 		Node::MemoryCopy(_) => "Memory Copy",
 		Node::MemoryDrop(_) => "Memory Drop",
@@ -289,8 +287,6 @@ pub fn write(node: &Node, out: &mut dyn Write) -> Result<()> {
 		| Node::MemoryNew(_)
 		| Node::MemoryLoad(_)
 		| Node::MemoryStore(_)
-		| Node::MemorySize(_)
-		| Node::MemoryGrow(_)
 		| Node::MemoryFill(_)
 		| Node::MemoryCopy(_)
 		| Node::MemoryDrop(_) => Err(Error::other("node does not have a dynamic name")),

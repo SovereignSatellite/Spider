@@ -1,18 +1,22 @@
 -- SECTION memory_new
+-- NEEDS c_calloc
 -- NEEDS ffi
 -- NEEDS ffi_cast
+-- NEEDS force_u32
 -- NEEDS memory_drop
--- NEEDS memory_grow
 -- NEEDS memory_type
 -- NEEDS u8_pointer_type
-local function rt_memory_new(initializer, minimum, maximum)
-	local result = ffi.gc(memory_type(nil, 0, maximum), rt_memory_drop)
+local function rt_memory_new(initializer, size)
+	size = force_u32(size)
 
-	if rt_memory_grow(result, minimum) == -1 then
-		error("failed to allocate memory")
+	local data = ffi.C.calloc(size, 1)
+
+	if data == nil and size ~= 0 then
+		return nil
 	end
 
-	local address = ffi_cast(u8_pointer_type, result.data)
+	local result = ffi.gc(memory_type(data, size), rt_memory_drop)
+	local address = ffi_cast(u8_pointer_type, data)
 
 	for offset, content in pairs(initializer) do
 		ffi.copy(address + offset, content, #content)
@@ -26,7 +30,7 @@ end
 -- NEEDS ffi_cast
 -- NEEDS u8_pointer_type
 local function rt_load_i32_from_s8(source, offset)
-	if offset < 0 or offset + 1 > source.minimum then
+	if offset < 0 or offset + 1 > source.size then
 		error("out of bounds memory load")
 	end
 
@@ -40,7 +44,7 @@ end
 -- NEEDS ffi_cast
 -- NEEDS u8_pointer_type
 local function rt_load_i32_from_u8(source, offset)
-	if offset < 0 or offset + 1 > source.minimum then
+	if offset < 0 or offset + 1 > source.size then
 		error("out of bounds memory load")
 	end
 
@@ -54,7 +58,7 @@ end
 -- NEEDS ffi_cast
 -- NEEDS u8_pointer_type
 local function rt_load_i32_from_s16(source, offset)
-	if offset < 0 or offset + 2 > source.minimum then
+	if offset < 0 or offset + 2 > source.size then
 		error("out of bounds memory load")
 	end
 
@@ -68,7 +72,7 @@ end
 -- NEEDS ffi_cast
 -- NEEDS u8_pointer_type
 local function rt_load_i32_from_u16(source, offset)
-	if offset < 0 or offset + 2 > source.minimum then
+	if offset < 0 or offset + 2 > source.size then
 		error("out of bounds memory load")
 	end
 
@@ -82,7 +86,7 @@ end
 -- NEEDS ffi_cast
 -- NEEDS u8_pointer_type
 local function rt_load_i32(source, offset)
-	if offset < 0 or offset + 4 > source.minimum then
+	if offset < 0 or offset + 4 > source.size then
 		error("out of bounds memory load")
 	end
 
@@ -97,7 +101,7 @@ end
 -- NEEDS i64_type
 -- NEEDS u8_pointer_type
 local function rt_load_i64_from_s8(source, offset)
-	if offset < 0 or offset + 1 > source.minimum then
+	if offset < 0 or offset + 1 > source.size then
 		error("out of bounds memory load")
 	end
 
@@ -113,7 +117,7 @@ end
 -- NEEDS i64_type
 -- NEEDS u8_pointer_type
 local function rt_load_i64_from_u8(source, offset)
-	if offset < 0 or offset + 1 > source.minimum then
+	if offset < 0 or offset + 1 > source.size then
 		error("out of bounds memory load")
 	end
 
@@ -129,7 +133,7 @@ end
 -- NEEDS i64_type
 -- NEEDS u8_pointer_type
 local function rt_load_i64_from_s16(source, offset)
-	if offset < 0 or offset + 2 > source.minimum then
+	if offset < 0 or offset + 2 > source.size then
 		error("out of bounds memory load")
 	end
 
@@ -145,7 +149,7 @@ end
 -- NEEDS i64_type
 -- NEEDS u8_pointer_type
 local function rt_load_i64_from_u16(source, offset)
-	if offset < 0 or offset + 2 > source.minimum then
+	if offset < 0 or offset + 2 > source.size then
 		error("out of bounds memory load")
 	end
 
@@ -161,7 +165,7 @@ end
 -- NEEDS i64_type
 -- NEEDS u8_pointer_type
 local function rt_load_i64_from_s32(source, offset)
-	if offset < 0 or offset + 4 > source.minimum then
+	if offset < 0 or offset + 4 > source.size then
 		error("out of bounds memory load")
 	end
 
@@ -177,7 +181,7 @@ end
 -- NEEDS i64_type
 -- NEEDS u8_pointer_type
 local function rt_load_i64_from_u32(source, offset)
-	if offset < 0 or offset + 4 > source.minimum then
+	if offset < 0 or offset + 4 > source.size then
 		error("out of bounds memory load")
 	end
 
@@ -192,7 +196,7 @@ end
 -- NEEDS ffi_cast
 -- NEEDS u8_pointer_type
 local function rt_load_i64(source, offset)
-	if offset < 0 or offset + 8 > source.minimum then
+	if offset < 0 or offset + 8 > source.size then
 		error("out of bounds memory load")
 	end
 
@@ -206,7 +210,7 @@ end
 -- NEEDS ffi_cast
 -- NEEDS u8_pointer_type
 local function rt_load_f32(source, offset)
-	if offset < 0 or offset + 4 > source.minimum then
+	if offset < 0 or offset + 4 > source.size then
 		error("out of bounds memory load")
 	end
 
@@ -220,7 +224,7 @@ end
 -- NEEDS ffi_cast
 -- NEEDS u8_pointer_type
 local function rt_load_f64(source, offset)
-	if offset < 0 or offset + 8 > source.minimum then
+	if offset < 0 or offset + 8 > source.size then
 		error("out of bounds memory load")
 	end
 
@@ -234,7 +238,7 @@ end
 -- NEEDS ffi_cast
 -- NEEDS u8_pointer_type
 local function rt_store_i32_into_i8(destination, offset, source)
-	if offset < 0 or offset + 1 > destination.minimum then
+	if offset < 0 or offset + 1 > destination.size then
 		error("out of bounds memory store")
 	end
 
@@ -248,7 +252,7 @@ end
 -- NEEDS ffi_cast
 -- NEEDS u8_pointer_type
 local function rt_store_i32_into_i16(destination, offset, source)
-	if offset < 0 or offset + 2 > destination.minimum then
+	if offset < 0 or offset + 2 > destination.size then
 		error("out of bounds memory store")
 	end
 
@@ -262,7 +266,7 @@ end
 -- NEEDS ffi_cast
 -- NEEDS u8_pointer_type
 local function rt_store_i32(destination, offset, source)
-	if offset < 0 or offset + 4 > destination.minimum then
+	if offset < 0 or offset + 4 > destination.size then
 		error("out of bounds memory store")
 	end
 
@@ -276,7 +280,7 @@ end
 -- NEEDS ffi_cast
 -- NEEDS u8_pointer_type
 local function rt_store_i64_into_i8(destination, offset, source)
-	if offset < 0 or offset + 1 > destination.minimum then
+	if offset < 0 or offset + 1 > destination.size then
 		error("out of bounds memory store")
 	end
 
@@ -290,7 +294,7 @@ end
 -- NEEDS ffi_cast
 -- NEEDS u8_pointer_type
 local function rt_store_i64_into_i16(destination, offset, source)
-	if offset < 0 or offset + 2 > destination.minimum then
+	if offset < 0 or offset + 2 > destination.size then
 		error("out of bounds memory store")
 	end
 
@@ -304,7 +308,7 @@ end
 -- NEEDS ffi_cast
 -- NEEDS u8_pointer_type
 local function rt_store_i64_into_i32(destination, offset, source)
-	if offset < 0 or offset + 4 > destination.minimum then
+	if offset < 0 or offset + 4 > destination.size then
 		error("out of bounds memory store")
 	end
 
@@ -318,7 +322,7 @@ end
 -- NEEDS ffi_cast
 -- NEEDS u8_pointer_type
 local function rt_store_i64(destination, offset, source)
-	if offset < 0 or offset + 8 > destination.minimum then
+	if offset < 0 or offset + 8 > destination.size then
 		error("out of bounds memory store")
 	end
 
@@ -332,7 +336,7 @@ end
 -- NEEDS ffi_cast
 -- NEEDS u8_pointer_type
 local function rt_store_f32(destination, offset, source)
-	if offset < 0 or offset + 4 > destination.minimum then
+	if offset < 0 or offset + 4 > destination.size then
 		error("out of bounds memory store")
 	end
 
@@ -346,7 +350,7 @@ end
 -- NEEDS ffi_cast
 -- NEEDS u8_pointer_type
 local function rt_store_f64(destination, offset, source)
-	if offset < 0 or offset + 8 > destination.minimum then
+	if offset < 0 or offset + 8 > destination.size then
 		error("out of bounds memory store")
 	end
 
@@ -355,54 +359,12 @@ local function rt_store_f64(destination, offset, source)
 	ffi_cast(any_pointer_type, address).i64 = source
 end
 
--- SECTION memory_size
--- NEEDS force_i32
-local function rt_memory_size(source)
-	source = force_i32(source.minimum)
-
-	return source
-end
-
--- SECTION memory_grow
--- NEEDS c_realloc
--- NEEDS ffi
--- NEEDS ffi_cast
--- NEEDS force_u32
--- NEEDS u8_pointer_type
-local function rt_memory_grow(destination, size)
-	local size = force_u32(size)
-	local old = destination.minimum
-
-	if size == 0 then
-		return old
-	end
-
-	local new = old + size
-
-	if new > destination.maximum then
-		return -1
-	end
-
-	local data = ffi.C.realloc(destination.data, new)
-
-	if data == nil then
-		return -1
-	end
-
-	ffi.fill(ffi_cast(u8_pointer_type, data) + old, size, 0)
-
-	destination.data = data
-	destination.minimum = new
-
-	return old
-end
-
 -- SECTION memory_fill
 -- NEEDS ffi
 -- NEEDS ffi_cast
 -- NEEDS u8_pointer_type
 local function rt_memory_fill(destination, offset, source, size)
-	if size < 0 or offset < 0 or offset + size > destination.minimum then
+	if size < 0 or offset < 0 or offset + size > destination.size then
 		error("out of bounds memory fill")
 	end
 
@@ -420,8 +382,8 @@ local function rt_memory_copy(destination, offset_1, source, offset_2, size)
 		size < 0
 		or offset_1 < 0
 		or offset_2 < 0
-		or offset_1 + size > destination.minimum
-		or offset_2 + size > source.minimum
+		or offset_1 + size > destination.size
+		or offset_2 + size > source.size
 	then
 		error("out of bounds memory copy")
 	end
@@ -439,8 +401,7 @@ local function rt_memory_drop(destination)
 	local address = destination.data
 
 	destination.data = nil
-	destination.minimum = 0
-	destination.maximum = 0
+	destination.size = 0
 
 	ffi.C.free(address)
 end

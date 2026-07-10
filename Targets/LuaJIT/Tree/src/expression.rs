@@ -4,7 +4,7 @@ use alloc::{boxed::Box, sync::Arc, vec::Vec};
 
 use super::statement::Sequence;
 
-pub use ir_graph::operation::{ExtendType, LoadType, MemoryNew, integer, number};
+pub use ir_graph::operation::{ExtendType, LoadType, integer, number};
 
 /// A function definition.
 pub struct Function {
@@ -329,17 +329,12 @@ impl MemoryLoad {
 	}
 }
 
-/// A memory size query.
-pub struct MemorySize {
-	/// The source expression.
-	pub source: Expression,
-}
-
-/// A memory grow.
-pub struct MemoryGrow {
-	/// The destination expression.
-	pub destination: Expression,
-	/// The size expression.
+/// A memory creation yielding a fixed-size memory, or `nil` when the
+/// allocation fails.
+pub struct MemoryNew {
+	/// The initial contents and their offsets.
+	pub initializer: Vec<(Arc<[u8]>, u32)>,
+	/// The size in bytes.
 	pub size: Expression,
 }
 
@@ -429,13 +424,9 @@ pub enum Expression {
 	TableGrow(Box<TableGrow>),
 
 	/// A memory creation.
-	MemoryNew(MemoryNew),
+	MemoryNew(Box<MemoryNew>),
 	/// A memory load.
 	MemoryLoad(Box<MemoryLoad>),
-	/// A memory size query.
-	MemorySize(Box<MemorySize>),
-	/// A memory grow.
-	MemoryGrow(Box<MemoryGrow>),
 }
 
 impl Expression {
@@ -471,9 +462,7 @@ impl Expression {
 			| Self::GlobalGet(_)
 			| Self::Extract(_)
 			| Self::TableSize(_)
-			| Self::TableGrow(_)
-			| Self::MemorySize(_)
-			| Self::MemoryGrow(_) => self.into_boolean_unchecked(),
+			| Self::TableGrow(_) => self.into_boolean_unchecked(),
 
 			Self::BooleanToInteger(boolean_to_integer) => boolean_to_integer.source,
 			Self::IntegerUnaryOperation(ref integer_unary_operation)

@@ -5,10 +5,9 @@ use luajit_tree::expression::{
 	Aggregate, BooleanToInteger, Call, Expression, Extract, Function, GlobalGet, GlobalNew,
 	IntegerBinaryOperation, IntegerCompareOperation, IntegerConvertToNumber, IntegerExtend,
 	IntegerNarrow, IntegerTransmuteToNumber, IntegerUnaryOperation, IntegerWiden, Local, Location,
-	MemoryGrow, MemoryLoad, MemoryNew, MemorySize, Name, NumberBinaryOperation,
-	NumberCompareOperation, NumberNarrow, NumberTransmuteToInteger, NumberTruncateToInteger,
-	NumberUnaryOperation, NumberWiden, RefIsNull, RuntimeCall, TableGet, TableGrow, TableNew,
-	TableSize,
+	MemoryLoad, MemoryNew, Name, NumberBinaryOperation, NumberCompareOperation, NumberNarrow,
+	NumberTransmuteToInteger, NumberTruncateToInteger, NumberUnaryOperation, NumberWiden,
+	RefIsNull, RuntimeCall, TableGet, TableGrow, TableNew, TableSize,
 };
 
 use super::{LuaJITPrinter, library::NeedsName as _, print::Print};
@@ -589,12 +588,8 @@ impl Print for TableGrow {
 }
 
 impl Print for MemoryNew {
-	fn print(&self, _printer: &mut LuaJITPrinter, out: &mut dyn Write) -> Result<()> {
-		let Self {
-			initializer,
-			minimum,
-			maximum,
-		} = self;
+	fn print(&self, printer: &mut LuaJITPrinter, out: &mut dyn Write) -> Result<()> {
+		let Self { initializer, size } = self;
 
 		let intrinsic = self.needs_name();
 
@@ -604,7 +599,11 @@ impl Print for MemoryNew {
 			write!(out, "[{offset}] = \"{}\", ", data.escape_ascii())?;
 		}
 
-		write!(out, "}}, {minimum}, {maximum})")
+		write!(out, "}}, ")?;
+
+		size.print(printer, out)?;
+
+		write!(out, ")")
 	}
 }
 
@@ -617,38 +616,6 @@ impl Print for MemoryLoad {
 		write!(out, "rt_{intrinsic}(")?;
 
 		source.print(printer, out)?;
-
-		write!(out, ")")
-	}
-}
-
-impl Print for MemorySize {
-	fn print(&self, printer: &mut LuaJITPrinter, out: &mut dyn Write) -> Result<()> {
-		let Self { source } = self;
-
-		let intrinsic = self.needs_name();
-
-		write!(out, "rt_{intrinsic}(")?;
-
-		source.print(printer, out)?;
-
-		write!(out, ")")
-	}
-}
-
-impl Print for MemoryGrow {
-	fn print(&self, printer: &mut LuaJITPrinter, out: &mut dyn Write) -> Result<()> {
-		let Self { destination, size } = self;
-
-		let intrinsic = self.needs_name();
-
-		write!(out, "rt_{intrinsic}(")?;
-
-		destination.print(printer, out)?;
-
-		write!(out, ", ")?;
-
-		size.print(printer, out)?;
 
 		write!(out, ")")
 	}
@@ -719,8 +686,6 @@ impl Print for Expression {
 			Self::TableGrow(table_grow) => table_grow.print(printer, out),
 			Self::MemoryNew(memory_new) => memory_new.print(printer, out),
 			Self::MemoryLoad(memory_load) => memory_load.print(printer, out),
-			Self::MemorySize(memory_size) => memory_size.print(printer, out),
-			Self::MemoryGrow(memory_grow) => memory_grow.print(printer, out),
 		}
 	}
 }

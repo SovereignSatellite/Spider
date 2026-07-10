@@ -60,8 +60,6 @@ define_unary_operation!(IsPositive, "Transmute.IsPositive");
 
 define_binary_operation!(IntoBitsI64, "Luau.IntoBitsI64");
 
-define_unary_operation!(BufferLength, "Buffer.Length");
-
 define_unary_operation!(TableLength, "Table.Length");
 
 define_unary_operation!(VectorCreate, "Vector.Create");

@@ -2,10 +2,10 @@
 
 use ir_graph::{
 	Link, Node,
-	operation::{Extract, LoadType, Location, MemoryLoad, MemorySize, MemoryStore, StoreType},
+	operation::{LoadType, Location, MemoryLoad, MemoryStore, StoreType},
 };
 use luau_foreign::{
-	Bit32ArShift, Bit32Or, BufferLength, BufferLoad, BufferStore, FromBitsI64, IntoBitsI64, LuauAdd,
+	Bit32ArShift, Bit32Or, BufferLoad, BufferStore, FromBitsI64, IntoBitsI64, LuauAdd,
 };
 
 use crate::replace;
@@ -47,26 +47,12 @@ pub fn lower(nodes: &mut Vec<Node>, id: u32) -> bool {
 		return true;
 	}
 
-	if let &Node::MemorySize(MemorySize { source }) = &nodes[index] {
-		size(nodes, id, source);
-
-		return true;
-	}
-
 	false
 }
 
-fn size(nodes: &mut Vec<Node>, id: u32, source: Link) {
-	let value = BufferLength::add_into(nodes, source);
-
-	replace::replace_read(nodes, id, value, source, &[value]);
-}
-
 fn load(nodes: &mut Vec<Node>, id: u32, source: Location, kind: LoadType) {
-	let buffer = Extract::add_into(nodes, source.reference, 0);
-
 	let mut reads = Vec::new();
-	let value = load_value(nodes, buffer, source.offset, kind, &mut reads);
+	let value = load_value(nodes, source.reference, source.offset, kind, &mut reads);
 
 	replace::replace_read(nodes, id, value, source.reference, &reads);
 }

@@ -2,8 +2,8 @@ use ir_graph::operation::StoreType;
 use luajit_tree::{
 	expression::{Expression, Local, Location},
 	statement::{
-		Assign, Call, GlobalSet, Match, MemoryCopy, MemoryDrop, MemoryFill, MemoryStore, Repeat,
-		RuntimeCall, Sequence, Statement, SwapAll, TableCopy, TableDrop, TableFill, TableSet,
+		Assign, Call, GlobalSet, Match, MemoryCopy, MemoryFill, MemoryStore, Repeat, RuntimeCall,
+		Sequence, Statement, SwapAll, TableCopy, TableDrop, TableFill, TableSet,
 	},
 };
 
@@ -225,12 +225,6 @@ impl CodeHandler {
 			}
 			.into(),
 		);
-
-		self.push_statement(statement);
-	}
-
-	pub fn emit_memory_drop(&mut self, source: Expression) {
-		let statement = Statement::MemoryDrop(MemoryDrop { source }.into());
 
 		self.push_statement(statement);
 	}
