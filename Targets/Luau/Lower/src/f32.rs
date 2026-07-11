@@ -155,9 +155,7 @@ pub fn compare(nodes: &mut Vec<Node>, lhs: Link, rhs: Link, operator: CompareOpe
 		CompareOperator::Equal => equal(nodes, lhs, rhs),
 		CompareOperator::NotEqual => not_equal(nodes, lhs, rhs),
 		CompareOperator::LessThan => less_than(nodes, lhs, rhs),
-		CompareOperator::GreaterThan => less_than(nodes, rhs, lhs),
 		CompareOperator::LessThanEqual => less_than_equal(nodes, lhs, rhs),
-		CompareOperator::GreaterThanEqual => less_than_equal(nodes, rhs, lhs),
 	};
 
 	BooleanToInteger::add_into(nodes, boolean)

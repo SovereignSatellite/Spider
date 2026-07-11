@@ -139,20 +139,6 @@
 	(IntegerCompareOperation lhs rhs (IntegerType.I32) (IntegerCompareOperator.LessThan false))
 )
 
-;; Node::IntegerCompareOperation (IntegerType::I32, IntegerCompareOperator::GreaterThan signed)
-(decl I32GtS (Link Link) Link)
-
-(extractor (I32GtS lhs rhs)
-	(IntegerCompareOperation lhs rhs (IntegerType.I32) (IntegerCompareOperator.GreaterThan true))
-)
-
-;; Node::IntegerCompareOperation (IntegerType::I32, IntegerCompareOperator::GreaterThan unsigned)
-(decl I32GtU (Link Link) Link)
-
-(extractor (I32GtU lhs rhs)
-	(IntegerCompareOperation lhs rhs (IntegerType.I32) (IntegerCompareOperator.GreaterThan false))
-)
-
 ;; Node::IntegerCompareOperation (IntegerType::I32, IntegerCompareOperator::LessThanEqual signed)
 (decl I32LeS (Link Link) Link)
 
@@ -165,20 +151,6 @@
 
 (extractor (I32LeU lhs rhs)
 	(IntegerCompareOperation lhs rhs (IntegerType.I32) (IntegerCompareOperator.LessThanEqual false))
-)
-
-;; Node::IntegerCompareOperation (IntegerType::I32, IntegerCompareOperator::GreaterThanEqual signed)
-(decl I32GeS (Link Link) Link)
-
-(extractor (I32GeS lhs rhs)
-	(IntegerCompareOperation lhs rhs (IntegerType.I32) (IntegerCompareOperator.GreaterThanEqual true))
-)
-
-;; Node::IntegerCompareOperation (IntegerType::I32, IntegerCompareOperator::GreaterThanEqual unsigned)
-(decl I32GeU (Link Link) Link)
-
-(extractor (I32GeU lhs rhs)
-	(IntegerCompareOperation lhs rhs (IntegerType.I32) (IntegerCompareOperator.GreaterThanEqual false))
 )
 
 ;; Built-in `+`
@@ -257,14 +229,6 @@
 (decl pure raw_compare_less_than_unsigned_i32 (i32 i32) i32)
 (extern constructor raw_compare_less_than_unsigned_i32 raw_compare_less_than_unsigned_i32)
 
-;; Built-in signed `>`; i32 boolean result
-(decl pure raw_compare_greater_than_signed_i32 (i32 i32) i32)
-(extern constructor raw_compare_greater_than_signed_i32 raw_compare_greater_than_signed_i32)
-
-;; Built-in unsigned `>`; i32 boolean result
-(decl pure raw_compare_greater_than_unsigned_i32 (i32 i32) i32)
-(extern constructor raw_compare_greater_than_unsigned_i32 raw_compare_greater_than_unsigned_i32)
-
 ;; Built-in signed `<=`; i32 boolean result
 (decl pure raw_compare_less_than_equal_signed_i32 (i32 i32) i32)
 (extern constructor raw_compare_less_than_equal_signed_i32 raw_compare_less_than_equal_signed_i32)
@@ -272,11 +236,3 @@
 ;; Built-in unsigned `<=`; i32 boolean result
 (decl pure raw_compare_less_than_equal_unsigned_i32 (i32 i32) i32)
 (extern constructor raw_compare_less_than_equal_unsigned_i32 raw_compare_less_than_equal_unsigned_i32)
-
-;; Built-in signed `>=`; i32 boolean result
-(decl pure raw_compare_greater_than_equal_signed_i32 (i32 i32) i32)
-(extern constructor raw_compare_greater_than_equal_signed_i32 raw_compare_greater_than_equal_signed_i32)
-
-;; Built-in unsigned `>=`; i32 boolean result
-(decl pure raw_compare_greater_than_equal_unsigned_i32 (i32 i32) i32)
-(extern constructor raw_compare_greater_than_equal_unsigned_i32 raw_compare_greater_than_equal_unsigned_i32)

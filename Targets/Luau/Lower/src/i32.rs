@@ -69,11 +69,7 @@ pub fn compare(nodes: &mut Vec<Node>, lhs: Link, rhs: Link, operator: CompareOpe
 		CompareOperator::Equal => LuauEqual::add_into(nodes, lhs, rhs),
 		CompareOperator::NotEqual => LuauNotEqual::add_into(nodes, lhs, rhs),
 		CompareOperator::LessThan { is_signed } => less_than(nodes, lhs, rhs, is_signed),
-		CompareOperator::GreaterThan { is_signed } => less_than(nodes, rhs, lhs, is_signed),
 		CompareOperator::LessThanEqual { is_signed } => less_than_equal(nodes, lhs, rhs, is_signed),
-		CompareOperator::GreaterThanEqual { is_signed } => {
-			less_than_equal(nodes, rhs, lhs, is_signed)
-		}
 	};
 
 	BooleanToInteger::add_into(nodes, boolean)

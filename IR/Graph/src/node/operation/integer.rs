@@ -153,18 +153,8 @@ pub enum CompareOperator {
 		/// Whether the comparison is signed.
 		is_signed: bool,
 	},
-	/// Greater than.
-	GreaterThan {
-		/// Whether the comparison is signed.
-		is_signed: bool,
-	},
 	/// Less than or equal.
 	LessThanEqual {
-		/// Whether the comparison is signed.
-		is_signed: bool,
-	},
-	/// Greater than or equal.
-	GreaterThanEqual {
 		/// Whether the comparison is signed.
 		is_signed: bool,
 	},

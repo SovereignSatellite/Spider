@@ -168,8 +168,8 @@ end
 -- SECTION divide_u64
 -- NEEDS I64_0000_0000_0000_0001
 -- NEEDS convert_u64_to_f64
--- NEEDS greater_than_equal_u64
 -- NEEDS is_all_zeros
+-- NEEDS less_than_equal_u64
 -- NEEDS or_i64
 -- NEEDS raw_leading_zeros_i64
 -- NEEDS raw_shift_left_i64
@@ -200,7 +200,7 @@ local function rt_divide_u64(lhs: number, rhs: number): number
 	for offset = rhs_zeros - lhs_zeros, 0, -1 do
 		local divisor = raw_shift_left_i64(rhs, offset)
 
-		if rt_greater_than_equal_u64(remainder, divisor) then
+		if rt_less_than_equal_u64(divisor, remainder) then
 			remainder = rt_subtract_i64(remainder, divisor)
 			quotient = rt_or_i64(raw_shift_left_i64(I64_0000_0000_0000_0001, offset), quotient)
 		end
@@ -236,8 +236,8 @@ end
 
 -- SECTION remainder_u64
 -- NEEDS convert_u64_to_f64
--- NEEDS greater_than_equal_u64
 -- NEEDS is_all_zeros
+-- NEEDS less_than_equal_u64
 -- NEEDS raw_leading_zeros_i64
 -- NEEDS raw_shift_left_i64
 -- NEEDS subtract_i64
@@ -266,7 +266,7 @@ local function rt_remainder_u64(lhs: number, rhs: number): number
 	for offset = rhs_zeros - lhs_zeros, 0, -1 do
 		local divisor = raw_shift_left_i64(rhs, offset)
 
-		if rt_greater_than_equal_u64(remainder, divisor) then
+		if rt_less_than_equal_u64(divisor, remainder) then
 			remainder = rt_subtract_i64(remainder, divisor)
 		end
 	end
@@ -428,49 +428,16 @@ local function rt_less_than_u64(lhs: number, rhs: number): boolean
 	return lhs_2 < rhs_2 or (lhs_2 == rhs_2 and lhs_1 < rhs_1)
 end
 
--- SECTION greater_than_s64
--- NEEDS flip_most_significant
--- NEEDS greater_than_u64
-local function rt_greater_than_s64(lhs: number, rhs: number): boolean
-	lhs = flip_most_significant(lhs)
-	rhs = flip_most_significant(rhs)
-
-	local result = rt_greater_than_u64(lhs, rhs)
-
-	return result
-end
-
--- SECTION greater_than_u64
--- NEEDS from_bits_i64
-local function rt_greater_than_u64(lhs: number, rhs: number): boolean
-	local lhs_1, lhs_2 = from_bits_i64(lhs)
-	local rhs_1, rhs_2 = from_bits_i64(rhs)
-
-	return lhs_2 > rhs_2 or (lhs_2 == rhs_2 and lhs_1 > rhs_1)
-end
-
 -- SECTION less_than_equal_s64
--- NEEDS greater_than_s64
+-- NEEDS less_than_s64
 local function rt_less_than_equal_s64(lhs: number, rhs: number): boolean
-	return not rt_greater_than_s64(lhs, rhs)
+	return not rt_less_than_s64(rhs, lhs)
 end
 
 -- SECTION less_than_equal_u64
--- NEEDS greater_than_u64
-local function rt_less_than_equal_u64(lhs: number, rhs: number): boolean
-	return not rt_greater_than_u64(lhs, rhs)
-end
-
--- SECTION greater_than_equal_s64
--- NEEDS less_than_s64
-local function rt_greater_than_equal_s64(lhs: number, rhs: number): boolean
-	return not rt_less_than_s64(lhs, rhs)
-end
-
--- SECTION greater_than_equal_u64
 -- NEEDS less_than_u64
-local function rt_greater_than_equal_u64(lhs: number, rhs: number): boolean
-	return not rt_less_than_u64(lhs, rhs)
+local function rt_less_than_equal_u64(lhs: number, rhs: number): boolean
+	return not rt_less_than_u64(rhs, lhs)
 end
 
 -- SECTION narrow_i64

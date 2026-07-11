@@ -45,9 +45,7 @@ pub fn compare(nodes: &mut Vec<Node>, lhs: Link, rhs: Link, operator: CompareOpe
 		CompareOperator::Equal => LuauEqual::add_into(nodes, lhs, rhs),
 		CompareOperator::NotEqual => LuauNotEqual::add_into(nodes, lhs, rhs),
 		CompareOperator::LessThan => LuauLessThan::add_into(nodes, lhs, rhs),
-		CompareOperator::GreaterThan => LuauLessThan::add_into(nodes, rhs, lhs),
 		CompareOperator::LessThanEqual => LuauLessThanEqual::add_into(nodes, lhs, rhs),
-		CompareOperator::GreaterThanEqual => LuauLessThanEqual::add_into(nodes, rhs, lhs),
 	};
 
 	BooleanToInteger::add_into(nodes, boolean)

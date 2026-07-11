@@ -139,12 +139,8 @@ pub enum CompareOperator {
 	NotEqual,
 	/// Less than.
 	LessThan,
-	/// Greater than.
-	GreaterThan,
 	/// Less than or equal.
 	LessThanEqual,
-	/// Greater than or equal.
-	GreaterThanEqual,
 }
 
 /// A floating-point comparison operation node.

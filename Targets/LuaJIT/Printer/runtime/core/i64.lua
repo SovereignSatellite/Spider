@@ -256,21 +256,6 @@ local function rt_less_than_u64(lhs, rhs)
 	return lhs < rhs
 end
 
--- SECTION greater_than_s64
-local function rt_greater_than_s64(lhs, rhs)
-	return lhs > rhs
-end
-
--- SECTION greater_than_u64
--- NEEDS ffi_cast
--- NEEDS u64_type
-local function rt_greater_than_u64(lhs, rhs)
-	lhs = ffi_cast(u64_type, lhs)
-	rhs = ffi_cast(u64_type, rhs)
-
-	return lhs > rhs
-end
-
 -- SECTION less_than_equal_s64
 local function rt_less_than_equal_s64(lhs, rhs)
 	return lhs <= rhs
@@ -284,21 +269,6 @@ local function rt_less_than_equal_u64(lhs, rhs)
 	rhs = ffi_cast(u64_type, rhs)
 
 	return lhs <= rhs
-end
-
--- SECTION greater_than_equal_s64
-local function rt_greater_than_equal_s64(lhs, rhs)
-	return lhs >= rhs
-end
-
--- SECTION greater_than_equal_u64
--- NEEDS ffi_cast
--- NEEDS u64_type
-local function rt_greater_than_equal_u64(lhs, rhs)
-	lhs = ffi_cast(u64_type, lhs)
-	rhs = ffi_cast(u64_type, rhs)
-
-	return lhs >= rhs
 end
 
 -- SECTION narrow_i64

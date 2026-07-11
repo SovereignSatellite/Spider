@@ -195,28 +195,12 @@ impl Context for RegionContext<'_> {
 		i32::from(arg0.cast_unsigned() < arg1.cast_unsigned())
 	}
 
-	fn raw_compare_greater_than_signed_i32(&mut self, arg0: i32, arg1: i32) -> i32 {
-		i32::from(arg0 > arg1)
-	}
-
-	fn raw_compare_greater_than_unsigned_i32(&mut self, arg0: i32, arg1: i32) -> i32 {
-		i32::from(arg0.cast_unsigned() > arg1.cast_unsigned())
-	}
-
 	fn raw_compare_less_than_equal_signed_i32(&mut self, arg0: i32, arg1: i32) -> i32 {
 		i32::from(arg0 <= arg1)
 	}
 
 	fn raw_compare_less_than_equal_unsigned_i32(&mut self, arg0: i32, arg1: i32) -> i32 {
 		i32::from(arg0.cast_unsigned() <= arg1.cast_unsigned())
-	}
-
-	fn raw_compare_greater_than_equal_signed_i32(&mut self, arg0: i32, arg1: i32) -> i32 {
-		i32::from(arg0 >= arg1)
-	}
-
-	fn raw_compare_greater_than_equal_unsigned_i32(&mut self, arg0: i32, arg1: i32) -> i32 {
-		i32::from(arg0.cast_unsigned() >= arg1.cast_unsigned())
 	}
 
 	fn raw_add_i64(&mut self, arg0: i64, arg1: i64) -> i64 {
@@ -301,28 +285,12 @@ impl Context for RegionContext<'_> {
 		i32::from(arg0.cast_unsigned() < arg1.cast_unsigned())
 	}
 
-	fn raw_compare_greater_than_signed_i64(&mut self, arg0: i64, arg1: i64) -> i32 {
-		i32::from(arg0 > arg1)
-	}
-
-	fn raw_compare_greater_than_unsigned_i64(&mut self, arg0: i64, arg1: i64) -> i32 {
-		i32::from(arg0.cast_unsigned() > arg1.cast_unsigned())
-	}
-
 	fn raw_compare_less_than_equal_signed_i64(&mut self, arg0: i64, arg1: i64) -> i32 {
 		i32::from(arg0 <= arg1)
 	}
 
 	fn raw_compare_less_than_equal_unsigned_i64(&mut self, arg0: i64, arg1: i64) -> i32 {
 		i32::from(arg0.cast_unsigned() <= arg1.cast_unsigned())
-	}
-
-	fn raw_compare_greater_than_equal_signed_i64(&mut self, arg0: i64, arg1: i64) -> i32 {
-		i32::from(arg0 >= arg1)
-	}
-
-	fn raw_compare_greater_than_equal_unsigned_i64(&mut self, arg0: i64, arg1: i64) -> i32 {
-		i32::from(arg0.cast_unsigned() >= arg1.cast_unsigned())
 	}
 
 	fn get_f32(&mut self, arg0: Link) -> Option<f32> {

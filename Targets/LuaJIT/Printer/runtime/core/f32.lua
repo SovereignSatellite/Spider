@@ -172,15 +172,6 @@ local function rt_less_than_f32(lhs, rhs)
 	return lhs < rhs
 end
 
--- SECTION greater_than_f32
--- NEEDS from_bits_f32
-local function rt_greater_than_f32(lhs, rhs)
-	lhs = from_bits_f32(lhs)
-	rhs = from_bits_f32(rhs)
-
-	return lhs > rhs
-end
-
 -- SECTION less_than_equal_f32
 -- NEEDS from_bits_f32
 local function rt_less_than_equal_f32(lhs, rhs)
@@ -188,15 +179,6 @@ local function rt_less_than_equal_f32(lhs, rhs)
 	rhs = from_bits_f32(rhs)
 
 	return lhs <= rhs
-end
-
--- SECTION greater_than_equal_f32
--- NEEDS from_bits_f32
-local function rt_greater_than_equal_f32(lhs, rhs)
-	lhs = from_bits_f32(lhs)
-	rhs = from_bits_f32(rhs)
-
-	return lhs >= rhs
 end
 
 -- SECTION widen_f32

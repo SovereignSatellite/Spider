@@ -149,12 +149,8 @@ const fn integer_compare_operator_name(operator: integer::CompareOperator) -> &'
 		integer::CompareOperator::NotEqual => "!=",
 		integer::CompareOperator::LessThan { is_signed: false } => "u<",
 		integer::CompareOperator::LessThan { is_signed: true } => "s<",
-		integer::CompareOperator::GreaterThan { is_signed: false } => "u>",
-		integer::CompareOperator::GreaterThan { is_signed: true } => "s>",
 		integer::CompareOperator::LessThanEqual { is_signed: false } => "u<=",
 		integer::CompareOperator::LessThanEqual { is_signed: true } => "s<=",
-		integer::CompareOperator::GreaterThanEqual { is_signed: false } => "u>=",
-		integer::CompareOperator::GreaterThanEqual { is_signed: true } => "s>=",
 	}
 }
 
@@ -224,9 +220,7 @@ const fn number_compare_operator_name(operator: number::CompareOperator) -> &'st
 		number::CompareOperator::Equal => "==",
 		number::CompareOperator::NotEqual => "!=",
 		number::CompareOperator::LessThan => "<",
-		number::CompareOperator::GreaterThan => ">",
 		number::CompareOperator::LessThanEqual => "<=",
-		number::CompareOperator::GreaterThanEqual => ">=",
 	}
 }
 

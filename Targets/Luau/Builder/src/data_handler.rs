@@ -104,10 +104,6 @@ const fn integer_binary_name(node: &integer::BinaryOperation) -> &'static str {
 	}
 }
 
-#[expect(
-	clippy::too_many_lines,
-	reason = "exhaustive match over integer compare operators"
-)]
 const fn integer_compare_name(node: &integer::CompareOperation) -> &'static str {
 	match (node.kind, node.operator) {
 		(integer::Type::I32, integer::CompareOperator::Equal) => "rt_equal_i32",
@@ -118,23 +114,11 @@ const fn integer_compare_name(node: &integer::CompareOperation) -> &'static str 
 		(integer::Type::I32, integer::CompareOperator::LessThan { is_signed: false }) => {
 			"rt_less_than_u32"
 		}
-		(integer::Type::I32, integer::CompareOperator::GreaterThan { is_signed: true }) => {
-			"rt_greater_than_s32"
-		}
-		(integer::Type::I32, integer::CompareOperator::GreaterThan { is_signed: false }) => {
-			"rt_greater_than_u32"
-		}
 		(integer::Type::I32, integer::CompareOperator::LessThanEqual { is_signed: true }) => {
 			"rt_less_than_equal_s32"
 		}
 		(integer::Type::I32, integer::CompareOperator::LessThanEqual { is_signed: false }) => {
 			"rt_less_than_equal_u32"
-		}
-		(integer::Type::I32, integer::CompareOperator::GreaterThanEqual { is_signed: true }) => {
-			"rt_greater_than_equal_s32"
-		}
-		(integer::Type::I32, integer::CompareOperator::GreaterThanEqual { is_signed: false }) => {
-			"rt_greater_than_equal_u32"
 		}
 		(integer::Type::I64, integer::CompareOperator::Equal) => "rt_equal_i64",
 		(integer::Type::I64, integer::CompareOperator::NotEqual) => "rt_not_equal_i64",
@@ -144,23 +128,11 @@ const fn integer_compare_name(node: &integer::CompareOperation) -> &'static str 
 		(integer::Type::I64, integer::CompareOperator::LessThan { is_signed: false }) => {
 			"rt_less_than_u64"
 		}
-		(integer::Type::I64, integer::CompareOperator::GreaterThan { is_signed: true }) => {
-			"rt_greater_than_s64"
-		}
-		(integer::Type::I64, integer::CompareOperator::GreaterThan { is_signed: false }) => {
-			"rt_greater_than_u64"
-		}
 		(integer::Type::I64, integer::CompareOperator::LessThanEqual { is_signed: true }) => {
 			"rt_less_than_equal_s64"
 		}
 		(integer::Type::I64, integer::CompareOperator::LessThanEqual { is_signed: false }) => {
 			"rt_less_than_equal_u64"
-		}
-		(integer::Type::I64, integer::CompareOperator::GreaterThanEqual { is_signed: true }) => {
-			"rt_greater_than_equal_s64"
-		}
-		(integer::Type::I64, integer::CompareOperator::GreaterThanEqual { is_signed: false }) => {
-			"rt_greater_than_equal_u64"
 		}
 	}
 }
@@ -238,19 +210,11 @@ const fn number_compare_name(node: &number::CompareOperation) -> &'static str {
 		(number::Type::F32, number::CompareOperator::Equal) => "rt_equal_f32",
 		(number::Type::F32, number::CompareOperator::NotEqual) => "rt_not_equal_f32",
 		(number::Type::F32, number::CompareOperator::LessThan) => "rt_less_than_f32",
-		(number::Type::F32, number::CompareOperator::GreaterThan) => "rt_greater_than_f32",
 		(number::Type::F32, number::CompareOperator::LessThanEqual) => "rt_less_than_equal_f32",
-		(number::Type::F32, number::CompareOperator::GreaterThanEqual) => {
-			"rt_greater_than_equal_f32"
-		}
 		(number::Type::F64, number::CompareOperator::Equal) => "rt_equal_f64",
 		(number::Type::F64, number::CompareOperator::NotEqual) => "rt_not_equal_f64",
 		(number::Type::F64, number::CompareOperator::LessThan) => "rt_less_than_f64",
-		(number::Type::F64, number::CompareOperator::GreaterThan) => "rt_greater_than_f64",
 		(number::Type::F64, number::CompareOperator::LessThanEqual) => "rt_less_than_equal_f64",
-		(number::Type::F64, number::CompareOperator::GreaterThanEqual) => {
-			"rt_greater_than_equal_f64"
-		}
 	}
 }
 

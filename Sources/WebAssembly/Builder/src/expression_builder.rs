@@ -325,6 +325,27 @@ impl ExpressionBuilder {
 		self.handle_integer_compare_operation(integer::Type::I64, operator);
 	}
 
+	fn handle_reversed_integer_compare_operation(
+		&mut self,
+		kind: integer::Type,
+		operator: integer::CompareOperator,
+	) {
+		let lhs = self.stack_builder.pull_local();
+		let rhs = self.stack_builder.pull_local();
+		let destination = self.stack_builder.push_local();
+
+		self.code_builder
+			.add_integer_compare_operation(destination, lhs, rhs, kind, operator);
+	}
+
+	fn handle_reversed_i32_compare(&mut self, operator: integer::CompareOperator) {
+		self.handle_reversed_integer_compare_operation(integer::Type::I32, operator);
+	}
+
+	fn handle_reversed_i64_compare(&mut self, operator: integer::CompareOperator) {
+		self.handle_reversed_integer_compare_operation(integer::Type::I64, operator);
+	}
+
 	fn handle_number_compare_operation(
 		&mut self,
 		kind: number::Type,
@@ -344,6 +365,27 @@ impl ExpressionBuilder {
 
 	fn handle_f64_compare(&mut self, operator: number::CompareOperator) {
 		self.handle_number_compare_operation(number::Type::F64, operator);
+	}
+
+	fn handle_reversed_number_compare_operation(
+		&mut self,
+		kind: number::Type,
+		operator: number::CompareOperator,
+	) {
+		let lhs = self.stack_builder.pull_local();
+		let rhs = self.stack_builder.pull_local();
+		let destination = self.stack_builder.push_local();
+
+		self.code_builder
+			.add_number_compare_operation(destination, lhs, rhs, kind, operator);
+	}
+
+	fn handle_reversed_f32_compare(&mut self, operator: number::CompareOperator) {
+		self.handle_reversed_number_compare_operation(number::Type::F32, operator);
+	}
+
+	fn handle_reversed_f64_compare(&mut self, operator: number::CompareOperator) {
+		self.handle_reversed_number_compare_operation(number::Type::F64, operator);
 	}
 
 	fn handle_integer_binary_operation(
@@ -741,10 +783,14 @@ impl ExpressionBuilder {
 				self.handle_i32_compare(integer::CompareOperator::LessThan { is_signed: false });
 			}
 			Operator::I32GtS => {
-				self.handle_i32_compare(integer::CompareOperator::GreaterThan { is_signed: true });
+				self.handle_reversed_i32_compare(integer::CompareOperator::LessThan {
+					is_signed: true,
+				});
 			}
 			Operator::I32GtU => {
-				self.handle_i32_compare(integer::CompareOperator::GreaterThan { is_signed: false });
+				self.handle_reversed_i32_compare(integer::CompareOperator::LessThan {
+					is_signed: false,
+				});
 			}
 			Operator::I32LeS => {
 				self.handle_i32_compare(integer::CompareOperator::LessThanEqual {
@@ -757,12 +803,12 @@ impl ExpressionBuilder {
 				});
 			}
 			Operator::I32GeS => {
-				self.handle_i32_compare(integer::CompareOperator::GreaterThanEqual {
+				self.handle_reversed_i32_compare(integer::CompareOperator::LessThanEqual {
 					is_signed: true,
 				});
 			}
 			Operator::I32GeU => {
-				self.handle_i32_compare(integer::CompareOperator::GreaterThanEqual {
+				self.handle_reversed_i32_compare(integer::CompareOperator::LessThanEqual {
 					is_signed: false,
 				});
 			}
@@ -776,10 +822,14 @@ impl ExpressionBuilder {
 				self.handle_i64_compare(integer::CompareOperator::LessThan { is_signed: false });
 			}
 			Operator::I64GtS => {
-				self.handle_i64_compare(integer::CompareOperator::GreaterThan { is_signed: true });
+				self.handle_reversed_i64_compare(integer::CompareOperator::LessThan {
+					is_signed: true,
+				});
 			}
 			Operator::I64GtU => {
-				self.handle_i64_compare(integer::CompareOperator::GreaterThan { is_signed: false });
+				self.handle_reversed_i64_compare(integer::CompareOperator::LessThan {
+					is_signed: false,
+				});
 			}
 			Operator::I64LeS => {
 				self.handle_i64_compare(integer::CompareOperator::LessThanEqual {
@@ -792,27 +842,35 @@ impl ExpressionBuilder {
 				});
 			}
 			Operator::I64GeS => {
-				self.handle_i64_compare(integer::CompareOperator::GreaterThanEqual {
+				self.handle_reversed_i64_compare(integer::CompareOperator::LessThanEqual {
 					is_signed: true,
 				});
 			}
 			Operator::I64GeU => {
-				self.handle_i64_compare(integer::CompareOperator::GreaterThanEqual {
+				self.handle_reversed_i64_compare(integer::CompareOperator::LessThanEqual {
 					is_signed: false,
 				});
 			}
 			Operator::F32Eq => self.handle_f32_compare(number::CompareOperator::Equal),
 			Operator::F32Ne => self.handle_f32_compare(number::CompareOperator::NotEqual),
 			Operator::F32Lt => self.handle_f32_compare(number::CompareOperator::LessThan),
-			Operator::F32Gt => self.handle_f32_compare(number::CompareOperator::GreaterThan),
+			Operator::F32Gt => {
+				self.handle_reversed_f32_compare(number::CompareOperator::LessThan);
+			}
 			Operator::F32Le => self.handle_f32_compare(number::CompareOperator::LessThanEqual),
-			Operator::F32Ge => self.handle_f32_compare(number::CompareOperator::GreaterThanEqual),
+			Operator::F32Ge => {
+				self.handle_reversed_f32_compare(number::CompareOperator::LessThanEqual);
+			}
 			Operator::F64Eq => self.handle_f64_compare(number::CompareOperator::Equal),
 			Operator::F64Ne => self.handle_f64_compare(number::CompareOperator::NotEqual),
 			Operator::F64Lt => self.handle_f64_compare(number::CompareOperator::LessThan),
-			Operator::F64Gt => self.handle_f64_compare(number::CompareOperator::GreaterThan),
+			Operator::F64Gt => {
+				self.handle_reversed_f64_compare(number::CompareOperator::LessThan);
+			}
 			Operator::F64Le => self.handle_f64_compare(number::CompareOperator::LessThanEqual),
-			Operator::F64Ge => self.handle_f64_compare(number::CompareOperator::GreaterThanEqual),
+			Operator::F64Ge => {
+				self.handle_reversed_f64_compare(number::CompareOperator::LessThanEqual);
+			}
 			Operator::I32Clz => self.handle_i32_unary(integer::UnaryOperator::LeadingZeros),
 			Operator::I32Ctz => self.handle_i32_unary(integer::UnaryOperator::TrailingZeros),
 			Operator::I32Popcnt => self.handle_i32_unary(integer::UnaryOperator::CountOnes),
