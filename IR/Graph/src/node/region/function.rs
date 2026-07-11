@@ -23,7 +23,8 @@ impl Function {
 	/// Node index of the arguments boundary node.
 	pub const ARGUMENTS_ID: u32 = 0;
 
-	/// Creates a new function region.
+	/// Creates a detached function region.
+	#[must_use = "detached regions are dropped unless the returned handle is retained"]
 	pub fn create<F>(argument_count: u16, initializer: F) -> Arc<Mutex<Self>>
 	where
 		F: FnOnce(&mut Vec<Node>, u32) -> Vec<Link>,
@@ -47,6 +48,7 @@ impl Function {
 	}
 
 	/// Adds a function region node to the graph.
+	#[must_use = "inserted nodes without live consumers are dead"]
 	pub fn add_into<F>(nodes: &mut Vec<Node>, argument_count: u16, initializer: F) -> Link
 	where
 		F: FnOnce(&mut Vec<Node>, u32) -> Vec<Link>,
@@ -111,12 +113,7 @@ pub struct Arguments {
 }
 
 impl Arguments {
-	/// Adds a function arguments boundary node to the region.
-	pub fn add_into(
-		nodes: &mut Vec<Node>,
-		parent: Weak<Mutex<Function>>,
-		result_count: u16,
-	) -> u32 {
+	fn add_into(nodes: &mut Vec<Node>, parent: Weak<Mutex<Function>>, result_count: u16) -> u32 {
 		let Ok(id) = nodes.len().try_into() else {
 			unreachable!()
 		};
@@ -146,20 +143,10 @@ pub struct Results {
 }
 
 impl Results {
-	/// Adds a function results boundary node to the region.
-	pub fn add_into(
-		nodes: &mut Vec<Node>,
-		parent: Weak<Mutex<Function>>,
-		sources: Vec<Link>,
-	) -> u32 {
-		let Ok(id) = nodes.len().try_into() else {
-			unreachable!()
-		};
+	fn add_into(nodes: &mut Vec<Node>, parent: Weak<Mutex<Function>>, sources: Vec<Link>) {
 		let node = Node::FunctionResults(Self { parent, sources });
 
 		nodes.push(node);
-
-		id
 	}
 
 	/// Returns the number of result values.

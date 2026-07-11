@@ -5,6 +5,7 @@ use ir_graph::Node;
 
 use super::{constant_at, inline::inline_once};
 
+#[must_use = "propagate whether this pass changed the graph"]
 pub fn fold(nodes: &mut Vec<Node>, id: usize) -> bool {
 	let Node::Match(arc) = &nodes[id] else {
 		return false;

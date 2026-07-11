@@ -34,6 +34,7 @@ impl LuauBuilder {
 	}
 
 	/// Builds a `Luau` function.
+	#[must_use = "use the built Luau function"]
 	#[expect(
 		clippy::significant_drop_tightening,
 		reason = "the lock guards the whole build: the policy precomputes over it, then the emitter walks it"

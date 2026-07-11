@@ -1,8 +1,5 @@
-//! Luau-specific lowering of trivial IR operations into foreign-node trees.
-//!
-//! Runs as the injected pass inside the optimizer fixpoint: each trivial operation is
-//! expanded in place into a tree of [`luau_foreign`] nodes, and the generic passes then
-//! compact and simplify the result.
+//! Lowers trivial IR operations into Luau foreign-node trees.
+//! Runs inside the optimizer fixpoint so generic passes simplify each expansion.
 
 pub use self::dispatch::apply;
 

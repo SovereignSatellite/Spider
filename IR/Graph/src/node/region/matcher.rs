@@ -17,7 +17,8 @@ pub struct Match {
 }
 
 impl Match {
-	/// Creates a new match region.
+	/// Creates a detached match region.
+	#[must_use = "detached regions are dropped unless the returned handle is retained"]
 	pub fn create<F>(arguments: Vec<Link>, condition: Link, initializer: F) -> Arc<Mutex<Self>>
 	where
 		F: FnOnce(&Weak<Mutex<Self>>, u16) -> Vec<Arc<Mutex<Branch>>>,
@@ -39,7 +40,8 @@ impl Match {
 		Arc::new_cyclic(create)
 	}
 
-	/// Adds a match region node to the graph.
+	/// Adds a match region node and returns its node identifier.
+	#[must_use = "inserted nodes without live consumers are dead"]
 	pub fn add_into<F>(
 		nodes: &mut Vec<Node>,
 		arguments: Vec<Link>,
@@ -59,7 +61,8 @@ impl Match {
 		id
 	}
 
-	/// Creates a new if-else match region.
+	/// Creates a detached if-else match region.
+	#[must_use = "detached regions are dropped unless the returned handle is retained"]
 	pub fn create_if<F, T>(
 		arguments: Vec<Link>,
 		condition: Link,
@@ -78,7 +81,8 @@ impl Match {
 		})
 	}
 
-	/// Adds an if-else structure to the graph.
+	/// Adds an if-else structure and returns its node identifier.
+	#[must_use = "inserted nodes without live consumers are dead"]
 	pub fn add_if_into<F, T>(
 		nodes: &mut Vec<Node>,
 		arguments: Vec<Link>,

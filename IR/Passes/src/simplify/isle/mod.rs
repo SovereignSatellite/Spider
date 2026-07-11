@@ -82,6 +82,7 @@ fn simplify(nodes: &mut Vec<Node>, id: u32) -> bool {
 }
 
 /// Sweeps every node once, reporting whether any rule fired.
+#[must_use = "propagate whether this pass changed the graph"]
 pub fn run(nodes: &mut Vec<Node>) -> bool {
 	let mut applied = false;
 

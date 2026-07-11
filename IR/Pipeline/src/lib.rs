@@ -105,10 +105,8 @@ impl Optimizer {
 		}
 	}
 
-	/// Runs the optimization pipeline over every region in the function.
-	///
-	/// `pass` runs each round once the generic passes settle, letting a target fold its own
-	/// lowering into the same fixpoint; it reports whether it changed the region.
+	/// Optimizes every region in the complete function tree, deepest first.
+	/// When `should_optimize`, `pass` runs after generic rewrites settle and reports its changes.
 	pub fn run(
 		&mut self,
 		function: &Arc<Mutex<Function>>,

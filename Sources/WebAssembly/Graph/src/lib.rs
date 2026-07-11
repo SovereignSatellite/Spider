@@ -1,4 +1,4 @@
-//! A WebAssembly control flow graph representation.
+//! Represents WebAssembly control flow graphs.
 
 #![no_std]
 
@@ -18,12 +18,8 @@ mod dot;
 pub mod instruction;
 
 /// A directed graph of basic blocks containing instructions.
-///
-/// Note that after construction, it is expected that the following invariants hold:
-///
-/// * All branches are diamond shaped
-/// * All loops are tail controlled
-/// * Without back-edges, the graph is in topological order
+/// After restructuring, branches are diamonds and loops are tail-controlled.
+/// Removing back edges then leaves the blocks in topological order.
 pub struct ControlFlowGraph {
 	/// The instructions stored across all basic blocks.
 	pub instructions: Vec<Instruction>,

@@ -160,6 +160,7 @@ impl Single {
 		}
 	}
 
+	#[must_use = "use the returned continuation block"]
 	pub fn run(&mut self, graph: &mut ControlFlowGraph, entry: u16) -> u16 {
 		self.continuation_finder.set_excluded(iter::empty());
 

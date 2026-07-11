@@ -48,6 +48,7 @@ pub struct UnaryOperation {
 
 impl UnaryOperation {
 	/// Adds a floating-point unary operation node to the graph.
+	#[must_use = "inserted nodes without live consumers are dead"]
 	pub fn add_into(
 		nodes: &mut Vec<Node>,
 		source: Link,
@@ -105,6 +106,7 @@ pub struct BinaryOperation {
 
 impl BinaryOperation {
 	/// Adds a floating-point binary operation node to the graph.
+	#[must_use = "inserted nodes without live consumers are dead"]
 	pub fn add_into(
 		nodes: &mut Vec<Node>,
 		lhs: Link,
@@ -158,6 +160,7 @@ pub struct CompareOperation {
 
 impl CompareOperation {
 	/// Adds a floating-point comparison node to the graph.
+	#[must_use = "inserted nodes without live consumers are dead"]
 	pub fn add_into(
 		nodes: &mut Vec<Node>,
 		lhs: Link,

@@ -23,7 +23,8 @@ impl Repeat {
 	/// Node index of the arguments boundary node.
 	pub const ARGUMENTS_ID: u32 = 0;
 
-	/// Creates a new repeat region.
+	/// Creates a detached repeat region.
+	#[must_use = "detached regions are dropped unless the returned handle is retained"]
 	pub fn create<F>(arguments: Vec<Link>, initializer: F) -> Arc<Mutex<Self>>
 	where
 		F: FnOnce(&mut Vec<Node>, u32) -> (Vec<Link>, Link),
@@ -47,7 +48,8 @@ impl Repeat {
 		Arc::new_cyclic(create)
 	}
 
-	/// Adds a repeat region node to the graph.
+	/// Adds a repeat region node and returns its node identifier.
+	#[must_use = "inserted nodes without live consumers are dead"]
 	pub fn add_into<F>(nodes: &mut Vec<Node>, arguments: Vec<Link>, initializer: F) -> u32
 	where
 		F: FnOnce(&mut Vec<Node>, u32) -> (Vec<Link>, Link),
@@ -165,8 +167,7 @@ pub struct Arguments {
 }
 
 impl Arguments {
-	/// Adds a repeat arguments boundary node to the region.
-	pub fn add_into(nodes: &mut Vec<Node>, parent: Weak<Mutex<Repeat>>, result_count: u16) -> u32 {
+	fn add_into(nodes: &mut Vec<Node>, parent: Weak<Mutex<Repeat>>, result_count: u16) -> u32 {
 		let Ok(id) = nodes.len().try_into() else {
 			unreachable!()
 		};
@@ -198,16 +199,12 @@ pub struct Results {
 }
 
 impl Results {
-	/// Adds a repeat results boundary node to the region.
-	pub fn add_into(
+	fn add_into(
 		nodes: &mut Vec<Node>,
 		parent: Weak<Mutex<Repeat>>,
 		sources: Vec<Link>,
 		condition: Link,
-	) -> u32 {
-		let Ok(id) = nodes.len().try_into() else {
-			unreachable!()
-		};
+	) {
 		let node = Node::RepeatResults(Self {
 			parent,
 			sources,
@@ -215,8 +212,6 @@ impl Results {
 		});
 
 		nodes.push(node);
-
-		id
 	}
 
 	/// Returns the number of result values.

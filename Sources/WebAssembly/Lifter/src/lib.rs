@@ -298,6 +298,7 @@ impl WebAssemblyLifter {
 	}
 
 	/// Lifts the given WebAssembly binary data into a root function.
+	#[must_use = "use the lifted root function"]
 	pub fn run(&mut self, data: &[u8]) -> Arc<Mutex<Function>> {
 		let module = Module::load(data);
 		let environment = &module.environment;

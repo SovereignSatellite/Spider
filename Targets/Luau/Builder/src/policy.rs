@@ -129,8 +129,7 @@ impl LuauPolicy {
 		}
 	}
 
-	/// Records, for the whole function, every node whose single output is
-	/// inlined at its one use rather than materialized into a register.
+	/// Records single-use outputs deferred across the complete function tree.
 	pub fn precompute(&mut self, nodes: &[Node]) {
 		self.deferred.clear();
 

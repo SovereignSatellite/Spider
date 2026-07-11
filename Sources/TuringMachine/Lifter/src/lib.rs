@@ -292,6 +292,7 @@ impl TuringMachineLifter {
 	}
 
 	/// Compiles the given source code into a root function.
+	#[must_use = "use the lifted root function"]
 	pub fn run(&mut self, source: &str) -> Arc<Mutex<Function>> {
 		self.operators.clear();
 		self.operators.extend(

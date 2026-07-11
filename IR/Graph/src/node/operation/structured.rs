@@ -15,6 +15,7 @@ pub struct Aggregate {
 
 impl Aggregate {
 	/// Adds an aggregate node to the graph.
+	#[must_use = "inserted nodes without live consumers are dead"]
 	pub fn add_into(nodes: &mut Vec<Node>, fields: Vec<Link>) -> Link {
 		let Ok(id) = nodes.len().try_into() else {
 			unreachable!()
@@ -40,6 +41,7 @@ pub struct Extract {
 
 impl Extract {
 	/// Adds an extract node to the graph.
+	#[must_use = "inserted nodes without live consumers are dead"]
 	pub fn add_into(nodes: &mut Vec<Node>, source: Link, index: u32) -> Link {
 		let Ok(id) = nodes.len().try_into() else {
 			unreachable!()

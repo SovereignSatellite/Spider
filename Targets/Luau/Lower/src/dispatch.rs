@@ -13,6 +13,7 @@ use crate::{
 };
 
 /// Lowers every trivial node in the region, reporting whether anything changed.
+#[must_use = "propagate whether this pass changed the graph"]
 pub fn apply(region: &mut Region) -> bool {
 	let nodes = region.nodes_mut();
 

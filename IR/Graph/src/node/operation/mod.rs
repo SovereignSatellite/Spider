@@ -1,7 +1,4 @@
-//! Core operation node types.
-//!
-//! Each concept file contains the node's struct definition, its `add_into`
-//! constructor, and its visitor impl colocated for SRP at the file level.
+//! Defines core operation nodes and their constructors.
 
 mod conversion;
 mod host;

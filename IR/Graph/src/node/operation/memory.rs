@@ -37,6 +37,7 @@ pub struct MemoryNew {
 
 impl MemoryNew {
 	/// Adds a memory creation node to the graph.
+	#[must_use = "inserted nodes without live consumers are dead"]
 	pub fn add_into(nodes: &mut Vec<Node>, initializer: Vec<(Arc<[u8]>, u32)>, size: Link) -> Link {
 		let Ok(id) = nodes.len().try_into() else {
 			unreachable!()
@@ -107,7 +108,8 @@ impl MemoryLoad {
 	/// The port index for the state token.
 	pub const STATE_PORT: u16 = 1;
 
-	/// Adds a memory load node to the graph.
+	/// Adds a memory load node and returns its value and state links.
+	#[must_use = "inserted nodes without live consumers are dead"]
 	pub fn add_into(nodes: &mut Vec<Node>, source: Location, kind: LoadType) -> (Link, Link) {
 		let Ok(id) = nodes.len().try_into() else {
 			unreachable!()
@@ -168,7 +170,8 @@ impl MemoryStore {
 	/// The port index for the state token.
 	pub const STATE_PORT: u16 = 0;
 
-	/// Adds a memory store node to the graph.
+	/// Adds a memory store node and returns its state link.
+	#[must_use = "inserted nodes without live consumers are dead"]
 	pub fn add_into(
 		nodes: &mut Vec<Node>,
 		destination: Location,
@@ -209,7 +212,8 @@ impl MemoryFill {
 	/// The port index for the state token.
 	pub const STATE_PORT: u16 = 0;
 
-	/// Adds a memory fill node to the graph.
+	/// Adds a memory fill node and returns its state link.
+	#[must_use = "inserted nodes without live consumers are dead"]
 	pub fn add_into(nodes: &mut Vec<Node>, destination: Location, byte: Link, size: Link) -> Link {
 		let Ok(id) = nodes.len().try_into() else {
 			unreachable!()
@@ -247,7 +251,8 @@ impl MemoryCopy {
 	/// The port index for the source state token.
 	pub const SOURCE_STATE_PORT: u16 = 1;
 
-	/// Adds a memory copy node to the graph.
+	/// Adds a memory copy node and returns its destination and source state links.
+	#[must_use = "inserted nodes without live consumers are dead"]
 	pub fn add_into(
 		nodes: &mut Vec<Node>,
 		destination: Location,
@@ -287,7 +292,8 @@ impl MemoryDrop {
 	/// The port index for the state token.
 	pub const STATE_PORT: u16 = 0;
 
-	/// Adds a memory drop node to the graph.
+	/// Adds a memory drop node and returns its state link.
+	#[must_use = "inserted nodes without live consumers are dead"]
 	pub fn add_into(nodes: &mut Vec<Node>, source: Link) -> Link {
 		let Ok(id) = nodes.len().try_into() else {
 			unreachable!()

@@ -27,6 +27,7 @@ const WRITE_U32: &str = "buffer_write_u32";
 const WRITE_F64: &str = "buffer_write_f64";
 
 /// Lowers a memory load or store in place, reporting whether one matched.
+#[must_use = "propagate whether this pass changed the graph"]
 pub fn lower(nodes: &mut Vec<Node>, id: u32) -> bool {
 	let index = usize::try_from(id).unwrap();
 
