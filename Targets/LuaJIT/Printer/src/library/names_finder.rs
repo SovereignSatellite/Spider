@@ -142,26 +142,12 @@ impl NeedsName for IntegerCompareOperation {
 			(integer::Type::I32, integer::CompareOperator::LessThan { is_signed: false }) => {
 				"less_than_u32"
 			}
-			(integer::Type::I32, integer::CompareOperator::GreaterThan { is_signed: true }) => {
-				"greater_than_s32"
-			}
-			(integer::Type::I32, integer::CompareOperator::GreaterThan { is_signed: false }) => {
-				"greater_than_u32"
-			}
 			(integer::Type::I32, integer::CompareOperator::LessThanEqual { is_signed: true }) => {
 				"less_than_equal_s32"
 			}
 			(integer::Type::I32, integer::CompareOperator::LessThanEqual { is_signed: false }) => {
 				"less_than_equal_u32"
 			}
-			(
-				integer::Type::I32,
-				integer::CompareOperator::GreaterThanEqual { is_signed: true },
-			) => "greater_than_equal_s32",
-			(
-				integer::Type::I32,
-				integer::CompareOperator::GreaterThanEqual { is_signed: false },
-			) => "greater_than_equal_u32",
 			(integer::Type::I64, integer::CompareOperator::Equal) => "equal_i64",
 			(integer::Type::I64, integer::CompareOperator::NotEqual) => "not_equal_i64",
 			(integer::Type::I64, integer::CompareOperator::LessThan { is_signed: true }) => {
@@ -170,26 +156,12 @@ impl NeedsName for IntegerCompareOperation {
 			(integer::Type::I64, integer::CompareOperator::LessThan { is_signed: false }) => {
 				"less_than_u64"
 			}
-			(integer::Type::I64, integer::CompareOperator::GreaterThan { is_signed: true }) => {
-				"greater_than_s64"
-			}
-			(integer::Type::I64, integer::CompareOperator::GreaterThan { is_signed: false }) => {
-				"greater_than_u64"
-			}
 			(integer::Type::I64, integer::CompareOperator::LessThanEqual { is_signed: true }) => {
 				"less_than_equal_s64"
 			}
 			(integer::Type::I64, integer::CompareOperator::LessThanEqual { is_signed: false }) => {
 				"less_than_equal_u64"
 			}
-			(
-				integer::Type::I64,
-				integer::CompareOperator::GreaterThanEqual { is_signed: true },
-			) => "greater_than_equal_s64",
-			(
-				integer::Type::I64,
-				integer::CompareOperator::GreaterThanEqual { is_signed: false },
-			) => "greater_than_equal_u64",
 		}
 	}
 }
@@ -307,19 +279,11 @@ impl NeedsName for NumberCompareOperation {
 			(number::Type::F32, number::CompareOperator::Equal) => "equal_f32",
 			(number::Type::F32, number::CompareOperator::NotEqual) => "not_equal_f32",
 			(number::Type::F32, number::CompareOperator::LessThan) => "less_than_f32",
-			(number::Type::F32, number::CompareOperator::GreaterThan) => "greater_than_f32",
 			(number::Type::F32, number::CompareOperator::LessThanEqual) => "less_than_equal_f32",
-			(number::Type::F32, number::CompareOperator::GreaterThanEqual) => {
-				"greater_than_equal_f32"
-			}
 			(number::Type::F64, number::CompareOperator::Equal) => "equal_f64",
 			(number::Type::F64, number::CompareOperator::NotEqual) => "not_equal_f64",
 			(number::Type::F64, number::CompareOperator::LessThan) => "less_than_f64",
-			(number::Type::F64, number::CompareOperator::GreaterThan) => "greater_than_f64",
 			(number::Type::F64, number::CompareOperator::LessThanEqual) => "less_than_equal_f64",
-			(number::Type::F64, number::CompareOperator::GreaterThanEqual) => {
-				"greater_than_equal_f64"
-			}
 		}
 	}
 }

@@ -111,19 +111,9 @@ local function rt_less_than_f64(lhs: number, rhs: number): boolean
 	return lhs < rhs
 end
 
--- SECTION greater_than_f64
-local function rt_greater_than_f64(lhs: number, rhs: number): boolean
-	return lhs > rhs
-end
-
 -- SECTION less_than_equal_f64
 local function rt_less_than_equal_f64(lhs: number, rhs: number): boolean
 	return lhs <= rhs
-end
-
--- SECTION greater_than_equal_f64
-local function rt_greater_than_equal_f64(lhs: number, rhs: number): boolean
-	return lhs >= rhs
 end
 
 -- SECTION narrow_f64

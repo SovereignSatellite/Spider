@@ -283,20 +283,6 @@ local function rt_less_than_u32(lhs, rhs)
 	return lhs < rhs
 end
 
--- SECTION greater_than_s32
-local function rt_greater_than_s32(lhs, rhs)
-	return lhs > rhs
-end
-
--- SECTION greater_than_u32
--- NEEDS bit_xor
-local function rt_greater_than_u32(lhs, rhs)
-	lhs = bit_xor(lhs, 0x80000000)
-	rhs = bit_xor(rhs, 0x80000000)
-
-	return lhs > rhs
-end
-
 -- SECTION less_than_equal_s32
 local function rt_less_than_equal_s32(lhs, rhs)
 	return lhs <= rhs
@@ -309,20 +295,6 @@ local function rt_less_than_equal_u32(lhs, rhs)
 	rhs = bit_xor(rhs, 0x80000000)
 
 	return lhs <= rhs
-end
-
--- SECTION greater_than_equal_s32
-local function rt_greater_than_equal_s32(lhs, rhs)
-	return lhs >= rhs
-end
-
--- SECTION greater_than_equal_u32
--- NEEDS bit_xor
-local function rt_greater_than_equal_u32(lhs, rhs)
-	lhs = bit_xor(lhs, 0x80000000)
-	rhs = bit_xor(rhs, 0x80000000)
-
-	return lhs >= rhs
 end
 
 -- SECTION widen_i32

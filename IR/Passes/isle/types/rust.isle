@@ -57,9 +57,7 @@
 		(Equal)
 		(NotEqual)
 		(LessThan (is_signed bool))
-		(GreaterThan (is_signed bool))
 		(LessThanEqual (is_signed bool))
-		(GreaterThanEqual (is_signed bool))
 	)
 )
 
@@ -99,9 +97,7 @@
 		(Equal)
 		(NotEqual)
 		(LessThan)
-		(GreaterThan)
 		(LessThanEqual)
-		(GreaterThanEqual)
 	)
 )
 

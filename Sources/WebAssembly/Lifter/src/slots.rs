@@ -1039,10 +1039,10 @@ impl SlotFile {
 
 		let condition = operation::integer::CompareOperation::add_into(
 			nodes,
-			delta,
 			headroom,
+			delta,
 			operation::integer::Type::I32,
-			operation::integer::CompareOperator::GreaterThan { is_signed: false },
+			operation::integer::CompareOperator::LessThan { is_signed: false },
 		);
 
 		let arguments = vec![state, content_state, size_state, content, old_size, delta];

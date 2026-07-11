@@ -414,24 +414,6 @@
 	(I32 0)
 )
 
-;; (N > N) => 0 (signed)
-(rule 6
-	(SimplifyI32
-		(I32GtS lhs lhs)
-	)
-
-	(I32 0)
-)
-
-;; (N > N) => 0 (unsigned)
-(rule 6
-	(SimplifyI32
-		(I32GtU lhs lhs)
-	)
-
-	(I32 0)
-)
-
 ;; (N <= N) => 1 (signed)
 (rule 6
 	(SimplifyI32
@@ -445,24 +427,6 @@
 (rule 6
 	(SimplifyI32
 		(I32LeU lhs lhs)
-	)
-
-	(I32 1)
-)
-
-;; (N >= N) => 1 (signed)
-(rule 6
-	(SimplifyI32
-		(I32GeS lhs lhs)
-	)
-
-	(I32 1)
-)
-
-;; (N >= N) => 1 (unsigned)
-(rule 6
-	(SimplifyI32
-		(I32GeU lhs lhs)
 	)
 
 	(I32 1)
@@ -504,24 +468,6 @@
 	(I32 (raw_compare_less_than_unsigned_i32 lhs rhs))
 )
 
-;; (K1 > K2) => K3 (signed)
-(rule 7
-	(SimplifyI32
-		(I32GtS (I32 lhs) (I32 rhs))
-	)
-
-	(I32 (raw_compare_greater_than_signed_i32 lhs rhs))
-)
-
-;; (K1 > K2) => K3 (unsigned)
-(rule 7
-	(SimplifyI32
-		(I32GtU (I32 lhs) (I32 rhs))
-	)
-
-	(I32 (raw_compare_greater_than_unsigned_i32 lhs rhs))
-)
-
 ;; (K1 <= K2) => K3 (signed)
 (rule 7
 	(SimplifyI32
@@ -538,22 +484,4 @@
 	)
 
 	(I32 (raw_compare_less_than_equal_unsigned_i32 lhs rhs))
-)
-
-;; (K1 >= K2) => K3 (signed)
-(rule 7
-	(SimplifyI32
-		(I32GeS (I32 lhs) (I32 rhs))
-	)
-
-	(I32 (raw_compare_greater_than_equal_signed_i32 lhs rhs))
-)
-
-;; (K1 >= K2) => K3 (unsigned)
-(rule 7
-	(SimplifyI32
-		(I32GeU (I32 lhs) (I32 rhs))
-	)
-
-	(I32 (raw_compare_greater_than_equal_unsigned_i32 lhs rhs))
 )
