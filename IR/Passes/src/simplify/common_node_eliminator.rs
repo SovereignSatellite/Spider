@@ -98,6 +98,13 @@ impl Signature {
 		matches!(operator, CompareOperator::Equal | CompareOperator::NotEqual)
 	}
 
+	const fn is_commutative_number_compare(operator: number::CompareOperator) -> bool {
+		matches!(
+			operator,
+			number::CompareOperator::Equal | number::CompareOperator::NotEqual
+		)
+	}
+
 	fn integer_binary(operation: &integer::BinaryOperation) -> Self {
 		let (lhs, rhs) = if Self::is_commutative_binary(operation.operator) {
 			Self::ordered(operation.lhs, operation.rhs)
@@ -116,6 +123,16 @@ impl Signature {
 		};
 
 		Self::IntegerCompare(operation.operator, operation.kind, lhs, rhs)
+	}
+
+	fn number_compare(operation: &number::CompareOperation) -> Self {
+		let (lhs, rhs) = if Self::is_commutative_number_compare(operation.operator) {
+			Self::ordered(operation.lhs, operation.rhs)
+		} else {
+			(operation.lhs, operation.rhs)
+		};
+
+		Self::NumberCompare(operation.operator, operation.kind, lhs, rhs)
 	}
 
 	fn foreign(foreign: &dyn Foreign) -> Option<Self> {
@@ -268,12 +285,7 @@ impl Signature {
 				operation.lhs,
 				operation.rhs,
 			)),
-			Node::NumberCompareOperation(operation) => Some(Self::NumberCompare(
-				operation.operator,
-				operation.kind,
-				operation.lhs,
-				operation.rhs,
-			)),
+			Node::NumberCompareOperation(operation) => Some(Self::number_compare(operation)),
 			Node::NumberNarrow(operation) => Some(Self::NumberNarrow(operation.source)),
 			Node::NumberWiden(operation) => Some(Self::NumberWiden(operation.source)),
 			Node::NumberTruncateToInteger(operation) => Some(Self::NumberTruncateToInteger(
