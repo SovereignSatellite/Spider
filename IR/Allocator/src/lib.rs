@@ -43,8 +43,8 @@ impl Allocator {
 		}
 	}
 
-	/// Allocates registers for one emitted body and returns the populated arena
-	/// together with the register count.
+	/// Allocates one function's control-region tree and returns its arena and register count.
+	#[must_use = "use the allocated arena and register count"]
 	pub fn run(&mut self, policy: &dyn Policy, nodes: &[Node]) -> (Arena, u32) {
 		self.collector.run(policy, nodes);
 

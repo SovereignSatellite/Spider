@@ -1,4 +1,4 @@
-//! The `Node` enum and its crate-wide dispatch.
+//! Defines graph nodes and their crate-wide dispatch.
 
 use alloc::sync::Arc;
 
@@ -43,7 +43,7 @@ pub enum Shape<'node> {
 	RepeatResults(&'node repeat::Results),
 }
 
-/// A node in the data flow graph.
+/// A node in the data-flow graph.
 #[derive(Default)]
 pub enum Node {
 	/// A function region.
@@ -244,6 +244,7 @@ macro_rules! for_each_visit {
 
 impl Node {
 	/// Adds a trap node to the graph.
+	#[must_use = "inserted nodes without live consumers are dead"]
 	pub fn add_trap_into(nodes: &mut Vec<Self>) -> Link {
 		let Ok(id) = nodes.len().try_into() else {
 			unreachable!()
@@ -255,6 +256,7 @@ impl Node {
 	}
 
 	/// Adds a null reference constant node to the graph.
+	#[must_use = "inserted nodes without live consumers are dead"]
 	pub fn add_null_into(nodes: &mut Vec<Self>) -> Link {
 		let Ok(id) = nodes.len().try_into() else {
 			unreachable!()
@@ -266,6 +268,7 @@ impl Node {
 	}
 
 	/// Adds a 32-bit integer constant node to the graph.
+	#[must_use = "inserted nodes without live consumers are dead"]
 	pub fn add_i32_into(nodes: &mut Vec<Self>, value: i32) -> Link {
 		let Ok(id) = nodes.len().try_into() else {
 			unreachable!()
@@ -278,6 +281,7 @@ impl Node {
 	}
 
 	/// Adds a 64-bit integer constant node to the graph.
+	#[must_use = "inserted nodes without live consumers are dead"]
 	pub fn add_i64_into(nodes: &mut Vec<Self>, value: i64) -> Link {
 		let Ok(id) = nodes.len().try_into() else {
 			unreachable!()
@@ -290,6 +294,7 @@ impl Node {
 	}
 
 	/// Adds a 32-bit float constant node to the graph.
+	#[must_use = "inserted nodes without live consumers are dead"]
 	pub fn add_f32_into(nodes: &mut Vec<Self>, value: f32) -> Link {
 		let Ok(id) = nodes.len().try_into() else {
 			unreachable!()
@@ -302,6 +307,7 @@ impl Node {
 	}
 
 	/// Adds a 64-bit float constant node to the graph.
+	#[must_use = "inserted nodes without live consumers are dead"]
 	pub fn add_f64_into(nodes: &mut Vec<Self>, value: f64) -> Link {
 		let Ok(id) = nodes.len().try_into() else {
 			unreachable!()

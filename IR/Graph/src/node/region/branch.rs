@@ -23,7 +23,8 @@ impl Branch {
 	/// Node index of the arguments boundary node.
 	pub const ARGUMENTS_ID: u32 = 0;
 
-	/// Creates a new branch region.
+	/// Creates a detached branch region.
+	#[must_use = "detached regions are dropped unless the returned handle is retained"]
 	pub fn create<F>(
 		parent: Weak<Mutex<Match>>,
 		argument_count: u16,
@@ -133,8 +134,7 @@ pub struct Arguments {
 }
 
 impl Arguments {
-	/// Adds a branch arguments boundary node to the region.
-	pub fn add_into(nodes: &mut Vec<Node>, parent: Weak<Mutex<Branch>>, result_count: u16) -> u32 {
+	fn add_into(nodes: &mut Vec<Node>, parent: Weak<Mutex<Branch>>, result_count: u16) -> u32 {
 		let Ok(id) = nodes.len().try_into() else {
 			unreachable!()
 		};
@@ -164,16 +164,10 @@ pub struct Results {
 }
 
 impl Results {
-	/// Adds a branch results boundary node to the region.
-	pub fn add_into(nodes: &mut Vec<Node>, parent: Weak<Mutex<Branch>>, sources: Vec<Link>) -> u32 {
-		let Ok(id) = nodes.len().try_into() else {
-			unreachable!()
-		};
+	fn add_into(nodes: &mut Vec<Node>, parent: Weak<Mutex<Branch>>, sources: Vec<Link>) {
 		let node = Node::BranchResults(Self { parent, sources });
 
 		nodes.push(node);
-
-		id
 	}
 
 	/// Returns the number of result values.

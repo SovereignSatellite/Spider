@@ -37,12 +37,8 @@ fn branch_result_source(branch: &Arc<Mutex<Branch>>, port: usize) -> Link {
 	identity_source(&guard.nodes, guard.results().sources[port])
 }
 
-/// Traces the origin of an output port on a match node.
-///
-/// Returns the parent-scope `Link` every branch forwards to this result port,
-/// or `None` if a branch computes the value or the branches disagree.
-/// Identity pass-throughs are followed, so the boundary identities resolve to
-/// their origin.
+/// Returns the parent link every branch forwards to one match output, following identities.
+/// Returns `None` when any branch computes the value or the forwarded links disagree.
 #[must_use]
 pub fn trace_match(matcher: &Match, port: u16) -> Option<Link> {
 	let port = usize::from(port);
@@ -63,11 +59,9 @@ pub fn trace_match(matcher: &Match, port: u16) -> Option<Link> {
 	Some(origin)
 }
 
-/// Traces the origin of an output port on a repeat node.
-///
-/// Returns the origin if the carry is invariant around its rotation cycle, or
-/// `None` if it is computed or the cycle disagrees. After a successful call,
-/// `visited` holds every port in the cycle. Identity pass-throughs are followed.
+/// Returns an invariant repeat carry's identity-resolved origin, or `None` when it disagrees.
+/// On success, `visited` contains every port in the rotation cycle.
+#[must_use]
 pub fn trace_repeat(visited: &mut Set, repeat: &Repeat, port: u16) -> Option<Link> {
 	let results = &repeat.results().sources;
 	let origin = repeat.arguments[usize::from(port)];

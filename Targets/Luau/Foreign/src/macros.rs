@@ -17,6 +17,7 @@ macro_rules! define_unary_operation {
 			pub const RESULT_PORT: u16 = 0;
 
 			/// Adds the operation to the graph and returns its result link.
+			#[must_use = "inserted nodes without live consumers are dead"]
 			pub fn add_into(nodes: &mut Vec<Node>, source: Link) -> Link {
 				let Ok(id) = nodes.len().try_into() else {
 					unreachable!()
@@ -67,6 +68,7 @@ macro_rules! define_binary_operation {
 			pub const RESULT_PORT: u16 = 0;
 
 			/// Adds the operation to the graph and returns its result link.
+			#[must_use = "inserted nodes without live consumers are dead"]
 			pub fn add_into(nodes: &mut Vec<Node>, lhs: Link, rhs: Link) -> Link {
 				let Ok(id) = nodes.len().try_into() else {
 					unreachable!()
@@ -78,6 +80,7 @@ macro_rules! define_binary_operation {
 			}
 
 			/// Adds the operation with a constant right-hand operand.
+			#[must_use = "inserted nodes without live consumers are dead"]
 			pub fn add_fast_into(nodes: &mut Vec<Node>, lhs: Link, rhs: u32) -> Link {
 				let rhs = i32::from_ne_bytes(rhs.to_ne_bytes());
 				let rhs = Node::add_i32_into(nodes, rhs);

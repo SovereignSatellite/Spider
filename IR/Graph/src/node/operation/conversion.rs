@@ -22,6 +22,7 @@ pub struct IntegerNarrow {
 
 impl IntegerNarrow {
 	/// Adds an integer narrowing node to the graph.
+	#[must_use = "inserted nodes without live consumers are dead"]
 	pub fn add_into(nodes: &mut Vec<Node>, source: Link) -> Link {
 		let Ok(id) = nodes.len().try_into() else {
 			unreachable!()
@@ -45,6 +46,7 @@ pub struct IntegerWiden {
 
 impl IntegerWiden {
 	/// Adds an integer widening node to the graph.
+	#[must_use = "inserted nodes without live consumers are dead"]
 	pub fn add_into(nodes: &mut Vec<Node>, source: Link) -> Link {
 		let Ok(id) = nodes.len().try_into() else {
 			unreachable!()
@@ -90,6 +92,7 @@ pub struct IntegerSignExtend {
 
 impl IntegerSignExtend {
 	/// Adds an integer sign-extension node to the graph.
+	#[must_use = "inserted nodes without live consumers are dead"]
 	pub fn add_into(nodes: &mut Vec<Node>, source: Link, kind: ExtendType) -> Link {
 		let Ok(id) = nodes.len().try_into() else {
 			unreachable!()
@@ -119,6 +122,7 @@ pub struct IntegerConvertToNumber {
 
 impl IntegerConvertToNumber {
 	/// Adds an integer-to-floating-point conversion node to the graph.
+	#[must_use = "inserted nodes without live consumers are dead"]
 	pub fn add_into(
 		nodes: &mut Vec<Node>,
 		source: Link,
@@ -160,6 +164,7 @@ pub struct IntegerTransmuteToNumber {
 
 impl IntegerTransmuteToNumber {
 	/// Adds an integer-to-floating-point reinterpretation node to the graph.
+	#[must_use = "inserted nodes without live consumers are dead"]
 	pub fn add_into(nodes: &mut Vec<Node>, source: Link, from: integer::Type) -> Link {
 		let Ok(id) = nodes.len().try_into() else {
 			unreachable!()
@@ -183,6 +188,7 @@ pub struct NumberNarrow {
 
 impl NumberNarrow {
 	/// Adds a floating-point narrowing node to the graph.
+	#[must_use = "inserted nodes without live consumers are dead"]
 	pub fn add_into(nodes: &mut Vec<Node>, source: Link) -> Link {
 		let Ok(id) = nodes.len().try_into() else {
 			unreachable!()
@@ -206,6 +212,7 @@ pub struct NumberWiden {
 
 impl NumberWiden {
 	/// Adds a floating-point widening node to the graph.
+	#[must_use = "inserted nodes without live consumers are dead"]
 	pub fn add_into(nodes: &mut Vec<Node>, source: Link) -> Link {
 		let Ok(id) = nodes.len().try_into() else {
 			unreachable!()
@@ -237,6 +244,7 @@ pub struct NumberTruncateToInteger {
 
 impl NumberTruncateToInteger {
 	/// Adds a floating-point-to-integer truncation node to the graph.
+	#[must_use = "inserted nodes without live consumers are dead"]
 	#[expect(
 		clippy::too_many_arguments,
 		reason = "conversion constructor requires source, signedness, saturation, and type pair"
@@ -285,6 +293,7 @@ pub struct NumberTransmuteToInteger {
 
 impl NumberTransmuteToInteger {
 	/// Adds a floating-point-to-integer reinterpretation node to the graph.
+	#[must_use = "inserted nodes without live consumers are dead"]
 	pub fn add_into(nodes: &mut Vec<Node>, source: Link, from: number::Type) -> Link {
 		let Ok(id) = nodes.len().try_into() else {
 			unreachable!()

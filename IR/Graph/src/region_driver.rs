@@ -27,7 +27,7 @@ where
 	handler(region);
 }
 
-/// Visits every region in the function, deepest first.
+/// Visits every region in the complete function tree, deepest first.
 pub fn run_function<H>(function: &Arc<Mutex<Function>>, handler: &mut H)
 where
 	H: FnMut(Region),

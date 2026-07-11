@@ -25,6 +25,7 @@ impl Import {
 	pub const RESULT_PORT: u16 = 0;
 
 	/// Adds an `Import` node to the graph and returns the imported value.
+	#[must_use = "inserted nodes without live consumers are dead"]
 	pub fn add_into(nodes: &mut Vec<Node>, namespace: Arc<str>, identifier: Arc<str>) -> Link {
 		let Ok(id) = nodes.len().try_into() else {
 			unreachable!()
@@ -57,6 +58,7 @@ impl Export {
 	pub const STATE_PORT: u16 = 0;
 
 	/// Adds an `Export` node to the graph and returns its state edge.
+	#[must_use = "inserted nodes without live consumers are dead"]
 	pub fn add_into(nodes: &mut Vec<Node>, identifier: Arc<str>, value: Link) -> Link {
 		let Ok(id) = nodes.len().try_into() else {
 			unreachable!()

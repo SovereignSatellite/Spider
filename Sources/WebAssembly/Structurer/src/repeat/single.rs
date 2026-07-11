@@ -214,6 +214,7 @@ impl Single {
 			.unwrap_or_else(|| self.set_new_latch(graph, entry, exit))
 	}
 
+	#[must_use = "use the returned repeat boundaries"]
 	pub fn run(&mut self, graph: &mut ControlFlowGraph, region: &[u16]) -> (u16, u16) {
 		self.set_region_contents(region);
 		self.find_entries_and_exits(graph);

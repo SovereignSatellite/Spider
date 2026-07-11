@@ -1,8 +1,5 @@
-//! Control flow restructuring for WebAssembly.
-//!
-//! Based on "Efficient Control Flow Restructuring for GPUs",
-//! by Nico Reissmann, Thomas L. Falch, Benjamin A. Bjørnseth,
-//! Helge Bahmann, Jan Christian Meyer, and Magnus Jahre.
+//! Restructures WebAssembly control flow with Reissmann et al.'s
+//! "Efficient Control Flow Restructuring for GPUs".
 #![no_std]
 
 extern crate alloc;

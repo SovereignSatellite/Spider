@@ -11,6 +11,7 @@ pub struct MutableNew {
 
 impl MutableNew {
 	/// Adds a mutable-cell creation node to the graph.
+	#[must_use = "inserted nodes without live consumers are dead"]
 	pub fn add_into(nodes: &mut Vec<Node>, initializer: Link) -> Link {
 		let Ok(id) = nodes.len().try_into() else {
 			unreachable!()
@@ -40,7 +41,8 @@ impl MutableGet {
 	/// The port index for the state token.
 	pub const STATE_PORT: u16 = 1;
 
-	/// Adds a mutable-cell read node to the graph.
+	/// Adds a mutable-cell read node and returns its value and state links.
+	#[must_use = "inserted nodes without live consumers are dead"]
 	pub fn add_into(nodes: &mut Vec<Node>, source: Link) -> (Link, Link) {
 		let Ok(id) = nodes.len().try_into() else {
 			unreachable!()
@@ -70,7 +72,8 @@ impl MutableSet {
 	/// The port index for the state token.
 	pub const STATE_PORT: u16 = 0;
 
-	/// Adds a mutable-cell write node to the graph.
+	/// Adds a mutable-cell write node and returns its state link.
+	#[must_use = "inserted nodes without live consumers are dead"]
 	pub fn add_into(nodes: &mut Vec<Node>, destination: Link, source: Link) -> Link {
 		let Ok(id) = nodes.len().try_into() else {
 			unreachable!()

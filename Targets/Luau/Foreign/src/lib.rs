@@ -1,9 +1,5 @@
-//! Primitive Luau foreign operation nodes.
-//!
-//! Each operation maps onto a single Luau host primitive (a `bit32`/`math`
-//! library call, a raw operator, or a runtime transmute helper). Target
-//! lowerings construct trees of these nodes; the Luau builder emits each one
-//! inline instead of as a runtime call.
+//! Models Luau operators and `bit32`/`math`/transmute calls as foreign nodes
+//! that lowering composes and the builder emits inline.
 
 #![no_std]
 
@@ -82,6 +78,7 @@ impl FromBitsI64 {
 	pub const HIGH_PORT: u16 = 1;
 
 	/// Adds the operation to the graph and returns its low- and high-word links.
+	#[must_use = "inserted nodes without live consumers are dead"]
 	pub fn add_into(nodes: &mut Vec<Node>, source: Link) -> (Link, Link) {
 		let Ok(id) = nodes.len().try_into() else {
 			unreachable!()
@@ -125,6 +122,7 @@ pub struct BufferLoad {
 
 impl BufferLoad {
 	/// Adds the operation to the graph and returns its result link.
+	#[must_use = "inserted nodes without live consumers are dead"]
 	pub fn add_into(nodes: &mut Vec<Node>, name: &'static str, buffer: Link, offset: Link) -> Link {
 		let Ok(id) = nodes.len().try_into() else {
 			unreachable!()
@@ -179,6 +177,7 @@ impl BufferStore {
 	pub const STATE_PORT: u16 = 0;
 
 	/// Adds the operation to the graph and returns its state token link.
+	#[must_use = "inserted nodes without live consumers are dead"]
 	pub fn add_into(
 		nodes: &mut Vec<Node>,
 		name: &'static str,
@@ -234,6 +233,7 @@ pub struct TableLoad {
 
 impl TableLoad {
 	/// Adds the operation to the graph and returns its result link.
+	#[must_use = "inserted nodes without live consumers are dead"]
 	pub fn add_into(nodes: &mut Vec<Node>, reference: Link, offset: Link) -> Link {
 		let Ok(id) = nodes.len().try_into() else {
 			unreachable!()
@@ -281,6 +281,7 @@ impl TableStore {
 	pub const STATE_PORT: u16 = 0;
 
 	/// Adds the operation to the graph and returns its state token link.
+	#[must_use = "inserted nodes without live consumers are dead"]
 	pub fn add_into(nodes: &mut Vec<Node>, reference: Link, offset: Link, value: Link) -> Link {
 		let Ok(id) = nodes.len().try_into() else {
 			unreachable!()

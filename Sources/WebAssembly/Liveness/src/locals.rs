@@ -677,6 +677,7 @@ impl LocalTracker {
 	}
 
 	/// Runs liveness analysis and returns the number of locals used.
+	#[must_use = "use the returned local count"]
 	pub fn run(&mut self, locals: &mut Locals, graph: &ControlFlowGraph, result_count: u16) -> u16 {
 		locals.set_block_count(graph.basic_blocks.len());
 

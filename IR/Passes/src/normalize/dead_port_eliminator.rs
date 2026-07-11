@@ -224,6 +224,7 @@ impl DeadPortEliminator {
 
 	/// Runs the dead port elimination pass on the region, reporting whether any
 	/// port was trimmed.
+	#[must_use = "propagate whether this pass changed the graph"]
 	pub fn run(&mut self, nodes: &mut [Node]) -> bool {
 		let mut trimmed = false;
 

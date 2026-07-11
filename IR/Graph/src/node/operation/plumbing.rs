@@ -17,7 +17,8 @@ pub struct Identity {
 }
 
 impl Identity {
-	/// Adds an identity node to the graph.
+	/// Adds an identity node and returns its node identifier.
+	#[must_use = "inserted nodes without live consumers are dead"]
 	pub fn add_into(nodes: &mut Vec<Node>, sources: Resizable<Link, 4>) -> u32 {
 		let Ok(id) = nodes.len().try_into() else {
 			unreachable!()
@@ -48,7 +49,8 @@ pub struct Fence {
 }
 
 impl Fence {
-	/// Adds a fence node to the graph.
+	/// Adds a fence node and returns its node identifier.
+	#[must_use = "inserted nodes without live consumers are dead"]
 	pub fn add_into(nodes: &mut Vec<Node>, sources: Resizable<Link, 4>) -> u32 {
 		let Ok(id) = nodes.len().try_into() else {
 			unreachable!()
@@ -83,7 +85,8 @@ pub struct Apply {
 }
 
 impl Apply {
-	/// Adds a function application node to the graph.
+	/// Adds a function application node and returns its node identifier.
+	#[must_use = "inserted nodes without live consumers are dead"]
 	pub fn add_into(
 		nodes: &mut Vec<Node>,
 		function: Link,
@@ -126,6 +129,7 @@ pub struct RefIsNull {
 
 impl RefIsNull {
 	/// Adds a reference null check node to the graph.
+	#[must_use = "inserted nodes without live consumers are dead"]
 	pub fn add_into(nodes: &mut Vec<Node>, source: Link) -> Link {
 		let Ok(id) = nodes.len().try_into() else {
 			unreachable!()

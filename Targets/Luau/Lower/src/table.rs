@@ -10,6 +10,7 @@ use luau_foreign::{BooleanToInteger, LuauLessThanEqual, TableLength, TableLoad, 
 use crate::replace;
 
 /// Lowers a table get or set in place, reporting whether one matched.
+#[must_use = "propagate whether this pass changed the graph"]
 pub fn lower(nodes: &mut Vec<Node>, id: u32) -> bool {
 	let index = usize::try_from(id).unwrap();
 

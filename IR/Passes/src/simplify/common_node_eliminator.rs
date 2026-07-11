@@ -345,6 +345,7 @@ impl CommonNodeEliminator {
 
 	/// Runs common node elimination on the region, reporting whether any node
 	/// was merged.
+	#[must_use = "propagate whether this pass changed the graph"]
 	pub fn run(&mut self, nodes: &mut [Node]) -> bool {
 		self.representatives.clear();
 

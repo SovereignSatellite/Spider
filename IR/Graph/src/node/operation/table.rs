@@ -16,6 +16,7 @@ pub struct TableNew {
 
 impl TableNew {
 	/// Adds a table creation node to the graph.
+	#[must_use = "inserted nodes without live consumers are dead"]
 	pub fn add_into(
 		nodes: &mut Vec<Node>,
 		initializer: Vec<(Link, u32)>,
@@ -68,7 +69,8 @@ impl TableGet {
 	/// The port index for the state token.
 	pub const STATE_PORT: u16 = 1;
 
-	/// Adds a table read node to the graph.
+	/// Adds a table read node and returns its value and state links.
+	#[must_use = "inserted nodes without live consumers are dead"]
 	pub fn add_into(nodes: &mut Vec<Node>, source: Location) -> (Link, Link) {
 		let Ok(id) = nodes.len().try_into() else {
 			unreachable!()
@@ -98,7 +100,8 @@ impl TableSet {
 	/// The port index for the state token.
 	pub const STATE_PORT: u16 = 0;
 
-	/// Adds a table write node to the graph.
+	/// Adds a table write node and returns its state link.
+	#[must_use = "inserted nodes without live consumers are dead"]
 	pub fn add_into(nodes: &mut Vec<Node>, destination: Location, source: Link) -> Link {
 		let Ok(id) = nodes.len().try_into() else {
 			unreachable!()
@@ -131,7 +134,8 @@ impl TableSize {
 	/// The port index for the state token.
 	pub const STATE_PORT: u16 = 1;
 
-	/// Adds a table size query node to the graph.
+	/// Adds a table size query node and returns its value and state links.
+	#[must_use = "inserted nodes without live consumers are dead"]
 	pub fn add_into(nodes: &mut Vec<Node>, source: Link) -> (Link, Link) {
 		let Ok(id) = nodes.len().try_into() else {
 			unreachable!()
@@ -165,7 +169,8 @@ impl TableGrow {
 	/// The port index for the state token.
 	pub const STATE_PORT: u16 = 1;
 
-	/// Adds a table grow node to the graph.
+	/// Adds a table grow node and returns its value and state links.
+	#[must_use = "inserted nodes without live consumers are dead"]
 	pub fn add_into(
 		nodes: &mut Vec<Node>,
 		destination: Link,
@@ -206,7 +211,8 @@ impl TableFill {
 	/// The port index for the state token.
 	pub const STATE_PORT: u16 = 0;
 
-	/// Adds a table fill node to the graph.
+	/// Adds a table fill node and returns its state link.
+	#[must_use = "inserted nodes without live consumers are dead"]
 	pub fn add_into(
 		nodes: &mut Vec<Node>,
 		destination: Location,
@@ -249,7 +255,8 @@ impl TableCopy {
 	/// The port index for the source state token.
 	pub const SOURCE_STATE_PORT: u16 = 1;
 
-	/// Adds a table copy node to the graph.
+	/// Adds a table copy node and returns its destination and source state links.
+	#[must_use = "inserted nodes without live consumers are dead"]
 	pub fn add_into(
 		nodes: &mut Vec<Node>,
 		destination: Location,
@@ -289,7 +296,8 @@ impl TableDrop {
 	/// The port index for the state token.
 	pub const STATE_PORT: u16 = 0;
 
-	/// Adds a table drop node to the graph.
+	/// Adds a table drop node and returns its state link.
+	#[must_use = "inserted nodes without live consumers are dead"]
 	pub fn add_into(nodes: &mut Vec<Node>, source: Link) -> Link {
 		let Ok(id) = nodes.len().try_into() else {
 			unreachable!()

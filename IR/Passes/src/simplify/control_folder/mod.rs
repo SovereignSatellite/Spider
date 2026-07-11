@@ -7,6 +7,7 @@ mod matcher;
 mod repeat;
 
 /// Folds constant-condition control flow in the region, reporting whether anything changed.
+#[must_use = "propagate whether this pass changed the graph"]
 pub fn run(nodes: &mut Vec<Node>) -> bool {
 	let original = nodes.len();
 	let mut folded = false;
