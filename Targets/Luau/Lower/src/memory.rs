@@ -146,12 +146,7 @@ fn widen_signed(nodes: &mut Vec<Node>, low: Link) -> Link {
 	IntoBitsI64::add_into(nodes, low, high)
 }
 
-fn load_long(
-	nodes: &mut Vec<Node>,
-	buffer: Link,
-	offset: Link,
-	reads: &mut Vec<Link>,
-) -> Link {
+fn load_long(nodes: &mut Vec<Node>, buffer: Link, offset: Link, reads: &mut Vec<Link>) -> Link {
 	let low = read(nodes, buffer, offset, READ_U32, reads);
 	let high_offset = LuauAdd::add_fast_into(nodes, offset, WORD_BYTES);
 	let high = read(nodes, buffer, high_offset, READ_U32, reads);
