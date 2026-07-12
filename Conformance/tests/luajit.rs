@@ -28,14 +28,12 @@ use luau_builder as _;
 use luau_lower as _;
 use luau_printer as _;
 
-use common::{compiler::Compiler, process, visitor::Visitor};
+use common::{REPETITION_COUNT, compiler::Compiler, process, visitor::Visitor};
 
 mod common;
 
 const HARNESS_START_SOURCE: &str = include_str!("harness/luajit.start.lua");
 const HARNESS_END_SOURCE: &str = include_str!("harness/luajit.end.lua");
-
-const REPETITION_COUNT: usize = 32;
 
 struct LuaJIT {
 	library_sections: LibrarySections,
