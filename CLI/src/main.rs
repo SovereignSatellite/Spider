@@ -36,7 +36,8 @@ fn build_root(
 
 	match target {
 		Target::Luau => optimizer.run(&root, should_optimize, &mut luau_lower::apply),
-		Target::Json | Target::LuaJIT => optimizer.run(&root, should_optimize, &mut |_| false),
+		Target::LuaJIT => optimizer.run(&root, should_optimize, &mut luajit_lower::apply),
+		Target::Json => optimizer.run(&root, should_optimize, &mut |_| false),
 	}
 
 	root

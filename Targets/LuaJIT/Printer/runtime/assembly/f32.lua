@@ -131,3 +131,23 @@ local NATIVE_F32 = (function()
 		divide_f32 = ffi_cast(f32_f32_to_f32, memory + 4 * FUNCTION_ALIGNMENT),
 	}
 end)()
+
+-- SECTION native_square_root_f32
+-- NEEDS native_f32
+local native_square_root_f32 = NATIVE_F32.square_root_f32
+
+-- SECTION native_add_f32
+-- NEEDS native_f32
+local native_add_f32 = NATIVE_F32.add_f32
+
+-- SECTION native_subtract_f32
+-- NEEDS native_f32
+local native_subtract_f32 = NATIVE_F32.subtract_f32
+
+-- SECTION native_multiply_f32
+-- NEEDS native_f32
+local native_multiply_f32 = NATIVE_F32.multiply_f32
+
+-- SECTION native_divide_f32
+-- NEEDS native_f32
+local native_divide_f32 = NATIVE_F32.divide_f32

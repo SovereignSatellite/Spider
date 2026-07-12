@@ -20,6 +20,7 @@ use wast::{
 };
 
 use luajit_builder as _;
+use luajit_lower as _;
 use luajit_printer as _;
 use luau_builder::LuauBuilder;
 use luau_printer::{

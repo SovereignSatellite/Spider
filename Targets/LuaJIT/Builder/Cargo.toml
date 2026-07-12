@@ -9,7 +9,9 @@ workspace = true
 [dependencies]
 hashbrown.workspace = true
 ir-graph.workspace = true
+luajit-foreign.workspace = true
 parking_lot.workspace = true
+stacker.workspace = true
 
 ir-allocator = { path = "../../../IR/Allocator" }
 luajit-tree = { path = "../Tree" }

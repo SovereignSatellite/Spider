@@ -15,11 +15,7 @@ require("table.new")
 local function stack_acquire(size_class)
 	local stack = table.remove(stack_pool[size_class])
 
-	if stack == nil then
-		return table.new(size_class, 0)
-	else
-		return stack
-	end
+	return stack or table.new(size_class, 0)
 end
 
 -- SECTION stack_release

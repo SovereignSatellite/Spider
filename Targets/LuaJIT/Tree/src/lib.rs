@@ -1,6 +1,5 @@
 //! The `LuaJIT` tree intermediate representation.
 
-#![no_std]
 #![expect(
 	clippy::multiple_inherent_impl,
 	reason = "visitor accept methods are in a separate file from the type definitions"
