@@ -27,14 +27,12 @@ use luau_printer::{
 	library::{NamesFinder, Printer as LibraryPrinter, Sections as LibrarySections},
 };
 
-use common::{compiler::Compiler, process, visitor::Visitor};
+use common::{REPETITION_COUNT, compiler::Compiler, process, visitor::Visitor};
 
 mod common;
 
 const HARNESS_START_SOURCE: &str = include_str!("harness/luau.start.luau");
 const HARNESS_END_SOURCE: &str = include_str!("harness/luau.end.luau");
-
-const REPETITION_COUNT: usize = 32;
 
 struct Luau {
 	library_sections: LibrarySections,
