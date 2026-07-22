@@ -10,6 +10,7 @@ workspace = true
 ir-graph.workspace = true
 ir-pipeline.workspace = true
 luajit-builder.workspace = true
+luajit-lower.workspace = true
 luajit-printer.workspace = true
 luau-builder.workspace = true
 luau-lower.workspace = true

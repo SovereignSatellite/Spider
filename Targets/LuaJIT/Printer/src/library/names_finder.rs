@@ -1,23 +1,10 @@
-#![expect(
-	clippy::too_many_lines,
-	reason = "exhaustive matches over expression variants in NeedsName impls"
-)]
-
 use core::ops::ControlFlow;
 
 use luajit_tree::{
 	expression::{
-		Aggregate, Expression, ExtendType, Extract, Function, GlobalGet, GlobalNew,
-		IntegerBinaryOperation, IntegerCompareOperation, IntegerConvertToNumber, IntegerExtend,
-		IntegerNarrow, IntegerTransmuteToNumber, IntegerUnaryOperation, IntegerWiden, LoadType,
-		MemoryLoad, MemoryNew, NumberBinaryOperation, NumberCompareOperation, NumberNarrow,
-		NumberTransmuteToInteger, NumberTruncateToInteger, NumberUnaryOperation, NumberWiden,
-		TableGet, TableGrow, TableNew, TableSize, integer, number,
+		Aggregate, Apply, Expression, Extract, Field, Function, Index, MemoryNew, TableNew,
 	},
-	statement::{
-		GlobalSet, MemoryCopy, MemoryFill, MemoryStore, Statement, StoreType, TableCopy, TableDrop,
-		TableFill, TableSet,
-	},
+	statement::{SetIndex, Statement},
 	visitor::Visitor,
 };
 
@@ -51,306 +38,9 @@ impl NeedsName for f64 {
 	}
 }
 
-impl NeedsName for IntegerUnaryOperation {
+impl<const N: usize> NeedsName for Apply<N> {
 	fn needs_name(&self) -> &'static str {
-		let Self { kind, operator, .. } = *self;
-
-		match (kind, operator) {
-			(integer::Type::I32, integer::UnaryOperator::CountOnes) => "count_ones_i32",
-			(integer::Type::I32, integer::UnaryOperator::LeadingZeros) => "leading_zeros_i32",
-			(integer::Type::I32, integer::UnaryOperator::TrailingZeros) => "trailing_zeros_i32",
-			(integer::Type::I64, integer::UnaryOperator::CountOnes) => "count_ones_i64",
-			(integer::Type::I64, integer::UnaryOperator::LeadingZeros) => "leading_zeros_i64",
-			(integer::Type::I64, integer::UnaryOperator::TrailingZeros) => "trailing_zeros_i64",
-		}
-	}
-}
-
-impl NeedsName for IntegerBinaryOperation {
-	fn needs_name(&self) -> &'static str {
-		let Self { kind, operator, .. } = *self;
-
-		match (kind, operator) {
-			(integer::Type::I32, integer::BinaryOperator::Add) => "add_i32",
-			(integer::Type::I32, integer::BinaryOperator::Subtract) => "subtract_i32",
-			(integer::Type::I32, integer::BinaryOperator::Multiply) => "multiply_i32",
-			(integer::Type::I32, integer::BinaryOperator::Divide { is_signed: true }) => {
-				"divide_s32"
-			}
-			(integer::Type::I32, integer::BinaryOperator::Divide { is_signed: false }) => {
-				"divide_u32"
-			}
-			(integer::Type::I32, integer::BinaryOperator::Remainder { is_signed: true }) => {
-				"remainder_s32"
-			}
-			(integer::Type::I32, integer::BinaryOperator::Remainder { is_signed: false }) => {
-				"remainder_u32"
-			}
-			(integer::Type::I32, integer::BinaryOperator::And) => "and_i32",
-			(integer::Type::I32, integer::BinaryOperator::Or) => "or_i32",
-			(integer::Type::I32, integer::BinaryOperator::ExclusiveOr) => "exclusive_or_i32",
-			(integer::Type::I32, integer::BinaryOperator::ShiftLeft) => "shift_left_i32",
-			(integer::Type::I32, integer::BinaryOperator::ShiftRight { is_signed: true }) => {
-				"shift_right_s32"
-			}
-			(integer::Type::I32, integer::BinaryOperator::ShiftRight { is_signed: false }) => {
-				"shift_right_u32"
-			}
-			(integer::Type::I32, integer::BinaryOperator::RotateLeft) => "rotate_left_i32",
-			(integer::Type::I32, integer::BinaryOperator::RotateRight) => "rotate_right_i32",
-			(integer::Type::I64, integer::BinaryOperator::Add) => "add_i64",
-			(integer::Type::I64, integer::BinaryOperator::Subtract) => "subtract_i64",
-			(integer::Type::I64, integer::BinaryOperator::Multiply) => "multiply_i64",
-			(integer::Type::I64, integer::BinaryOperator::Divide { is_signed: true }) => {
-				"divide_s64"
-			}
-			(integer::Type::I64, integer::BinaryOperator::Divide { is_signed: false }) => {
-				"divide_u64"
-			}
-			(integer::Type::I64, integer::BinaryOperator::Remainder { is_signed: true }) => {
-				"remainder_s64"
-			}
-			(integer::Type::I64, integer::BinaryOperator::Remainder { is_signed: false }) => {
-				"remainder_u64"
-			}
-			(integer::Type::I64, integer::BinaryOperator::And) => "and_i64",
-			(integer::Type::I64, integer::BinaryOperator::Or) => "or_i64",
-			(integer::Type::I64, integer::BinaryOperator::ExclusiveOr) => "exclusive_or_i64",
-			(integer::Type::I64, integer::BinaryOperator::ShiftLeft) => "shift_left_i64",
-			(integer::Type::I64, integer::BinaryOperator::ShiftRight { is_signed: true }) => {
-				"shift_right_s64"
-			}
-			(integer::Type::I64, integer::BinaryOperator::ShiftRight { is_signed: false }) => {
-				"shift_right_u64"
-			}
-			(integer::Type::I64, integer::BinaryOperator::RotateLeft) => "rotate_left_i64",
-			(integer::Type::I64, integer::BinaryOperator::RotateRight) => "rotate_right_i64",
-		}
-	}
-}
-
-impl NeedsName for IntegerCompareOperation {
-	fn needs_name(&self) -> &'static str {
-		let Self { kind, operator, .. } = *self;
-
-		match (kind, operator) {
-			(integer::Type::I32, integer::CompareOperator::Equal) => "equal_i32",
-			(integer::Type::I32, integer::CompareOperator::NotEqual) => "not_equal_i32",
-			(integer::Type::I32, integer::CompareOperator::LessThan { is_signed: true }) => {
-				"less_than_s32"
-			}
-			(integer::Type::I32, integer::CompareOperator::LessThan { is_signed: false }) => {
-				"less_than_u32"
-			}
-			(integer::Type::I32, integer::CompareOperator::LessThanEqual { is_signed: true }) => {
-				"less_than_equal_s32"
-			}
-			(integer::Type::I32, integer::CompareOperator::LessThanEqual { is_signed: false }) => {
-				"less_than_equal_u32"
-			}
-			(integer::Type::I64, integer::CompareOperator::Equal) => "equal_i64",
-			(integer::Type::I64, integer::CompareOperator::NotEqual) => "not_equal_i64",
-			(integer::Type::I64, integer::CompareOperator::LessThan { is_signed: true }) => {
-				"less_than_s64"
-			}
-			(integer::Type::I64, integer::CompareOperator::LessThan { is_signed: false }) => {
-				"less_than_u64"
-			}
-			(integer::Type::I64, integer::CompareOperator::LessThanEqual { is_signed: true }) => {
-				"less_than_equal_s64"
-			}
-			(integer::Type::I64, integer::CompareOperator::LessThanEqual { is_signed: false }) => {
-				"less_than_equal_u64"
-			}
-		}
-	}
-}
-
-impl NeedsName for IntegerNarrow {
-	fn needs_name(&self) -> &'static str {
-		"narrow_i64"
-	}
-}
-
-impl NeedsName for IntegerWiden {
-	fn needs_name(&self) -> &'static str {
-		"widen_i32"
-	}
-}
-
-impl NeedsName for IntegerExtend {
-	fn needs_name(&self) -> &'static str {
-		let Self { kind, .. } = *self;
-
-		match kind {
-			ExtendType::I32_S8 => "extend_s8_to_i32",
-			ExtendType::I32_S16 => "extend_s16_to_i32",
-			ExtendType::I64_S8 => "extend_s8_to_i64",
-			ExtendType::I64_S16 => "extend_s16_to_i64",
-			ExtendType::I64_S32 => "extend_s32_to_i64",
-		}
-	}
-}
-
-impl NeedsName for IntegerConvertToNumber {
-	fn needs_name(&self) -> &'static str {
-		let Self {
-			is_signed,
-			to,
-			from,
-			..
-		} = *self;
-
-		match (from, to, is_signed) {
-			(integer::Type::I32, number::Type::F32, true) => "convert_s32_to_f32",
-			(integer::Type::I32, number::Type::F32, false) => "convert_u32_to_f32",
-			(integer::Type::I32, number::Type::F64, true) => "convert_s32_to_f64",
-			(integer::Type::I32, number::Type::F64, false) => "convert_u32_to_f64",
-			(integer::Type::I64, number::Type::F32, true) => "convert_s64_to_f32",
-			(integer::Type::I64, number::Type::F32, false) => "convert_u64_to_f32",
-			(integer::Type::I64, number::Type::F64, true) => "convert_s64_to_f64",
-			(integer::Type::I64, number::Type::F64, false) => "convert_u64_to_f64",
-		}
-	}
-}
-
-impl NeedsName for IntegerTransmuteToNumber {
-	fn needs_name(&self) -> &'static str {
-		let Self { from, .. } = *self;
-
-		match from {
-			integer::Type::I32 => "transmute_i32_to_f32",
-			integer::Type::I64 => "transmute_i64_to_f64",
-		}
-	}
-}
-
-impl NeedsName for NumberUnaryOperation {
-	fn needs_name(&self) -> &'static str {
-		let Self { kind, operator, .. } = *self;
-
-		match (kind, operator) {
-			(number::Type::F32, number::UnaryOperator::Absolute) => "absolute_f32",
-			(number::Type::F32, number::UnaryOperator::Negate) => "negate_f32",
-			(number::Type::F32, number::UnaryOperator::SquareRoot) => "square_root_f32",
-			(number::Type::F32, number::UnaryOperator::RoundUp) => "round_up_f32",
-			(number::Type::F32, number::UnaryOperator::RoundDown) => "round_down_f32",
-			(number::Type::F32, number::UnaryOperator::Truncate) => "truncate_f32",
-			(number::Type::F32, number::UnaryOperator::Nearest) => "nearest_f32",
-			(number::Type::F64, number::UnaryOperator::Absolute) => "absolute_f64",
-			(number::Type::F64, number::UnaryOperator::Negate) => "negate_f64",
-			(number::Type::F64, number::UnaryOperator::SquareRoot) => "square_root_f64",
-			(number::Type::F64, number::UnaryOperator::RoundUp) => "round_up_f64",
-			(number::Type::F64, number::UnaryOperator::RoundDown) => "round_down_f64",
-			(number::Type::F64, number::UnaryOperator::Truncate) => "truncate_f64",
-			(number::Type::F64, number::UnaryOperator::Nearest) => "nearest_f64",
-		}
-	}
-}
-
-impl NeedsName for NumberBinaryOperation {
-	fn needs_name(&self) -> &'static str {
-		let Self { kind, operator, .. } = *self;
-
-		match (kind, operator) {
-			(number::Type::F32, number::BinaryOperator::Add) => "add_f32",
-			(number::Type::F32, number::BinaryOperator::Subtract) => "subtract_f32",
-			(number::Type::F32, number::BinaryOperator::Multiply) => "multiply_f32",
-			(number::Type::F32, number::BinaryOperator::Divide) => "divide_f32",
-			(number::Type::F32, number::BinaryOperator::Minimum) => "minimum_f32",
-			(number::Type::F32, number::BinaryOperator::Maximum) => "maximum_f32",
-			(number::Type::F32, number::BinaryOperator::CopySign) => "copy_sign_f32",
-			(number::Type::F64, number::BinaryOperator::Add) => "add_f64",
-			(number::Type::F64, number::BinaryOperator::Subtract) => "subtract_f64",
-			(number::Type::F64, number::BinaryOperator::Multiply) => "multiply_f64",
-			(number::Type::F64, number::BinaryOperator::Divide) => "divide_f64",
-			(number::Type::F64, number::BinaryOperator::Minimum) => "minimum_f64",
-			(number::Type::F64, number::BinaryOperator::Maximum) => "maximum_f64",
-			(number::Type::F64, number::BinaryOperator::CopySign) => "copy_sign_f64",
-		}
-	}
-}
-
-impl NeedsName for NumberCompareOperation {
-	fn needs_name(&self) -> &'static str {
-		let Self { kind, operator, .. } = *self;
-
-		match (kind, operator) {
-			(number::Type::F32, number::CompareOperator::Equal) => "equal_f32",
-			(number::Type::F32, number::CompareOperator::NotEqual) => "not_equal_f32",
-			(number::Type::F32, number::CompareOperator::LessThan) => "less_than_f32",
-			(number::Type::F32, number::CompareOperator::LessThanEqual) => "less_than_equal_f32",
-			(number::Type::F64, number::CompareOperator::Equal) => "equal_f64",
-			(number::Type::F64, number::CompareOperator::NotEqual) => "not_equal_f64",
-			(number::Type::F64, number::CompareOperator::LessThan) => "less_than_f64",
-			(number::Type::F64, number::CompareOperator::LessThanEqual) => "less_than_equal_f64",
-		}
-	}
-}
-
-impl NeedsName for NumberNarrow {
-	fn needs_name(&self) -> &'static str {
-		"narrow_f64"
-	}
-}
-
-impl NeedsName for NumberWiden {
-	fn needs_name(&self) -> &'static str {
-		"widen_f32"
-	}
-}
-
-impl NeedsName for NumberTruncateToInteger {
-	fn needs_name(&self) -> &'static str {
-		let Self {
-			is_signed,
-			is_saturating,
-			to,
-			from,
-			..
-		} = *self;
-
-		match (from, to, is_signed, is_saturating) {
-			(number::Type::F32, integer::Type::I32, true, true) => "saturate_f32_to_s32",
-			(number::Type::F32, integer::Type::I32, true, false) => "truncate_f32_to_s32",
-			(number::Type::F32, integer::Type::I32, false, true) => "saturate_f32_to_u32",
-			(number::Type::F32, integer::Type::I32, false, false) => "truncate_f32_to_u32",
-			(number::Type::F32, integer::Type::I64, true, true) => "saturate_f32_to_s64",
-			(number::Type::F32, integer::Type::I64, true, false) => "truncate_f32_to_s64",
-			(number::Type::F32, integer::Type::I64, false, true) => "saturate_f32_to_u64",
-			(number::Type::F32, integer::Type::I64, false, false) => "truncate_f32_to_u64",
-			(number::Type::F64, integer::Type::I32, true, true) => "saturate_f64_to_s32",
-			(number::Type::F64, integer::Type::I32, true, false) => "truncate_f64_to_s32",
-			(number::Type::F64, integer::Type::I32, false, true) => "saturate_f64_to_u32",
-			(number::Type::F64, integer::Type::I32, false, false) => "truncate_f64_to_u32",
-			(number::Type::F64, integer::Type::I64, true, true) => "saturate_f64_to_s64",
-			(number::Type::F64, integer::Type::I64, true, false) => "truncate_f64_to_s64",
-			(number::Type::F64, integer::Type::I64, false, true) => "saturate_f64_to_u64",
-			(number::Type::F64, integer::Type::I64, false, false) => "truncate_f64_to_u64",
-		}
-	}
-}
-
-impl NeedsName for NumberTransmuteToInteger {
-	fn needs_name(&self) -> &'static str {
-		let Self { from, .. } = *self;
-
-		match from {
-			number::Type::F32 => "transmute_f32_to_i32",
-			number::Type::F64 => "transmute_f64_to_i64",
-		}
-	}
-}
-
-impl NeedsName for GlobalNew {
-	fn needs_name(&self) -> &'static str {
-		""
-	}
-}
-
-impl NeedsName for GlobalGet {
-	fn needs_name(&self) -> &'static str {
-		""
+		self.name.strip_prefix("rt_").unwrap_or(self.name)
 	}
 }
 
@@ -366,56 +56,27 @@ impl NeedsName for Extract {
 	}
 }
 
+impl NeedsName for Field {
+	fn needs_name(&self) -> &'static str {
+		""
+	}
+}
+
+impl NeedsName for Index {
+	fn needs_name(&self) -> &'static str {
+		""
+	}
+}
+
 impl NeedsName for TableNew {
 	fn needs_name(&self) -> &'static str {
 		"table_new"
 	}
 }
 
-impl NeedsName for TableGet {
-	fn needs_name(&self) -> &'static str {
-		"table_get"
-	}
-}
-
-impl NeedsName for TableSize {
-	fn needs_name(&self) -> &'static str {
-		"table_size"
-	}
-}
-
-impl NeedsName for TableGrow {
-	fn needs_name(&self) -> &'static str {
-		"table_grow"
-	}
-}
-
 impl NeedsName for MemoryNew {
 	fn needs_name(&self) -> &'static str {
 		"memory_new"
-	}
-}
-
-impl NeedsName for MemoryLoad {
-	fn needs_name(&self) -> &'static str {
-		let Self { kind, .. } = *self;
-
-		match kind {
-			LoadType::I32_S8 => "load_i32_from_s8",
-			LoadType::I32_U8 => "load_i32_from_u8",
-			LoadType::I32_S16 => "load_i32_from_s16",
-			LoadType::I32_U16 => "load_i32_from_u16",
-			LoadType::I32 => "load_i32",
-			LoadType::I64_S8 => "load_i64_from_s8",
-			LoadType::I64_U8 => "load_i64_from_u8",
-			LoadType::I64_S16 => "load_i64_from_s16",
-			LoadType::I64_U16 => "load_i64_from_u16",
-			LoadType::I64_S32 => "load_i64_from_s32",
-			LoadType::I64_U32 => "load_i64_from_u32",
-			LoadType::I64 => "load_i64",
-			LoadType::F32 => "load_f32",
-			LoadType::F64 => "load_f64",
-		}
 	}
 }
 
@@ -428,6 +89,8 @@ impl NeedsName for Expression {
 			| Self::Local(_)
 			| Self::String(_)
 			| Self::Call(_)
+			| Self::Infix(_)
+			| Self::Prefix(_)
 			| Self::BooleanToInteger(_)
 			| Self::RefIsNull(_) => "",
 
@@ -436,114 +99,26 @@ impl NeedsName for Expression {
 			Self::F32(f32) => f32.needs_name(),
 			Self::F64(f64) => f64.needs_name(),
 
-			Self::RuntimeCall(runtime_call) => runtime_call.name,
+			Self::Apply0Arguments(apply) => apply.needs_name(),
+			Self::Apply1Argument(apply) => apply.needs_name(),
+			Self::Apply2Arguments(apply) => apply.needs_name(),
+			Self::Apply3Arguments(apply) => apply.needs_name(),
+			Self::Apply4Arguments(apply) => apply.needs_name(),
+			Self::Apply5Arguments(apply) => apply.needs_name(),
 
-			Self::IntegerUnaryOperation(integer_unary_operation) => {
-				integer_unary_operation.needs_name()
-			}
-			Self::IntegerBinaryOperation(integer_binary_operation) => {
-				integer_binary_operation.needs_name()
-			}
-			Self::IntegerCompareOperation(integer_compare_operation) => {
-				integer_compare_operation.needs_name()
-			}
-			Self::IntegerNarrow(integer_narrow) => integer_narrow.needs_name(),
-			Self::IntegerWiden(integer_widen) => integer_widen.needs_name(),
-			Self::IntegerExtend(integer_extend) => integer_extend.needs_name(),
-			Self::IntegerConvertToNumber(integer_convert_to_number) => {
-				integer_convert_to_number.needs_name()
-			}
-			Self::IntegerTransmuteToNumber(integer_transmute_to_number) => {
-				integer_transmute_to_number.needs_name()
-			}
-			Self::NumberUnaryOperation(number_unary_operation) => {
-				number_unary_operation.needs_name()
-			}
-			Self::NumberBinaryOperation(number_binary_operation) => {
-				number_binary_operation.needs_name()
-			}
-			Self::NumberCompareOperation(number_compare_operation) => {
-				number_compare_operation.needs_name()
-			}
-			Self::NumberNarrow(number_narrow) => number_narrow.needs_name(),
-			Self::NumberWiden(number_widen) => number_widen.needs_name(),
-			Self::NumberTruncateToInteger(number_truncate_to_integer) => {
-				number_truncate_to_integer.needs_name()
-			}
-			Self::NumberTransmuteToInteger(number_transmute_to_integer) => {
-				number_transmute_to_integer.needs_name()
-			}
-			Self::GlobalNew(global_new) => global_new.needs_name(),
-			Self::GlobalGet(global_get) => global_get.needs_name(),
 			Self::Aggregate(aggregate) => aggregate.needs_name(),
 			Self::Extract(extract) => extract.needs_name(),
+			Self::Field(field) => field.needs_name(),
 			Self::TableNew(table_new) => table_new.needs_name(),
-			Self::TableGet(table_get) => table_get.needs_name(),
-			Self::TableSize(table_size) => table_size.needs_name(),
-			Self::TableGrow(table_grow) => table_grow.needs_name(),
+			Self::Index(index) => index.needs_name(),
 			Self::MemoryNew(memory_new) => memory_new.needs_name(),
-			Self::MemoryLoad(memory_load) => memory_load.needs_name(),
 		}
 	}
 }
 
-impl NeedsName for GlobalSet {
+impl NeedsName for SetIndex {
 	fn needs_name(&self) -> &'static str {
 		""
-	}
-}
-
-impl NeedsName for TableSet {
-	fn needs_name(&self) -> &'static str {
-		"table_set"
-	}
-}
-
-impl NeedsName for TableFill {
-	fn needs_name(&self) -> &'static str {
-		"table_fill"
-	}
-}
-
-impl NeedsName for TableCopy {
-	fn needs_name(&self) -> &'static str {
-		"table_copy"
-	}
-}
-
-impl NeedsName for TableDrop {
-	fn needs_name(&self) -> &'static str {
-		"table_drop"
-	}
-}
-
-impl NeedsName for MemoryStore {
-	fn needs_name(&self) -> &'static str {
-		let Self { kind, .. } = *self;
-
-		match kind {
-			StoreType::I32_I8 => "store_i32_into_i8",
-			StoreType::I32_I16 => "store_i32_into_i16",
-			StoreType::I32 => "store_i32",
-			StoreType::I64_I8 => "store_i64_into_i8",
-			StoreType::I64_I16 => "store_i64_into_i16",
-			StoreType::I64_I32 => "store_i64_into_i32",
-			StoreType::I64 => "store_i64",
-			StoreType::F32 => "store_f32",
-			StoreType::F64 => "store_f64",
-		}
-	}
-}
-
-impl NeedsName for MemoryFill {
-	fn needs_name(&self) -> &'static str {
-		"memory_fill"
-	}
-}
-
-impl NeedsName for MemoryCopy {
-	fn needs_name(&self) -> &'static str {
-		"memory_copy"
 	}
 }
 
@@ -556,16 +131,7 @@ impl NeedsName for Statement {
 			| Self::SwapAll(_)
 			| Self::Call(_) => "",
 
-			Self::RuntimeCall(runtime_call) => runtime_call.name,
-
-			Self::GlobalSet(global_set) => global_set.needs_name(),
-			Self::TableSet(table_set) => table_set.needs_name(),
-			Self::TableFill(table_fill) => table_fill.needs_name(),
-			Self::TableCopy(table_copy) => table_copy.needs_name(),
-			Self::TableDrop(table_drop) => table_drop.needs_name(),
-			Self::MemoryStore(memory_store) => memory_store.needs_name(),
-			Self::MemoryFill(memory_fill) => memory_fill.needs_name(),
-			Self::MemoryCopy(memory_copy) => memory_copy.needs_name(),
+			Self::SetIndex(set_index) => set_index.needs_name(),
 		}
 	}
 }

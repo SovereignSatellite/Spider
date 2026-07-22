@@ -89,9 +89,7 @@ end
 -- SECTION add_i32
 -- NEEDS force_i32
 local function rt_add_i32(lhs, rhs)
-	local result = lhs + rhs
-
-	result = force_i32(result)
+	local result = force_i32(lhs + rhs)
 
 	return result
 end
@@ -99,9 +97,7 @@ end
 -- SECTION subtract_i32
 -- NEEDS force_i32
 local function rt_subtract_i32(lhs, rhs)
-	local result = lhs - rhs
-
-	result = force_i32(result)
+	local result = force_i32(lhs - rhs)
 
 	return result
 end
@@ -164,7 +160,7 @@ end
 -- NEEDS math_fmod
 local function rt_remainder_s32(lhs, rhs)
 	if rhs == 0 then
-		error("integer divide by zero")
+		error("integer divide by zero", 2)
 	end
 
 	local result = math_fmod(lhs, rhs)

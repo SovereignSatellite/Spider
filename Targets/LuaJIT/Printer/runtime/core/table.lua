@@ -16,41 +16,37 @@ end
 
 -- SECTION table_get
 local function rt_table_get(source, offset)
-	if offset < 0 or offset >= source.minimum then
-		error("out of bounds table get")
-	end
+	assert(offset >= 0, "out of bounds table access")
+	assert(offset < source.minimum, "out of bounds table access")
 
 	return source[offset]
 end
 
 -- SECTION table_set
 local function rt_table_set(destination, offset, source)
-	if offset < 0 or offset >= destination.minimum then
-		error("out of bounds table set")
-	end
+	assert(offset >= 0, "out of bounds table access")
+	assert(offset < destination.minimum, "out of bounds table access")
 
 	destination[offset] = source
 end
 
 -- SECTION table_size
+-- NEEDS force_i32
 local function rt_table_size(source)
-	return source.minimum
+	return force_i32(source.minimum)
 end
 
 -- SECTION table_grow
+-- NEEDS force_i32
 -- NEEDS force_u32
 local function rt_table_grow(destination, source, size)
 	local size = force_u32(size)
 	local old = destination.minimum
 
-	if size == 0 then
-		return old
-	end
-
 	local new = old + size
 
 	if new > destination.maximum then
-		return -1
+		return force_i32(-1)
 	end
 
 	for offset = old, new do
@@ -59,14 +55,14 @@ local function rt_table_grow(destination, source, size)
 
 	destination.minimum = new
 
-	return old
+	return force_i32(old)
 end
 
 -- SECTION table_fill
 local function rt_table_fill(destination, offset, source, size)
-	if size < 0 or offset < 0 or offset + size > destination.minimum then
-		error("out of bounds table fill")
-	end
+	assert(size >= 0, "out of bounds table access")
+	assert(offset >= 0, "out of bounds table access")
+	assert(offset + size <= destination.minimum, "out of bounds table access")
 
 	for offset = offset, offset + size - 1 do
 		destination[offset] = source
@@ -75,15 +71,11 @@ end
 
 -- SECTION table_copy
 local function rt_table_copy(destination, offset_1, source, offset_2, size)
-	if
-		size < 0
-		or offset_1 < 0
-		or offset_2 < 0
-		or offset_1 + size > destination.minimum
-		or offset_2 + size > source.minimum
-	then
-		error("out of bounds table copy")
-	end
+	assert(size >= 0, "out of bounds table access")
+	assert(offset_1 >= 0, "out of bounds table access")
+	assert(offset_1 + size <= destination.minimum, "out of bounds table access")
+	assert(offset_2 >= 0, "out of bounds table access")
+	assert(offset_2 + size <= source.minimum, "out of bounds table access")
 
 	table.move(source, offset_2, offset_2 + size - 1, offset_1, destination)
 end

@@ -9,9 +9,23 @@ local ffi_cast = ffi.cast
 -- NEEDS ffi
 local i64_type = ffi.typeof("int64_t")
 
+-- SECTION cast_i64
+-- NEEDS ffi_cast
+-- NEEDS i64_type
+local function cast_i64(source)
+	return ffi_cast(i64_type, source)
+end
+
 -- SECTION u64_type
 -- NEEDS ffi
 local u64_type = ffi.typeof("uint64_t")
+
+-- SECTION cast_u64
+-- NEEDS ffi_cast
+-- NEEDS u64_type
+local function cast_u64(source)
+	return ffi_cast(u64_type, source)
+end
 
 -- SECTION c_calloc
 -- NEEDS ffi
@@ -48,10 +62,24 @@ union Any {
 -- NEEDS ffi
 local u8_pointer_type = ffi.typeof("uint8_t *")
 
+-- SECTION cast_u8_pointer
+-- NEEDS ffi_cast
+-- NEEDS u8_pointer_type
+local function cast_u8_pointer(source)
+	return ffi_cast(u8_pointer_type, source)
+end
+
 -- SECTION any_pointer_type
 -- NEEDS any_type
 -- NEEDS ffi
 local any_pointer_type = ffi.typeof("union Any *")
+
+-- SECTION cast_any_pointer
+-- NEEDS any_pointer_type
+-- NEEDS ffi_cast
+local function cast_any_pointer(source)
+	return ffi_cast(any_pointer_type, source)
+end
 
 -- SECTION memory_type
 -- NEEDS any_type
@@ -90,8 +118,8 @@ local TRANSMUTE_N64 = ffi.new("union transmute_n64")
 -- SECTION from_bits_f32
 -- NEEDS transmute_n32
 local function from_bits_f32(source)
-	-- LuaJIT does NaN tagging. This means we must manually make sure we don't
-	-- accidentally create a broken value when transmuting.
+	-- LuaJIT reserves NaN payloads for tagged values, so transmuted NaNs use a
+	-- canonical payload.
 	if source > 0x7F800000 then
 		source = 0x7FC00000
 	elseif source < 0 and source > -0x00800000 then
@@ -114,8 +142,8 @@ end
 -- SECTION from_bits_f64
 -- NEEDS transmute_n64
 local function from_bits_f64(source)
-	-- LuaJIT does NaN tagging. This means we must manually make sure we don't
-	-- accidentally create a broken value when transmuting.
+	-- LuaJIT reserves NaN payloads for tagged values, so transmuted NaNs use a
+	-- canonical payload.
 	if source > 0x7FF0000000000000LL then
 		source = 0x7FF8000000000000LL
 	elseif source < 0LL and source > 0xFFF0000000000000LL then

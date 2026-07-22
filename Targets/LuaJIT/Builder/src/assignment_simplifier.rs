@@ -8,6 +8,13 @@ impl AssignmentSimplifier {
 	pub fn new(mut assignments: Vec<(Local, Local)>) -> Self {
 		assignments.sort_unstable();
 
+		debug_assert!(
+			assignments
+				.windows(2)
+				.all(|pair| pair[0].0 != pair[1].0 || pair[0].1 == pair[1].1),
+			"a parallel move must write each destination from a single source"
+		);
+
 		Self { assignments }
 	}
 

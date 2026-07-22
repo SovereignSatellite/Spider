@@ -1,5 +1,5 @@
 [package]
-name = "luajit-tree"
+name = "luajit-lower"
 version = "1.0.0"
 edition = "2024"
 
@@ -7,4 +7,5 @@ edition = "2024"
 workspace = true
 
 [dependencies]
-stacker.workspace = true
+ir-graph.workspace = true
+luajit-foreign.workspace = true

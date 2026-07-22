@@ -1,20 +1,32 @@
 use alloc::sync::Arc;
+use core::any::Any;
 
 use parking_lot::Mutex;
 
 use ir_graph::{
 	Link, Node,
+	foreign::Foreign,
 	operation::{self, Apply, Export},
 	region::{Branch, Function, Match, Repeat, repeat},
 };
+use luajit_foreign::{
+	BitAnd, BitArShift, BitLRotate, BitLShift, BitOr, BitRRotate, BitRShift, BitXor,
+	BooleanToInteger, CastAnyPointer, CastI64, CastU8Pointer, CastU64, ForceI32, ForceU32,
+	FromBitsF32, FromBitsF64, IntoBitsF32, IntoBitsF64, LuaJITAdd, LuaJITDivide, LuaJITEqual,
+	LuaJITLessThan, LuaJITLessThanEqual, LuaJITModulo, LuaJITMultiply, LuaJITNegate,
+	LuaJITNotEqual, LuaJITSubtract, MathAbs, MathCeil, MathFloor, MathFmod, MathMax, MathMin,
+	MathModf, MathSqrt, MemoryData, MemorySize, NativeAddF32, NativeDivideF32, NativeMultiplyF32,
+	NativeSquareRootF32, NativeSubtractF32, PointerLoad, PointerStore, TableLength, TableLoad,
+	TableStore,
+};
 use luajit_tree::{
-	expression::{self, Expression, Local, Name},
+	expression::{self, Apply as ApplyExpression, Call as CallExpression, Expression, Local, Name},
 	statement::Sequence,
 };
 
 use super::{
 	code_handler::CodeHandler,
-	data_handler::{DataHandler, build_import},
+	data_handler::{DataHandler, build_import, memory_store_name},
 	policy::{LuaJITPolicy, PHYSICAL_REGISTERS},
 };
 
@@ -115,7 +127,7 @@ impl<'allocator, 'policy> Emitter<'allocator, 'policy> {
 		self.next_region = 1;
 		self.code_handler.push_scope();
 
-		self.handle_nodes(&function.nodes);
+		self.handle_nodes_unbounded(&function.nodes);
 
 		let arguments = collect_argument_names(function.argument_count);
 		let locals = fast_locals_for(peak, function.argument_count);
@@ -180,7 +192,7 @@ impl<'allocator, 'policy> Emitter<'allocator, 'policy> {
 		self.region = branch_region;
 		self.code_handler.push_scope();
 
-		self.handle_nodes(&branch.nodes);
+		self.handle_nodes_unbounded(&branch.nodes);
 
 		self.emit_transfer(result_locals, &branch.results().sources);
 
@@ -241,7 +253,7 @@ impl<'allocator, 'policy> Emitter<'allocator, 'policy> {
 		self.region = repeat_region;
 		self.code_handler.push_scope();
 
-		self.handle_nodes(&repeat.nodes);
+		self.handle_nodes_unbounded(&repeat.nodes);
 
 		drop(repeat);
 
@@ -262,13 +274,314 @@ impl<'allocator, 'policy> Emitter<'allocator, 'policy> {
 		self.code_handler.emit_repeat(condition, rotation);
 	}
 
+	// Identity and fence are pure forwarders: every output port carries an operand's value,
+	// so each port is assigned from its source as an explicit move.
+	fn handle_identity(&mut self, id: u32, node: &operation::Identity) {
+		let destinations = self
+			.data_handler
+			.port_locals(self.region, id, node.result_count());
+
+		self.emit_transfer(&destinations, &node.sources);
+	}
+
+	fn handle_fence(&mut self, id: u32, node: &operation::Fence) {
+		let destinations = self
+			.data_handler
+			.port_locals(self.region, id, node.result_count());
+
+		self.emit_transfer(&destinations, &node.sources);
+	}
+
 	fn handle_export(&mut self, id: u32, node: &Export) {
 		let state = self.bridge(id, Export::STATE_PORT, node.value);
 		let value = self.data_handler.load(self.region, state);
 		let identifier = Expression::String(Arc::clone(&node.identifier));
+		let expression = ApplyExpression {
+			name: "rt_export",
+			arguments: [identifier, value],
+		};
 
 		self.code_handler
-			.emit_runtime_call("export", vec![identifier, value]);
+			.emit_call(Vec::new(), Expression::Apply2Arguments(expression.into()));
+	}
+
+	fn handle_foreign(&mut self, nodes: &[Node], id: u32, foreign: &dyn Foreign) {
+		let any: &dyn Any = foreign;
+
+		if let Some(&node) = any.downcast_ref::<PointerStore>() {
+			self.handle_pointer_store(id, node);
+		} else if let Some(&node) = any.downcast_ref::<TableStore>() {
+			self.handle_table_store(id, node);
+		} else {
+			self.emit_expression(nodes, id);
+		}
+	}
+
+	fn handle_pointer_store(&mut self, id: u32, node: PointerStore) {
+		self.bridge(id, PointerStore::STATE_PORT, node.reference);
+
+		let pointer = self.data_handler.load(self.region, node.pointer);
+		let field = Expression::String(Arc::from(node.field));
+		let value = self.data_handler.load(self.region, node.value);
+
+		self.code_handler.emit_set_index(pointer, field, value);
+	}
+
+	fn handle_table_store(&mut self, id: u32, node: TableStore) {
+		let reference = self.bridge(id, TableStore::STATE_PORT, node.reference);
+		let table = self.data_handler.load(self.region, reference);
+		let offset = self.data_handler.load(self.region, node.offset);
+		let value = self.data_handler.load(self.region, node.value);
+
+		self.code_handler.emit_set_index(table, offset, value);
+	}
+
+	fn value_foreign(&mut self, foreign: &dyn Foreign) -> Expression {
+		let any: &dyn Any = foreign;
+
+		if let Some(expression) = self.value_bit(any) {
+			return expression;
+		}
+
+		if let Some(expression) = self.value_operator(any) {
+			return expression;
+		}
+
+		if let Some(expression) = self.value_ffi(any) {
+			return expression;
+		}
+
+		if let Some(expression) = self.value_math(any) {
+			return expression;
+		}
+
+		if let Some(expression) = self.value_memory(any) {
+			return expression;
+		}
+
+		if let Some(expression) = self.value_native_f32(any) {
+			return expression;
+		}
+
+		if let Some(expression) = self.value_table(any) {
+			return expression;
+		}
+
+		unimplemented!("`{}` has no expression form", foreign.identifier())
+	}
+
+	#[expect(clippy::question_mark, reason = "keep foreign dispatch shape uniform")]
+	fn value_native_f32(&mut self, any: &dyn Any) -> Option<Expression> {
+		let region = self.region;
+
+		let expression = if let Some(node) = any.downcast_ref::<NativeSquareRootF32>() {
+			self.data_handler
+				.build_apply_1(region, "native_square_root_f32", [node.source])
+		} else if let Some(node) = any.downcast_ref::<NativeAddF32>() {
+			self.data_handler
+				.build_apply_2(region, "native_add_f32", [node.lhs, node.rhs])
+		} else if let Some(node) = any.downcast_ref::<NativeSubtractF32>() {
+			self.data_handler
+				.build_apply_2(region, "native_subtract_f32", [node.lhs, node.rhs])
+		} else if let Some(node) = any.downcast_ref::<NativeMultiplyF32>() {
+			self.data_handler
+				.build_apply_2(region, "native_multiply_f32", [node.lhs, node.rhs])
+		} else if let Some(node) = any.downcast_ref::<NativeDivideF32>() {
+			self.data_handler
+				.build_apply_2(region, "native_divide_f32", [node.lhs, node.rhs])
+		} else {
+			return None;
+		};
+
+		Some(expression)
+	}
+
+	fn value_table(&mut self, any: &dyn Any) -> Option<Expression> {
+		let region = self.region;
+
+		if let Some(node) = any.downcast_ref::<TableLoad>() {
+			return Some(
+				self.data_handler
+					.build_index(region, node.reference, node.offset),
+			);
+		}
+
+		if let Some(node) = any.downcast_ref::<TableLength>() {
+			return Some(self.data_handler.build_table_length(region, node.source));
+		}
+
+		None
+	}
+
+	fn value_memory(&mut self, any: &dyn Any) -> Option<Expression> {
+		let region = self.region;
+
+		if let Some(node) = any.downcast_ref::<MemoryData>() {
+			return Some(self.data_handler.build_field(region, node.source, "data"));
+		}
+
+		if let Some(node) = any.downcast_ref::<MemorySize>() {
+			return Some(self.data_handler.build_field(region, node.source, "size"));
+		}
+
+		if let Some(node) = any.downcast_ref::<PointerLoad>() {
+			return Some(
+				self.data_handler
+					.build_field(region, node.pointer, node.field),
+			);
+		}
+
+		None
+	}
+
+	fn value_bit(&mut self, any: &dyn Any) -> Option<Expression> {
+		let region = self.region;
+
+		let expression = if let Some(node) = any.downcast_ref::<BitAnd>() {
+			self.data_handler
+				.build_apply_2(region, "bit_and", [node.lhs, node.rhs])
+		} else if let Some(node) = any.downcast_ref::<BitOr>() {
+			self.data_handler
+				.build_apply_2(region, "bit_or", [node.lhs, node.rhs])
+		} else if let Some(node) = any.downcast_ref::<BitXor>() {
+			self.data_handler
+				.build_apply_2(region, "bit_xor", [node.lhs, node.rhs])
+		} else if let Some(node) = any.downcast_ref::<BitLShift>() {
+			self.data_handler
+				.build_apply_2(region, "bit_lshift", [node.lhs, node.rhs])
+		} else if let Some(node) = any.downcast_ref::<BitRShift>() {
+			self.data_handler
+				.build_apply_2(region, "bit_rshift", [node.lhs, node.rhs])
+		} else if let Some(node) = any.downcast_ref::<BitArShift>() {
+			self.data_handler
+				.build_apply_2(region, "bit_arshift", [node.lhs, node.rhs])
+		} else if let Some(node) = any.downcast_ref::<BitLRotate>() {
+			self.data_handler
+				.build_apply_2(region, "bit_lrotate", [node.lhs, node.rhs])
+		} else if let Some(node) = any.downcast_ref::<BitRRotate>() {
+			self.data_handler
+				.build_apply_2(region, "bit_rrotate", [node.lhs, node.rhs])
+		} else if let Some(node) = any.downcast_ref::<ForceI32>() {
+			self.data_handler
+				.build_apply_1(region, "force_i32", [node.source])
+		} else if let Some(node) = any.downcast_ref::<ForceU32>() {
+			self.data_handler
+				.build_apply_1(region, "force_u32", [node.source])
+		} else {
+			return None;
+		};
+
+		Some(expression)
+	}
+
+	fn value_operator(&mut self, any: &dyn Any) -> Option<Expression> {
+		let region = self.region;
+
+		let expression = if let Some(node) = any.downcast_ref::<LuaJITAdd>() {
+			self.data_handler
+				.build_infix(region, "+", node.lhs, node.rhs)
+		} else if let Some(node) = any.downcast_ref::<LuaJITSubtract>() {
+			self.data_handler
+				.build_infix(region, "-", node.lhs, node.rhs)
+		} else if let Some(node) = any.downcast_ref::<LuaJITMultiply>() {
+			self.data_handler
+				.build_infix(region, "*", node.lhs, node.rhs)
+		} else if let Some(node) = any.downcast_ref::<LuaJITDivide>() {
+			self.data_handler
+				.build_infix(region, "/", node.lhs, node.rhs)
+		} else if let Some(node) = any.downcast_ref::<LuaJITModulo>() {
+			self.data_handler
+				.build_infix(region, "%", node.lhs, node.rhs)
+		} else if let Some(node) = any.downcast_ref::<LuaJITNegate>() {
+			self.data_handler.build_prefix(region, "-", node.source)
+		} else if let Some(node) = any.downcast_ref::<LuaJITEqual>() {
+			self.data_handler
+				.build_infix(region, "==", node.lhs, node.rhs)
+		} else if let Some(node) = any.downcast_ref::<LuaJITNotEqual>() {
+			self.data_handler
+				.build_infix(region, "~=", node.lhs, node.rhs)
+		} else if let Some(node) = any.downcast_ref::<LuaJITLessThan>() {
+			self.data_handler
+				.build_infix(region, "<", node.lhs, node.rhs)
+		} else if let Some(node) = any.downcast_ref::<LuaJITLessThanEqual>() {
+			self.data_handler
+				.build_infix(region, "<=", node.lhs, node.rhs)
+		} else {
+			return None;
+		};
+
+		Some(expression)
+	}
+
+	fn value_ffi(&mut self, any: &dyn Any) -> Option<Expression> {
+		let region = self.region;
+
+		let expression = if let Some(node) = any.downcast_ref::<CastAnyPointer>() {
+			self.data_handler
+				.build_apply_1(region, "cast_any_pointer", [node.source])
+		} else if let Some(node) = any.downcast_ref::<CastI64>() {
+			self.data_handler
+				.build_apply_1(region, "cast_i64", [node.source])
+		} else if let Some(node) = any.downcast_ref::<CastU64>() {
+			self.data_handler
+				.build_apply_1(region, "cast_u64", [node.source])
+		} else if let Some(node) = any.downcast_ref::<CastU8Pointer>() {
+			self.data_handler
+				.build_apply_1(region, "cast_u8_pointer", [node.source])
+		} else if let Some(node) = any.downcast_ref::<FromBitsF32>() {
+			self.data_handler
+				.build_apply_1(region, "from_bits_f32", [node.source])
+		} else if let Some(node) = any.downcast_ref::<IntoBitsF32>() {
+			self.data_handler
+				.build_apply_1(region, "into_bits_f32", [node.source])
+		} else if let Some(node) = any.downcast_ref::<FromBitsF64>() {
+			self.data_handler
+				.build_apply_1(region, "from_bits_f64", [node.source])
+		} else if let Some(node) = any.downcast_ref::<IntoBitsF64>() {
+			self.data_handler
+				.build_apply_1(region, "into_bits_f64", [node.source])
+		} else if let Some(node) = any.downcast_ref::<BooleanToInteger>() {
+			self.data_handler
+				.build_boolean_to_integer(region, node.source)
+		} else {
+			return None;
+		};
+
+		Some(expression)
+	}
+
+	fn value_math(&mut self, any: &dyn Any) -> Option<Expression> {
+		let region = self.region;
+
+		let expression = if let Some(node) = any.downcast_ref::<MathAbs>() {
+			self.data_handler
+				.build_apply_1(region, "math_abs", [node.source])
+		} else if let Some(node) = any.downcast_ref::<MathSqrt>() {
+			self.data_handler
+				.build_apply_1(region, "math_sqrt", [node.source])
+		} else if let Some(node) = any.downcast_ref::<MathCeil>() {
+			self.data_handler
+				.build_apply_1(region, "math_ceil", [node.source])
+		} else if let Some(node) = any.downcast_ref::<MathFloor>() {
+			self.data_handler
+				.build_apply_1(region, "math_floor", [node.source])
+		} else if let Some(node) = any.downcast_ref::<MathModf>() {
+			self.data_handler
+				.build_apply_1(region, "math_modf", [node.source])
+		} else if let Some(node) = any.downcast_ref::<MathMin>() {
+			self.data_handler
+				.build_apply_2(region, "math_min", [node.lhs, node.rhs])
+		} else if let Some(node) = any.downcast_ref::<MathMax>() {
+			self.data_handler
+				.build_apply_2(region, "math_max", [node.lhs, node.rhs])
+		} else if let Some(node) = any.downcast_ref::<MathFmod>() {
+			self.data_handler
+				.build_apply_2(region, "math_fmod", [node.lhs, node.rhs])
+		} else {
+			return None;
+		};
+
+		Some(expression)
 	}
 
 	fn handle_call(&mut self, id: u32, node: &Apply) {
@@ -277,8 +590,15 @@ impl<'allocator, 'policy> Emitter<'allocator, 'policy> {
 		let results = self
 			.data_handler
 			.port_locals(self.region, id, node.result_count);
+		let call = Expression::Call(
+			CallExpression {
+				function,
+				arguments,
+			}
+			.into(),
+		);
 
-		self.code_handler.emit_call(function, results, arguments);
+		self.code_handler.emit_call(results, call);
 	}
 
 	#[expect(clippy::too_many_lines, reason = "exhaustive match over node variants")]
@@ -300,7 +620,10 @@ impl<'allocator, 'policy> Emitter<'allocator, 'policy> {
 			| Node::Apply(_)
 			| Node::MutableGet(_)
 			| Node::MutableSet(_)
+			| Node::TableGet(_)
 			| Node::TableSet(_)
+			| Node::TableSize(_)
+			| Node::TableGrow(_)
 			| Node::TableFill(_)
 			| Node::TableCopy(_)
 			| Node::TableDrop(_)
@@ -312,7 +635,7 @@ impl<'allocator, 'policy> Emitter<'allocator, 'policy> {
 
 			Node::Import(node) => build_import(node),
 
-			Node::Foreign(_) => unreachable!("the LuaJIT target consumes no foreign nodes"),
+			Node::Foreign(foreign) => self.value_foreign(foreign.as_ref()),
 
 			Node::Trap => Expression::Trap,
 			Node::Null => Expression::Null,
@@ -368,9 +691,6 @@ impl<'allocator, 'policy> Emitter<'allocator, 'policy> {
 			Node::Extract(node) => self.data_handler.build_extract(self.region, *node),
 
 			Node::TableNew(node) => self.data_handler.build_table_new(self.region, node),
-			Node::TableGet(node) => self.data_handler.build_table_get(self.region, *node),
-			Node::TableSize(node) => self.data_handler.build_table_size(self.region, *node),
-			Node::TableGrow(node) => self.data_handler.build_table_grow(self.region, *node),
 
 			Node::MemoryNew(node) => self.data_handler.build_memory_new(self.region, node),
 		}
@@ -383,47 +703,104 @@ impl<'allocator, 'policy> Emitter<'allocator, 'policy> {
 		self.emit_or_defer(id, value);
 	}
 
+	// A mutable cell is a one-field aggregate, so a write to it sets index one.
 	fn handle_mutable_set(&mut self, id: u32, node: operation::MutableSet) {
-		let destination = self.bridge(id, operation::MutableSet::STATE_PORT, node.destination);
-		let destination = self.data_handler.load(self.region, destination);
+		let reference = self.bridge(id, operation::MutableSet::STATE_PORT, node.destination);
+		let destination = self.data_handler.load(self.region, reference);
 		let source = self.data_handler.load(self.region, node.source);
 
-		self.code_handler.emit_mutable_set(destination, source);
+		self.code_handler
+			.emit_set_index(destination, Expression::I32(1), source);
 	}
 
-	fn handle_table_set(&mut self, node: operation::TableSet) {
-		let destination = self
+	fn handle_table_get(&mut self, id: u32, node: operation::TableGet) {
+		let reference = self.bridge(id, operation::TableGet::STATE_PORT, node.source.reference);
+		let value = self
 			.data_handler
-			.load_location(self.region, node.destination);
-		let source = self.data_handler.load(self.region, node.source);
+			.build_table_get(self.region, reference, node.source.offset);
 
-		self.code_handler.emit_table_set(destination, source);
+		self.emit_or_defer(id, value);
 	}
 
-	fn handle_table_fill(&mut self, node: operation::TableFill) {
-		let destination = self
+	fn handle_table_set(&mut self, id: u32, node: operation::TableSet) {
+		let reference = self.bridge(
+			id,
+			operation::TableSet::STATE_PORT,
+			node.destination.reference,
+		);
+		let value = self.data_handler.build_apply_3(
+			self.region,
+			"rt_table_set",
+			[reference, node.destination.offset, node.source],
+		);
+
+		self.code_handler.emit_call(Vec::new(), value);
+	}
+
+	fn handle_table_size(&mut self, id: u32, node: operation::TableSize) {
+		let reference = self.bridge(id, operation::TableSize::STATE_PORT, node.source);
+		let value = self.data_handler.build_table_size(self.region, reference);
+
+		self.emit_or_defer(id, value);
+	}
+
+	fn handle_table_grow(&mut self, id: u32, node: operation::TableGrow) {
+		let reference = self.bridge(id, operation::TableGrow::STATE_PORT, node.destination);
+		let value =
+			self.data_handler
+				.build_table_grow(self.region, reference, node.initializer, node.size);
+
+		self.emit_or_defer(id, value);
+	}
+
+	fn handle_table_fill(&mut self, id: u32, node: operation::TableFill) {
+		let reference = self.bridge(
+			id,
+			operation::TableFill::STATE_PORT,
+			node.destination.reference,
+		);
+		let value = self.data_handler.build_apply_4(
+			self.region,
+			"rt_table_fill",
+			[reference, node.destination.offset, node.source, node.size],
+		);
+
+		self.code_handler.emit_call(Vec::new(), value);
+	}
+
+	fn handle_table_copy(&mut self, id: u32, node: operation::TableCopy) {
+		let destination = Link(id, operation::TableCopy::DESTINATION_STATE_PORT);
+		let source = Link(id, operation::TableCopy::SOURCE_STATE_PORT);
+		let destination_local = self.data_handler.local_of(self.region, destination);
+		let source_local = self.data_handler.local_of(self.region, source);
+
+		self.emit_transfer(
+			&[destination_local, source_local],
+			&[node.destination.reference, node.source.reference],
+		);
+
+		let value = self.data_handler.build_apply_5(
+			self.region,
+			"rt_table_copy",
+			[
+				destination,
+				node.destination.offset,
+				source,
+				node.source.offset,
+				node.size,
+			],
+		);
+
+		self.code_handler.emit_call(Vec::new(), value);
+	}
+
+	fn handle_table_drop(&mut self, id: u32, node: operation::TableDrop) {
+		let reference = self.bridge(id, operation::TableDrop::STATE_PORT, node.source);
+		let value = self
 			.data_handler
-			.load_location(self.region, node.destination);
-		let source = self.data_handler.load(self.region, node.source);
-		let size = self.data_handler.load(self.region, node.size);
+			.build_apply_1(self.region, "rt_table_drop", [reference]);
 
-		self.code_handler.emit_table_fill(destination, source, size);
-	}
-
-	fn handle_table_copy(&mut self, node: operation::TableCopy) {
-		let destination = self
-			.data_handler
-			.load_location(self.region, node.destination);
-		let source = self.data_handler.load_location(self.region, node.source);
-		let size = self.data_handler.load(self.region, node.size);
-
-		self.code_handler.emit_table_copy(destination, source, size);
-	}
-
-	fn handle_table_drop(&mut self, node: operation::TableDrop) {
-		let source = self.data_handler.load(self.region, node.source);
-
-		self.code_handler.emit_table_drop(source);
+		self.code_handler.emit_call(Vec::new(), value);
 	}
 
 	fn handle_memory_load(&mut self, id: u32, node: operation::MemoryLoad) {
@@ -444,17 +821,13 @@ impl<'allocator, 'policy> Emitter<'allocator, 'policy> {
 			operation::MemoryStore::STATE_PORT,
 			node.destination.reference,
 		);
-		let destination = self.data_handler.load_location(
+		let value = self.data_handler.build_apply_3(
 			self.region,
-			operation::Location {
-				reference,
-				..node.destination
-			},
+			memory_store_name(node.kind),
+			[reference, node.destination.offset, node.source],
 		);
-		let source = self.data_handler.load(self.region, node.source);
 
-		self.code_handler
-			.emit_memory_store(destination, source, node.kind);
+		self.code_handler.emit_call(Vec::new(), value);
 	}
 
 	fn handle_memory_fill(&mut self, id: u32, node: operation::MemoryFill) {
@@ -463,17 +836,13 @@ impl<'allocator, 'policy> Emitter<'allocator, 'policy> {
 			operation::MemoryFill::STATE_PORT,
 			node.destination.reference,
 		);
-		let destination = self.data_handler.load_location(
+		let value = self.data_handler.build_apply_4(
 			self.region,
-			operation::Location {
-				reference,
-				..node.destination
-			},
+			"rt_memory_fill",
+			[reference, node.destination.offset, node.byte, node.size],
 		);
-		let byte = self.data_handler.load(self.region, node.byte);
-		let size = self.data_handler.load(self.region, node.size);
 
-		self.code_handler.emit_memory_fill(destination, byte, size);
+		self.code_handler.emit_call(Vec::new(), value);
 	}
 
 	fn handle_memory_copy(&mut self, id: u32, node: operation::MemoryCopy) {
@@ -487,24 +856,19 @@ impl<'allocator, 'policy> Emitter<'allocator, 'policy> {
 			&[node.destination.reference, node.source.reference],
 		);
 
-		let destination = self.data_handler.load_location(
+		let value = self.data_handler.build_apply_5(
 			self.region,
-			operation::Location {
-				reference: destination,
-				..node.destination
-			},
+			"rt_memory_copy",
+			[
+				destination,
+				node.destination.offset,
+				source,
+				node.source.offset,
+				node.size,
+			],
 		);
-		let source = self.data_handler.load_location(
-			self.region,
-			operation::Location {
-				reference: source,
-				..node.source
-			},
-		);
-		let size = self.data_handler.load(self.region, node.size);
 
-		self.code_handler
-			.emit_memory_copy(destination, source, size);
+		self.code_handler.emit_call(Vec::new(), value);
 	}
 
 	fn handle_memory_drop(&mut self, id: u32, node: operation::MemoryDrop) {
@@ -526,13 +890,14 @@ impl<'allocator, 'policy> Emitter<'allocator, 'policy> {
 			| Node::FunctionResults(_)
 			| Node::BranchArguments(_)
 			| Node::BranchResults(_)
-			| Node::RepeatArguments(_)
-			| Node::Identity(_)
-			| Node::Fence(_) => {}
+			| Node::RepeatArguments(_) => {}
 
 			Node::RepeatResults(ref node) => self.handle_repeat_results(node),
 
-			Node::Foreign(_) => unreachable!("the LuaJIT target consumes no foreign nodes"),
+			Node::Identity(ref node) => self.handle_identity(id, node),
+			Node::Fence(ref node) => self.handle_fence(id, node),
+
+			Node::Foreign(ref node) => self.handle_foreign(nodes, id, node.as_ref()),
 
 			Node::Import(_)
 			| Node::Trap
@@ -561,25 +926,29 @@ impl<'allocator, 'policy> Emitter<'allocator, 'policy> {
 			| Node::Aggregate(_)
 			| Node::Extract(_)
 			| Node::TableNew(_)
-			| Node::TableGet(_)
-			| Node::TableSize(_)
-			| Node::TableGrow(_)
 			| Node::MemoryNew(_) => self.emit_expression(nodes, id),
 
 			Node::Export(ref node) => self.handle_export(id, node),
 			Node::Apply(ref node) => self.handle_call(id, node),
 			Node::MutableGet(node) => self.handle_mutable_get(id, node),
 			Node::MutableSet(node) => self.handle_mutable_set(id, node),
-			Node::TableSet(node) => self.handle_table_set(node),
-			Node::TableFill(node) => self.handle_table_fill(node),
-			Node::TableCopy(node) => self.handle_table_copy(node),
-			Node::TableDrop(node) => self.handle_table_drop(node),
+			Node::TableGet(node) => self.handle_table_get(id, node),
+			Node::TableSet(node) => self.handle_table_set(id, node),
+			Node::TableSize(node) => self.handle_table_size(id, node),
+			Node::TableGrow(node) => self.handle_table_grow(id, node),
+			Node::TableFill(node) => self.handle_table_fill(id, node),
+			Node::TableCopy(node) => self.handle_table_copy(id, node),
+			Node::TableDrop(node) => self.handle_table_drop(id, node),
 			Node::MemoryLoad(node) => self.handle_memory_load(id, node),
 			Node::MemoryStore(node) => self.handle_memory_store(id, node),
 			Node::MemoryFill(node) => self.handle_memory_fill(id, node),
 			Node::MemoryCopy(node) => self.handle_memory_copy(id, node),
 			Node::MemoryDrop(node) => self.handle_memory_drop(id, node),
 		}
+	}
+
+	fn handle_nodes_unbounded(&mut self, nodes: &[Node]) {
+		stacker::maybe_grow(0x1_0000, 0x10_0000, || self.handle_nodes(nodes));
 	}
 
 	fn handle_nodes(&mut self, nodes: &[Node]) {

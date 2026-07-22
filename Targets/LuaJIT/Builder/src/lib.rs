@@ -34,6 +34,7 @@ impl LuaJITBuilder {
 	}
 
 	/// Builds a `LuaJIT` function.
+	#[must_use = "use the built LuaJIT function"]
 	#[expect(
 		clippy::significant_drop_tightening,
 		reason = "the lock guards the whole build: the policy precomputes over it, then the emitter walks it"
