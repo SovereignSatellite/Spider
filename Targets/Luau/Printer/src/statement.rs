@@ -1,6 +1,9 @@
 use std::io::{Result, Write};
 
-use luau_tree::statement::{Assign, Call, Match, Repeat, Sequence, SetIndex, Statement, SwapAll};
+use luau_tree::{
+	expression::Expression,
+	statement::{Assign, Call, Match, Repeat, Sequence, SetIndex, Statement, SwapAll},
+};
 
 use super::{LuauPrinter, expression::fmt_delimited, print::Print};
 
@@ -183,6 +186,22 @@ impl Print for Match {
 	}
 }
 
+fn print_repeat_exit_condition(
+	condition: &Expression,
+	printer: &mut LuauPrinter,
+	out: &mut dyn Write,
+) -> Result<()> {
+	if let Expression::BooleanToInteger(conversion) = condition {
+		write!(out, "not (")?;
+		conversion.source.print(printer, out)?;
+		write!(out, ")")
+	} else {
+		write!(out, "(")?;
+		condition.print(printer, out)?;
+		write!(out, ") == 0")
+	}
+}
+
 impl Print for Repeat {
 	fn print(&self, printer: &mut LuauPrinter, out: &mut dyn Write) -> Result<()> {
 		let Self {
@@ -198,9 +217,9 @@ impl Print for Repeat {
 		code.print(printer, out)?;
 
 		printer.write_indent(out)?;
-		write!(out, "if (")?;
-		condition.print(printer, out)?;
-		writeln!(out, ") == 0 then break end")?;
+		write!(out, "if ")?;
+		print_repeat_exit_condition(condition, printer, out)?;
+		writeln!(out, " then break end")?;
 
 		rotation.print(printer, out)?;
 		printer.outdent();
