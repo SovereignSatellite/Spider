@@ -143,8 +143,15 @@ impl CodeBuilder {
 	}
 
 	pub fn add_select(&mut self, destination: u16, condition: u16, on_false: u16, on_true: u16) {
-		self.add_if(
+		self.add_i32_compare_constant(
+			SHARED_LOCAL,
 			condition,
+			0,
+			integer::CompareOperator::NotEqual,
+		);
+
+		self.add_if(
+			SHARED_LOCAL,
 			|this| this.add_local_set(destination, on_false),
 			|this| this.add_local_set(destination, on_true),
 		);

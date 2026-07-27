@@ -17,7 +17,7 @@ pub fn fold(nodes: &mut Vec<Node>, id: usize) -> bool {
 		return false;
 	};
 
-	let index = select_arm(selector, matcher.branches.len());
+	let index = usize::try_from(selector.cast_unsigned()).unwrap();
 	let chosen = Arc::clone(&matcher.branches[index]);
 	let inputs = matcher.arguments.clone();
 
@@ -28,10 +28,4 @@ pub fn fold(nodes: &mut Vec<Node>, id: usize) -> bool {
 	inline_once(nodes, id, body, &inputs);
 
 	true
-}
-
-fn select_arm(selector: i32, count: usize) -> usize {
-	let default = count - 1;
-
-	usize::try_from(selector).map_or(default, |index| index.min(default))
 }

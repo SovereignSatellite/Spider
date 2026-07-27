@@ -26,10 +26,54 @@ impl ExpressionBuilder {
 		}
 	}
 
-	fn add_local_branch(&mut self, successors: usize) -> u16 {
-		let source = self.stack_builder.pull_local();
+	fn bound_table_selector(&mut self, selector: u16, default_index: i32) {
+		self.code_builder.add_i32_compare_constant(
+			SHARED_LOCAL,
+			selector,
+			default_index,
+			integer::CompareOperator::LessThan { is_signed: false },
+		);
+		self.code_builder.add_if(
+			SHARED_LOCAL,
+			|builder| builder.add_i32_constant(selector, default_index),
+			|_| {},
+		);
+	}
 
-		self.code_builder.add_local_branch(source, successors)
+	fn add_single_target_table_branch(&mut self) -> u16 {
+		self.stack_builder.pull_local();
+
+		self.code_builder.add_basic_block(1)
+	}
+
+	fn add_boolean_branch(&mut self) -> u16 {
+		let selector = self.stack_builder.pull_local();
+
+		self.code_builder.add_i32_compare_constant(
+			SHARED_LOCAL,
+			selector,
+			0,
+			integer::CompareOperator::NotEqual,
+		);
+
+		self.code_builder.add_local_branch(SHARED_LOCAL, 2)
+	}
+
+	fn add_indexed_table_branch(&mut self, branch_count: usize) -> u16 {
+		let selector = self.stack_builder.pull_local();
+		let default_index = u32::try_from(branch_count - 1).unwrap().cast_signed();
+
+		self.bound_table_selector(selector, default_index);
+
+		self.code_builder.add_local_branch(selector, branch_count)
+	}
+
+	fn add_table_branch(&mut self, branch_count: usize) -> u16 {
+		match branch_count {
+			1 => self.add_single_target_table_branch(),
+			2 => self.add_boolean_branch(),
+			_ => self.add_indexed_table_branch(branch_count),
+		}
 	}
 
 	fn handle_unreachable(&mut self) {
@@ -50,7 +94,7 @@ impl ExpressionBuilder {
 	}
 
 	fn handle_if(&mut self, types: &Types, block_type: BlockType) {
-		let id = self.add_local_branch(2);
+		let id = self.add_boolean_branch();
 
 		self.stack_builder.push_level(types, block_type, None);
 		self.stack_builder.jump_to_depth(id, 0, 0);
@@ -92,14 +136,14 @@ impl ExpressionBuilder {
 	}
 
 	fn handle_br_if(&mut self, relative_depth: u32) {
-		let id = self.add_local_branch(2);
+		let id = self.add_boolean_branch();
 
 		self.stack_builder.jump_to_depth(id, 1, relative_depth);
 	}
 
 	fn handle_br_table(&mut self, table: &BrTable<'_>) {
 		let len = table.len().try_into().unwrap();
-		let id = self.add_local_branch(len + 1);
+		let id = self.add_table_branch(len + 1);
 
 		self.stack_builder.jump_to_depth(id, len, table.default());
 

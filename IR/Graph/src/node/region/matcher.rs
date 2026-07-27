@@ -30,6 +30,11 @@ impl Match {
 
 			let branches = initializer(weak, argument_count);
 
+			debug_assert!(
+				branches.len() >= 2,
+				"`Match` must have at least 2 `Branch`es"
+			);
+
 			Mutex::new(Self {
 				arguments,
 				condition,
@@ -116,9 +121,7 @@ impl Match {
 	/// Returns the number of output ports.
 	#[must_use]
 	pub fn result_count(&self) -> u16 {
-		self.branches
-			.first()
-			.map_or(0, |branch| branch.lock().result_count())
+		self.branches[0].lock().result_count()
 	}
 
 	/// Visits each outer link (arguments, condition).
