@@ -9,49 +9,36 @@ use luau_tree::expression::{
 use super::{LuauPrinter, library::NeedsName as _, print::Print};
 
 mod conditional {
-	use core::ops::Range;
 	use std::io::{Result, Write};
 
 	use luau_tree::expression::Expression;
 
 	use crate::{LuauPrinter, print::Print as _};
 
-	fn print_recursive(
+	fn print_match_tree(
 		branches: &[Expression],
 		condition: &Expression,
-		range: Range<usize>,
+		branch_offset: usize,
 		printer: &mut LuauPrinter,
 		out: &mut dyn Write,
 	) -> Result<()> {
-		let center = range.start + (range.end - range.start) / 2;
-
-		if range.start != center {
-			write!(out, "if (")?;
-
-			condition.print(printer, out)?;
-
-			write!(out, ") < {center} then ")?;
-
-			print_recursive(branches, condition, range.start..center, printer, out)?;
-
-			write!(out, " else")?;
-
-			if range.end != center + 1 {
-				write!(out, "if (")?;
-
-				condition.print(printer, out)?;
-
-				write!(out, ") > {center} then ")?;
-
-				print_recursive(branches, condition, (center + 1)..range.end, printer, out)?;
-
-				write!(out, " else")?;
-			}
-
-			write!(out, " ")?;
+		if branches.len() == 1 {
+			return branches[0].print(printer, out);
 		}
 
-		branches[center].print(printer, out)
+		let split_index = branches.len() / 2;
+		let threshold = branch_offset + split_index;
+		let (lower_branches, upper_branches) = branches.split_at(split_index);
+
+		write!(out, "if (")?;
+		condition.print(printer, out)?;
+		write!(out, ") < {threshold} then ")?;
+
+		print_match_tree(lower_branches, condition, branch_offset, printer, out)?;
+
+		write!(out, " else ")?;
+
+		print_match_tree(upper_branches, condition, threshold, printer, out)
 	}
 
 	pub fn print_match(
@@ -60,7 +47,7 @@ mod conditional {
 		printer: &mut LuauPrinter,
 		out: &mut dyn Write,
 	) -> Result<()> {
-		print_recursive(branches, condition, 0..branches.len(), printer, out)
+		print_match_tree(branches, condition, 0, printer, out)
 	}
 
 	pub fn print_if(
