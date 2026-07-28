@@ -82,11 +82,10 @@ fn reuse_hint_of(node: &Node, port: u16) -> Option<Link> {
 
 fn classify_uses(node: &Node, states: &mut [UseState]) {
 	match node.shape() {
-		Shape::Plain => classify_plain_uses(node, states),
-		Shape::Function(_)
-		| Shape::Repeat(_)
-		| Shape::BranchResults(_)
-		| Shape::RepeatResults(_) => classify_blocking_uses(node, states),
+		Shape::Plain | Shape::RepeatResults(_) => classify_plain_uses(node, states),
+		Shape::Function(_) | Shape::Repeat(_) | Shape::BranchResults(_) => {
+			classify_blocking_uses(node, states);
+		}
 		Shape::Match(arc) => classify_match_uses(&arc.lock(), states),
 	}
 

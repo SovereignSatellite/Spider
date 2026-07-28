@@ -32,10 +32,17 @@ fn route_all_to_identity(nodes: &mut Vec<Node>, results: &mut [Link]) {
 	}
 }
 
-fn route_results_node(nodes: &mut Vec<Node>, position: usize) {
+fn route_result_sources_to_identities(nodes: &mut Vec<Node>, position: usize) {
 	let mut results_node = mem::take(&mut nodes[position]);
+	let sources = if let Node::BranchResults(results) = &mut results_node {
+		&mut results.sources
+	} else if let Node::RepeatResults(results) = &mut results_node {
+		&mut results.sources
+	} else {
+		unreachable!()
+	};
 
-	results_node.for_each_mut_outer(|link| route_to_identity(nodes, link));
+	route_all_to_identity(nodes, sources);
 
 	nodes[position] = results_node;
 }
@@ -47,12 +54,12 @@ fn route_region_results(region: &mut Region) {
 		Region::Branch(region) => {
 			let position = region.results_index();
 
-			route_results_node(&mut region.nodes, position);
+			route_result_sources_to_identities(&mut region.nodes, position);
 		}
 		Region::Repeat(region) => {
 			let position = region.results_index();
 
-			route_results_node(&mut region.nodes, position);
+			route_result_sources_to_identities(&mut region.nodes, position);
 		}
 	}
 }
