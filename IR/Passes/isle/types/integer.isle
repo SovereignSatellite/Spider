@@ -16,3 +16,6 @@
 ;; Node::IntegerCompareOperation
 (decl IntegerCompareOperation (Link Link IntegerType IntegerCompareOperator) Link)
 (extern extractor IntegerCompareOperation get_integer_compare_operation)
+
+(decl partial ReduceBooleanComparison (Link IntegerCompareOperator i32) Link)
+(extern constructor ReduceBooleanComparison reduce_boolean_comparison)

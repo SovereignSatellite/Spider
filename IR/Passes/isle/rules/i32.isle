@@ -432,6 +432,34 @@
 	(I32 1)
 )
 
+;; ((A cmp B) cmp K) => (A cmp B) or !(A cmp B)
+(rule 11
+	(SimplifyI32
+		(IntegerCompareOperation
+			comparison @ (IntegerCompareOperation _ _ _ _)
+			(I32 boolean_value)
+			(IntegerType.I32)
+			boolean_operator
+		)
+	)
+
+	(ReduceBooleanComparison comparison boolean_operator boolean_value)
+)
+
+;; (K cmp (A cmp B)) => (A cmp B) or !(A cmp B)
+(rule 10
+	(SimplifyI32
+		(IntegerCompareOperation
+			(I32 boolean_value)
+			comparison @ (IntegerCompareOperation _ _ _ _)
+			(IntegerType.I32)
+			boolean_operator
+		)
+	)
+
+	(ReduceBooleanComparison comparison boolean_operator boolean_value)
+)
+
 ;; (K1 == K2) => K3
 (rule 7
 	(SimplifyI32

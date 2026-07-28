@@ -113,6 +113,55 @@ impl Context for RegionContext<'_> {
 		}
 	}
 
+	fn reduce_boolean_comparison(
+		&mut self,
+		arg0: Link,
+		arg1: &IntegerCompareOperator,
+		arg2: i32,
+	) -> Option<Link> {
+		let comparison = arg0;
+
+		match (*arg1, arg2) {
+			(IntegerCompareOperator::NotEqual, 0_i32) | (IntegerCompareOperator::Equal, 1_i32) => {
+				return Some(comparison);
+			}
+			(IntegerCompareOperator::Equal, 0_i32) | (IntegerCompareOperator::NotEqual, 1_i32) => {}
+			_ => return None,
+		}
+
+		let &Node::IntegerCompareOperation(operation) = self.at(comparison) else {
+			unreachable!()
+		};
+		let (left_operand, right_operand, operator) = match operation.operator {
+			IntegerCompareOperator::Equal => (
+				operation.lhs,
+				operation.rhs,
+				IntegerCompareOperator::NotEqual,
+			),
+			IntegerCompareOperator::NotEqual => {
+				(operation.lhs, operation.rhs, IntegerCompareOperator::Equal)
+			}
+			IntegerCompareOperator::LessThan { is_signed } => (
+				operation.rhs,
+				operation.lhs,
+				IntegerCompareOperator::LessThanEqual { is_signed },
+			),
+			IntegerCompareOperator::LessThanEqual { is_signed } => (
+				operation.rhs,
+				operation.lhs,
+				IntegerCompareOperator::LessThan { is_signed },
+			),
+		};
+
+		Some(IntegerCompareOperation::add_into(
+			self.0,
+			left_operand,
+			right_operand,
+			operation.kind,
+			operator,
+		))
+	}
+
 	fn raw_add_i32(&mut self, arg0: i32, arg1: i32) -> i32 {
 		arg0.wrapping_add(arg1)
 	}
