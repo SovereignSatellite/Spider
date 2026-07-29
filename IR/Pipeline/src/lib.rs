@@ -44,9 +44,11 @@ impl Optimizer {
 
 			let folded = control_folder::run(region.nodes_mut());
 			let simplified = isle::run(region.nodes_mut());
+			let _ = self.dead_port_eliminator.run(region.nodes_mut());
+			let reduced_match_outputs = isle::reduce_match_outputs(region.nodes_mut());
 			let merged = self.common_node_eliminator.run(region.nodes_mut());
 
-			if !folded && !simplified && !merged && !pass(region) {
+			if !folded && !simplified && !reduced_match_outputs && !merged && !pass(region) {
 				break;
 			}
 

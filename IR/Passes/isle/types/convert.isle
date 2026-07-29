@@ -5,6 +5,7 @@
 ;; Node::IntegerWiden
 (decl IntegerWiden (Link) Link)
 (extern extractor IntegerWiden get_integer_widen)
+(extern constructor IntegerWiden add_integer_widen)
 
 ;; Node::IntegerSignExtend wrapping an identical Node::IntegerSignExtend
 (decl SignExtendIdempotent (Link) Link)

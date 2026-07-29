@@ -15,9 +15,12 @@ use self::{
 	},
 };
 
+pub use self::match_output_reducer::reduce_match_outputs;
+
 mod context;
 mod internal;
 mod luau;
+mod match_output_reducer;
 
 fn replace_node(nodes: &mut [Node], destination: u32, sources: &[Link]) {
 	let sources = sources.iter().copied().collect();
