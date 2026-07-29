@@ -14,6 +14,16 @@ pub mod repeat;
 
 pub use self::{branch::Branch, function::Function, matcher::Match, repeat::Repeat};
 
+fn duplicate_body(source: &[Node], results_index: usize, target: &mut Vec<Node>) {
+	stacker::maybe_grow(0x1_0000, 0x10_0000, || {
+		for node in &source[1..results_index] {
+			let operation = node.duplicate_operation();
+
+			target.push(operation);
+		}
+	});
+}
+
 /// A locked reference to a concrete region type.
 pub enum Region {
 	/// A function region.

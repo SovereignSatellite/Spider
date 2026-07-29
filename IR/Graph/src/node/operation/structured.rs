@@ -8,6 +8,7 @@
 use crate::{Link, Node};
 
 /// An aggregate value composed from a list of field links.
+#[derive(Clone)]
 pub struct Aggregate {
 	/// The field value links, in order.
 	pub fields: Vec<Link>,

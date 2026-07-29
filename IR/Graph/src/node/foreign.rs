@@ -15,6 +15,10 @@ pub trait Foreign: Any {
 	#[must_use]
 	fn result_count(&self) -> u16;
 
+	/// Returns an independently mutable duplicate without remapping its links.
+	#[must_use]
+	fn duplicate(&self) -> Box<dyn Foreign>;
+
 	/// Calls `handler` for each outer link.
 	fn for_each_outer(&self, handler: &mut dyn FnMut(Link)) {
 		let _ = handler;

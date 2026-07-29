@@ -11,6 +11,8 @@ use parking_lot::Mutex;
 
 use crate::{Link, Node, node::region::matcher::Match};
 
+use super::duplicate_body;
+
 /// A branch region within a match.
 pub struct Branch {
 	/// The nodes in this region.
@@ -63,6 +65,20 @@ impl Branch {
 	#[must_use]
 	pub fn result_count(&self) -> u16 {
 		self.results().argument_count()
+	}
+
+	/// Returns a detached duplicate with the supplied parent reference.
+	///
+	/// # Panics
+	///
+	/// Panics if this branch is not finalized.
+	#[must_use]
+	pub fn duplicate(&self, parent: Weak<Mutex<Match>>) -> Arc<Mutex<Self>> {
+		Self::create(parent, self.argument_count(), |nodes, _| {
+			duplicate_body(&self.nodes, self.results_index(), nodes);
+
+			self.results().sources.clone()
+		})
 	}
 
 	/// Returns a reference to the arguments boundary node.

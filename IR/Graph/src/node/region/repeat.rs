@@ -11,6 +11,8 @@ use parking_lot::Mutex;
 
 use crate::{Link, Node};
 
+use super::duplicate_body;
+
 /// A repeat (loop) region.
 pub struct Repeat {
 	/// The argument links.
@@ -82,6 +84,20 @@ impl Repeat {
 	#[must_use]
 	pub fn result_count(&self) -> u16 {
 		self.results().argument_count()
+	}
+
+	/// Returns a detached duplicate.
+	///
+	/// # Panics
+	///
+	/// Panics if this repeat is not finalized.
+	#[must_use]
+	pub fn duplicate(&self) -> Arc<Mutex<Self>> {
+		Self::create(self.arguments.clone(), |nodes, _| {
+			duplicate_body(&self.nodes, self.results_index(), nodes);
+
+			(self.results().sources.clone(), self.results().condition)
+		})
 	}
 
 	/// Visits each outer link (arguments).

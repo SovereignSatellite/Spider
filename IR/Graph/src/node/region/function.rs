@@ -11,6 +11,8 @@ use parking_lot::Mutex;
 
 use crate::{Link, Node};
 
+use super::duplicate_body;
+
 /// A function region.
 pub struct Function {
 	/// The number of argument ports exposed by the body's [`Arguments`] node.
@@ -101,6 +103,20 @@ impl Function {
 		};
 
 		(Self::ARGUMENTS_ID, results)
+	}
+
+	/// Returns a detached duplicate.
+	///
+	/// # Panics
+	///
+	/// Panics if this function is not finalized.
+	#[must_use]
+	pub fn duplicate(&self) -> Arc<Mutex<Self>> {
+		Self::create(self.argument_count, |nodes, _| {
+			duplicate_body(&self.nodes, self.results_index(), nodes);
+
+			self.results().sources.clone()
+		})
 	}
 }
 

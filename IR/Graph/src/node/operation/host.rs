@@ -11,6 +11,7 @@ use alloc::sync::Arc;
 use crate::{Link, Node};
 
 /// A resolved reference into the runtime-provided host import registry.
+#[derive(Clone)]
 pub struct Import {
 	/// The import namespace (e.g. `"wasi_snapshot_preview1"`).
 	pub namespace: Arc<str>,
@@ -44,6 +45,7 @@ impl Import {
 }
 
 /// A write into the runtime-provided host export registry under a named identifier.
+#[derive(Clone)]
 pub struct Export {
 	/// The export identifier (e.g. `"memory"`).
 	pub identifier: Arc<str>,

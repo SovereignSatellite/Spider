@@ -11,6 +11,7 @@ use list::resizable::Resizable;
 use crate::{Link, Node};
 
 /// A node that passes through its sources unchanged.
+#[derive(Clone)]
 pub struct Identity {
 	/// The source links.
 	pub sources: Resizable<Link, 4>,
@@ -43,6 +44,7 @@ impl Identity {
 }
 
 /// A fence node that orders its sources.
+#[derive(Clone)]
 pub struct Fence {
 	/// The ordered source links.
 	pub sources: Resizable<Link, 4>,
@@ -75,6 +77,7 @@ impl Fence {
 }
 
 /// A function application node.
+#[derive(Clone)]
 pub struct Apply {
 	/// The function being applied.
 	pub function: Link,

@@ -38,6 +38,10 @@ macro_rules! define_unary_operation {
 				Self::RESULT_COUNT
 			}
 
+			fn duplicate(&self) -> Box<dyn Foreign> {
+				Box::new(*self)
+			}
+
 			fn for_each_outer(&self, handler: &mut dyn FnMut(Link)) {
 				handler(self.source);
 			}
@@ -96,6 +100,10 @@ macro_rules! define_binary_operation {
 
 			fn result_count(&self) -> u16 {
 				Self::RESULT_COUNT
+			}
+
+			fn duplicate(&self) -> Box<dyn Foreign> {
+				Box::new(*self)
 			}
 
 			fn for_each_outer(&self, handler: &mut dyn FnMut(Link)) {

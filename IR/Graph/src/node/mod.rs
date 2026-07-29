@@ -392,6 +392,86 @@ impl Node {
 		}
 	}
 
+	/// Duplicates this operation without remapping links, so the caller must preserve its dynamic execution trace.
+	///
+	/// # Panics
+	///
+	/// Panics if this is a boundary node or contains a non-finalized region.
+	#[must_use]
+	#[expect(clippy::too_many_lines, reason = "exhaustive match over node variants")]
+	pub fn duplicate_operation(&self) -> Self {
+		match self {
+			Self::Function(node) => Self::Function(node.lock().duplicate()),
+			Self::Match(node) => Self::Match(node.lock().duplicate()),
+			Self::Repeat(node) => Self::Repeat(node.lock().duplicate()),
+
+			Self::FunctionArguments(_)
+			| Self::FunctionResults(_)
+			| Self::BranchArguments(_)
+			| Self::BranchResults(_)
+			| Self::RepeatArguments(_)
+			| Self::RepeatResults(_) => panic!("boundary nodes cannot be duplicated independently"),
+
+			Self::Import(node) => Self::Import(node.clone()),
+			Self::Export(node) => Self::Export(node.clone()),
+			Self::Foreign(node) => Self::Foreign(node.duplicate()),
+
+			Self::Trap => Self::Trap,
+			Self::Null => Self::Null,
+			Self::I32(value) => Self::I32(*value),
+			Self::I64(value) => Self::I64(*value),
+			Self::F32(value) => Self::F32(*value),
+			Self::F64(value) => Self::F64(*value),
+
+			Self::Identity(node) => Self::Identity(node.clone()),
+			Self::Fence(node) => Self::Fence(node.clone()),
+
+			Self::Apply(node) => Self::Apply(node.clone()),
+
+			Self::RefIsNull(node) => Self::RefIsNull(*node),
+
+			Self::IntegerUnaryOperation(node) => Self::IntegerUnaryOperation(*node),
+			Self::IntegerBinaryOperation(node) => Self::IntegerBinaryOperation(*node),
+			Self::IntegerCompareOperation(node) => Self::IntegerCompareOperation(*node),
+			Self::IntegerNarrow(node) => Self::IntegerNarrow(*node),
+			Self::IntegerWiden(node) => Self::IntegerWiden(*node),
+			Self::IntegerSignExtend(node) => Self::IntegerSignExtend(*node),
+			Self::IntegerConvertToNumber(node) => Self::IntegerConvertToNumber(*node),
+			Self::IntegerTransmuteToNumber(node) => Self::IntegerTransmuteToNumber(*node),
+
+			Self::NumberUnaryOperation(node) => Self::NumberUnaryOperation(*node),
+			Self::NumberBinaryOperation(node) => Self::NumberBinaryOperation(*node),
+			Self::NumberCompareOperation(node) => Self::NumberCompareOperation(*node),
+			Self::NumberNarrow(node) => Self::NumberNarrow(*node),
+			Self::NumberWiden(node) => Self::NumberWiden(*node),
+			Self::NumberTruncateToInteger(node) => Self::NumberTruncateToInteger(*node),
+			Self::NumberTransmuteToInteger(node) => Self::NumberTransmuteToInteger(*node),
+
+			Self::MutableNew(node) => Self::MutableNew(*node),
+			Self::MutableGet(node) => Self::MutableGet(*node),
+			Self::MutableSet(node) => Self::MutableSet(*node),
+
+			Self::Aggregate(node) => Self::Aggregate(node.clone()),
+			Self::Extract(node) => Self::Extract(*node),
+
+			Self::TableNew(node) => Self::TableNew(node.clone()),
+			Self::TableGet(node) => Self::TableGet(*node),
+			Self::TableSet(node) => Self::TableSet(*node),
+			Self::TableSize(node) => Self::TableSize(*node),
+			Self::TableGrow(node) => Self::TableGrow(*node),
+			Self::TableFill(node) => Self::TableFill(*node),
+			Self::TableCopy(node) => Self::TableCopy(*node),
+			Self::TableDrop(node) => Self::TableDrop(*node),
+
+			Self::MemoryNew(node) => Self::MemoryNew(node.clone()),
+			Self::MemoryLoad(node) => Self::MemoryLoad(*node),
+			Self::MemoryStore(node) => Self::MemoryStore(*node),
+			Self::MemoryFill(node) => Self::MemoryFill(*node),
+			Self::MemoryCopy(node) => Self::MemoryCopy(*node),
+			Self::MemoryDrop(node) => Self::MemoryDrop(*node),
+		}
+	}
+
 	/// Returns the structural role this node plays during a region walk.
 	#[must_use]
 	#[expect(clippy::too_many_lines, reason = "exhaustive match over node variants")]

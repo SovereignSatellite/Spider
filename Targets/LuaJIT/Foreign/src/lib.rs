@@ -100,6 +100,10 @@ impl Foreign for PointerLoad {
 		1
 	}
 
+	fn duplicate(&self) -> Box<dyn Foreign> {
+		Box::new(*self)
+	}
+
 	fn for_each_outer(&self, handler: &mut dyn FnMut(Link)) {
 		handler(self.pointer);
 	}
@@ -159,6 +163,10 @@ impl Foreign for PointerStore {
 		1
 	}
 
+	fn duplicate(&self) -> Box<dyn Foreign> {
+		Box::new(*self)
+	}
+
 	fn for_each_outer(&self, handler: &mut dyn FnMut(Link)) {
 		handler(self.reference);
 		handler(self.pointer);
@@ -202,6 +210,10 @@ impl Foreign for TableLoad {
 
 	fn result_count(&self) -> u16 {
 		1
+	}
+
+	fn duplicate(&self) -> Box<dyn Foreign> {
+		Box::new(*self)
 	}
 
 	fn for_each_outer(&self, handler: &mut dyn FnMut(Link)) {
@@ -254,6 +266,10 @@ impl Foreign for TableStore {
 
 	fn result_count(&self) -> u16 {
 		1
+	}
+
+	fn duplicate(&self) -> Box<dyn Foreign> {
+		Box::new(*self)
 	}
 
 	fn for_each_outer(&self, handler: &mut dyn FnMut(Link)) {

@@ -124,6 +124,25 @@ impl Match {
 		self.branches[0].lock().result_count()
 	}
 
+	/// Returns a detached duplicate.
+	///
+	/// # Panics
+	///
+	/// Panics if any branch is not finalized.
+	#[must_use]
+	pub fn duplicate(&self) -> Arc<Mutex<Self>> {
+		Self::create(self.arguments.clone(), self.condition, |parent, _| {
+			self.branches
+				.iter()
+				.map(|branch| {
+					let parent = Weak::clone(parent);
+
+					branch.lock().duplicate(parent)
+				})
+				.collect()
+		})
+	}
+
 	/// Visits each outer link (arguments, condition).
 	pub fn for_each_outer<H: FnMut(Link)>(&self, mut handler: H) {
 		for &link in &self.arguments {
