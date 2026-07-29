@@ -99,6 +99,10 @@ impl Foreign for FromBitsI64 {
 		Self::RESULT_COUNT
 	}
 
+	fn duplicate(&self) -> Box<dyn Foreign> {
+		Box::new(*self)
+	}
+
 	fn for_each_outer(&self, handler: &mut dyn FnMut(Link)) {
 		handler(self.source);
 	}
@@ -145,6 +149,10 @@ impl Foreign for BufferLoad {
 
 	fn result_count(&self) -> u16 {
 		1
+	}
+
+	fn duplicate(&self) -> Box<dyn Foreign> {
+		Box::new(*self)
 	}
 
 	fn for_each_outer(&self, handler: &mut dyn FnMut(Link)) {
@@ -209,6 +217,10 @@ impl Foreign for BufferStore {
 		1
 	}
 
+	fn duplicate(&self) -> Box<dyn Foreign> {
+		Box::new(*self)
+	}
+
 	fn for_each_outer(&self, handler: &mut dyn FnMut(Link)) {
 		handler(self.reference);
 		handler(self.offset);
@@ -252,6 +264,10 @@ impl Foreign for TableLoad {
 
 	fn result_count(&self) -> u16 {
 		1
+	}
+
+	fn duplicate(&self) -> Box<dyn Foreign> {
+		Box::new(*self)
 	}
 
 	fn for_each_outer(&self, handler: &mut dyn FnMut(Link)) {
@@ -304,6 +320,10 @@ impl Foreign for TableStore {
 
 	fn result_count(&self) -> u16 {
 		1
+	}
+
+	fn duplicate(&self) -> Box<dyn Foreign> {
+		Box::new(*self)
 	}
 
 	fn for_each_outer(&self, handler: &mut dyn FnMut(Link)) {

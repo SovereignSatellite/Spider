@@ -5,6 +5,7 @@ use crate::{Link, Node};
 use super::memory::Location;
 
 /// A table creation node.
+#[derive(Clone)]
 pub struct TableNew {
 	/// The initial elements and their offsets.
 	pub initializer: Vec<(Link, u32)>,
