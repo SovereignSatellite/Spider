@@ -1,0 +1,559 @@
+(type I32Table4
+	(enum
+		(Table (less i32) (equal i32) (greater i32) (unordered i32))
+	)
+)
+
+(type I64Table4
+	(enum
+		(Table (less i64) (equal i64) (greater i64) (unordered i64))
+	)
+)
+
+(type I32Table5
+	(enum
+		(Table
+			(equal i32)
+			(less i32)
+			(greater i32)
+			(negative_left i32)
+			(negative_right i32)
+		)
+	)
+)
+
+(type I64Table5
+	(enum
+		(Table
+			(equal i64)
+			(less i64)
+			(greater i64)
+			(negative_left i64)
+			(negative_right i64)
+		)
+	)
+)
+
+(type IntegerRelation
+	(enum
+		(Relation
+			(left Link)
+			(right Link)
+			(kind IntegerType)
+			(left_table I32Table5)
+			(right_table I32Table5)
+		)
+	)
+)
+
+(type NumberDefinition
+	(enum
+		(Definition
+			(left Link)
+			(right Link)
+			(kind NumberType)
+			(table I32Table4)
+		)
+	)
+)
+
+(type NumberRelation
+	(enum
+		(Relation
+			(left Link)
+			(right Link)
+			(kind NumberType)
+			(left_table I32Table4)
+			(right_table I32Table4)
+		)
+	)
+)
+
+(type NumberPredicate
+	(enum
+		(Direct (operator NumberCompareOperator))
+		(Reversed (operator NumberCompareOperator))
+	)
+)
+
+(decl pure IntegerComparisonTable (IntegerCompareOperator) I32Table5)
+
+(rule (IntegerComparisonTable operator)
+	(I32Table5.Table
+		(EvaluateI32Comparison operator 0 0)
+		(EvaluateI32Comparison operator 0 1)
+		(EvaluateI32Comparison operator 1 0)
+		(EvaluateI32Comparison operator -1 0)
+		(EvaluateI32Comparison operator 0 -1)
+	)
+)
+
+(decl pure NumberComparisonTable (NumberCompareOperator) I32Table4)
+
+(rule (NumberComparisonTable (NumberCompareOperator.Equal))
+	(I32Table4.Table 0 1 0 0)
+)
+
+(rule (NumberComparisonTable (NumberCompareOperator.NotEqual))
+	(I32Table4.Table 1 0 1 1)
+)
+
+(rule (NumberComparisonTable (NumberCompareOperator.LessThan))
+	(I32Table4.Table 1 0 0 0)
+)
+
+(rule (NumberComparisonTable (NumberCompareOperator.LessThanEqual))
+	(I32Table4.Table 1 1 0 0)
+)
+
+(decl pure partial DescribeIntegerRelation (Link Link) IntegerRelation)
+
+(rule 20 (DescribeIntegerRelation
+		(IntegerCompareOperation left right kind left_operator)
+		(IntegerCompareOperation left right kind right_operator))
+	(IntegerRelation.Relation
+		left right kind
+		(IntegerComparisonTable left_operator)
+		(IntegerComparisonTable right_operator))
+)
+
+(rule 10 (DescribeIntegerRelation
+		(IntegerCompareOperation left right kind left_operator)
+		(IntegerCompareOperation right left kind right_operator))
+	(if-let (I32Table5.Table equal less greater negative_left negative_right)
+		(IntegerComparisonTable right_operator))
+	(IntegerRelation.Relation
+		left right kind
+		(IntegerComparisonTable left_operator)
+		(I32Table5.Table equal greater less negative_right negative_left))
+)
+
+(decl pure partial DescribeNumberDefinition (Link) NumberDefinition)
+
+(rule 20 (DescribeNumberDefinition
+		(NumberCompareOperation left right kind operator))
+	(NumberDefinition.Definition
+		left right kind (NumberComparisonTable operator))
+)
+
+(rule 10 (DescribeNumberDefinition
+		(BooleanNot (NumberCompareOperation left right kind operator)))
+	(if-let (I32Table4.Table less equal greater unordered)
+		(NumberComparisonTable operator))
+	(NumberDefinition.Definition
+		left right kind
+		(I32Table4.Table
+			(EvaluateI32Binary (IntegerBinaryOperator.Subtract) 1 less)
+			(EvaluateI32Binary (IntegerBinaryOperator.Subtract) 1 equal)
+			(EvaluateI32Binary (IntegerBinaryOperator.Subtract) 1 greater)
+			(EvaluateI32Binary (IntegerBinaryOperator.Subtract) 1 unordered)))
+)
+
+(decl pure partial DescribeNumberRelation (Link Link) NumberRelation)
+
+(rule 20 (DescribeNumberRelation left_expression right_expression)
+	(if-let (NumberDefinition.Definition comparison_left comparison_right kind left_table)
+		(DescribeNumberDefinition left_expression))
+	(if-let (NumberDefinition.Definition comparison_left comparison_right kind right_table)
+		(DescribeNumberDefinition right_expression))
+	(NumberRelation.Relation comparison_left comparison_right kind left_table right_table)
+)
+
+(rule 10 (DescribeNumberRelation left_expression right_expression)
+	(if-let (NumberDefinition.Definition comparison_left comparison_right kind left_table)
+		(DescribeNumberDefinition left_expression))
+	(if-let (NumberDefinition.Definition
+		comparison_right comparison_left kind
+		(I32Table4.Table less equal greater unordered))
+		(DescribeNumberDefinition right_expression))
+	(NumberRelation.Relation
+		comparison_left comparison_right kind left_table
+		(I32Table4.Table greater equal less unordered))
+)
+
+(decl pure partial EvaluateI32BinaryTable4
+	(IntegerBinaryOperator I32Table4 I32Table4) I32Table4
+)
+
+(rule (EvaluateI32BinaryTable4 operator
+		(I32Table4.Table left_less left_equal left_greater left_unordered)
+		(I32Table4.Table right_less right_equal right_greater right_unordered))
+	(I32Table4.Table
+		(EvaluateI32Binary operator left_less right_less)
+		(EvaluateI32Binary operator left_equal right_equal)
+		(EvaluateI32Binary operator left_greater right_greater)
+		(EvaluateI32Binary operator left_unordered right_unordered))
+)
+
+(decl pure partial EvaluateI32BinaryTable5
+	(IntegerBinaryOperator I32Table5 I32Table5) I32Table5
+)
+
+(rule (EvaluateI32BinaryTable5 operator
+		(I32Table5.Table
+			left_equal left_less left_greater left_negative_left left_negative_right)
+		(I32Table5.Table
+			right_equal right_less right_greater right_negative_left right_negative_right))
+	(I32Table5.Table
+		(EvaluateI32Binary operator left_equal right_equal)
+		(EvaluateI32Binary operator left_less right_less)
+		(EvaluateI32Binary operator left_greater right_greater)
+		(EvaluateI32Binary operator left_negative_left right_negative_left)
+		(EvaluateI32Binary operator left_negative_right right_negative_right))
+)
+
+(decl pure partial EvaluateWidenedI32BinaryTable4
+	(IntegerBinaryOperator I32Table4 I32Table4) I64Table4
+)
+
+(rule (EvaluateWidenedI32BinaryTable4 operator
+		(I32Table4.Table left_less left_equal left_greater left_unordered)
+		(I32Table4.Table right_less right_equal right_greater right_unordered))
+	(I64Table4.Table
+		(EvaluateI64Binary operator left_less right_less)
+		(EvaluateI64Binary operator left_equal right_equal)
+		(EvaluateI64Binary operator left_greater right_greater)
+		(EvaluateI64Binary operator left_unordered right_unordered))
+)
+
+(decl pure partial EvaluateWidenedI32BinaryTable5
+	(IntegerBinaryOperator I32Table5 I32Table5) I64Table5
+)
+
+(rule (EvaluateWidenedI32BinaryTable5 operator
+		(I32Table5.Table
+			left_equal left_less left_greater left_negative_left left_negative_right)
+		(I32Table5.Table
+			right_equal right_less right_greater right_negative_left right_negative_right))
+	(I64Table5.Table
+		(EvaluateI64Binary operator left_equal right_equal)
+		(EvaluateI64Binary operator left_less right_less)
+		(EvaluateI64Binary operator left_greater right_greater)
+		(EvaluateI64Binary operator left_negative_left right_negative_left)
+		(EvaluateI64Binary operator left_negative_right right_negative_right))
+)
+
+(decl pure EvaluateI32ComparisonTable4
+	(IntegerCompareOperator I32Table4 I32Table4) I32Table4
+)
+
+(rule (EvaluateI32ComparisonTable4 operator
+		(I32Table4.Table left_less left_equal left_greater left_unordered)
+		(I32Table4.Table right_less right_equal right_greater right_unordered))
+	(I32Table4.Table
+		(EvaluateI32Comparison operator left_less right_less)
+		(EvaluateI32Comparison operator left_equal right_equal)
+		(EvaluateI32Comparison operator left_greater right_greater)
+		(EvaluateI32Comparison operator left_unordered right_unordered))
+)
+
+(decl pure EvaluateI32ComparisonTable5
+	(IntegerCompareOperator I32Table5 I32Table5) I32Table5
+)
+
+(rule (EvaluateI32ComparisonTable5 operator
+		(I32Table5.Table
+			left_equal left_less left_greater left_negative_left left_negative_right)
+		(I32Table5.Table
+			right_equal right_less right_greater right_negative_left right_negative_right))
+	(I32Table5.Table
+		(EvaluateI32Comparison operator left_equal right_equal)
+		(EvaluateI32Comparison operator left_less right_less)
+		(EvaluateI32Comparison operator left_greater right_greater)
+		(EvaluateI32Comparison operator left_negative_left right_negative_left)
+		(EvaluateI32Comparison operator left_negative_right right_negative_right))
+)
+
+(decl BuildIntegerPredicate (IntegerRelation IntegerCompareOperator) Link)
+
+(rule (BuildIntegerPredicate
+		(IntegerRelation.Relation left right kind _ _)
+		operator)
+	(IntegerCompareOperation left right kind operator)
+)
+
+(decl BuildNumberPredicate (NumberRelation NumberPredicate) Link)
+
+(rule (BuildNumberPredicate
+		(NumberRelation.Relation left right kind _ _)
+		(NumberPredicate.Direct operator))
+	(NumberCompareOperation left right kind operator)
+)
+
+(rule (BuildNumberPredicate
+		(NumberRelation.Relation left right kind _ _)
+		(NumberPredicate.Reversed operator))
+	(NumberCompareOperation right left kind operator)
+)
+
+(decl partial ProjectIntegerI32 (IntegerRelation I32Table5) Link)
+
+(rule 100 (ProjectIntegerI32 relation (I32Table5.Table on_true on_false on_false on_false on_false))
+	(ReduceI32Table
+		(BuildIntegerPredicate relation (IntegerCompareOperator.Equal))
+		on_false on_true)
+)
+
+(rule 90 (ProjectIntegerI32 relation (I32Table5.Table on_false on_true on_false on_true on_false))
+	(ReduceI32Table
+		(BuildIntegerPredicate relation (IntegerCompareOperator.LessThan true))
+		on_false on_true)
+)
+
+(rule 80 (ProjectIntegerI32 relation (I32Table5.Table on_false on_true on_false on_false on_true))
+	(ReduceI32Table
+		(BuildIntegerPredicate relation (IntegerCompareOperator.LessThan false))
+		on_false on_true)
+)
+
+(rule 70 (ProjectIntegerI32 relation (I32Table5.Table on_true on_true on_false on_true on_false))
+	(ReduceI32Table
+		(BuildIntegerPredicate relation
+			(IntegerCompareOperator.LessThanEqual true))
+		on_false on_true)
+)
+
+(rule 60 (ProjectIntegerI32 relation (I32Table5.Table on_true on_true on_false on_false on_true))
+	(ReduceI32Table
+		(BuildIntegerPredicate relation
+			(IntegerCompareOperator.LessThanEqual false))
+		on_false on_true)
+)
+
+(decl partial ProjectIntegerI64 (IntegerRelation I64Table5) Link)
+
+(rule 100 (ProjectIntegerI64 relation (I64Table5.Table on_true on_false on_false on_false on_false))
+	(ReduceI64Table
+		(BuildIntegerPredicate relation (IntegerCompareOperator.Equal))
+		on_false on_true)
+)
+
+(rule 90 (ProjectIntegerI64 relation (I64Table5.Table on_false on_true on_false on_true on_false))
+	(ReduceI64Table
+		(BuildIntegerPredicate relation (IntegerCompareOperator.LessThan true))
+		on_false on_true)
+)
+
+(rule 80 (ProjectIntegerI64 relation (I64Table5.Table on_false on_true on_false on_false on_true))
+	(ReduceI64Table
+		(BuildIntegerPredicate relation (IntegerCompareOperator.LessThan false))
+		on_false on_true)
+)
+
+(rule 70 (ProjectIntegerI64 relation (I64Table5.Table on_true on_true on_false on_true on_false))
+	(ReduceI64Table
+		(BuildIntegerPredicate relation
+			(IntegerCompareOperator.LessThanEqual true))
+		on_false on_true)
+)
+
+(rule 60 (ProjectIntegerI64 relation (I64Table5.Table on_true on_true on_false on_false on_true))
+	(ReduceI64Table
+		(BuildIntegerPredicate relation
+			(IntegerCompareOperator.LessThanEqual false))
+		on_false on_true)
+)
+
+(decl partial ProjectNumberI32 (NumberRelation I32Table4) Link)
+
+(rule 100 (ProjectNumberI32 relation (I32Table4.Table on_false on_true on_false on_false))
+	(ReduceI32Table
+		(BuildNumberPredicate relation (NumberPredicate.Direct (NumberCompareOperator.Equal)))
+		on_false on_true)
+)
+
+(rule 90 (ProjectNumberI32 relation (I32Table4.Table on_true on_false on_false on_false))
+	(ReduceI32Table
+		(BuildNumberPredicate relation (NumberPredicate.Direct (NumberCompareOperator.LessThan)))
+		on_false on_true)
+)
+
+(rule 80 (ProjectNumberI32 relation (I32Table4.Table on_true on_true on_false on_false))
+	(ReduceI32Table
+		(BuildNumberPredicate relation (NumberPredicate.Direct (NumberCompareOperator.LessThanEqual)))
+		on_false on_true)
+)
+
+(rule 70 (ProjectNumberI32 relation (I32Table4.Table on_false on_false on_true on_false))
+	(ReduceI32Table
+		(BuildNumberPredicate relation (NumberPredicate.Reversed (NumberCompareOperator.LessThan)))
+		on_false on_true)
+)
+
+(rule 60 (ProjectNumberI32 relation (I32Table4.Table on_false on_true on_true on_false))
+	(ReduceI32Table
+		(BuildNumberPredicate relation (NumberPredicate.Reversed (NumberCompareOperator.LessThanEqual)))
+		on_false on_true)
+)
+
+(decl partial ProjectNumberI64 (NumberRelation I64Table4) Link)
+
+(rule 100 (ProjectNumberI64 relation (I64Table4.Table on_false on_true on_false on_false))
+	(ReduceI64Table
+		(BuildNumberPredicate relation (NumberPredicate.Direct (NumberCompareOperator.Equal)))
+		on_false on_true)
+)
+
+(rule 90 (ProjectNumberI64 relation (I64Table4.Table on_true on_false on_false on_false))
+	(ReduceI64Table
+		(BuildNumberPredicate relation (NumberPredicate.Direct (NumberCompareOperator.LessThan)))
+		on_false on_true)
+)
+
+(rule 80 (ProjectNumberI64 relation (I64Table4.Table on_true on_true on_false on_false))
+	(ReduceI64Table
+		(BuildNumberPredicate relation (NumberPredicate.Direct (NumberCompareOperator.LessThanEqual)))
+		on_false on_true)
+)
+
+(rule 70 (ProjectNumberI64 relation (I64Table4.Table on_false on_false on_true on_false))
+	(ReduceI64Table
+		(BuildNumberPredicate relation (NumberPredicate.Reversed (NumberCompareOperator.LessThan)))
+		on_false on_true)
+)
+
+(rule 60 (ProjectNumberI64 relation (I64Table4.Table on_false on_true on_true on_false))
+	(ReduceI64Table
+		(BuildNumberPredicate relation (NumberPredicate.Reversed (NumberCompareOperator.LessThanEqual)))
+		on_false on_true)
+)
+
+(decl partial ReduceBooleanBinaryPair (Link Link IntegerBinaryOperator) Link)
+
+(rule 100 (ReduceBooleanBinaryPair boolean boolean operator)
+	(ReduceI32Table boolean
+		(EvaluateI32Binary operator 0 0)
+		(EvaluateI32Binary operator 1 1))
+)
+
+(rule 90 (ReduceBooleanBinaryPair boolean (BooleanNot boolean) operator)
+	(ReduceI32Table boolean
+		(EvaluateI32Binary operator 0 1)
+		(EvaluateI32Binary operator 1 0))
+)
+
+(rule 80 (ReduceBooleanBinaryPair (BooleanNot boolean) boolean operator)
+	(ReduceI32Table boolean
+		(EvaluateI32Binary operator 1 0)
+		(EvaluateI32Binary operator 0 1))
+)
+
+(rule 70 (ReduceBooleanBinaryPair left right operator)
+	(if-let relation @ (IntegerRelation.Relation _ _ _ left_table right_table)
+		(DescribeIntegerRelation left right))
+	(if-let result (EvaluateI32BinaryTable5 operator left_table right_table))
+	(ProjectIntegerI32 relation result)
+)
+
+(rule 60 (ReduceBooleanBinaryPair left right operator)
+	(if-let relation @ (NumberRelation.Relation _ _ _ left_table right_table)
+		(DescribeNumberRelation left right))
+	(if-let result (EvaluateI32BinaryTable4 operator left_table right_table))
+	(ProjectNumberI32 relation result)
+)
+
+(decl partial ReduceBooleanComparisonPair (Link Link IntegerCompareOperator) Link)
+
+(rule 100 (ReduceBooleanComparisonPair boolean boolean operator)
+	(ReduceI32BooleanTable boolean
+		(EvaluateI32Comparison operator 0 0)
+		(EvaluateI32Comparison operator 1 1))
+)
+
+(rule 90 (ReduceBooleanComparisonPair boolean (BooleanNot boolean) operator)
+	(ReduceI32BooleanTable boolean
+		(EvaluateI32Comparison operator 0 1)
+		(EvaluateI32Comparison operator 1 0))
+)
+
+(rule 80 (ReduceBooleanComparisonPair (BooleanNot boolean) boolean operator)
+	(ReduceI32BooleanTable boolean
+		(EvaluateI32Comparison operator 1 0)
+		(EvaluateI32Comparison operator 0 1))
+)
+
+(rule 70 (ReduceBooleanComparisonPair left right operator)
+	(if-let relation @ (IntegerRelation.Relation _ _ _ left_table right_table)
+		(DescribeIntegerRelation left right))
+	(ProjectIntegerI32 relation
+		(EvaluateI32ComparisonTable5 operator left_table right_table))
+)
+
+(rule 60 (ReduceBooleanComparisonPair left right operator)
+	(if-let relation @ (NumberRelation.Relation _ _ _ left_table right_table)
+		(DescribeNumberRelation left right))
+	(ProjectNumberI32 relation
+		(EvaluateI32ComparisonTable4 operator left_table right_table))
+)
+
+(decl partial ReduceWidenedBooleanBinaryPair
+	(Link Link IntegerBinaryOperator) Link
+)
+
+(rule 100 (ReduceWidenedBooleanBinaryPair boolean boolean operator)
+	(ReduceI64Table boolean
+		(EvaluateI64Binary operator 0 0)
+		(EvaluateI64Binary operator 1 1))
+)
+
+(rule 90 (ReduceWidenedBooleanBinaryPair boolean (BooleanNot boolean) operator)
+	(ReduceI64Table boolean
+		(EvaluateI64Binary operator 0 1)
+		(EvaluateI64Binary operator 1 0))
+)
+
+(rule 80 (ReduceWidenedBooleanBinaryPair (BooleanNot boolean) boolean operator)
+	(ReduceI64Table boolean
+		(EvaluateI64Binary operator 1 0)
+		(EvaluateI64Binary operator 0 1))
+)
+
+(rule 70 (ReduceWidenedBooleanBinaryPair left right operator)
+	(if-let relation @ (IntegerRelation.Relation _ _ _ left_table right_table)
+		(DescribeIntegerRelation left right))
+	(if-let result (EvaluateWidenedI32BinaryTable5 operator left_table right_table))
+	(ProjectIntegerI64 relation result)
+)
+
+(rule 60 (ReduceWidenedBooleanBinaryPair left right operator)
+	(if-let relation @ (NumberRelation.Relation _ _ _ left_table right_table)
+		(DescribeNumberRelation left right))
+	(if-let result (EvaluateWidenedI32BinaryTable4 operator left_table right_table))
+	(ProjectNumberI64 relation result)
+)
+
+(decl partial ReduceWidenedBooleanComparisonPair
+	(Link Link IntegerCompareOperator) Link
+)
+
+(rule 100 (ReduceWidenedBooleanComparisonPair boolean boolean operator)
+	(ReduceI32BooleanTable boolean
+		(EvaluateI64Comparison operator 0 0)
+		(EvaluateI64Comparison operator 1 1))
+)
+
+(rule 90 (ReduceWidenedBooleanComparisonPair boolean (BooleanNot boolean) operator)
+	(ReduceI32BooleanTable boolean
+		(EvaluateI64Comparison operator 0 1)
+		(EvaluateI64Comparison operator 1 0))
+)
+
+(rule 80 (ReduceWidenedBooleanComparisonPair (BooleanNot boolean) boolean operator)
+	(ReduceI32BooleanTable boolean
+		(EvaluateI64Comparison operator 1 0)
+		(EvaluateI64Comparison operator 0 1))
+)
+
+(rule 70 (ReduceWidenedBooleanComparisonPair left right operator)
+	(if-let relation @ (IntegerRelation.Relation _ _ _ left_table right_table)
+		(DescribeIntegerRelation left right))
+	(ProjectIntegerI32 relation
+		(EvaluateI32ComparisonTable5 operator left_table right_table))
+)
+
+(rule 60 (ReduceWidenedBooleanComparisonPair left right operator)
+	(if-let relation @ (NumberRelation.Relation _ _ _ left_table right_table)
+		(DescribeNumberRelation left right))
+	(ProjectNumberI32 relation
+		(EvaluateI32ComparisonTable4 operator left_table right_table))
+)
