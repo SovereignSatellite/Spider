@@ -1,0 +1,92 @@
+(decl BooleanNot (Link) Link)
+
+(rule (BooleanNot boolean)
+	(IntegerCompareOperation
+		boolean
+		(I32 0)
+		(IntegerType.I32)
+		(IntegerCompareOperator.Equal)
+	)
+)
+
+(extern extractor BooleanNot get_boolean_not)
+
+(decl partial DirectComplementBoolean (Link) Link)
+
+(rule 100 (DirectComplementBoolean (BooleanNot boolean))
+	boolean
+)
+
+(rule 90 (DirectComplementBoolean
+		(IntegerCompareOperation left right type (IntegerCompareOperator.Equal)))
+	(IntegerCompareOperation left right type (IntegerCompareOperator.NotEqual))
+)
+
+(rule 90 (DirectComplementBoolean
+		(IntegerCompareOperation left right type (IntegerCompareOperator.NotEqual)))
+	(IntegerCompareOperation left right type (IntegerCompareOperator.Equal))
+)
+
+(rule 90 (DirectComplementBoolean
+		(IntegerCompareOperation left right type (IntegerCompareOperator.LessThan signed)))
+	(IntegerCompareOperation right left type (IntegerCompareOperator.LessThanEqual signed))
+)
+
+(rule 90 (DirectComplementBoolean
+		(IntegerCompareOperation left right type (IntegerCompareOperator.LessThanEqual signed)))
+	(IntegerCompareOperation right left type (IntegerCompareOperator.LessThan signed))
+)
+
+(rule 80 (DirectComplementBoolean
+		(NumberCompareOperation left right type (NumberCompareOperator.Equal)))
+	(NumberCompareOperation left right type (NumberCompareOperator.NotEqual))
+)
+
+(rule 80 (DirectComplementBoolean
+		(NumberCompareOperation left right type (NumberCompareOperator.NotEqual)))
+	(NumberCompareOperation left right type (NumberCompareOperator.Equal))
+)
+
+(decl partial ReduceI32BooleanTable (Link i32 i32) Link)
+
+(rule 30 (ReduceI32BooleanTable _ value value)
+	(I32 value)
+)
+
+(rule 20 (ReduceI32BooleanTable boolean 0 1)
+	boolean
+)
+
+(rule 10 (ReduceI32BooleanTable boolean 1 0)
+	(BooleanNot boolean)
+)
+
+(decl partial ReduceI64BooleanTable (Link i64 i64) Link)
+
+(rule 30 (ReduceI64BooleanTable _ value value)
+	(I64 value)
+)
+
+(rule 20 (ReduceI64BooleanTable boolean 0 1)
+	(IntegerWiden boolean)
+)
+
+(rule 10 (ReduceI64BooleanTable boolean 1 0)
+	(IntegerWiden (BooleanNot boolean))
+)
+
+(decl ReduceBooleanUnaryOperation (Link IntegerUnaryOperator) Link)
+
+(rule (ReduceBooleanUnaryOperation boolean operator)
+	(ReduceI32Table boolean
+		(EvaluateI32Unary operator 0)
+		(EvaluateI32Unary operator 1))
+)
+
+(decl ReduceWidenedBooleanUnaryOperation (Link IntegerUnaryOperator) Link)
+
+(rule (ReduceWidenedBooleanUnaryOperation boolean operator)
+	(ReduceI64Table boolean
+		(EvaluateI64Unary operator 0)
+		(EvaluateI64Unary operator 1))
+)

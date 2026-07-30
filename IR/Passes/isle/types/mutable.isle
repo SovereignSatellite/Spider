@@ -1,11 +1,8 @@
-;; Node::MutableNew
 (decl MutableNew (Link) Link)
 (extern extractor MutableNew get_mutable_new)
 
-;; Node::MutableGet
 (decl MutableGet (Link) Link)
 (extern extractor MutableGet get_mutable_get)
 
-;; Node::MutableSet
 (decl MutableSet (Link Link) Link)
 (extern extractor MutableSet get_mutable_set)

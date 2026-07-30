@@ -1,269 +1,50 @@
-;; Node::Foreign(luau_foreign::MathAbs)
-(decl MathAbs (Link) Link)
+(decl IntegralLuauUnary (Link) Link)
+(extern extractor IntegralLuauUnary get_integral_luau_unary)
 
-(extractor (MathAbs source)
-	(LuauUnaryOperation source (LuauUnaryOperator.Absolute))
-)
-
-;; Node::Foreign(luau_foreign::MathSqrt)
-(decl MathSqrt (Link) Link)
-
-(extractor (MathSqrt source)
-	(LuauUnaryOperation source (LuauUnaryOperator.SquareRoot))
-)
-
-;; Node::Foreign(luau_foreign::MathFloor)
-(decl MathFloor (Link) Link)
-
-(extractor (MathFloor source)
-	(LuauUnaryOperation source (LuauUnaryOperator.RoundDown))
-)
-
-;; Node::Foreign(luau_foreign::MathCeil)
-(decl MathCeil (Link) Link)
-
-(extractor (MathCeil source)
-	(LuauUnaryOperation source (LuauUnaryOperator.RoundUp))
-)
-
-;; Node::Foreign(luau_foreign::MathModf)
-(decl MathModf (Link) Link)
-
-(extractor (MathModf source)
-	(LuauUnaryOperation source (LuauUnaryOperator.RoundToZero))
-)
-
-;; Node::Foreign(luau_foreign::MathMin)
-(decl MathMin (Link Link) Link)
-
-(extractor (MathMin lhs rhs)
-	(LuauBinaryOperation lhs rhs (LuauBinaryOperator.Minimum))
-)
-
-;; Node::Foreign(luau_foreign::MathMax)
-(decl MathMax (Link Link) Link)
-
-(extractor (MathMax lhs rhs)
-	(LuauBinaryOperation lhs rhs (LuauBinaryOperator.Maximum))
-)
-
-;; Node::Foreign(luau_foreign::MathFmod)
-(decl MathFmod (Link Link) Link)
-
-(extractor (MathFmod lhs rhs)
-	(LuauBinaryOperation lhs rhs (LuauBinaryOperator.FloatModulo))
-)
-
-;; Luau math.abs
-(decl pure raw_math_absolute (f64) f64)
-(extern constructor raw_math_absolute raw_math_absolute)
-
-;; Luau math.sqrt
-(decl pure raw_math_square_root (f64) f64)
-(extern constructor raw_math_square_root raw_math_square_root)
-
-;; Luau math.floor
-(decl pure raw_math_floor (f64) f64)
-(extern constructor raw_math_floor raw_math_floor)
-
-;; Luau math.ceil
-(decl pure raw_math_ceil (f64) f64)
-(extern constructor raw_math_ceil raw_math_ceil)
-
-;; Luau math.modf integral part; truncates toward zero
-(decl pure raw_math_modf (f64) f64)
-(extern constructor raw_math_modf raw_math_modf)
-
-;; Luau math.min; asymmetric on a NaN operand
-(decl pure raw_luau_minimum (f64 f64) f64)
-(extern constructor raw_luau_minimum raw_luau_minimum)
-
-;; Luau math.max; asymmetric on a NaN operand
-(decl pure raw_luau_maximum (f64 f64) f64)
-(extern constructor raw_luau_maximum raw_luau_maximum)
-
-;; Luau math.fmod; sign follows the dividend
-(decl pure raw_math_fmod (f64 f64) f64)
-(extern constructor raw_math_fmod raw_math_fmod)
+(decl LuauExtremum (Link Link) Link)
+(extern extractor LuauExtremum get_luau_extremum)
 
 (decl partial SimplifyLuauMath (Link) Link)
 
-;; math.abs(math.abs(N)) => math.abs(N)
-(rule 3
+(rule 5
 	(SimplifyLuauMath
-		(MathAbs (and inner (MathAbs _)))
+		(LuauUnaryOperation
+			inner @ (LuauUnaryOperation _ (LuauUnaryOperator.Absolute))
+			(LuauUnaryOperator.Absolute)
+		)
 	)
 
 	inner
 )
 
-;; math.floor(math.floor(N)) => math.floor(N)
-(rule 3
+(rule 4
 	(SimplifyLuauMath
-		(MathFloor (and inner (MathFloor _)))
+		(IntegralLuauUnary inner @ (IntegralLuauUnary _))
 	)
 
 	inner
 )
 
-;; math.ceil(math.ceil(N)) => math.ceil(N)
 (rule 3
 	(SimplifyLuauMath
-		(MathCeil (and inner (MathCeil _)))
+		(LuauExtremum source source)
 	)
 
-	inner
+	source
 )
 
-;; math.floor(math.ceil(N)) => math.ceil(N)
-(rule 3
-	(SimplifyLuauMath
-		(MathFloor (and inner (MathCeil _)))
-	)
-
-	inner
-)
-
-;; math.ceil(math.floor(N)) => math.floor(N)
-(rule 3
-	(SimplifyLuauMath
-		(MathCeil (and inner (MathFloor _)))
-	)
-
-	inner
-)
-
-;; math.floor(math.modf(N)) => math.modf(N)
-(rule 3
-	(SimplifyLuauMath
-		(MathFloor (and inner (MathModf _)))
-	)
-
-	inner
-)
-
-;; math.ceil(math.modf(N)) => math.modf(N)
-(rule 3
-	(SimplifyLuauMath
-		(MathCeil (and inner (MathModf _)))
-	)
-
-	inner
-)
-
-;; math.modf(math.floor(N)) => math.floor(N)
-(rule 3
-	(SimplifyLuauMath
-		(MathModf (and inner (MathFloor _)))
-	)
-
-	inner
-)
-
-;; math.modf(math.ceil(N)) => math.ceil(N)
-(rule 3
-	(SimplifyLuauMath
-		(MathModf (and inner (MathCeil _)))
-	)
-
-	inner
-)
-
-;; math.modf(math.modf(N)) => math.modf(N)
-(rule 3
-	(SimplifyLuauMath
-		(MathModf (and inner (MathModf _)))
-	)
-
-	inner
-)
-
-;; math.min(N, N) => N
 (rule 2
 	(SimplifyLuauMath
-		(MathMin value value)
+		(LuauUnaryOperation (LuauNumber source) operator)
 	)
 
-	value
+	(raw_luau_number_result (EvaluateLuauUnary operator source))
 )
 
-;; math.max(N, N) => N
-(rule 2
-	(SimplifyLuauMath
-		(MathMax value value)
-	)
-
-	value
-)
-
-;; math.abs(K) => result
 (rule 1
 	(SimplifyLuauMath
-		(MathAbs (LuauNumber value))
+		(LuauBinaryOperation (LuauNumber left) (LuauNumber right) operator)
 	)
 
-	(raw_luau_number_result (raw_math_absolute value))
-)
-
-;; math.sqrt(K) => result
-(rule 1
-	(SimplifyLuauMath
-		(MathSqrt (LuauNumber value))
-	)
-
-	(raw_luau_number_result (raw_math_square_root value))
-)
-
-;; math.floor(K) => result
-(rule 1
-	(SimplifyLuauMath
-		(MathFloor (LuauNumber value))
-	)
-
-	(raw_luau_number_result (raw_math_floor value))
-)
-
-;; math.ceil(K) => result
-(rule 1
-	(SimplifyLuauMath
-		(MathCeil (LuauNumber value))
-	)
-
-	(raw_luau_number_result (raw_math_ceil value))
-)
-
-;; math.modf(K) => result
-(rule 1
-	(SimplifyLuauMath
-		(MathModf (LuauNumber value))
-	)
-
-	(raw_luau_number_result (raw_math_modf value))
-)
-
-;; math.min(K1, K2) => result
-(rule
-	(SimplifyLuauMath
-		(MathMin (LuauNumber lhs) (LuauNumber rhs))
-	)
-
-	(raw_luau_number_result (raw_luau_minimum lhs rhs))
-)
-
-;; math.max(K1, K2) => result
-(rule
-	(SimplifyLuauMath
-		(MathMax (LuauNumber lhs) (LuauNumber rhs))
-	)
-
-	(raw_luau_number_result (raw_luau_maximum lhs rhs))
-)
-
-;; math.fmod(K1, K2) => result
-(rule
-	(SimplifyLuauMath
-		(MathFmod (LuauNumber lhs) (LuauNumber rhs))
-	)
-
-	(raw_luau_number_result (raw_math_fmod lhs rhs))
+	(raw_luau_number_result (EvaluateLuauBinary operator left right))
 )

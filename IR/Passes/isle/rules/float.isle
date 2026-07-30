@@ -1,55 +1,37 @@
 (decl partial SimplifyFloat (Link) Link)
 
-;; Negate(Negate(x)) => x (F32)
 (rule
 	(SimplifyFloat
-		(F32Neg (F32Neg x))
+		(NumberUnaryOperation
+			(NumberUnaryOperation source type (NumberUnaryOperator.Negate))
+			type
+			(NumberUnaryOperator.Negate)
+		)
 	)
 
-	x
+	source
 )
 
-;; Absolute(Absolute(x)) => Absolute(x) (F32)
 (rule 2
 	(SimplifyFloat
-		(F32Abs inner @ (F32Abs _))
+		(NumberUnaryOperation
+			inner @ (NumberUnaryOperation _ type (NumberUnaryOperator.Absolute))
+			type
+			(NumberUnaryOperator.Absolute)
+		)
 	)
 
 	inner
 )
 
-;; Absolute(Negate(x)) => Absolute(x) (F32)
 (rule 1
 	(SimplifyFloat
-		(F32Abs (F32Neg x))
+		(NumberUnaryOperation
+			(NumberUnaryOperation source type (NumberUnaryOperator.Negate))
+			type
+			(NumberUnaryOperator.Absolute)
+		)
 	)
 
-	(F32Abs x)
-)
-
-;; Negate(Negate(x)) => x (F64)
-(rule
-	(SimplifyFloat
-		(F64Neg (F64Neg x))
-	)
-
-	x
-)
-
-;; Absolute(Absolute(x)) => Absolute(x) (F64)
-(rule 2
-	(SimplifyFloat
-		(F64Abs inner @ (F64Abs _))
-	)
-
-	inner
-)
-
-;; Absolute(Negate(x)) => Absolute(x) (F64)
-(rule 1
-	(SimplifyFloat
-		(F64Abs (F64Neg x))
-	)
-
-	(F64Abs x)
+	(NumberUnaryOperation source type (NumberUnaryOperator.Absolute))
 )

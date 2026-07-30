@@ -3,11 +3,12 @@
 	clippy::cognitive_complexity,
 	clippy::collapsible_if,
 	clippy::collapsible_match,
+	clippy::doc_markdown,
 	clippy::equatable_if_let,
 	clippy::excessive_nesting,
 	clippy::match_ref_pats,
-	clippy::match_wildcard_for_single_variants,
 	clippy::needless_return,
+	clippy::similar_names,
 	clippy::too_many_lines,
 	clippy::trivially_copy_pass_by_ref,
 	clippy::wildcard_enum_match_arm,
@@ -23,12 +24,15 @@ use ir_graph::{
 	Link,
 	list::{self, fixed::Fixed},
 	operation::{
-		LoadType, StoreType,
+		ExtendType, LoadType, StoreType,
 		integer::{
 			BinaryOperator as IntegerBinaryOperator, CompareOperator as IntegerCompareOperator,
-			Type as IntegerType,
+			Type as IntegerType, UnaryOperator as IntegerUnaryOperator,
 		},
-		number::{Type as NumberType, UnaryOperator as NumberUnaryOperator},
+		number::{
+			CompareOperator as NumberCompareOperator, Type as NumberType,
+			UnaryOperator as NumberUnaryOperator,
+		},
 	},
 };
 
@@ -39,12 +43,10 @@ use super::luau::{
 
 include!(concat!(env!("OUT_DIR"), "/isle.rs"));
 
-impl Links {
-	/// Converts these links into a fixed-size array.
+impl LinkPair {
 	pub fn as_fixed(&self) -> Fixed<Link, 2> {
-		match *self {
-			Self::N1 { field_1 } => list::fixed![field_1],
-			Self::N2 { field_1, field_2 } => list::fixed![field_1, field_2],
-		}
+		let Self::Pair { first, second } = *self;
+
+		list::fixed![first, second]
 	}
 }

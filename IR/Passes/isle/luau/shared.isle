@@ -10,7 +10,6 @@
 	)
 )
 
-;; Foreign Luau unary value operations, discriminated by operator
 (decl LuauUnaryOperation (Link LuauUnaryOperator) Link)
 (extern extractor LuauUnaryOperation get_luau_unary_operation)
 
@@ -22,14 +21,18 @@
 	)
 )
 
-;; Foreign Luau binary value operations, discriminated by operator
 (decl LuauBinaryOperation (Link Link LuauBinaryOperator) Link)
 (extern extractor LuauBinaryOperation get_luau_binary_operation)
 
-;; A constant operand reaching Luau arithmetic, widened to its host number value
+(decl pure partial EvaluateLuauUnary (LuauUnaryOperator f64) f64)
+(extern constructor EvaluateLuauUnary evaluate_luau_unary)
+
+(decl pure EvaluateLuauBinary (LuauBinaryOperator f64 f64) f64)
+(extern constructor EvaluateLuauBinary evaluate_luau_binary)
+
 (decl LuauNumber (f64) Link)
 (extern extractor LuauNumber constant_luau_number)
 
-;; A folded Luau number; declines when non-finite, narrowing an in-range integer to I32
+;; Decline non-finite results and retain exact word-sized results as integers.
 (decl pure partial raw_luau_number_result (f64) Link)
 (extern constructor raw_luau_number_result raw_luau_number_result)

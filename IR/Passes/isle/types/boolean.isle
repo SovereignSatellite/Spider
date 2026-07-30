@@ -1,0 +1,2 @@
+(decl ExactBoolean (Link) Link)
+(extern extractor ExactBoolean get_exact_boolean)

@@ -3,15 +3,17 @@
 use ir_graph::{
 	Link, Node,
 	operation::{
-		Aggregate, Extract, IntegerNarrow, IntegerSignExtend, IntegerTransmuteToNumber,
+		Aggregate, ExtendType, Extract, IntegerNarrow, IntegerSignExtend, IntegerTransmuteToNumber,
 		IntegerWiden, LoadType, Location, MemoryLoad, MemoryStore, MutableGet, MutableNew,
 		MutableSet, NumberTransmuteToInteger, RefIsNull, StoreType, TableGet, TableSet,
 		integer::{
 			BinaryOperation as IntegerBinaryOperation, BinaryOperator as IntegerBinaryOperator,
 			CompareOperation as IntegerCompareOperation, CompareOperator as IntegerCompareOperator,
-			Type as IntegerType,
+			Type as IntegerType, UnaryOperation as IntegerUnaryOperation,
+			UnaryOperator as IntegerUnaryOperator,
 		},
 		number::{
+			CompareOperation as NumberCompareOperation, CompareOperator as NumberCompareOperator,
 			Type as NumberType, UnaryOperation as NumberUnaryOperation,
 			UnaryOperator as NumberUnaryOperator,
 		},
@@ -31,7 +33,7 @@ use super::{
 	},
 };
 
-/// A newtype wrapper for implementing the ISLE `Context` trait on a region.
+/// Supply a graph region to ISLE.
 pub struct RegionContext<'nodes>(pub &'nodes mut Vec<Node>);
 
 impl RegionContext<'_> {
@@ -44,7 +46,38 @@ impl RegionContext<'_> {
 	}
 }
 
+#[expect(
+	clippy::renamed_function_params,
+	reason = "semantic names replace generated positional Context parameter names"
+)]
 impl Context for RegionContext<'_> {
+	fn get_exact_boolean(&mut self, arg0: Link) -> Option<Link> {
+		let boolean = self.trace(arg0);
+
+		matches!(
+			self.at(boolean),
+			Node::IntegerCompareOperation(_) | Node::NumberCompareOperation(_) | Node::RefIsNull(_)
+		)
+		.then_some(boolean)
+	}
+
+	fn get_boolean_not(&mut self, arg0: Link) -> Option<Link> {
+		let boolean_not = self.trace(arg0);
+		let &Node::IntegerCompareOperation(operation) = self.at(boolean_not) else {
+			return None;
+		};
+		let right = self.trace(operation.rhs);
+
+		if operation.kind != IntegerType::I32
+			|| operation.operator != IntegerCompareOperator::Equal
+			|| !matches!(self.at(right), Node::I32(0_i32))
+		{
+			return None;
+		}
+
+		self.get_exact_boolean(operation.lhs)
+	}
+
 	fn get_i32(&mut self, arg0: Link) -> Option<i32> {
 		if let &Node::I32(value) = self.at(arg0) {
 			Some(value)
@@ -67,6 +100,38 @@ impl Context for RegionContext<'_> {
 
 	fn add_i64(&mut self, arg0: i64) -> Link {
 		Node::add_i64_into(self.0, arg0)
+	}
+
+	fn get_integer_unary_operation(
+		&mut self,
+		arg0: Link,
+	) -> Option<(Link, IntegerType, IntegerUnaryOperator)> {
+		if let &Node::IntegerUnaryOperation(IntegerUnaryOperation {
+			source,
+			kind,
+			operator,
+		}) = self.at(arg0)
+		{
+			Some((self.trace(source), kind, operator))
+		} else {
+			None
+		}
+	}
+
+	fn evaluate_i32_unary(&mut self, operator: &IntegerUnaryOperator, source: i32) -> i32 {
+		match *operator {
+			IntegerUnaryOperator::CountOnes => source.count_ones().cast_signed(),
+			IntegerUnaryOperator::LeadingZeros => source.leading_zeros().cast_signed(),
+			IntegerUnaryOperator::TrailingZeros => source.trailing_zeros().cast_signed(),
+		}
+	}
+
+	fn evaluate_i64_unary(&mut self, operator: &IntegerUnaryOperator, source: i64) -> i64 {
+		match *operator {
+			IntegerUnaryOperator::CountOnes => i64::from(source.count_ones()),
+			IntegerUnaryOperator::LeadingZeros => i64::from(source.leading_zeros()),
+			IntegerUnaryOperator::TrailingZeros => i64::from(source.trailing_zeros()),
+		}
 	}
 
 	fn get_integer_binary_operation(
@@ -113,257 +178,128 @@ impl Context for RegionContext<'_> {
 		}
 	}
 
-	fn reduce_boolean_comparison(
+	fn add_integer_compare_operation(
 		&mut self,
 		arg0: Link,
-		arg1: &IntegerCompareOperator,
-		arg2: i32,
-	) -> Option<Link> {
-		let comparison = arg0;
+		arg1: Link,
+		arg2: &IntegerType,
+		arg3: &IntegerCompareOperator,
+	) -> Link {
+		IntegerCompareOperation::add_into(self.0, arg0, arg1, *arg2, *arg3)
+	}
 
-		match (*arg1, arg2) {
-			(IntegerCompareOperator::NotEqual, 0_i32) | (IntegerCompareOperator::Equal, 1_i32) => {
-				return Some(comparison);
+	fn evaluate_i32_binary(
+		&mut self,
+		operator: &IntegerBinaryOperator,
+		left: i32,
+		right: i32,
+	) -> Option<i32> {
+		match *operator {
+			IntegerBinaryOperator::Add => Some(left.wrapping_add(right)),
+			IntegerBinaryOperator::Subtract => Some(left.wrapping_sub(right)),
+			IntegerBinaryOperator::Multiply => Some(left.wrapping_mul(right)),
+			IntegerBinaryOperator::Divide { is_signed: true } => left.checked_div(right),
+			IntegerBinaryOperator::Divide { is_signed: false } => left
+				.cast_unsigned()
+				.checked_div(right.cast_unsigned())
+				.map(u32::cast_signed),
+			IntegerBinaryOperator::Remainder { is_signed: true } => left.checked_rem(right),
+			IntegerBinaryOperator::Remainder { is_signed: false } => left
+				.cast_unsigned()
+				.checked_rem(right.cast_unsigned())
+				.map(u32::cast_signed),
+			IntegerBinaryOperator::And => Some(left & right),
+			IntegerBinaryOperator::Or => Some(left | right),
+			IntegerBinaryOperator::ExclusiveOr => Some(left ^ right),
+			IntegerBinaryOperator::ShiftLeft => Some(left.wrapping_shl(right.cast_unsigned())),
+			IntegerBinaryOperator::ShiftRight { is_signed: true } => {
+				Some(left.wrapping_shr(right.cast_unsigned()))
 			}
-			(IntegerCompareOperator::Equal, 0_i32) | (IntegerCompareOperator::NotEqual, 1_i32) => {}
-			_ => return None,
-		}
-
-		let &Node::IntegerCompareOperation(operation) = self.at(comparison) else {
-			unreachable!()
-		};
-		let (left_operand, right_operand, operator) = match operation.operator {
-			IntegerCompareOperator::Equal => (
-				operation.lhs,
-				operation.rhs,
-				IntegerCompareOperator::NotEqual,
+			IntegerBinaryOperator::ShiftRight { is_signed: false } => Some(
+				left.cast_unsigned()
+					.wrapping_shr(right.cast_unsigned())
+					.cast_signed(),
 			),
-			IntegerCompareOperator::NotEqual => {
-				(operation.lhs, operation.rhs, IntegerCompareOperator::Equal)
+			IntegerBinaryOperator::RotateLeft => Some(left.rotate_left(right.cast_unsigned())),
+			IntegerBinaryOperator::RotateRight => Some(left.rotate_right(right.cast_unsigned())),
+		}
+	}
+
+	fn evaluate_i64_binary(
+		&mut self,
+		operator: &IntegerBinaryOperator,
+		left: i64,
+		right: i64,
+	) -> Option<i64> {
+		match *operator {
+			IntegerBinaryOperator::Add => Some(left.wrapping_add(right)),
+			IntegerBinaryOperator::Subtract => Some(left.wrapping_sub(right)),
+			IntegerBinaryOperator::Multiply => Some(left.wrapping_mul(right)),
+			IntegerBinaryOperator::Divide { is_signed: true } => left.checked_div(right),
+			IntegerBinaryOperator::Divide { is_signed: false } => left
+				.cast_unsigned()
+				.checked_div(right.cast_unsigned())
+				.map(u64::cast_signed),
+			IntegerBinaryOperator::Remainder { is_signed: true } => left.checked_rem(right),
+			IntegerBinaryOperator::Remainder { is_signed: false } => left
+				.cast_unsigned()
+				.checked_rem(right.cast_unsigned())
+				.map(u64::cast_signed),
+			IntegerBinaryOperator::And => Some(left & right),
+			IntegerBinaryOperator::Or => Some(left | right),
+			IntegerBinaryOperator::ExclusiveOr => Some(left ^ right),
+			IntegerBinaryOperator::ShiftLeft => Some(left.wrapping_shl(shift_count_i64(right))),
+			IntegerBinaryOperator::ShiftRight { is_signed: true } => {
+				Some(left.wrapping_shr(shift_count_i64(right)))
 			}
-			IntegerCompareOperator::LessThan { is_signed } => (
-				operation.rhs,
-				operation.lhs,
-				IntegerCompareOperator::LessThanEqual { is_signed },
+			IntegerBinaryOperator::ShiftRight { is_signed: false } => Some(
+				left.cast_unsigned()
+					.wrapping_shr(shift_count_i64(right))
+					.cast_signed(),
 			),
-			IntegerCompareOperator::LessThanEqual { is_signed } => (
-				operation.rhs,
-				operation.lhs,
-				IntegerCompareOperator::LessThan { is_signed },
-			),
-		};
-
-		Some(IntegerCompareOperation::add_into(
-			self.0,
-			left_operand,
-			right_operand,
-			operation.kind,
-			operator,
-		))
-	}
-
-	fn raw_add_i32(&mut self, arg0: i32, arg1: i32) -> i32 {
-		arg0.wrapping_add(arg1)
-	}
-
-	fn raw_sub_i32(&mut self, arg0: i32, arg1: i32) -> i32 {
-		arg0.wrapping_sub(arg1)
-	}
-
-	fn raw_multiply_i32(&mut self, arg0: i32, arg1: i32) -> i32 {
-		arg0.wrapping_mul(arg1)
-	}
-
-	fn raw_and_i32(&mut self, arg0: i32, arg1: i32) -> i32 {
-		arg0 & arg1
-	}
-
-	fn raw_or_i32(&mut self, arg0: i32, arg1: i32) -> i32 {
-		arg0 | arg1
-	}
-
-	fn raw_exclusive_or_i32(&mut self, arg0: i32, arg1: i32) -> i32 {
-		arg0 ^ arg1
-	}
-
-	fn raw_shift_left_i32(&mut self, arg0: i32, arg1: i32) -> i32 {
-		arg0.wrapping_shl(arg1.cast_unsigned())
-	}
-
-	fn raw_shift_right_signed_i32(&mut self, arg0: i32, arg1: i32) -> i32 {
-		arg0.wrapping_shr(arg1.cast_unsigned())
-	}
-
-	fn raw_shift_right_unsigned_i32(&mut self, arg0: i32, arg1: i32) -> i32 {
-		arg0.cast_unsigned()
-			.wrapping_shr(arg1.cast_unsigned())
-			.cast_signed()
-	}
-
-	fn raw_rotate_left_i32(&mut self, arg0: i32, arg1: i32) -> i32 {
-		arg0.rotate_left(arg1.cast_unsigned())
-	}
-
-	fn raw_rotate_right_i32(&mut self, arg0: i32, arg1: i32) -> i32 {
-		arg0.rotate_right(arg1.cast_unsigned())
-	}
-
-	fn raw_divide_signed_i32(&mut self, arg0: i32, arg1: i32) -> Option<i32> {
-		arg0.checked_div(arg1)
-	}
-
-	fn raw_divide_unsigned_i32(&mut self, arg0: i32, arg1: i32) -> Option<i32> {
-		arg0.cast_unsigned()
-			.checked_div(arg1.cast_unsigned())
-			.map(u32::cast_signed)
-	}
-
-	fn raw_remainder_signed_i32(&mut self, arg0: i32, arg1: i32) -> Option<i32> {
-		arg0.checked_rem(arg1)
-	}
-
-	fn raw_remainder_unsigned_i32(&mut self, arg0: i32, arg1: i32) -> Option<i32> {
-		arg0.cast_unsigned()
-			.checked_rem(arg1.cast_unsigned())
-			.map(u32::cast_signed)
-	}
-
-	fn raw_compare_equal_i32(&mut self, arg0: i32, arg1: i32) -> i32 {
-		i32::from(arg0 == arg1)
-	}
-
-	fn raw_compare_not_equal_i32(&mut self, arg0: i32, arg1: i32) -> i32 {
-		i32::from(arg0 != arg1)
-	}
-
-	fn raw_compare_less_than_signed_i32(&mut self, arg0: i32, arg1: i32) -> i32 {
-		i32::from(arg0 < arg1)
-	}
-
-	fn raw_compare_less_than_unsigned_i32(&mut self, arg0: i32, arg1: i32) -> i32 {
-		i32::from(arg0.cast_unsigned() < arg1.cast_unsigned())
-	}
-
-	fn raw_compare_less_than_equal_signed_i32(&mut self, arg0: i32, arg1: i32) -> i32 {
-		i32::from(arg0 <= arg1)
-	}
-
-	fn raw_compare_less_than_equal_unsigned_i32(&mut self, arg0: i32, arg1: i32) -> i32 {
-		i32::from(arg0.cast_unsigned() <= arg1.cast_unsigned())
-	}
-
-	fn raw_add_i64(&mut self, arg0: i64, arg1: i64) -> i64 {
-		arg0.wrapping_add(arg1)
-	}
-
-	fn raw_sub_i64(&mut self, arg0: i64, arg1: i64) -> i64 {
-		arg0.wrapping_sub(arg1)
-	}
-
-	fn raw_multiply_i64(&mut self, arg0: i64, arg1: i64) -> i64 {
-		arg0.wrapping_mul(arg1)
-	}
-
-	fn raw_and_i64(&mut self, arg0: i64, arg1: i64) -> i64 {
-		arg0 & arg1
-	}
-
-	fn raw_or_i64(&mut self, arg0: i64, arg1: i64) -> i64 {
-		arg0 | arg1
-	}
-
-	fn raw_exclusive_or_i64(&mut self, arg0: i64, arg1: i64) -> i64 {
-		arg0 ^ arg1
-	}
-
-	fn raw_shift_left_i64(&mut self, arg0: i64, arg1: i64) -> i64 {
-		arg0.wrapping_shl(shift_count_i64(arg1))
-	}
-
-	fn raw_shift_right_signed_i64(&mut self, arg0: i64, arg1: i64) -> i64 {
-		arg0.wrapping_shr(shift_count_i64(arg1))
-	}
-
-	fn raw_shift_right_unsigned_i64(&mut self, arg0: i64, arg1: i64) -> i64 {
-		arg0.cast_unsigned()
-			.wrapping_shr(shift_count_i64(arg1))
-			.cast_signed()
-	}
-
-	fn raw_rotate_left_i64(&mut self, arg0: i64, arg1: i64) -> i64 {
-		arg0.rotate_left(shift_count_i64(arg1))
-	}
-
-	fn raw_rotate_right_i64(&mut self, arg0: i64, arg1: i64) -> i64 {
-		arg0.rotate_right(shift_count_i64(arg1))
-	}
-
-	fn raw_divide_signed_i64(&mut self, arg0: i64, arg1: i64) -> Option<i64> {
-		arg0.checked_div(arg1)
-	}
-
-	fn raw_divide_unsigned_i64(&mut self, arg0: i64, arg1: i64) -> Option<i64> {
-		arg0.cast_unsigned()
-			.checked_div(arg1.cast_unsigned())
-			.map(u64::cast_signed)
-	}
-
-	fn raw_remainder_signed_i64(&mut self, arg0: i64, arg1: i64) -> Option<i64> {
-		arg0.checked_rem(arg1)
-	}
-
-	fn raw_remainder_unsigned_i64(&mut self, arg0: i64, arg1: i64) -> Option<i64> {
-		arg0.cast_unsigned()
-			.checked_rem(arg1.cast_unsigned())
-			.map(u64::cast_signed)
-	}
-
-	fn raw_compare_equal_i64(&mut self, arg0: i64, arg1: i64) -> i32 {
-		i32::from(arg0 == arg1)
-	}
-
-	fn raw_compare_not_equal_i64(&mut self, arg0: i64, arg1: i64) -> i32 {
-		i32::from(arg0 != arg1)
-	}
-
-	fn raw_compare_less_than_signed_i64(&mut self, arg0: i64, arg1: i64) -> i32 {
-		i32::from(arg0 < arg1)
-	}
-
-	fn raw_compare_less_than_unsigned_i64(&mut self, arg0: i64, arg1: i64) -> i32 {
-		i32::from(arg0.cast_unsigned() < arg1.cast_unsigned())
-	}
-
-	fn raw_compare_less_than_equal_signed_i64(&mut self, arg0: i64, arg1: i64) -> i32 {
-		i32::from(arg0 <= arg1)
-	}
-
-	fn raw_compare_less_than_equal_unsigned_i64(&mut self, arg0: i64, arg1: i64) -> i32 {
-		i32::from(arg0.cast_unsigned() <= arg1.cast_unsigned())
-	}
-
-	fn get_f32(&mut self, arg0: Link) -> Option<f32> {
-		if let &Node::F32(value) = self.at(arg0) {
-			Some(value)
-		} else {
-			None
+			IntegerBinaryOperator::RotateLeft => Some(left.rotate_left(shift_count_i64(right))),
+			IntegerBinaryOperator::RotateRight => Some(left.rotate_right(shift_count_i64(right))),
 		}
 	}
 
-	fn add_f32(&mut self, arg0: f32) -> Link {
-		Node::add_f32_into(self.0, arg0)
+	fn evaluate_i32_comparison(
+		&mut self,
+		operator: &IntegerCompareOperator,
+		left: i32,
+		right: i32,
+	) -> i32 {
+		i32::from(match *operator {
+			IntegerCompareOperator::Equal => left == right,
+			IntegerCompareOperator::NotEqual => left != right,
+			IntegerCompareOperator::LessThan { is_signed: true } => left < right,
+			IntegerCompareOperator::LessThan { is_signed: false } => {
+				left.cast_unsigned() < right.cast_unsigned()
+			}
+			IntegerCompareOperator::LessThanEqual { is_signed: true } => left <= right,
+			IntegerCompareOperator::LessThanEqual { is_signed: false } => {
+				left.cast_unsigned() <= right.cast_unsigned()
+			}
+		})
 	}
 
-	fn get_f64(&mut self, arg0: Link) -> Option<f64> {
-		if let &Node::F64(value) = self.at(arg0) {
-			Some(value)
-		} else {
-			None
-		}
-	}
-
-	fn add_f64(&mut self, arg0: f64) -> Link {
-		Node::add_f64_into(self.0, arg0)
+	fn evaluate_i64_comparison(
+		&mut self,
+		operator: &IntegerCompareOperator,
+		left: i64,
+		right: i64,
+	) -> i32 {
+		i32::from(match *operator {
+			IntegerCompareOperator::Equal => left == right,
+			IntegerCompareOperator::NotEqual => left != right,
+			IntegerCompareOperator::LessThan { is_signed: true } => left < right,
+			IntegerCompareOperator::LessThan { is_signed: false } => {
+				left.cast_unsigned() < right.cast_unsigned()
+			}
+			IntegerCompareOperator::LessThanEqual { is_signed: true } => left <= right,
+			IntegerCompareOperator::LessThanEqual { is_signed: false } => {
+				left.cast_unsigned() <= right.cast_unsigned()
+			}
+		})
 	}
 
 	fn get_mutable_new(&mut self, arg0: Link) -> Option<Link> {
@@ -469,6 +405,14 @@ impl Context for RegionContext<'_> {
 
 	fn add_integer_widen(&mut self, arg0: Link) -> Link {
 		IntegerWiden::add_into(self.0, arg0)
+	}
+
+	fn get_integer_sign_extend(&mut self, arg0: Link) -> Option<(Link, ExtendType)> {
+		if let &Node::IntegerSignExtend(IntegerSignExtend { source, kind }) = self.at(arg0) {
+			Some((self.trace(source), kind))
+		} else {
+			None
+		}
 	}
 
 	fn get_sign_extend_idempotent(&mut self, arg0: Link) -> Option<Link> {
@@ -578,6 +522,33 @@ impl Context for RegionContext<'_> {
 		NumberUnaryOperation::add_into(self.0, arg0, *arg1, *arg2)
 	}
 
+	fn get_number_compare_operation(
+		&mut self,
+		arg0: Link,
+	) -> Option<(Link, Link, NumberType, NumberCompareOperator)> {
+		if let &Node::NumberCompareOperation(NumberCompareOperation {
+			lhs,
+			rhs,
+			kind,
+			operator,
+		}) = self.at(arg0)
+		{
+			Some((self.trace(lhs), self.trace(rhs), kind, operator))
+		} else {
+			None
+		}
+	}
+
+	fn add_number_compare_operation(
+		&mut self,
+		arg0: Link,
+		arg1: Link,
+		arg2: &NumberType,
+		arg3: &NumberCompareOperator,
+	) -> Link {
+		NumberCompareOperation::add_into(self.0, arg0, arg1, *arg2, *arg3)
+	}
+
 	fn get_bit32_binary_operation(
 		&mut self,
 		arg0: Link,
@@ -625,46 +596,72 @@ impl Context for RegionContext<'_> {
 		luau::is_bit32_canonical(&**foreign).then_some(arg0)
 	}
 
-	fn raw_luau_shift_left(&mut self, arg0: i32, arg1: i32) -> i32 {
-		let value = arg0.cast_unsigned();
-		let count = arg1.cast_unsigned();
-		let result = if count < 32 { value << count } else { 0 };
+	fn fuse_bit32_binary(
+		&mut self,
+		operator: &Bit32BinaryOperator,
+		first: i32,
+		second: i32,
+	) -> Option<i32> {
+		match *operator {
+			Bit32BinaryOperator::And => Some(first & second),
+			Bit32BinaryOperator::Or => Some(first | second),
+			Bit32BinaryOperator::ExclusiveOr => Some(first ^ second),
+			Bit32BinaryOperator::ShiftLeft
+			| Bit32BinaryOperator::ShiftRightUnsigned
+			| Bit32BinaryOperator::ShiftRightSigned
+			| Bit32BinaryOperator::RotateLeft
+			| Bit32BinaryOperator::RotateRight => {
+				let first = first.cast_unsigned();
+				let second = second.cast_unsigned();
 
-		result.cast_signed()
-	}
-
-	fn raw_luau_shift_right_unsigned(&mut self, arg0: i32, arg1: i32) -> i32 {
-		let value = arg0.cast_unsigned();
-		let count = arg1.cast_unsigned();
-		let result = if count < 32 { value >> count } else { 0 };
-
-		result.cast_signed()
-	}
-
-	fn raw_luau_shift_right_signed(&mut self, arg0: i32, arg1: i32) -> i32 {
-		let count = arg1.cast_unsigned();
-
-		if count < 32 {
-			arg0 >> count
-		} else {
-			arg0 >> 31
+				(first < 32 && second < 32).then(|| (first + second).cast_signed())
+			}
 		}
 	}
 
-	fn raw_luau_shift_fusion(&mut self, arg0: i32, arg1: i32) -> Option<i32> {
-		let first = arg0.cast_unsigned();
-		let second = arg1.cast_unsigned();
-		let both_in_range = first < 32 && second < 32;
+	fn evaluate_bit32_binary(
+		&mut self,
+		operator: &Bit32BinaryOperator,
+		left: i32,
+		right: i32,
+	) -> i32 {
+		match *operator {
+			Bit32BinaryOperator::And => left & right,
+			Bit32BinaryOperator::Or => left | right,
+			Bit32BinaryOperator::ExclusiveOr => left ^ right,
+			Bit32BinaryOperator::ShiftLeft => {
+				let count = right.cast_unsigned();
 
-		both_in_range.then(|| (first + second).cast_signed())
+				if count < 32 {
+					left.cast_unsigned().wrapping_shl(count).cast_signed()
+				} else {
+					0
+				}
+			}
+			Bit32BinaryOperator::ShiftRightUnsigned => {
+				let count = right.cast_unsigned();
+
+				if count < 32 {
+					left.cast_unsigned().wrapping_shr(count).cast_signed()
+				} else {
+					0
+				}
+			}
+			Bit32BinaryOperator::ShiftRightSigned => left >> right.cast_unsigned().min(31),
+			Bit32BinaryOperator::RotateLeft => left.rotate_left(right.cast_unsigned()),
+			Bit32BinaryOperator::RotateRight => left.rotate_right(right.cast_unsigned()),
+		}
 	}
 
-	fn raw_bit32_count_leading_zeros(&mut self, arg0: i32) -> i32 {
-		arg0.cast_unsigned().leading_zeros().cast_signed()
-	}
-
-	fn raw_bit32_count_trailing_zeros(&mut self, arg0: i32) -> i32 {
-		arg0.cast_unsigned().trailing_zeros().cast_signed()
+	fn evaluate_bit32_unary(&mut self, operator: &Bit32UnaryOperator, source: i32) -> i32 {
+		match *operator {
+			Bit32UnaryOperator::CountLeadingZeros => {
+				source.cast_unsigned().leading_zeros().cast_signed()
+			}
+			Bit32UnaryOperator::CountTrailingZeros => {
+				source.cast_unsigned().trailing_zeros().cast_signed()
+			}
+		}
 	}
 
 	fn get_luau_unary_operation(&mut self, arg0: Link) -> Option<(Link, LuauUnaryOperator)> {
@@ -713,44 +710,33 @@ impl Context for RegionContext<'_> {
 		} else if is_exact_integer && is_in_word_range && !is_negative_zero {
 			Some(self.add_i32((arg0 as u32).cast_signed()))
 		} else {
-			Some(self.add_f64(arg0))
+			Some(Node::add_f64_into(self.0, arg0))
 		}
 	}
 
-	fn raw_luau_add(&mut self, arg0: f64, arg1: f64) -> f64 {
-		arg0 + arg1
-	}
+	fn evaluate_luau_arithmetic(
+		&mut self,
+		operator: &LuauArithmeticOperator,
+		left: f64,
+		right: f64,
+	) -> f64 {
+		match *operator {
+			LuauArithmeticOperator::Add => left + right,
+			LuauArithmeticOperator::Subtract => left - right,
+			LuauArithmeticOperator::Multiply => left * right,
+			LuauArithmeticOperator::Divide => left / right,
+			LuauArithmeticOperator::FloorDivide => (left / right).floor(),
+			LuauArithmeticOperator::Modulo => {
+				let remainder = left % right;
+				let follows_wrong_sign = (remainder < 0.0_f64) != (right < 0.0_f64);
 
-	fn raw_luau_subtract(&mut self, arg0: f64, arg1: f64) -> f64 {
-		arg0 - arg1
-	}
-
-	fn raw_luau_multiply(&mut self, arg0: f64, arg1: f64) -> f64 {
-		arg0 * arg1
-	}
-
-	fn raw_luau_divide(&mut self, arg0: f64, arg1: f64) -> f64 {
-		arg0 / arg1
-	}
-
-	fn raw_luau_floor_divide(&mut self, arg0: f64, arg1: f64) -> f64 {
-		(arg0 / arg1).floor()
-	}
-
-	// Luau `%` takes the sign of the divisor, not the dividend.
-	fn raw_luau_modulo(&mut self, arg0: f64, arg1: f64) -> f64 {
-		let remainder = arg0 % arg1;
-		let follows_wrong_sign = (remainder < 0.0_f64) != (arg1 < 0.0_f64);
-
-		if remainder != 0.0_f64 && follows_wrong_sign {
-			remainder + arg1
-		} else {
-			remainder
+				if remainder != 0.0_f64 && follows_wrong_sign {
+					remainder + right
+				} else {
+					remainder
+				}
+			}
 		}
-	}
-
-	fn raw_luau_negate(&mut self, arg0: f64) -> f64 {
-		-arg0
 	}
 
 	fn get_luau_binary_operation(
@@ -788,58 +774,79 @@ impl Context for RegionContext<'_> {
 
 	#[expect(
 		clippy::float_cmp,
-		reason = "Luau equality is an exact bit comparison, not an epsilon test"
+		reason = "Luau equality is exact rather than approximate"
 	)]
-	fn raw_luau_equal(&mut self, arg0: f64, arg1: f64) -> i32 {
-		i32::from(arg0 == arg1)
+	fn evaluate_luau_comparison(
+		&mut self,
+		operator: &LuauCompareOperator,
+		left: f64,
+		right: f64,
+	) -> i32 {
+		i32::from(match *operator {
+			LuauCompareOperator::Equal => left == right,
+			LuauCompareOperator::NotEqual => left != right,
+			LuauCompareOperator::LessThan => left < right,
+			LuauCompareOperator::LessThanEqual => left <= right,
+		})
 	}
 
-	#[expect(
-		clippy::float_cmp,
-		reason = "Luau inequality is an exact bit comparison, not an epsilon test"
-	)]
-	fn raw_luau_not_equal(&mut self, arg0: f64, arg1: f64) -> i32 {
-		i32::from(arg0 != arg1)
+	fn evaluate_luau_unary(&mut self, operator: &LuauUnaryOperator, source: f64) -> Option<f64> {
+		match *operator {
+			LuauUnaryOperator::Negate => Some(-source),
+			LuauUnaryOperator::Absolute => Some(source.abs()),
+			LuauUnaryOperator::SquareRoot => Some(source.sqrt()),
+			LuauUnaryOperator::RoundDown => Some(source.floor()),
+			LuauUnaryOperator::RoundUp => Some(source.ceil()),
+			LuauUnaryOperator::RoundToZero => Some(source.trunc()),
+			LuauUnaryOperator::FlipMostSignificant => None,
+		}
 	}
 
-	fn raw_luau_less_than(&mut self, arg0: f64, arg1: f64) -> i32 {
-		i32::from(arg0 < arg1)
+	fn evaluate_luau_binary(
+		&mut self,
+		operator: &LuauBinaryOperator,
+		left: f64,
+		right: f64,
+	) -> f64 {
+		match *operator {
+			LuauBinaryOperator::Minimum => {
+				if right < left {
+					right
+				} else {
+					left
+				}
+			}
+			LuauBinaryOperator::Maximum => {
+				if right > left {
+					right
+				} else {
+					left
+				}
+			}
+			LuauBinaryOperator::FloatModulo => left % right,
+		}
 	}
 
-	fn raw_luau_less_than_equal(&mut self, arg0: f64, arg1: f64) -> i32 {
-		i32::from(arg0 <= arg1)
+	fn get_integral_luau_unary(&mut self, source: Link) -> Option<Link> {
+		let (inner, operator) = self.get_luau_unary_operation(source)?;
+
+		matches!(
+			operator,
+			LuauUnaryOperator::RoundDown
+				| LuauUnaryOperator::RoundUp
+				| LuauUnaryOperator::RoundToZero
+		)
+		.then_some(inner)
 	}
 
-	fn raw_math_absolute(&mut self, arg0: f64) -> f64 {
-		arg0.abs()
-	}
+	fn get_luau_extremum(&mut self, source: Link) -> Option<(Link, Link)> {
+		let (left, right, operator) = self.get_luau_binary_operation(source)?;
 
-	fn raw_math_square_root(&mut self, arg0: f64) -> f64 {
-		arg0.sqrt()
-	}
-
-	fn raw_math_floor(&mut self, arg0: f64) -> f64 {
-		arg0.floor()
-	}
-
-	fn raw_math_ceil(&mut self, arg0: f64) -> f64 {
-		arg0.ceil()
-	}
-
-	fn raw_math_modf(&mut self, arg0: f64) -> f64 {
-		arg0.trunc()
-	}
-
-	fn raw_luau_minimum(&mut self, arg0: f64, arg1: f64) -> f64 {
-		if arg1 < arg0 { arg1 } else { arg0 }
-	}
-
-	fn raw_luau_maximum(&mut self, arg0: f64, arg1: f64) -> f64 {
-		if arg1 > arg0 { arg1 } else { arg0 }
-	}
-
-	fn raw_math_fmod(&mut self, arg0: f64, arg1: f64) -> f64 {
-		arg0 % arg1
+		matches!(
+			operator,
+			LuauBinaryOperator::Minimum | LuauBinaryOperator::Maximum
+		)
+		.then_some((left, right))
 	}
 
 	fn get_from_bits_i64(&mut self, arg0: Link) -> Option<Link> {

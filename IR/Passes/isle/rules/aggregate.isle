@@ -1,6 +1,5 @@
 (decl partial SimplifyAggregate (Link) Link)
 
-;; Extract(Aggregate[.. field ..], index) => field
 (rule
 	(SimplifyAggregate
 		(ExtractOfAggregate field)

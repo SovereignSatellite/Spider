@@ -1,21 +1,18 @@
-;; Node::I32
 (decl I32 (i32) Link)
 (extern extractor I32 get_i32)
 (extern constructor I32 add_i32)
 
-;; Node::I64
 (decl I64 (i64) Link)
 (extern extractor I64 get_i64)
 (extern constructor I64 add_i64)
 
-;; Node::IntegerBinaryOperation
 (decl IntegerBinaryOperation (Link Link IntegerType IntegerBinaryOperator) Link)
 (extern extractor IntegerBinaryOperation get_integer_binary_operation)
 (extern constructor IntegerBinaryOperation add_integer_binary_operation)
 
-;; Node::IntegerCompareOperation
+(decl IntegerUnaryOperation (Link IntegerType IntegerUnaryOperator) Link)
+(extern extractor IntegerUnaryOperation get_integer_unary_operation)
+
 (decl IntegerCompareOperation (Link Link IntegerType IntegerCompareOperator) Link)
 (extern extractor IntegerCompareOperation get_integer_compare_operation)
-
-(decl partial ReduceBooleanComparison (Link IntegerCompareOperator i32) Link)
-(extern constructor ReduceBooleanComparison reduce_boolean_comparison)
+(extern constructor IntegerCompareOperation add_integer_compare_operation)

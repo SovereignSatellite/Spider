@@ -1,6 +1,54 @@
 (decl partial SimplifyConvert (Link) Link)
 
-;; IntegerNarrow(IntegerWiden(x)) => x
+(rule 9
+	(SimplifyConvert
+		(IntegerSignExtend
+			widened @ (IntegerWiden (ExactBoolean _))
+			(ExtendType.I64_S8)
+		)
+	)
+
+	widened
+)
+
+(rule 8
+	(SimplifyConvert
+		(IntegerSignExtend
+			widened @ (IntegerWiden (ExactBoolean _))
+			(ExtendType.I64_S16)
+		)
+	)
+
+	widened
+)
+
+(rule 7
+	(SimplifyConvert
+		(IntegerSignExtend
+			widened @ (IntegerWiden (ExactBoolean _))
+			(ExtendType.I64_S32)
+		)
+	)
+
+	widened
+)
+
+(rule 6
+	(SimplifyConvert
+		(IntegerSignExtend boolean @ (ExactBoolean _) (ExtendType.I32_S8))
+	)
+
+	boolean
+)
+
+(rule 5
+	(SimplifyConvert
+		(IntegerSignExtend boolean @ (ExactBoolean _) (ExtendType.I32_S16))
+	)
+
+	boolean
+)
+
 (rule 4
 	(SimplifyConvert
 		(IntegerNarrow (IntegerWiden x))
@@ -9,7 +57,6 @@
 	x
 )
 
-;; IntegerSignExtend(IntegerSignExtend(x, k), k) => IntegerSignExtend(x, k)
 (rule 3
 	(SimplifyConvert
 		(SignExtendIdempotent inner)
@@ -18,7 +65,6 @@
 	inner
 )
 
-;; IntegerTransmuteToNumber(NumberTransmuteToInteger(x)) => x
 (rule 2
 	(SimplifyConvert
 		(TransmuteIntRoundTrip x)
@@ -27,7 +73,6 @@
 	x
 )
 
-;; NumberTransmuteToInteger(IntegerTransmuteToNumber(x)) => x
 (rule 1
 	(SimplifyConvert
 		(TransmuteNumberRoundTrip x)

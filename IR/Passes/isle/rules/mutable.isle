@@ -1,19 +1,17 @@
-(decl partial SimplifyMutable (Link) Links)
+(decl partial SimplifyMutable (Link) LinkPair)
 
-;; Get(New(value)) => value
 (rule 2
 	(SimplifyMutable
 		(MutableGet mutable @ (MutableNew source))
 	)
 
-	(Links.N2 source mutable)
+	(LinkPair.Pair source mutable)
 )
 
-;; Get(Set(value)) => value
 (rule 1
 	(SimplifyMutable
 		(MutableGet mutable @ (MutableSet _ source))
 	)
 
-	(Links.N2 source mutable)
+	(LinkPair.Pair source mutable)
 )

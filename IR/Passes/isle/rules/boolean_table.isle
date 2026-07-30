@@ -1,7 +1,7 @@
 (decl ReduceI32Table (Link i32 i32) Link)
 
 (rule 40 (ReduceI32Table predicate on_false on_true)
-	(if-let 1 (raw_exclusive_or_i32 on_false on_true))
+	(if-let 1 (EvaluateI32Binary (IntegerBinaryOperator.ExclusiveOr) on_false on_true))
 	(IntegerBinaryOperation
 		predicate
 		(I32 on_false)
@@ -11,7 +11,7 @@
 )
 
 (rule 30 (ReduceI32Table predicate on_false on_true)
-	(if-let 1 (raw_sub_i32 on_true on_false))
+	(if-let 1 (EvaluateI32Binary (IntegerBinaryOperator.Subtract) on_true on_false))
 	(IntegerBinaryOperation
 		predicate
 		(I32 on_false)
@@ -21,7 +21,7 @@
 )
 
 (rule 30 (ReduceI32Table predicate on_false on_true)
-	(if-let -1 (raw_sub_i32 on_true on_false))
+	(if-let -1 (EvaluateI32Binary (IntegerBinaryOperator.Subtract) on_true on_false))
 	(IntegerBinaryOperation
 		(I32 on_false)
 		predicate
@@ -31,7 +31,7 @@
 )
 
 (rule 10 (ReduceI32Table predicate on_false on_true)
-	(if-let difference (raw_exclusive_or_i32 on_false on_true))
+	(if-let difference (EvaluateI32Binary (IntegerBinaryOperator.ExclusiveOr) on_false on_true))
 	(IntegerBinaryOperation
 		(IntegerBinaryOperation
 			(IntegerBinaryOperation
@@ -53,7 +53,7 @@
 (decl ReduceI64Table (Link i64 i64) Link)
 
 (rule 40 (ReduceI64Table predicate on_false on_true)
-	(if-let 1 (raw_exclusive_or_i64 on_false on_true))
+	(if-let 1 (EvaluateI64Binary (IntegerBinaryOperator.ExclusiveOr) on_false on_true))
 	(IntegerBinaryOperation
 		(IntegerWiden predicate)
 		(I64 on_false)
@@ -63,7 +63,7 @@
 )
 
 (rule 30 (ReduceI64Table predicate on_false on_true)
-	(if-let 1 (raw_sub_i64 on_true on_false))
+	(if-let 1 (EvaluateI64Binary (IntegerBinaryOperator.Subtract) on_true on_false))
 	(IntegerBinaryOperation
 		(IntegerWiden predicate)
 		(I64 on_false)
@@ -73,7 +73,7 @@
 )
 
 (rule 30 (ReduceI64Table predicate on_false on_true)
-	(if-let -1 (raw_sub_i64 on_true on_false))
+	(if-let -1 (EvaluateI64Binary (IntegerBinaryOperator.Subtract) on_true on_false))
 	(IntegerBinaryOperation
 		(I64 on_false)
 		(IntegerWiden predicate)
@@ -83,7 +83,7 @@
 )
 
 (rule 10 (ReduceI64Table predicate on_false on_true)
-	(if-let difference (raw_exclusive_or_i64 on_false on_true))
+	(if-let difference (EvaluateI64Binary (IntegerBinaryOperator.ExclusiveOr) on_false on_true))
 	(IntegerBinaryOperation
 		(IntegerBinaryOperation
 			(IntegerBinaryOperation

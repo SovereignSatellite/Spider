@@ -7,101 +7,33 @@
 	)
 )
 
-;; Foreign Luau comparison operations, discriminated by operator
 (decl LuauCompareOperation (Link Link LuauCompareOperator) Link)
 (extern extractor LuauCompareOperation get_luau_compare_operation)
 
-;; Node::Foreign(luau_foreign::LuauEqual)
-(decl LuauEqual (Link Link) Link)
-
-(extractor (LuauEqual lhs rhs)
-	(LuauCompareOperation lhs rhs (LuauCompareOperator.Equal))
-)
-
-;; Node::Foreign(luau_foreign::LuauNotEqual)
-(decl LuauNotEqual (Link Link) Link)
-
-(extractor (LuauNotEqual lhs rhs)
-	(LuauCompareOperation lhs rhs (LuauCompareOperator.NotEqual))
-)
-
-;; Node::Foreign(luau_foreign::LuauLessThan)
-(decl LuauLessThan (Link Link) Link)
-
-(extractor (LuauLessThan lhs rhs)
-	(LuauCompareOperation lhs rhs (LuauCompareOperator.LessThan))
-)
-
-;; Node::Foreign(luau_foreign::LuauLessThanEqual)
-(decl LuauLessThanEqual (Link Link) Link)
-
-(extractor (LuauLessThanEqual lhs rhs)
-	(LuauCompareOperation lhs rhs (LuauCompareOperator.LessThanEqual))
-)
-
-;; Node::Foreign(luau_foreign::BooleanToInteger)
 (decl BooleanToInteger (Link) Link)
 (extern extractor BooleanToInteger get_boolean_to_integer)
 
-;; Luau `==`; i32 boolean result
-(decl pure raw_luau_equal (f64 f64) i32)
-(extern constructor raw_luau_equal raw_luau_equal)
-
-;; Luau `~=`; i32 boolean result
-(decl pure raw_luau_not_equal (f64 f64) i32)
-(extern constructor raw_luau_not_equal raw_luau_not_equal)
-
-;; Luau `<`; i32 boolean result
-(decl pure raw_luau_less_than (f64 f64) i32)
-(extern constructor raw_luau_less_than raw_luau_less_than)
-
-;; Luau `<=`; i32 boolean result
-(decl pure raw_luau_less_than_equal (f64 f64) i32)
-(extern constructor raw_luau_less_than_equal raw_luau_less_than_equal)
+(decl pure EvaluateLuauComparison (LuauCompareOperator f64 f64) i32)
+(extern constructor EvaluateLuauComparison evaluate_luau_comparison)
 
 (decl partial SimplifyLuauCompare (Link) Link)
 
-;; (N < N) => 0
 (rule 1
 	(SimplifyLuauCompare
-		(BooleanToInteger (LuauLessThan value value))
+		(BooleanToInteger
+			(LuauCompareOperation value value (LuauCompareOperator.LessThan))
+		)
 	)
 
 	(I32 0)
 )
 
-;; (K1 == K2) => K3
 (rule
 	(SimplifyLuauCompare
-		(BooleanToInteger (LuauEqual (LuauNumber lhs) (LuauNumber rhs)))
+		(BooleanToInteger
+			(LuauCompareOperation (LuauNumber left) (LuauNumber right) operator)
+		)
 	)
 
-	(I32 (raw_luau_equal lhs rhs))
-)
-
-;; (K1 ~= K2) => K3
-(rule
-	(SimplifyLuauCompare
-		(BooleanToInteger (LuauNotEqual (LuauNumber lhs) (LuauNumber rhs)))
-	)
-
-	(I32 (raw_luau_not_equal lhs rhs))
-)
-
-;; (K1 < K2) => K3
-(rule
-	(SimplifyLuauCompare
-		(BooleanToInteger (LuauLessThan (LuauNumber lhs) (LuauNumber rhs)))
-	)
-
-	(I32 (raw_luau_less_than lhs rhs))
-)
-
-;; (K1 <= K2) => K3
-(rule
-	(SimplifyLuauCompare
-		(BooleanToInteger (LuauLessThanEqual (LuauNumber lhs) (LuauNumber rhs)))
-	)
-
-	(I32 (raw_luau_less_than_equal lhs rhs))
+	(I32 (EvaluateLuauComparison operator left right))
 )
