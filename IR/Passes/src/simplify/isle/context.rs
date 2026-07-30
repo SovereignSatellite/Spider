@@ -102,6 +102,10 @@ impl Context for RegionContext<'_> {
 		Node::add_i64_into(self.0, arg0)
 	}
 
+	fn widen_i32_value(&mut self, arg0: i32) -> i64 {
+		i64::from(arg0)
+	}
+
 	fn get_integer_unary_operation(
 		&mut self,
 		arg0: Link,

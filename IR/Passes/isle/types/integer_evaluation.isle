@@ -15,3 +15,7 @@
 
 (decl pure EvaluateI64Comparison (IntegerCompareOperator i64 i64) i32)
 (extern constructor EvaluateI64Comparison evaluate_i64_comparison)
+
+(decl pure WidenI32Value (i32) i64)
+(extern constructor WidenI32Value widen_i32_value)
+(convert i32 i64 WidenI32Value)

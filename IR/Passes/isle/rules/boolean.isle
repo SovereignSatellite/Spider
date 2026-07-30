@@ -183,3 +183,71 @@
 
 	(ReduceWidenedBooleanUnaryOperation boolean operator)
 )
+
+(rule 32
+	(SimplifyInteger
+		(IntegerCompareOperation
+			(IntegerWiden left_boolean @ (ExactBoolean _))
+			(IntegerWiden right_boolean @ (ExactBoolean _))
+			(IntegerType.I64)
+			operator
+		)
+	)
+
+	(ReduceWidenedBooleanComparisonPair left_boolean right_boolean operator)
+)
+
+(rule 29
+	(SimplifyInteger
+		(IntegerCompareOperation
+			left_boolean @ (ExactBoolean _)
+			right_boolean @ (ExactBoolean _)
+			(IntegerType.I32)
+			operator
+		)
+	)
+
+	(ReduceBooleanComparisonPair left_boolean right_boolean operator)
+)
+
+(rule 25
+	(SimplifyInteger
+		(IntegerBinaryOperation
+			left_boolean @ (ExactBoolean _)
+			right_boolean @ (ExactBoolean _)
+			(IntegerType.I32)
+			operator
+		)
+	)
+
+	(ReduceBooleanBinaryPair left_boolean right_boolean operator)
+)
+
+(rule 21
+	(SimplifyInteger
+		(IntegerBinaryOperation
+			(IntegerWiden left_boolean @ (ExactBoolean _))
+			(IntegerWiden right_boolean @ (ExactBoolean _))
+			(IntegerType.I64)
+			operator
+		)
+	)
+
+	(ReduceWidenedBooleanBinaryPair left_boolean right_boolean operator)
+)
+
+(rule
+	(SimplifyInteger
+		(NumberCompareOperation source source _ (NumberCompareOperator.LessThan))
+	)
+
+	(I32 0)
+)
+
+(rule
+	(SimplifyInteger
+		(NumberCompareOperation source source type (NumberCompareOperator.LessThanEqual))
+	)
+
+	(NumberCompareOperation source source type (NumberCompareOperator.Equal))
+)
