@@ -464,11 +464,11 @@ impl<'allocator, 'policy> Emitter<'allocator, 'policy> {
 		} else if let Some(node) = any.downcast_ref::<ForceI32>() {
 			self.data_handler
 				.build_apply_1(region, "force_i32", [node.source])
-		} else if let Some(node) = any.downcast_ref::<ForceU32>() {
+		} else {
+			let node = any.downcast_ref::<ForceU32>()?;
+
 			self.data_handler
 				.build_apply_1(region, "force_u32", [node.source])
-		} else {
-			return None;
 		};
 
 		Some(expression)
@@ -503,11 +503,11 @@ impl<'allocator, 'policy> Emitter<'allocator, 'policy> {
 		} else if let Some(node) = any.downcast_ref::<LuaJITLessThan>() {
 			self.data_handler
 				.build_infix(region, "<", node.lhs, node.rhs)
-		} else if let Some(node) = any.downcast_ref::<LuaJITLessThanEqual>() {
+		} else {
+			let node = any.downcast_ref::<LuaJITLessThanEqual>()?;
+
 			self.data_handler
 				.build_infix(region, "<=", node.lhs, node.rhs)
-		} else {
-			return None;
 		};
 
 		Some(expression)
@@ -540,11 +540,11 @@ impl<'allocator, 'policy> Emitter<'allocator, 'policy> {
 		} else if let Some(node) = any.downcast_ref::<IntoBitsF64>() {
 			self.data_handler
 				.build_apply_1(region, "into_bits_f64", [node.source])
-		} else if let Some(node) = any.downcast_ref::<BooleanToInteger>() {
+		} else {
+			let node = any.downcast_ref::<BooleanToInteger>()?;
+
 			self.data_handler
 				.build_boolean_to_integer(region, node.source)
-		} else {
-			return None;
 		};
 
 		Some(expression)
@@ -574,11 +574,11 @@ impl<'allocator, 'policy> Emitter<'allocator, 'policy> {
 		} else if let Some(node) = any.downcast_ref::<MathMax>() {
 			self.data_handler
 				.build_apply_2(region, "math_max", [node.lhs, node.rhs])
-		} else if let Some(node) = any.downcast_ref::<MathFmod>() {
+		} else {
+			let node = any.downcast_ref::<MathFmod>()?;
+
 			self.data_handler
 				.build_apply_2(region, "math_fmod", [node.lhs, node.rhs])
-		} else {
-			return None;
 		};
 
 		Some(expression)
