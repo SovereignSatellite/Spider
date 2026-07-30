@@ -462,11 +462,11 @@ impl<'allocator, 'policy> Emitter<'allocator, 'policy> {
 		} else if let Some(node) = any.downcast_ref::<Bit32CountLz>() {
 			self.data_handler
 				.build_apply_1(region, "bit32_countlz", [node.source])
-		} else if let Some(node) = any.downcast_ref::<Bit32CountRz>() {
+		} else {
+			let node = any.downcast_ref::<Bit32CountRz>()?;
+
 			self.data_handler
 				.build_apply_1(region, "bit32_countrz", [node.source])
-		} else {
-			return None;
 		};
 
 		Some(expression)
@@ -504,11 +504,11 @@ impl<'allocator, 'policy> Emitter<'allocator, 'policy> {
 		} else if let Some(node) = any.downcast_ref::<LuauLessThan>() {
 			self.data_handler
 				.build_infix(region, "<", node.lhs, node.rhs)
-		} else if let Some(node) = any.downcast_ref::<LuauLessThanEqual>() {
+		} else {
+			let node = any.downcast_ref::<LuauLessThanEqual>()?;
+
 			self.data_handler
 				.build_infix(region, "<=", node.lhs, node.rhs)
-		} else {
-			return None;
 		};
 
 		Some(expression)
@@ -535,11 +535,11 @@ impl<'allocator, 'policy> Emitter<'allocator, 'policy> {
 		} else if let Some(node) = any.downcast_ref::<IsPositive>() {
 			self.data_handler
 				.build_apply_1(region, "is_positive", [node.source])
-		} else if let Some(node) = any.downcast_ref::<BooleanToInteger>() {
+		} else {
+			let node = any.downcast_ref::<BooleanToInteger>()?;
+
 			self.data_handler
 				.build_boolean_to_integer(region, node.source)
-		} else {
-			return None;
 		};
 
 		Some(expression)
@@ -569,11 +569,11 @@ impl<'allocator, 'policy> Emitter<'allocator, 'policy> {
 		} else if let Some(node) = any.downcast_ref::<MathMax>() {
 			self.data_handler
 				.build_apply_2(region, "math_max", [node.lhs, node.rhs])
-		} else if let Some(node) = any.downcast_ref::<MathFmod>() {
+		} else {
+			let node = any.downcast_ref::<MathFmod>()?;
+
 			self.data_handler
 				.build_apply_2(region, "math_fmod", [node.lhs, node.rhs])
-		} else {
-			return None;
 		};
 
 		Some(expression)
