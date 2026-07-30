@@ -1,56 +1,47 @@
-;; Node::Foreign(luau_foreign::FromBitsI64), splitting a packed i64 into words
 (decl FromBitsI64 (Link) Link)
 (extern extractor FromBitsI64 get_from_bits_i64)
 
-;; Node::Foreign(luau_foreign::IntoBitsI64), joining low and high words
 (decl IntoBitsI64 (Link Link) Link)
 (extern extractor IntoBitsI64 get_into_bits_i64)
 
-;; An into_bits_i64 wrapping the from_bits_i64 of one source, recovering it
 (decl RepackedI64 (Link) Link)
 (extern extractor RepackedI64 get_repacked_i64)
 
-;; The low word of a packed i64 constant, matching the printer's little-endian split
+;; Word order follows the target printer's little-endian packed representation.
 (decl pure raw_i64_low_word (i64) i32)
 (extern constructor raw_i64_low_word raw_i64_low_word)
 
-;; The high word of a packed i64 constant, matching the printer's little-endian split
 (decl pure raw_i64_high_word (i64) i32)
 (extern constructor raw_i64_high_word raw_i64_high_word)
 
-;; The packed i64 constant joining a low and high word
 (decl pure raw_i64_from_words (i32 i32) i64)
 (extern constructor raw_i64_from_words raw_i64_from_words)
 
-;; The low word of a fresh from_bits_i64 split of N
 (decl split_low (Link) Link)
 (extern constructor split_low split_low)
 
-;; The sign-flipped high word of that same split — the high word of from_bits_i64(flip(N))
+;; Flipping the packed sign bit changes only the high split word.
 (decl flip_split_high (Link) Link)
 (extern constructor flip_split_high flip_split_high)
 
-(decl partial SimplifyLuauWide (Link) Links)
+(decl partial SimplifyLuauWide (Link) LinkPair)
 
-;; from_bits_i64(into_bits_i64(LO, HI)) => (LO, HI)
 (rule
 	(SimplifyLuauWide
 		(FromBitsI64 (IntoBitsI64 low high))
 	)
 
-	(Links.N2 low high)
+	(LinkPair.Pair low high)
 )
 
-;; from_bits_i64(K) => (LO, HI) (K a packed i64 constant)
 (rule 1
 	(SimplifyLuauWide
 		(FromBitsI64 (I64 packed))
 	)
 
-	(Links.N2 (I32 (raw_i64_low_word packed)) (I32 (raw_i64_high_word packed)))
+	(LinkPair.Pair (I32 (raw_i64_low_word packed)) (I32 (raw_i64_high_word packed)))
 )
 
-;; from_bits_i64(flip(N)) => (low(N), bit32.bxor(high(N), 0x80000000)); flip only toggles the sign bit
 (rule 2
 	(SimplifyLuauWide
 		(FromBitsI64 (FlipMostSignificant source))
@@ -58,11 +49,10 @@
 
 	(let
 		((low Link (split_low source)))
-		(Links.N2 low (flip_split_high low))
+		(LinkPair.Pair low (flip_split_high low))
 	)
 )
 
-;; Node::Foreign(luau_foreign::FlipMostSignificant)
 (decl FlipMostSignificant (Link) Link)
 
 (extractor (FlipMostSignificant source)
@@ -71,7 +61,6 @@
 
 (decl partial SimplifyLuauTransmute (Link) Link)
 
-;; flip(flip(N)) => N
 (rule 2
 	(SimplifyLuauTransmute
 		(FlipMostSignificant (FlipMostSignificant value))
@@ -80,7 +69,6 @@
 	value
 )
 
-;; into_bits_i64(from_bits_i64(N)) => N
 (rule
 	(SimplifyLuauTransmute
 		(RepackedI64 source)
@@ -89,7 +77,6 @@
 	source
 )
 
-;; into_bits_i64(LO, HI) => K (LO and HI constant words of a packed i64)
 (rule 1
 	(SimplifyLuauTransmute
 		(IntoBitsI64 (I32 low) (I32 high))

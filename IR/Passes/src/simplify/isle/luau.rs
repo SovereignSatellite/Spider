@@ -12,7 +12,7 @@ use luau_foreign::{
 };
 
 /// The operator carried by a Luau `bit32` binary node.
-#[derive(Clone, Copy)]
+#[derive(PartialEq, Eq, Clone, Copy)]
 pub enum Bit32BinaryOperator {
 	/// `bit32.band`.
 	And,

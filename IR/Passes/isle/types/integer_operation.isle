@@ -1,0 +1,61 @@
+(decl IntegerAdd (Link Link IntegerType) Link)
+
+(rule (IntegerAdd left right type)
+	(IntegerBinaryOperation left right type (IntegerBinaryOperator.Add))
+)
+
+(extractor (IntegerAdd left right type)
+	(IntegerBinaryOperation left right type (IntegerBinaryOperator.Add))
+)
+
+(decl IntegerSubtract (Link Link IntegerType) Link)
+
+(rule (IntegerSubtract left right type)
+	(IntegerBinaryOperation left right type (IntegerBinaryOperator.Subtract))
+)
+
+(extractor (IntegerSubtract left right type)
+	(IntegerBinaryOperation left right type (IntegerBinaryOperator.Subtract))
+)
+
+(decl IntegerMultiply (Link Link IntegerType) Link)
+
+(extractor (IntegerMultiply left right type)
+	(IntegerBinaryOperation left right type (IntegerBinaryOperator.Multiply))
+)
+
+(decl IntegerAnd (Link Link IntegerType) Link)
+
+(extractor (IntegerAnd left right type)
+	(IntegerBinaryOperation left right type (IntegerBinaryOperator.And))
+)
+
+(decl IntegerOr (Link Link IntegerType) Link)
+
+(extractor (IntegerOr left right type)
+	(IntegerBinaryOperation left right type (IntegerBinaryOperator.Or))
+)
+
+(decl IntegerExclusiveOr (Link Link IntegerType) Link)
+
+(extractor (IntegerExclusiveOr left right type)
+	(IntegerBinaryOperation left right type (IntegerBinaryOperator.ExclusiveOr))
+)
+
+(decl IntegerShiftLeft (Link Link IntegerType) Link)
+
+(extractor (IntegerShiftLeft left right type)
+	(IntegerBinaryOperation left right type (IntegerBinaryOperator.ShiftLeft))
+)
+
+(decl IntegerRotateLeft (Link Link IntegerType) Link)
+
+(extractor (IntegerRotateLeft left right type)
+	(IntegerBinaryOperation left right type (IntegerBinaryOperator.RotateLeft))
+)
+
+(decl IntegerRotateRight (Link Link IntegerType) Link)
+
+(extractor (IntegerRotateRight left right type)
+	(IntegerBinaryOperation left right type (IntegerBinaryOperator.RotateRight))
+)

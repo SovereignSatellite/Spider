@@ -1,7 +1,5 @@
-;; Node::RefIsNull
 (decl RefIsNull (Link) Link)
 (extern extractor RefIsNull get_ref_is_null)
 
-;; Node::Null
 (decl Null () Link)
 (extern extractor Null get_null)
