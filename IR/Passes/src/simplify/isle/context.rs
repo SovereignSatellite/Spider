@@ -467,6 +467,10 @@ impl Context for RegionContext<'_> {
 		}
 	}
 
+	fn add_integer_widen(&mut self, arg0: Link) -> Link {
+		IntegerWiden::add_into(self.0, arg0)
+	}
+
 	fn get_sign_extend_idempotent(&mut self, arg0: Link) -> Option<Link> {
 		let &Node::IntegerSignExtend(IntegerSignExtend {
 			source,
