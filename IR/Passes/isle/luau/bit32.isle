@@ -37,6 +37,16 @@
 (decl pure EvaluateBit32Unary (Bit32UnaryOperator i32) i32)
 (extern constructor EvaluateBit32Unary evaluate_bit32_unary)
 
+(decl pure partial HasBit32ZeroIdentity (Bit32BinaryOperator) bool)
+
+(rule (HasBit32ZeroIdentity (Bit32BinaryOperator.Or)) true)
+(rule (HasBit32ZeroIdentity (Bit32BinaryOperator.ExclusiveOr)) true)
+(rule (HasBit32ZeroIdentity (Bit32BinaryOperator.ShiftLeft)) true)
+(rule (HasBit32ZeroIdentity (Bit32BinaryOperator.ShiftRightUnsigned)) true)
+(rule (HasBit32ZeroIdentity (Bit32BinaryOperator.ShiftRightSigned)) true)
+(rule (HasBit32ZeroIdentity (Bit32BinaryOperator.RotateLeft)) true)
+(rule (HasBit32ZeroIdentity (Bit32BinaryOperator.RotateRight)) true)
+
 (decl partial SimplifyLuauBit32 (Link) Link)
 
 (rule 5
@@ -47,8 +57,9 @@
 			operator
 		)
 	)
+	(if-let fused (FuseBit32Binary operator first second))
 
-	(Bit32BinaryOperation source (I32 (FuseBit32Binary operator first second)) operator)
+	(Bit32BinaryOperation source (I32 fused) operator)
 )
 
 (rule 4
@@ -105,8 +116,9 @@
 
 (rule 1
 	(SimplifyLuauBit32
-		(Bit32BinaryOperation (CanonicalBit32 source) (I32 0) _)
+		(Bit32BinaryOperation (CanonicalBit32 source) (I32 0) operator)
 	)
+	(if-let true (HasBit32ZeroIdentity operator))
 
 	source
 )
