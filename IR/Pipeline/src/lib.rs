@@ -35,34 +35,38 @@ impl Optimizer {
 		}
 	}
 
-	fn apply(&mut self, region: &mut Region, pass: &mut dyn FnMut(&mut Region) -> bool) {
-		#[cfg(debug_assertions)]
-		let mut iterations_allowed = region.nodes().len().saturating_mul(64).saturating_add(1024);
+	fn run_generic_round(&mut self, region: &mut Region) -> bool {
+		let mut changed = false;
 
+		changed |= control_folder::run(region.nodes_mut());
+		changed |= self.invariant_port_mover.run(region.nodes_mut());
+
+		changed |= self.dead_port_eliminator.run(region.nodes_mut());
+
+		changed |= isle::reduce_match_outputs(region.nodes_mut());
+		changed |= self.common_node_eliminator.run(region.nodes_mut());
+		changed |= isle::run(region.nodes_mut());
+
+		changed
+	}
+
+	fn optimize_region(
+		&mut self,
+		region: &mut Region,
+		lower_target_nodes: &mut dyn FnMut(&mut Region) -> bool,
+	) {
 		loop {
-			self.invariant_port_mover.run(region.nodes_mut());
-
-			let folded = control_folder::run(region.nodes_mut());
-			let simplified = isle::run(region.nodes_mut());
-			let _ = self.dead_port_eliminator.run(region.nodes_mut());
-			let reduced_match_outputs = isle::reduce_match_outputs(region.nodes_mut());
-			let merged = self.common_node_eliminator.run(region.nodes_mut());
-
-			if !folded && !simplified && !reduced_match_outputs && !merged && !pass(region) {
-				break;
+			if self.run_generic_round(region) {
+				identity::remove(region.nodes_mut());
+				continue;
 			}
 
-			#[cfg(debug_assertions)]
-			{
-				assert!(
-					iterations_allowed > 0,
-					"optimizer did not converge; a non-shrinking rewrite is likely oscillating"
-				);
-
-				iterations_allowed -= 1;
+			if lower_target_nodes(region) {
+				identity::remove(region.nodes_mut());
+				continue;
 			}
 
-			identity::remove(region.nodes_mut());
+			break;
 		}
 	}
 
@@ -107,17 +111,17 @@ impl Optimizer {
 		}
 	}
 
-	/// Optimizes every region in the complete function tree, deepest first.
-	/// When `should_optimize`, `pass` runs after generic rewrites settle and reports its changes.
+	/// Optimize every region in the complete function tree, deepest first.
+	/// Run target lowering only after generic rewrites settle.
 	pub fn run(
 		&mut self,
 		function: &Arc<Mutex<Function>>,
 		should_optimize: bool,
-		pass: &mut dyn FnMut(&mut Region) -> bool,
+		lower_target_nodes: &mut dyn FnMut(&mut Region) -> bool,
 	) {
 		region_driver::run_function(function, &mut |mut region| {
 			if should_optimize {
-				self.apply(&mut region, pass);
+				self.optimize_region(&mut region, lower_target_nodes);
 			}
 
 			self.finalize(&mut region);
