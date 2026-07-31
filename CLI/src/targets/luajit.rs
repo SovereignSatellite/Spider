@@ -53,10 +53,10 @@ fn print_full_library(out: &mut dyn Write) -> std::io::Result<()> {
 pub fn print(root: &Arc<Mutex<Function>>, out: &mut dyn Write) {
 	let function = build_function(root);
 
-	print_library(&function, out).expect("library should print");
-	print_function(&function, out).expect("source should print");
+	print_library(&function, out).expect("failed to write the LuaJIT runtime library");
+	print_function(&function, out).expect("failed to write the compiled LuaJIT source");
 }
 
 pub fn print_runtime(out: &mut dyn Write) {
-	print_full_library(out).expect("library should print");
+	print_full_library(out).expect("failed to write the LuaJIT runtime library");
 }

@@ -23,11 +23,11 @@ fn has_balanced_brackets(source: &str) -> bool {
 }
 
 pub fn lift(data: &[u8]) -> Arc<Mutex<Function>> {
-	let source = str::from_utf8(data).expect("`file` should be a valid UTF-8 string");
+	let source = str::from_utf8(data).expect("the input file is not valid UTF-8");
 
 	assert!(
 		has_balanced_brackets(source),
-		"`file` should have balanced brackets"
+		"the input file contains unbalanced brackets"
 	);
 
 	let mut lifter = TuringMachineLifter::new();

@@ -9,7 +9,7 @@ use web_assembly_lifter::WebAssemblyLifter;
 pub fn lift(data: &[u8]) -> Arc<Mutex<Function>> {
 	Validator::new()
 		.validate_all(data)
-		.expect("`file` should be a WebAssembly binary");
+		.expect("the input file is not a valid WebAssembly binary");
 
 	let mut lifter = WebAssemblyLifter::new();
 
