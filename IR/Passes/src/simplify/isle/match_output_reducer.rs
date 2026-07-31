@@ -21,47 +21,73 @@ enum IntegerConstant {
 	I64(i64),
 }
 
-struct BinaryMatchBranches {
+struct BinaryMatch {
+	predicate: Link,
+	result_count: u16,
 	on_false: Arc<Mutex<Branch>>,
 	on_true: Arc<Mutex<Branch>>,
 }
 
-fn integer_constant_at(branch: &Mutex<Branch>, output_port: u16) -> Option<IntegerConstant> {
-	let guard = branch.lock();
-	let source = identity_source(
-		&guard.nodes,
-		guard.results().sources[usize::from(output_port)],
-	);
-	let node = &guard.nodes[usize::try_from(source.0).unwrap()];
-	let constant = if let &Node::I32(value) = node {
-		Some(IntegerConstant::I32(value))
-	} else if let &Node::I64(value) = node {
-		Some(IntegerConstant::I64(value))
-	} else {
-		None
-	};
-	drop(guard);
+impl IntegerConstant {
+	fn at(branch: &Mutex<Branch>, output_port: u16) -> Option<Self> {
+		let guard = branch.lock();
+		let source = identity_source(
+			&guard.nodes,
+			guard.results().sources[usize::from(output_port)],
+		);
+		let node = &guard.nodes[usize::try_from(source.0).unwrap()];
 
-	constant
+		let constant = if let &Node::I32(value) = node {
+			Some(Self::I32(value))
+		} else if let &Node::I64(value) = node {
+			Some(Self::I64(value))
+		} else {
+			None
+		};
+		drop(guard);
+
+		constant
+	}
 }
 
-fn reduce_output(
-	nodes: &mut Vec<Node>,
-	predicate: Link,
-	branches: &BinaryMatchBranches,
-	output_port: u16,
-) -> Option<Link> {
-	match (
-		integer_constant_at(&branches.on_false, output_port)?,
-		integer_constant_at(&branches.on_true, output_port)?,
-	) {
-		(IntegerConstant::I32(on_false), IntegerConstant::I32(on_true)) => Some(
-			constructor_ReduceI32Table(&mut RegionContext(nodes), predicate, on_false, on_true),
-		),
-		(IntegerConstant::I64(on_false), IntegerConstant::I64(on_true)) => Some(
-			constructor_ReduceI64Table(&mut RegionContext(nodes), predicate, on_false, on_true),
-		),
-		_ => None,
+impl BinaryMatch {
+	fn from_region(match_region: &Mutex<Match>) -> Option<Self> {
+		let guard = match_region.lock();
+		let [on_false, on_true] = guard.branches.as_slice() else {
+			return None;
+		};
+
+		Some(Self {
+			predicate: guard.condition,
+			result_count: guard.result_count(),
+			on_false: Arc::clone(on_false),
+			on_true: Arc::clone(on_true),
+		})
+	}
+
+	fn reduce_output(&self, nodes: &mut Vec<Node>, output_port: u16) -> Option<Link> {
+		match (
+			IntegerConstant::at(&self.on_false, output_port)?,
+			IntegerConstant::at(&self.on_true, output_port)?,
+		) {
+			(IntegerConstant::I32(on_false), IntegerConstant::I32(on_true)) => {
+				Some(constructor_ReduceI32Table(
+					&mut RegionContext(nodes),
+					self.predicate,
+					on_false,
+					on_true,
+				))
+			}
+			(IntegerConstant::I64(on_false), IntegerConstant::I64(on_true)) => {
+				Some(constructor_ReduceI64Table(
+					&mut RegionContext(nodes),
+					self.predicate,
+					on_false,
+					on_true,
+				))
+			}
+			_ => None,
+		}
 	}
 }
 
@@ -70,25 +96,14 @@ fn reduce_match(
 	match_index: usize,
 	match_region: &Arc<Mutex<Match>>,
 ) -> bool {
-	let (predicate, branches, result_count) = {
-		let guard = match_region.lock();
-		let [on_false, on_true] = guard.branches.as_slice() else {
-			return false;
-		};
-
-		(
-			guard.condition,
-			BinaryMatchBranches {
-				on_false: Arc::clone(on_false),
-				on_true: Arc::clone(on_true),
-			},
-			guard.result_count(),
-		)
+	let Some(binary_match) = BinaryMatch::from_region(match_region) else {
+		return false;
 	};
-	let mut remaining_output_ports = 0..result_count;
+	let mut remaining_output_ports = 0..binary_match.result_count;
 	let Some((first_reduced_port, first_replacement)) =
 		remaining_output_ports.find_map(|output_port| {
-			reduce_output(nodes, predicate, &branches, output_port)
+			binary_match
+				.reduce_output(nodes, output_port)
 				.map(|replacement| (output_port, replacement))
 		})
 	else {
@@ -103,7 +118,8 @@ fn reduce_match(
 		.map(|output_port| Link(moved_match_identifier, output_port))
 		.chain(once(first_replacement))
 		.chain(remaining_output_ports.map(|output_port| {
-			reduce_output(nodes, predicate, &branches, output_port)
+			binary_match
+				.reduce_output(nodes, output_port)
 				.unwrap_or(Link(moved_match_identifier, output_port))
 		}))
 		.collect();
