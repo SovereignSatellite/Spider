@@ -192,6 +192,15 @@ define_optimizations!(
 		"Move values unchanged by conditional or loop regions into the surrounding region."
 	),
 	(
+		[],
+		invert_head_controlled_loops,
+		HeadControlledLoopInversion,
+		"invert-head-controlled-loops",
+		Two,
+		ControlMotion,
+		"Invert correlated head-controlled loops around their controlling conditional."
+	),
+	(
 		[ControlFolder],
 		fold_constant_match,
 		ConstantMatchFolding,

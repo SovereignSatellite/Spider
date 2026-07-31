@@ -98,7 +98,7 @@ fn add_optimization_arguments(mut command: ClapCommand) -> ClapCommand {
 				.value_parser(clap::value_parser!(u32))
 				.help_heading(OPTIMIZATION_HEADING)
 				.help(
-					"Limit graph-changing fixpoint rounds per region; omitted means 4,294,967,295 rounds.",
+					"Limit each graph-changing fixpoint phase to this many rounds; omitted means 4,294,967,295 rounds.",
 				),
 		);
 
