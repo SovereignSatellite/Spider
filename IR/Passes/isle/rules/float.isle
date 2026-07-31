@@ -8,6 +8,7 @@
 			(NumberUnaryOperator.Negate)
 		)
 	)
+	(if-let true (OptimizationEnabled (Optimization.ReduceDoubleFloatNegation)))
 
 	source
 )
@@ -20,6 +21,7 @@
 			(NumberUnaryOperator.Absolute)
 		)
 	)
+	(if-let true (OptimizationEnabled (Optimization.ReduceFloatAbsolute)))
 
 	inner
 )
@@ -32,6 +34,7 @@
 			(NumberUnaryOperator.Absolute)
 		)
 	)
+	(if-let true (OptimizationEnabled (Optimization.ReduceFloatAbsolute)))
 
 	(NumberUnaryOperation source type (NumberUnaryOperator.Absolute))
 )

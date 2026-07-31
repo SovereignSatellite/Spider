@@ -4,6 +4,7 @@
 	(SimplifyMutable
 		(MutableGet mutable @ (MutableNew source))
 	)
+	(if-let true (OptimizationEnabled (Optimization.ForwardMutableGet)))
 
 	(LinkPair.Pair source mutable)
 )
@@ -12,6 +13,7 @@
 	(SimplifyMutable
 		(MutableGet mutable @ (MutableSet _ source))
 	)
+	(if-let true (OptimizationEnabled (Optimization.ForwardMutableGet)))
 
 	(LinkPair.Pair source mutable)
 )

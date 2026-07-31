@@ -19,6 +19,7 @@ use wast::{
 	token::{F32, F64, Id, Span},
 };
 
+use ir_passes::catalog::Optimizations;
 use luajit_builder as _;
 use luajit_lower as _;
 use luajit_printer as _;
@@ -88,9 +89,14 @@ impl Luau {
 	}
 
 	fn format_source(&mut self, data: &[u8]) -> Result<()> {
+		let optimizations = if self.is_optimized {
+			Optimizations::all()
+		} else {
+			Optimizations::none()
+		};
 		let root = self
 			.compiler
-			.run(data, self.is_optimized, &mut luau_lower::apply);
+			.run(data, optimizations, &mut luau_lower::apply);
 
 		let function = self.builder.run(&root);
 

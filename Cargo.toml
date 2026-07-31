@@ -14,6 +14,7 @@ members = [
 
 [workspace.dependencies]
 ir-graph = { path = "IR/Graph" }
+ir-passes = { path = "IR/Passes" }
 ir-pipeline = { path = "IR/Pipeline" }
 luajit-builder = { path = "Targets/LuaJIT/Builder" }
 luajit-foreign = { path = "Targets/LuaJIT/Foreign" }

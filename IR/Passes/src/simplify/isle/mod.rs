@@ -2,15 +2,18 @@
 
 use ir_graph::{Link, Node, operation::Identity};
 
+use crate::catalog::Optimizations;
+
 use self::{
 	context::RegionContext,
 	internal::{
-		LinkPair, constructor_SimplifyAggregate, constructor_SimplifyConvert,
-		constructor_SimplifyFloat, constructor_SimplifyInteger, constructor_SimplifyLuauArithmetic,
-		constructor_SimplifyLuauBit32, constructor_SimplifyLuauCompare,
-		constructor_SimplifyLuauMath, constructor_SimplifyLuauTransmute,
-		constructor_SimplifyLuauWide, constructor_SimplifyMemory, constructor_SimplifyMutable,
-		constructor_SimplifyReference, constructor_SimplifyTable,
+		LinkPair, constructor_SimplifyAggregate, constructor_SimplifyBoolean,
+		constructor_SimplifyConvert, constructor_SimplifyFloat, constructor_SimplifyInteger,
+		constructor_SimplifyLuauArithmetic, constructor_SimplifyLuauBit32,
+		constructor_SimplifyLuauCompare, constructor_SimplifyLuauMath,
+		constructor_SimplifyLuauTransmute, constructor_SimplifyLuauWide,
+		constructor_SimplifyMemory, constructor_SimplifyMutable, constructor_SimplifyReference,
+		constructor_SimplifyTable,
 	},
 };
 
@@ -29,46 +32,64 @@ fn replace_node(nodes: &mut [Node], destination: u32, sources: &[Link]) {
 
 fn simplify_single<Constructor>(
 	nodes: &mut Vec<Node>,
+	optimizations: &Optimizations,
 	identifier: u32,
 	constructor: Constructor,
 ) -> bool
 where
 	Constructor: FnOnce(&mut RegionContext<'_>, Link) -> Option<Link>,
 {
-	constructor(&mut RegionContext(nodes), Link(identifier, 0)).is_some_and(|source| {
-		replace_node(nodes, identifier, &[source]);
+	let Some(source) = constructor(
+		&mut RegionContext {
+			nodes,
+			optimizations,
+		},
+		Link(identifier, 0),
+	) else {
+		return false;
+	};
 
-		true
-	})
+	replace_node(nodes, identifier, &[source]);
+
+	true
 }
 
 fn simplify_pair<Constructor>(
 	nodes: &mut Vec<Node>,
+	optimizations: &Optimizations,
 	identifier: u32,
 	constructor: Constructor,
 ) -> bool
 where
 	Constructor: FnOnce(&mut RegionContext<'_>, Link) -> Option<LinkPair>,
 {
-	constructor(&mut RegionContext(nodes), Link(identifier, 0)).is_some_and(|sources| {
-		replace_node(nodes, identifier, &sources.as_fixed());
+	let Some(sources) = constructor(
+		&mut RegionContext {
+			nodes,
+			optimizations,
+		},
+		Link(identifier, 0),
+	) else {
+		return false;
+	};
 
-		true
-	})
+	replace_node(nodes, identifier, &sources.as_fixed());
+
+	true
 }
 
-fn simplify_foreign(nodes: &mut Vec<Node>, identifier: u32) -> bool {
-	simplify_single(nodes, identifier, |context, link| {
+fn simplify_foreign(nodes: &mut Vec<Node>, optimizations: &Optimizations, identifier: u32) -> bool {
+	simplify_single(nodes, optimizations, identifier, |context, link| {
 		constructor_SimplifyLuauBit32(context, link)
-	}) || simplify_single(nodes, identifier, |context, link| {
+	}) || simplify_single(nodes, optimizations, identifier, |context, link| {
 		constructor_SimplifyLuauArithmetic(context, link)
-	}) || simplify_single(nodes, identifier, |context, link| {
+	}) || simplify_single(nodes, optimizations, identifier, |context, link| {
 		constructor_SimplifyLuauCompare(context, link)
-	}) || simplify_single(nodes, identifier, |context, link| {
+	}) || simplify_single(nodes, optimizations, identifier, |context, link| {
 		constructor_SimplifyLuauMath(context, link)
-	}) || simplify_single(nodes, identifier, |context, link| {
+	}) || simplify_single(nodes, optimizations, identifier, |context, link| {
 		constructor_SimplifyLuauTransmute(context, link)
-	}) || simplify_pair(nodes, identifier, |context, link| {
+	}) || simplify_pair(nodes, optimizations, identifier, |context, link| {
 		constructor_SimplifyLuauWide(context, link)
 	})
 }
@@ -78,7 +99,7 @@ fn simplify_foreign(nodes: &mut Vec<Node>, identifier: u32) -> bool {
 	clippy::too_many_lines,
 	reason = "the exhaustive Node router stays in declaration order and owns one complete dispatch"
 )]
-fn simplify(nodes: &mut Vec<Node>, identifier: u32) -> bool {
+fn simplify(nodes: &mut Vec<Node>, optimizations: &Optimizations, identifier: u32) -> bool {
 	match &nodes[usize::try_from(identifier).unwrap()] {
 		Node::Function(_)
 		| Node::Match(_)
@@ -91,7 +112,7 @@ fn simplify(nodes: &mut Vec<Node>, identifier: u32) -> bool {
 		| Node::RepeatResults(_)
 		| Node::Import(_)
 		| Node::Export(_) => false,
-		Node::Foreign(_) => simplify_foreign(nodes, identifier),
+		Node::Foreign(_) => simplify_foreign(nodes, optimizations, identifier),
 		Node::Trap
 		| Node::Null
 		| Node::I32(_)
@@ -101,46 +122,62 @@ fn simplify(nodes: &mut Vec<Node>, identifier: u32) -> bool {
 		| Node::Identity(_)
 		| Node::Fence(_)
 		| Node::Apply(_) => false,
-		Node::RefIsNull(_) => simplify_single(nodes, identifier, |context, link| {
+		Node::RefIsNull(_) => simplify_single(nodes, optimizations, identifier, |context, link| {
 			constructor_SimplifyReference(context, link)
 		}),
 		Node::IntegerUnaryOperation(_)
 		| Node::IntegerBinaryOperation(_)
-		| Node::IntegerCompareOperation(_) => simplify_single(nodes, identifier, |context, link| {
-			constructor_SimplifyInteger(context, link)
-		}),
-		Node::IntegerNarrow(_) => simplify_single(nodes, identifier, |context, link| {
-			constructor_SimplifyConvert(context, link)
-		}),
+		| Node::IntegerCompareOperation(_) => {
+			simplify_single(nodes, optimizations, identifier, |context, link| {
+				constructor_SimplifyBoolean(context, link)
+			}) || simplify_single(nodes, optimizations, identifier, |context, link| {
+				constructor_SimplifyInteger(context, link)
+			})
+		}
+		Node::IntegerNarrow(_) => {
+			simplify_single(nodes, optimizations, identifier, |context, link| {
+				constructor_SimplifyConvert(context, link)
+			})
+		}
 		Node::IntegerWiden(_) => false,
-		Node::IntegerSignExtend(_) => simplify_single(nodes, identifier, |context, link| {
-			constructor_SimplifyConvert(context, link)
-		}),
+		Node::IntegerSignExtend(_) => {
+			simplify_single(nodes, optimizations, identifier, |context, link| {
+				constructor_SimplifyConvert(context, link)
+			})
+		}
 		Node::IntegerConvertToNumber(_) => false,
-		Node::IntegerTransmuteToNumber(_) => simplify_single(nodes, identifier, |context, link| {
-			constructor_SimplifyConvert(context, link)
-		}),
-		Node::NumberUnaryOperation(_) => simplify_single(nodes, identifier, |context, link| {
-			constructor_SimplifyFloat(context, link)
-		}),
+		Node::IntegerTransmuteToNumber(_) => {
+			simplify_single(nodes, optimizations, identifier, |context, link| {
+				constructor_SimplifyConvert(context, link)
+			})
+		}
+		Node::NumberUnaryOperation(_) => {
+			simplify_single(nodes, optimizations, identifier, |context, link| {
+				constructor_SimplifyFloat(context, link)
+			})
+		}
 		Node::NumberBinaryOperation(_) => false,
-		Node::NumberCompareOperation(_) => simplify_single(nodes, identifier, |context, link| {
-			constructor_SimplifyInteger(context, link)
-		}),
+		Node::NumberCompareOperation(_) => {
+			simplify_single(nodes, optimizations, identifier, |context, link| {
+				constructor_SimplifyBoolean(context, link)
+			})
+		}
 		Node::NumberNarrow(_) | Node::NumberWiden(_) | Node::NumberTruncateToInteger(_) => false,
-		Node::NumberTransmuteToInteger(_) => simplify_single(nodes, identifier, |context, link| {
-			constructor_SimplifyConvert(context, link)
-		}),
+		Node::NumberTransmuteToInteger(_) => {
+			simplify_single(nodes, optimizations, identifier, |context, link| {
+				constructor_SimplifyConvert(context, link)
+			})
+		}
 		Node::MutableNew(_) => false,
-		Node::MutableGet(_) => simplify_pair(nodes, identifier, |context, link| {
+		Node::MutableGet(_) => simplify_pair(nodes, optimizations, identifier, |context, link| {
 			constructor_SimplifyMutable(context, link)
 		}),
 		Node::MutableSet(_) | Node::Aggregate(_) => false,
-		Node::Extract(_) => simplify_single(nodes, identifier, |context, link| {
+		Node::Extract(_) => simplify_single(nodes, optimizations, identifier, |context, link| {
 			constructor_SimplifyAggregate(context, link)
 		}),
 		Node::TableNew(_) => false,
-		Node::TableGet(_) => simplify_pair(nodes, identifier, |context, link| {
+		Node::TableGet(_) => simplify_pair(nodes, optimizations, identifier, |context, link| {
 			constructor_SimplifyTable(context, link)
 		}),
 		Node::TableSet(_)
@@ -150,7 +187,7 @@ fn simplify(nodes: &mut Vec<Node>, identifier: u32) -> bool {
 		| Node::TableCopy(_)
 		| Node::TableDrop(_)
 		| Node::MemoryNew(_) => false,
-		Node::MemoryLoad(_) => simplify_pair(nodes, identifier, |context, link| {
+		Node::MemoryLoad(_) => simplify_pair(nodes, optimizations, identifier, |context, link| {
 			constructor_SimplifyMemory(context, link)
 		}),
 		Node::MemoryStore(_) | Node::MemoryFill(_) | Node::MemoryCopy(_) | Node::MemoryDrop(_) => {
@@ -161,7 +198,7 @@ fn simplify(nodes: &mut Vec<Node>, identifier: u32) -> bool {
 
 /// Sweeps every node once, reporting whether any rule fired.
 #[must_use = "propagate whether this pass changed the graph"]
-pub fn run(nodes: &mut Vec<Node>) -> bool {
+pub fn run(nodes: &mut Vec<Node>, optimizations: &Optimizations) -> bool {
 	let mut applied = false;
 
 	let Ok(last) = u32::try_from(nodes.len()) else {
@@ -169,7 +206,7 @@ pub fn run(nodes: &mut Vec<Node>) -> bool {
 	};
 
 	for identifier in (0..last).rev() {
-		applied |= simplify(nodes, identifier);
+		applied |= simplify(nodes, optimizations, identifier);
 	}
 
 	applied

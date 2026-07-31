@@ -3,7 +3,8 @@ use alloc::sync::Arc;
 use parking_lot::Mutex;
 
 use ir_graph::{Region, region::Function};
-use ir_pipeline::Optimizer;
+use ir_passes::catalog::Optimizations;
+use ir_pipeline::{OptimizationConfiguration, Optimizer};
 use web_assembly_lifter::WebAssemblyLifter;
 
 pub struct Compiler {
@@ -22,12 +23,14 @@ impl Compiler {
 	pub fn run(
 		&mut self,
 		data: &[u8],
-		should_optimize: bool,
-		pass: &mut dyn FnMut(&mut Region) -> bool,
+		optimizations: Optimizations,
+		lower_target_nodes: &mut dyn FnMut(&mut Region, &Optimizations) -> bool,
 	) -> Arc<Mutex<Function>> {
 		let function = self.lifter.run(data);
+		let configuration = OptimizationConfiguration::with_maximum_rounds(optimizations);
 
-		self.optimizer.run(&function, should_optimize, pass);
+		self.optimizer
+			.run(&function, &configuration, lower_target_nodes);
 
 		function
 	}

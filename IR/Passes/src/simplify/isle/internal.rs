@@ -43,6 +43,8 @@ use ir_graph::{
 	},
 };
 
+use crate::catalog::Optimization;
+
 use super::luau::{
 	Bit32BinaryOperator, Bit32UnaryOperator, LuauArithmeticOperator, LuauBinaryOperator,
 	LuauCompareOperator, LuauUnaryOperator,

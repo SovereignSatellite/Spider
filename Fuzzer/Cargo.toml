@@ -12,6 +12,7 @@ workspace = true
 
 [dependencies]
 ir-graph.workspace = true
+ir-passes.workspace = true
 ir-pipeline.workspace = true
 luajit-builder.workspace = true
 luajit-printer.workspace = true

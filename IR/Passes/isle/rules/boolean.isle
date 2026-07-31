@@ -1,5 +1,7 @@
+(decl partial SimplifyBoolean (Link) Link)
+
 (rule 31
-	(SimplifyInteger
+	(SimplifyBoolean
 		(IntegerCompareOperation
 			(IntegerWiden boolean @ (ExactBoolean _))
 			(I64 0)
@@ -7,12 +9,13 @@
 			(IntegerCompareOperator.Equal)
 		)
 	)
+	(if-let true (DirectComplementBooleanEnabled boolean))
 
 	(DirectComplementBoolean boolean)
 )
 
 (rule 30
-	(SimplifyInteger
+	(SimplifyBoolean
 		(IntegerCompareOperation
 			(IntegerWiden boolean @ (ExactBoolean _))
 			(I64 constant)
@@ -29,7 +32,7 @@
 )
 
 (rule 29
-	(SimplifyInteger
+	(SimplifyBoolean
 		(IntegerCompareOperation
 			(I64 constant)
 			(IntegerWiden boolean @ (ExactBoolean _))
@@ -46,7 +49,7 @@
 )
 
 (rule 28
-	(SimplifyInteger
+	(SimplifyBoolean
 		(IntegerCompareOperation
 			boolean @ (ExactBoolean _)
 			(I32 0)
@@ -59,7 +62,7 @@
 )
 
 (rule 27
-	(SimplifyInteger
+	(SimplifyBoolean
 		(IntegerCompareOperation
 			boolean @ (ExactBoolean _)
 			(I32 constant)
@@ -76,7 +79,7 @@
 )
 
 (rule 26
-	(SimplifyInteger
+	(SimplifyBoolean
 		(IntegerCompareOperation
 			(I32 constant)
 			boolean @ (ExactBoolean _)
@@ -93,7 +96,7 @@
 )
 
 (rule 24
-	(SimplifyInteger
+	(SimplifyBoolean
 		(IntegerBinaryOperation
 			boolean @ (ExactBoolean _)
 			(I32 constant)
@@ -110,7 +113,7 @@
 )
 
 (rule 23
-	(SimplifyInteger
+	(SimplifyBoolean
 		(IntegerBinaryOperation
 			(I32 constant)
 			boolean @ (ExactBoolean _)
@@ -127,7 +130,7 @@
 )
 
 (rule 22
-	(SimplifyInteger
+	(SimplifyBoolean
 		(IntegerUnaryOperation
 			boolean @ (ExactBoolean _)
 			(IntegerType.I32)
@@ -139,7 +142,7 @@
 )
 
 (rule 20
-	(SimplifyInteger
+	(SimplifyBoolean
 		(IntegerBinaryOperation
 			(IntegerWiden boolean @ (ExactBoolean _))
 			(I64 constant)
@@ -156,7 +159,7 @@
 )
 
 (rule 19
-	(SimplifyInteger
+	(SimplifyBoolean
 		(IntegerBinaryOperation
 			(I64 constant)
 			(IntegerWiden boolean @ (ExactBoolean _))
@@ -173,7 +176,7 @@
 )
 
 (rule 18
-	(SimplifyInteger
+	(SimplifyBoolean
 		(IntegerUnaryOperation
 			(IntegerWiden boolean @ (ExactBoolean _))
 			(IntegerType.I64)
@@ -185,7 +188,7 @@
 )
 
 (rule 32
-	(SimplifyInteger
+	(SimplifyBoolean
 		(IntegerCompareOperation
 			(IntegerWiden left_boolean @ (ExactBoolean _))
 			(IntegerWiden right_boolean @ (ExactBoolean _))
@@ -198,7 +201,7 @@
 )
 
 (rule 29
-	(SimplifyInteger
+	(SimplifyBoolean
 		(IntegerCompareOperation
 			left_boolean @ (ExactBoolean _)
 			right_boolean @ (ExactBoolean _)
@@ -211,7 +214,7 @@
 )
 
 (rule 25
-	(SimplifyInteger
+	(SimplifyBoolean
 		(IntegerBinaryOperation
 			left_boolean @ (ExactBoolean _)
 			right_boolean @ (ExactBoolean _)
@@ -224,7 +227,7 @@
 )
 
 (rule 21
-	(SimplifyInteger
+	(SimplifyBoolean
 		(IntegerBinaryOperation
 			(IntegerWiden left_boolean @ (ExactBoolean _))
 			(IntegerWiden right_boolean @ (ExactBoolean _))
@@ -237,17 +240,19 @@
 )
 
 (rule
-	(SimplifyInteger
+	(SimplifyBoolean
 		(NumberCompareOperation source source _ (NumberCompareOperator.LessThan))
 	)
+	(if-let true (OptimizationEnabled (Optimization.FoldReflexiveNumberOrdering)))
 
 	(I32 0)
 )
 
 (rule
-	(SimplifyInteger
+	(SimplifyBoolean
 		(NumberCompareOperation source source type (NumberCompareOperator.LessThanEqual))
 	)
+	(if-let true (OptimizationEnabled (Optimization.FoldReflexiveNumberOrdering)))
 
 	(NumberCompareOperation source source type (NumberCompareOperator.Equal))
 )

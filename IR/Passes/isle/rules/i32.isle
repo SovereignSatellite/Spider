@@ -4,6 +4,7 @@
 	(SimplifyInteger
 		(IntegerAdd lhs (I32 0) (IntegerType.I32))
 	)
+	(if-let true (OptimizationEnabled (Optimization.ReduceI32AddZero)))
 
 	lhs
 )
@@ -12,6 +13,7 @@
 	(SimplifyInteger
 		(IntegerSubtract lhs (I32 0) (IntegerType.I32))
 	)
+	(if-let true (OptimizationEnabled (Optimization.ReduceI32SubtractIdentity)))
 
 	lhs
 )
@@ -20,6 +22,7 @@
 	(SimplifyInteger
 		(IntegerMultiply lhs (I32 1) (IntegerType.I32))
 	)
+	(if-let true (OptimizationEnabled (Optimization.ReduceI32MultiplyIdentity)))
 
 	lhs
 )
@@ -28,6 +31,7 @@
 	(SimplifyInteger
 		(IntegerMultiply _ (I32 0) (IntegerType.I32))
 	)
+	(if-let true (OptimizationEnabled (Optimization.ReduceI32MultiplyIdentity)))
 
 	(I32 0)
 )
@@ -36,6 +40,7 @@
 	(SimplifyInteger
 		(IntegerAnd _ (I32 0) (IntegerType.I32))
 	)
+	(if-let true (OptimizationEnabled (Optimization.ReduceI32AndIdentity)))
 
 	(I32 0)
 )
@@ -44,6 +49,7 @@
 	(SimplifyInteger
 		(IntegerAnd lhs (I32 -1) (IntegerType.I32))
 	)
+	(if-let true (OptimizationEnabled (Optimization.ReduceI32AndIdentity)))
 
 	lhs
 )
@@ -52,6 +58,7 @@
 	(SimplifyInteger
 		(IntegerOr lhs (I32 0) (IntegerType.I32))
 	)
+	(if-let true (OptimizationEnabled (Optimization.ReduceI32OrIdentity)))
 
 	lhs
 )
@@ -60,6 +67,7 @@
 	(SimplifyInteger
 		(IntegerOr _ (I32 -1) (IntegerType.I32))
 	)
+	(if-let true (OptimizationEnabled (Optimization.ReduceI32OrIdentity)))
 
 	(I32 -1)
 )
@@ -68,6 +76,7 @@
 	(SimplifyInteger
 		(IntegerExclusiveOr lhs (I32 0) (IntegerType.I32))
 	)
+	(if-let true (OptimizationEnabled (Optimization.ReduceI32ExclusiveOrIdentity)))
 
 	lhs
 )
@@ -76,6 +85,7 @@
 	(SimplifyInteger
 		(IntegerShiftLeft lhs (I32 0) (IntegerType.I32))
 	)
+	(if-let true (OptimizationEnabled (Optimization.ReduceI32ShiftIdentity)))
 
 	lhs
 )
@@ -89,6 +99,7 @@
 			(IntegerBinaryOperator.ShiftRight _)
 		)
 	)
+	(if-let true (OptimizationEnabled (Optimization.ReduceI32ShiftIdentity)))
 
 	source
 )
@@ -97,6 +108,7 @@
 	(SimplifyInteger
 		(IntegerRotateLeft lhs (I32 0) (IntegerType.I32))
 	)
+	(if-let true (OptimizationEnabled (Optimization.ReduceI32RotateIdentity)))
 
 	lhs
 )
@@ -105,6 +117,7 @@
 	(SimplifyInteger
 		(IntegerRotateRight lhs (I32 0) (IntegerType.I32))
 	)
+	(if-let true (OptimizationEnabled (Optimization.ReduceI32RotateIdentity)))
 
 	lhs
 )
@@ -118,6 +131,7 @@
 			(IntegerBinaryOperator.Divide _)
 		)
 	)
+	(if-let true (OptimizationEnabled (Optimization.ReduceI32DivideOne)))
 
 	source
 )
@@ -131,6 +145,7 @@
 			(IntegerBinaryOperator.Remainder _)
 		)
 	)
+	(if-let true (OptimizationEnabled (Optimization.ReduceI32RemainderOne)))
 
 	(I32 0)
 )
@@ -139,6 +154,7 @@
 	(SimplifyInteger
 		(IntegerSubtract lhs lhs (IntegerType.I32))
 	)
+	(if-let true (OptimizationEnabled (Optimization.ReduceI32SubtractIdentity)))
 
 	(I32 0)
 )
@@ -148,10 +164,11 @@
 		(IntegerBinaryOperation
 			source
 			source
-			_
+			(IntegerType.I32)
 			(IntegerBinaryOperator.And)
 		)
 	)
+	(if-let true (OptimizationEnabled (Optimization.ReduceI32AndIdentity)))
 
 	source
 )
@@ -161,10 +178,11 @@
 		(IntegerBinaryOperation
 			source
 			source
-			_
+			(IntegerType.I32)
 			(IntegerBinaryOperator.Or)
 		)
 	)
+	(if-let true (OptimizationEnabled (Optimization.ReduceI32OrIdentity)))
 
 	source
 )
@@ -173,6 +191,7 @@
 	(SimplifyInteger
 		(IntegerExclusiveOr lhs lhs (IntegerType.I32))
 	)
+	(if-let true (OptimizationEnabled (Optimization.ReduceI32ExclusiveOrIdentity)))
 
 	(I32 0)
 )
@@ -181,6 +200,7 @@
 	(SimplifyInteger
 		(IntegerSubtract (I32 0) (IntegerSubtract (I32 0) lhs (IntegerType.I32)) (IntegerType.I32))
 	)
+	(if-let true (OptimizationEnabled (Optimization.ReduceI32DoubleNegation)))
 
 	lhs
 )
@@ -189,6 +209,7 @@
 	(SimplifyInteger
 		(IntegerUnaryOperation (I32 source) (IntegerType.I32) operator)
 	)
+	(if-let true (I32UnaryFoldingEnabled operator))
 
 	(I32 (EvaluateI32Unary operator source))
 )
@@ -202,6 +223,7 @@
 			operator
 		)
 	)
+	(if-let true (I32BinaryFoldingEnabled operator))
 
 	(I32 (EvaluateI32Binary operator left right))
 )
@@ -213,6 +235,7 @@
 			(I32 right_constant)
 		 (IntegerType.I32))
 	)
+	(if-let true (OptimizationEnabled (Optimization.ReassociateI32Constants)))
 
 	(IntegerAdd source (I32 (EvaluateI32Binary (IntegerBinaryOperator.Add) left_constant right_constant)) (IntegerType.I32))
 )
@@ -224,6 +247,7 @@
 			(I32 right_constant)
 		 (IntegerType.I32))
 	)
+	(if-let true (OptimizationEnabled (Optimization.ReassociateI32Constants)))
 
 	(IntegerAdd source (I32 (EvaluateI32Binary (IntegerBinaryOperator.Subtract) left_constant right_constant)) (IntegerType.I32))
 )
@@ -235,38 +259,43 @@
 			(I32 right_constant)
 		 (IntegerType.I32))
 	)
+	(if-let true (OptimizationEnabled (Optimization.ReassociateI32Constants)))
 
 	(IntegerSubtract source (I32 (EvaluateI32Binary (IntegerBinaryOperator.Add) left_constant right_constant)) (IntegerType.I32))
 )
 
 (rule 6
 	(SimplifyInteger
-		(IntegerCompareOperation source source _ (IntegerCompareOperator.Equal))
+		(IntegerCompareOperation source source (IntegerType.I32) (IntegerCompareOperator.Equal))
 	)
+	(if-let true (OptimizationEnabled (Optimization.FoldReflexiveI32Comparison)))
 
 	(I32 1)
 )
 
 (rule 6
 	(SimplifyInteger
-		(IntegerCompareOperation source source _ (IntegerCompareOperator.NotEqual))
+		(IntegerCompareOperation source source (IntegerType.I32) (IntegerCompareOperator.NotEqual))
 	)
+	(if-let true (OptimizationEnabled (Optimization.FoldReflexiveI32Comparison)))
 
 	(I32 0)
 )
 
 (rule 6
 	(SimplifyInteger
-		(IntegerCompareOperation source source _ (IntegerCompareOperator.LessThan _))
+		(IntegerCompareOperation source source (IntegerType.I32) (IntegerCompareOperator.LessThan _))
 	)
+	(if-let true (OptimizationEnabled (Optimization.FoldReflexiveI32Comparison)))
 
 	(I32 0)
 )
 
 (rule 6
 	(SimplifyInteger
-		(IntegerCompareOperation source source _ (IntegerCompareOperator.LessThanEqual _))
+		(IntegerCompareOperation source source (IntegerType.I32) (IntegerCompareOperator.LessThanEqual _))
 	)
+	(if-let true (OptimizationEnabled (Optimization.FoldReflexiveI32Comparison)))
 
 	(I32 1)
 )
@@ -280,6 +309,7 @@
 			operator
 		)
 	)
+	(if-let true (I32ComparisonFoldingEnabled operator))
 
 	(I32 (EvaluateI32Comparison operator left right))
 )

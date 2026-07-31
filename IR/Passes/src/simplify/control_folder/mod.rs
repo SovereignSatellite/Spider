@@ -2,18 +2,21 @@
 
 use ir_graph::{Link, Node, tracer::identity_source};
 
+use crate::catalog::Optimizations;
+
 mod inline;
 mod matcher;
 mod repeat;
 
 /// Folds constant-condition control flow in the region, reporting whether anything changed.
 #[must_use = "propagate whether this pass changed the graph"]
-pub fn run(nodes: &mut Vec<Node>) -> bool {
-	let original = nodes.len();
+pub fn run(nodes: &mut Vec<Node>, optimizations: &Optimizations) -> bool {
+	let original_node_count = nodes.len();
 	let mut folded = false;
 
-	for id in 0..original {
-		folded |= matcher::fold(nodes, id) || repeat::fold(nodes, id);
+	for identifier in 0..original_node_count {
+		folded |= (optimizations.fold_constant_match && matcher::fold(nodes, identifier))
+			|| (optimizations.fold_exiting_repeat && repeat::fold(nodes, identifier));
 	}
 
 	folded
