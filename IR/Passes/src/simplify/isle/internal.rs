@@ -1,5 +1,6 @@
 #![expect(
 	clippy::absolute_paths,
+	clippy::bool_comparison,
 	clippy::cognitive_complexity,
 	clippy::collapsible_if,
 	clippy::collapsible_match,
@@ -8,6 +9,8 @@
 	clippy::equatable_if_let,
 	clippy::excessive_nesting,
 	clippy::match_ref_pats,
+	clippy::match_wildcard_for_single_variants,
+	clippy::missing_const_for_fn,
 	clippy::needless_borrowed_reference,
 	clippy::needless_pass_by_ref_mut,
 	clippy::needless_return,
