@@ -52,7 +52,7 @@ fn print_root(root: &Arc<Mutex<Function>>, target: Target) {
 		Target::LuaJIT => targets::into_luajit(root, &mut output),
 	}
 
-	output.flush().expect("output should print");
+	output.flush().expect("failed to flush compiled output");
 }
 
 fn compile(arguments: CompileArguments) {
@@ -63,7 +63,7 @@ fn compile(arguments: CompileArguments) {
 		optimize,
 	} = arguments;
 
-	let data = std::fs::read(file).expect("failed to read file");
+	let data = std::fs::read(file).expect("failed to read the input file");
 	let root = build_root(&data, optimize, source, target);
 
 	print_root(&root, target);
@@ -77,7 +77,7 @@ fn print_runtime(target: RuntimeTarget) {
 		RuntimeTarget::LuaJIT => targets::into_luajit_runtime(&mut output),
 	}
 
-	output.flush().expect("output should print");
+	output.flush().expect("failed to flush the runtime script");
 }
 
 fn main() {
