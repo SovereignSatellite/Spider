@@ -23,104 +23,161 @@ pub fn apply(region: &mut Region) -> bool {
 
 	let mut changed = false;
 
-	for id in (0..length).rev() {
-		changed |= memory::lower(nodes, id) || table::lower(nodes, id) || lower_node(nodes, id);
+	for identifier in (0..length).rev() {
+		changed |= lower_node(nodes, identifier);
 	}
 
 	changed
 }
 
-// The node is taken out so its (Copy) payload can be read while the lowering
-// appends to `nodes`; a node that does not lower is put straight back.
+enum LoweringResult {
+	ReplaceWith(Link),
+	AlreadyReplaced,
+}
+
 #[expect(clippy::too_many_lines, reason = "exhaustive match over node variants")]
-fn lower_node(nodes: &mut Vec<Node>, id: u32) -> bool {
-	let index = usize::try_from(id).unwrap();
+fn lower_node(nodes: &mut Vec<Node>, identifier: u32) -> bool {
+	let index = usize::try_from(identifier).unwrap();
 	let node = mem::take(&mut nodes[index]);
 
-	let result = match &node {
-		Node::Function(_)
-		| Node::Match(_)
-		| Node::Repeat(_)
-		| Node::FunctionArguments(_)
-		| Node::FunctionResults(_)
-		| Node::BranchArguments(_)
-		| Node::BranchResults(_)
-		| Node::RepeatArguments(_)
-		| Node::RepeatResults(_)
-		| Node::Import(_)
-		| Node::Export(_)
-		| Node::Foreign(_)
-		| Node::Trap
-		| Node::Null
-		| Node::I32(_)
-		| Node::I64(_)
-		| Node::F32(_)
-		| Node::F64(_)
-		| Node::Identity(_)
-		| Node::Fence(_)
-		| Node::Apply(_)
-		| Node::RefIsNull(_)
-		| Node::MutableNew(_)
-		| Node::MutableGet(_)
-		| Node::MutableSet(_)
-		| Node::Aggregate(_)
-		| Node::Extract(_)
-		| Node::TableNew(_)
-		| Node::TableGet(_)
-		| Node::TableSet(_)
-		| Node::TableSize(_)
-		| Node::TableGrow(_)
-		| Node::TableFill(_)
-		| Node::TableCopy(_)
-		| Node::TableDrop(_)
-		| Node::MemoryNew(_)
-		| Node::MemoryLoad(_)
-		| Node::MemoryStore(_)
-		| Node::MemoryFill(_)
-		| Node::MemoryCopy(_)
-		| Node::MemoryDrop(_) => None,
+	let lowering =
+		match &node {
+			Node::Function(_)
+			| Node::Match(_)
+			| Node::Repeat(_)
+			| Node::FunctionArguments(_)
+			| Node::FunctionResults(_)
+			| Node::BranchArguments(_)
+			| Node::BranchResults(_)
+			| Node::RepeatArguments(_)
+			| Node::RepeatResults(_)
+			| Node::Import(_)
+			| Node::Export(_)
+			| Node::Foreign(_)
+			| Node::Trap
+			| Node::Null
+			| Node::I32(_)
+			| Node::I64(_)
+			| Node::F32(_)
+			| Node::F64(_)
+			| Node::Identity(_)
+			| Node::Fence(_)
+			| Node::Apply(_)
+			| Node::RefIsNull(_)
+			| Node::MutableNew(_)
+			| Node::MutableGet(_)
+			| Node::MutableSet(_)
+			| Node::Aggregate(_)
+			| Node::Extract(_)
+			| Node::TableNew(_)
+			| Node::TableGrow(_)
+			| Node::TableFill(_)
+			| Node::TableCopy(_)
+			| Node::TableDrop(_)
+			| Node::MemoryNew(_)
+			| Node::MemoryFill(_)
+			| Node::MemoryCopy(_)
+			| Node::MemoryDrop(_) => None,
 
-		Node::IntegerUnaryOperation(operation) => Some(lower_integer_unary(nodes, *operation)),
-		Node::IntegerBinaryOperation(operation) => Some(lower_integer_binary(nodes, *operation)),
-		Node::IntegerCompareOperation(operation) => Some(lower_integer_compare(nodes, *operation)),
-		Node::IntegerNarrow(operation) => Some(convert::narrow_i64(nodes, operation.source)),
-		Node::IntegerWiden(operation) => Some(convert::widen_i32(nodes, operation.source)),
-		Node::IntegerSignExtend(operation) => Some(convert::sign_extend(
-			nodes,
-			operation.source,
-			operation.kind,
-		)),
-		Node::IntegerConvertToNumber(operation) => Some(convert::convert_to_number(
-			nodes,
-			operation.source,
-			operation.is_signed,
-			operation.to,
-			operation.from,
-		)),
-		Node::IntegerTransmuteToNumber(operation) => Some(convert::transmute_to_number(
-			operation.source,
-			operation.from,
-		)),
-		Node::NumberUnaryOperation(operation) => Some(lower_number_unary(nodes, *operation)),
-		Node::NumberBinaryOperation(operation) => Some(lower_number_binary(nodes, *operation)),
-		Node::NumberCompareOperation(operation) => Some(lower_number_compare(nodes, *operation)),
-		Node::NumberNarrow(operation) => Some(convert::narrow_f64(nodes, operation.source)),
-		Node::NumberWiden(operation) => Some(convert::widen_f32(nodes, operation.source)),
-		Node::NumberTruncateToInteger(operation) => Some(truncate::to_integer(nodes, operation)),
-		Node::NumberTransmuteToInteger(operation) => Some(convert::transmute_to_integer(
-			operation.source,
-			operation.from,
-		)),
-	};
+			Node::IntegerUnaryOperation(operation) => Some(LoweringResult::ReplaceWith(
+				lower_integer_unary(nodes, *operation),
+			)),
+			Node::IntegerBinaryOperation(operation) => Some(LoweringResult::ReplaceWith(
+				lower_integer_binary(nodes, *operation),
+			)),
+			Node::IntegerCompareOperation(operation) => Some(LoweringResult::ReplaceWith(
+				lower_integer_compare(nodes, *operation),
+			)),
+			Node::IntegerNarrow(operation) => Some(LoweringResult::ReplaceWith(
+				convert::narrow_i64(nodes, operation.source),
+			)),
+			Node::IntegerWiden(operation) => Some(LoweringResult::ReplaceWith(convert::widen_i32(
+				nodes,
+				operation.source,
+			))),
+			Node::IntegerSignExtend(operation) => Some(LoweringResult::ReplaceWith(
+				convert::sign_extend(nodes, operation.source, operation.kind),
+			)),
+			Node::IntegerConvertToNumber(operation) => {
+				Some(LoweringResult::ReplaceWith(convert::convert_to_number(
+					nodes,
+					operation.source,
+					operation.is_signed,
+					operation.to,
+					operation.from,
+				)))
+			}
+			Node::IntegerTransmuteToNumber(operation) => Some(LoweringResult::ReplaceWith(
+				convert::transmute_to_number(operation.source, operation.from),
+			)),
+			Node::NumberUnaryOperation(operation) => Some(LoweringResult::ReplaceWith(
+				lower_number_unary(nodes, *operation),
+			)),
+			Node::NumberBinaryOperation(operation) => Some(LoweringResult::ReplaceWith(
+				lower_number_binary(nodes, *operation),
+			)),
+			Node::NumberCompareOperation(operation) => Some(LoweringResult::ReplaceWith(
+				lower_number_compare(nodes, *operation),
+			)),
+			Node::NumberNarrow(operation) => Some(LoweringResult::ReplaceWith(
+				convert::narrow_f64(nodes, operation.source),
+			)),
+			Node::NumberWiden(operation) => Some(LoweringResult::ReplaceWith(convert::widen_f32(
+				nodes,
+				operation.source,
+			))),
+			Node::NumberTruncateToInteger(operation) => Some(LoweringResult::ReplaceWith(
+				truncate::to_integer(nodes, operation),
+			)),
+			Node::NumberTransmuteToInteger(operation) => Some(LoweringResult::ReplaceWith(
+				convert::transmute_to_integer(operation.source, operation.from),
+			)),
+			Node::TableGet(operation) => {
+				table::lower_get(nodes, identifier, operation.source);
 
-	let lowered = result.is_some();
+				Some(LoweringResult::AlreadyReplaced)
+			}
+			Node::TableSet(operation) => {
+				table::lower_set(nodes, identifier, operation.destination, operation.source);
 
-	match result {
-		Some(result) => replace::replace_node(nodes, id, &[result]),
-		None => nodes[index] = node,
+				Some(LoweringResult::AlreadyReplaced)
+			}
+			Node::TableSize(operation) => {
+				table::lower_size(nodes, identifier, operation.source);
+
+				Some(LoweringResult::AlreadyReplaced)
+			}
+			Node::MemoryLoad(operation) => {
+				memory::lower_load(nodes, identifier, operation.source, operation.kind);
+
+				Some(LoweringResult::AlreadyReplaced)
+			}
+			Node::MemoryStore(operation) => {
+				memory::lower_store(
+					nodes,
+					identifier,
+					operation.destination,
+					operation.source,
+					operation.kind,
+				);
+
+				Some(LoweringResult::AlreadyReplaced)
+			}
+		};
+
+	match lowering {
+		Some(LoweringResult::ReplaceWith(link)) => {
+			replace::replace_node(nodes, identifier, &[link]);
+
+			true
+		}
+		Some(LoweringResult::AlreadyReplaced) => true,
+		None => {
+			nodes[index] = node;
+
+			false
+		}
 	}
-
-	lowered
 }
 
 fn lower_integer_unary(nodes: &mut Vec<Node>, operation: integer::UnaryOperation) -> Link {

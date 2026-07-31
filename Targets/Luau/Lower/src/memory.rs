@@ -2,7 +2,7 @@
 
 use ir_graph::{
 	Link, Node,
-	operation::{LoadType, Location, MemoryLoad, MemoryStore, StoreType},
+	operation::{LoadType, Location, StoreType},
 };
 use luau_foreign::{
 	Bit32ArShift, Bit32Or, BufferLoad, BufferStore, FromBitsI64, IntoBitsI64, LuauAdd,
@@ -26,36 +26,11 @@ const WRITE_U16: &str = "buffer_write_u16";
 const WRITE_U32: &str = "buffer_write_u32";
 const WRITE_F64: &str = "buffer_write_f64";
 
-/// Lowers a memory load or store in place, reporting whether one matched.
-#[must_use = "propagate whether this pass changed the graph"]
-pub fn lower(nodes: &mut Vec<Node>, id: u32) -> bool {
-	let index = usize::try_from(id).unwrap();
-
-	if let &Node::MemoryLoad(MemoryLoad { source, kind }) = &nodes[index] {
-		load(nodes, id, source, kind);
-
-		return true;
-	}
-
-	if let &Node::MemoryStore(MemoryStore {
-		destination,
-		source,
-		kind,
-	}) = &nodes[index]
-	{
-		store(nodes, id, destination, source, kind);
-
-		return true;
-	}
-
-	false
-}
-
-fn load(nodes: &mut Vec<Node>, id: u32, source: Location, kind: LoadType) {
+pub fn lower_load(nodes: &mut Vec<Node>, identifier: u32, source: Location, kind: LoadType) {
 	let mut reads = Vec::new();
 	let value = load_value(nodes, source.reference, source.offset, kind, &mut reads);
 
-	replace::replace_read(nodes, id, value, source.reference, &reads);
+	replace::replace_read(nodes, identifier, value, source.reference, &reads);
 }
 
 fn load_value(
@@ -154,10 +129,16 @@ fn load_long(nodes: &mut Vec<Node>, buffer: Link, offset: Link, reads: &mut Vec<
 	IntoBitsI64::add_into(nodes, low, high)
 }
 
-fn store(nodes: &mut Vec<Node>, id: u32, destination: Location, source: Link, kind: StoreType) {
+pub fn lower_store(
+	nodes: &mut Vec<Node>,
+	identifier: u32,
+	destination: Location,
+	source: Link,
+	kind: StoreType,
+) {
 	let state = store_value(nodes, destination, source, kind);
 
-	replace::replace_node(nodes, id, &[state]);
+	replace::replace_node(nodes, identifier, &[state]);
 }
 
 fn store_value(

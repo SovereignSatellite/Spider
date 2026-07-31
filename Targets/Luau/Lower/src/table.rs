@@ -1,39 +1,11 @@
 //! Lowerings for table element reads and writes.
 
-use ir_graph::{
-	Link, Node,
-	operation::{Location, TableGet, TableSet},
-	region::Match,
-};
+use ir_graph::{Link, Node, operation::Location, region::Match};
 use luau_foreign::{BooleanToInteger, LuauLessThanEqual, TableLength, TableLoad, TableStore};
 
 use crate::replace;
 
-/// Lowers a table get or set in place, reporting whether one matched.
-#[must_use = "propagate whether this pass changed the graph"]
-pub fn lower(nodes: &mut Vec<Node>, id: u32) -> bool {
-	let index = usize::try_from(id).unwrap();
-
-	if let &Node::TableGet(TableGet { source }) = &nodes[index] {
-		get(nodes, id, source);
-
-		return true;
-	}
-
-	if let &Node::TableSet(TableSet {
-		destination,
-		source,
-	}) = &nodes[index]
-	{
-		set(nodes, id, destination, source);
-
-		return true;
-	}
-
-	false
-}
-
-fn get(nodes: &mut Vec<Node>, id: u32, source: Location) {
+pub fn lower_get(nodes: &mut Vec<Node>, identifier: u32, source: Location) {
 	let condition = out_of_bounds(nodes, source.reference, source.offset);
 	let matcher = Match::add_if_into(
 		nodes,
@@ -51,14 +23,14 @@ fn get(nodes: &mut Vec<Node>, id: u32, source: Location) {
 
 	replace::replace_read(
 		nodes,
-		id,
+		identifier,
 		Link(matcher, 0),
 		source.reference,
 		&[Link(matcher, 0)],
 	);
 }
 
-fn set(nodes: &mut Vec<Node>, id: u32, destination: Location, source: Link) {
+pub fn lower_set(nodes: &mut Vec<Node>, identifier: u32, destination: Location, source: Link) {
 	let condition = out_of_bounds(nodes, destination.reference, destination.offset);
 	let matcher = Match::add_if_into(
 		nodes,
@@ -75,7 +47,7 @@ fn set(nodes: &mut Vec<Node>, id: u32, destination: Location, source: Link) {
 		|nodes, _arguments| vec![Node::add_trap_into(nodes)],
 	);
 
-	replace::replace_node(nodes, id, &[Link(matcher, 0)]);
+	replace::replace_node(nodes, identifier, &[Link(matcher, 0)]);
 }
 
 fn out_of_bounds(nodes: &mut Vec<Node>, reference: Link, offset: Link) -> Link {
