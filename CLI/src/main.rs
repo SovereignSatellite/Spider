@@ -7,7 +7,6 @@ use clap::Parser as _;
 use parking_lot::Mutex;
 
 use ir_graph::region::Function;
-use ir_passes::catalog::Optimizations;
 use ir_pipeline::{OptimizationConfiguration, Optimizer};
 
 use self::arguments::{Arguments, Command, CompileArguments, RuntimeTarget, Source, Target};
@@ -56,24 +55,16 @@ fn print_root(root: &Arc<Mutex<Function>>, target: Target) {
 	output.flush().expect("failed to flush compiled output");
 }
 
-fn compile(arguments: CompileArguments) {
-	let CompileArguments {
-		file,
-		source,
-		target,
-		optimize,
-	} = arguments;
+fn compile(arguments: &CompileArguments) {
+	let data = std::fs::read(&arguments.file).expect("failed to read the input file");
+	let root = build_root(
+		&data,
+		&arguments.optimizations.configuration,
+		arguments.source,
+		arguments.target,
+	);
 
-	let data = std::fs::read(file).expect("failed to read the input file");
-	let optimizations = if optimize {
-		Optimizations::all()
-	} else {
-		Optimizations::none()
-	};
-	let configuration = OptimizationConfiguration::with_maximum_rounds(optimizations);
-	let root = build_root(&data, &configuration, source, target);
-
-	print_root(&root, target);
+	print_root(&root, arguments.target);
 }
 
 fn print_runtime(target: RuntimeTarget) {
@@ -90,7 +81,7 @@ fn print_runtime(target: RuntimeTarget) {
 fn main() {
 	let arguments = Arguments::parse();
 
-	match arguments.command {
+	match &arguments.command {
 		Command::Compile(arguments) => compile(arguments),
 		Command::Runtime(arguments) => print_runtime(arguments.target),
 	}
