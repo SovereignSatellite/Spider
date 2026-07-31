@@ -7,6 +7,7 @@
 			(ExtendType.I64_S8)
 		)
 	)
+	(if-let true (OptimizationEnabled (Optimization.ReduceBooleanSignExtension)))
 
 	widened
 )
@@ -18,6 +19,7 @@
 			(ExtendType.I64_S16)
 		)
 	)
+	(if-let true (OptimizationEnabled (Optimization.ReduceBooleanSignExtension)))
 
 	widened
 )
@@ -29,6 +31,7 @@
 			(ExtendType.I64_S32)
 		)
 	)
+	(if-let true (OptimizationEnabled (Optimization.ReduceBooleanSignExtension)))
 
 	widened
 )
@@ -37,6 +40,7 @@
 	(SimplifyConvert
 		(IntegerSignExtend boolean @ (ExactBoolean _) (ExtendType.I32_S8))
 	)
+	(if-let true (OptimizationEnabled (Optimization.ReduceBooleanSignExtension)))
 
 	boolean
 )
@@ -45,6 +49,7 @@
 	(SimplifyConvert
 		(IntegerSignExtend boolean @ (ExactBoolean _) (ExtendType.I32_S16))
 	)
+	(if-let true (OptimizationEnabled (Optimization.ReduceBooleanSignExtension)))
 
 	boolean
 )
@@ -53,6 +58,7 @@
 	(SimplifyConvert
 		(IntegerNarrow (IntegerWiden x))
 	)
+	(if-let true (OptimizationEnabled (Optimization.ReduceNarrowWiden)))
 
 	x
 )
@@ -61,6 +67,7 @@
 	(SimplifyConvert
 		(SignExtendIdempotent inner)
 	)
+	(if-let true (OptimizationEnabled (Optimization.ReduceIdempotentSignExtension)))
 
 	inner
 )
@@ -69,6 +76,7 @@
 	(SimplifyConvert
 		(TransmuteIntRoundTrip x)
 	)
+	(if-let true (OptimizationEnabled (Optimization.ReduceIntegerTransmuteRoundTrip)))
 
 	x
 )
@@ -77,6 +85,7 @@
 	(SimplifyConvert
 		(TransmuteNumberRoundTrip x)
 	)
+	(if-let true (OptimizationEnabled (Optimization.ReduceNumberTransmuteRoundTrip)))
 
 	x
 )

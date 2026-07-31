@@ -14,6 +14,7 @@ use super::{
 	context::RegionContext,
 	internal::{constructor_ReduceI32Table, constructor_ReduceI64Table},
 };
+use crate::catalog::Optimizations;
 
 #[derive(Clone, Copy)]
 enum IntegerConstant {
@@ -65,26 +66,37 @@ impl BinaryMatch {
 		})
 	}
 
-	fn reduce_output(&self, nodes: &mut Vec<Node>, output_port: u16) -> Option<Link> {
+	fn reduce_output(
+		&self,
+		nodes: &mut Vec<Node>,
+		optimizations: &Optimizations,
+		output_port: u16,
+	) -> Option<Link> {
 		match (
 			IntegerConstant::at(&self.on_false, output_port)?,
 			IntegerConstant::at(&self.on_true, output_port)?,
 		) {
 			(IntegerConstant::I32(on_false), IntegerConstant::I32(on_true)) => {
-				Some(constructor_ReduceI32Table(
-					&mut RegionContext(nodes),
+				constructor_ReduceI32Table(
+					&mut RegionContext {
+						nodes,
+						optimizations,
+					},
 					self.predicate,
 					on_false,
 					on_true,
-				))
+				)
 			}
 			(IntegerConstant::I64(on_false), IntegerConstant::I64(on_true)) => {
-				Some(constructor_ReduceI64Table(
-					&mut RegionContext(nodes),
+				constructor_ReduceI64Table(
+					&mut RegionContext {
+						nodes,
+						optimizations,
+					},
 					self.predicate,
 					on_false,
 					on_true,
-				))
+				)
 			}
 			_ => None,
 		}
@@ -93,6 +105,7 @@ impl BinaryMatch {
 
 fn reduce_match(
 	nodes: &mut Vec<Node>,
+	optimizations: &Optimizations,
 	match_index: usize,
 	match_region: &Arc<Mutex<Match>>,
 ) -> bool {
@@ -103,7 +116,7 @@ fn reduce_match(
 	let Some((first_reduced_port, first_replacement)) =
 		remaining_output_ports.find_map(|output_port| {
 			binary_match
-				.reduce_output(nodes, output_port)
+				.reduce_output(nodes, optimizations, output_port)
 				.map(|replacement| (output_port, replacement))
 		})
 	else {
@@ -119,7 +132,7 @@ fn reduce_match(
 		.chain(once(first_replacement))
 		.chain(remaining_output_ports.map(|output_port| {
 			binary_match
-				.reduce_output(nodes, output_port)
+				.reduce_output(nodes, optimizations, output_port)
 				.unwrap_or(Link(moved_match_identifier, output_port))
 		}))
 		.collect();
@@ -133,7 +146,7 @@ fn reduce_match(
 
 /// Reduce binary Match outputs selected from integer constants.
 #[must_use = "propagate whether this pass changed the graph"]
-pub fn reduce_match_outputs(nodes: &mut Vec<Node>) -> bool {
+pub fn reduce_match_outputs(nodes: &mut Vec<Node>, optimizations: &Optimizations) -> bool {
 	let original_node_count = nodes.len();
 	let mut any_match_moved = false;
 
@@ -143,7 +156,7 @@ pub fn reduce_match_outputs(nodes: &mut Vec<Node>) -> bool {
 		};
 		let match_region = Arc::clone(match_region);
 
-		any_match_moved |= reduce_match(nodes, node_index, &match_region);
+		any_match_moved |= reduce_match(nodes, optimizations, node_index, &match_region);
 	}
 
 	any_match_moved

@@ -57,6 +57,7 @@
 			operator
 		)
 	)
+	(if-let true (OptimizationEnabled (Optimization.FuseLuauBit32Constants)))
 	(if-let fused (FuseBit32Binary operator first second))
 
 	(Bit32BinaryOperation source (I32 fused) operator)
@@ -66,6 +67,7 @@
 	(SimplifyLuauBit32
 		(Bit32BinaryOperation (I32 left) (I32 right) operator)
 	)
+	(if-let true (OptimizationEnabled (Optimization.FoldLuauBit32Constants)))
 
 	(I32 (EvaluateBit32Binary operator left right))
 )
@@ -74,6 +76,7 @@
 	(SimplifyLuauBit32
 		(Bit32UnaryOperation (I32 source) operator)
 	)
+	(if-let true (OptimizationEnabled (Optimization.FoldLuauBit32Unary)))
 
 	(I32 (EvaluateBit32Unary operator source))
 )
@@ -82,6 +85,7 @@
 	(SimplifyLuauBit32
 		(Bit32BinaryOperation value value (Bit32BinaryOperator.ExclusiveOr))
 	)
+	(if-let true (OptimizationEnabled (Optimization.ReduceLuauBit32ExclusiveOr)))
 
 	(I32 0)
 )
@@ -90,6 +94,7 @@
 	(SimplifyLuauBit32
 		(Bit32BinaryOperation _ (I32 0) (Bit32BinaryOperator.And))
 	)
+	(if-let true (OptimizationEnabled (Optimization.ReduceLuauBit32And)))
 
 	(I32 0)
 )
@@ -98,6 +103,7 @@
 	(SimplifyLuauBit32
 		(Bit32BinaryOperation _ (I32 -1) (Bit32BinaryOperator.Or))
 	)
+	(if-let true (OptimizationEnabled (Optimization.ReduceLuauBit32Or)))
 
 	(I32 -1)
 )
@@ -110,6 +116,7 @@
 			(Bit32BinaryOperator.And)
 		)
 	)
+	(if-let true (OptimizationEnabled (Optimization.ReduceCanonicalLuauBit32And)))
 
 	source
 )
@@ -118,6 +125,7 @@
 	(SimplifyLuauBit32
 		(Bit32BinaryOperation (CanonicalBit32 source) (I32 0) operator)
 	)
+	(if-let true (OptimizationEnabled (Optimization.ReduceCanonicalLuauBit32Zero)))
 	(if-let true (HasBit32ZeroIdentity operator))
 
 	source

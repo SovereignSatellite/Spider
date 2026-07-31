@@ -1,20 +1,38 @@
 (decl pure EvaluateI32Unary (IntegerUnaryOperator i32) i32)
 (extern constructor EvaluateI32Unary evaluate_i32_unary)
 
+(decl pure I32UnaryFoldingEnabled (IntegerUnaryOperator) bool)
+(extern constructor I32UnaryFoldingEnabled i32_unary_folding_enabled)
+
 (decl pure EvaluateI64Unary (IntegerUnaryOperator i64) i64)
 (extern constructor EvaluateI64Unary evaluate_i64_unary)
+
+(decl pure I64UnaryFoldingEnabled (IntegerUnaryOperator) bool)
+(extern constructor I64UnaryFoldingEnabled i64_unary_folding_enabled)
 
 (decl pure partial EvaluateI32Binary (IntegerBinaryOperator i32 i32) i32)
 (extern constructor EvaluateI32Binary evaluate_i32_binary)
 
+(decl pure I32BinaryFoldingEnabled (IntegerBinaryOperator) bool)
+(extern constructor I32BinaryFoldingEnabled i32_binary_folding_enabled)
+
 (decl pure partial EvaluateI64Binary (IntegerBinaryOperator i64 i64) i64)
 (extern constructor EvaluateI64Binary evaluate_i64_binary)
+
+(decl pure I64BinaryFoldingEnabled (IntegerBinaryOperator) bool)
+(extern constructor I64BinaryFoldingEnabled i64_binary_folding_enabled)
 
 (decl pure EvaluateI32Comparison (IntegerCompareOperator i32 i32) i32)
 (extern constructor EvaluateI32Comparison evaluate_i32_comparison)
 
+(decl pure I32ComparisonFoldingEnabled (IntegerCompareOperator) bool)
+(extern constructor I32ComparisonFoldingEnabled i32_comparison_folding_enabled)
+
 (decl pure EvaluateI64Comparison (IntegerCompareOperator i64 i64) i32)
 (extern constructor EvaluateI64Comparison evaluate_i64_comparison)
+
+(decl pure I64ComparisonFoldingEnabled (IntegerCompareOperator) bool)
+(extern constructor I64ComparisonFoldingEnabled i64_comparison_folding_enabled)
 
 (decl pure WidenI32Value (i32) i64)
 (extern constructor WidenI32Value widen_i32_value)

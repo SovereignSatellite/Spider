@@ -289,133 +289,153 @@
 (decl partial ProjectIntegerI32 (IntegerRelation I32Table5) Link)
 
 (rule 100 (ProjectIntegerI32 relation (I32Table5.Table on_true on_false on_false on_false on_false))
-	(ReduceI32Table
+	(if-let reduction (SelectI32TableReduction on_false on_true))
+	(BuildI32TableReduction
 		(BuildIntegerPredicate relation (IntegerCompareOperator.Equal))
-		on_false on_true)
+		reduction)
 )
 
 (rule 90 (ProjectIntegerI32 relation (I32Table5.Table on_false on_true on_false on_true on_false))
-	(ReduceI32Table
+	(if-let reduction (SelectI32TableReduction on_false on_true))
+	(BuildI32TableReduction
 		(BuildIntegerPredicate relation (IntegerCompareOperator.LessThan true))
-		on_false on_true)
+		reduction)
 )
 
 (rule 80 (ProjectIntegerI32 relation (I32Table5.Table on_false on_true on_false on_false on_true))
-	(ReduceI32Table
+	(if-let reduction (SelectI32TableReduction on_false on_true))
+	(BuildI32TableReduction
 		(BuildIntegerPredicate relation (IntegerCompareOperator.LessThan false))
-		on_false on_true)
+		reduction)
 )
 
 (rule 70 (ProjectIntegerI32 relation (I32Table5.Table on_true on_true on_false on_true on_false))
-	(ReduceI32Table
+	(if-let reduction (SelectI32TableReduction on_false on_true))
+	(BuildI32TableReduction
 		(BuildIntegerPredicate relation
 			(IntegerCompareOperator.LessThanEqual true))
-		on_false on_true)
+		reduction)
 )
 
 (rule 60 (ProjectIntegerI32 relation (I32Table5.Table on_true on_true on_false on_false on_true))
-	(ReduceI32Table
+	(if-let reduction (SelectI32TableReduction on_false on_true))
+	(BuildI32TableReduction
 		(BuildIntegerPredicate relation
 			(IntegerCompareOperator.LessThanEqual false))
-		on_false on_true)
+		reduction)
 )
 
 (decl partial ProjectIntegerI64 (IntegerRelation I64Table5) Link)
 
 (rule 100 (ProjectIntegerI64 relation (I64Table5.Table on_true on_false on_false on_false on_false))
-	(ReduceI64Table
+	(if-let reduction (SelectI64TableReduction on_false on_true))
+	(BuildI64TableReduction
 		(BuildIntegerPredicate relation (IntegerCompareOperator.Equal))
-		on_false on_true)
+		reduction)
 )
 
 (rule 90 (ProjectIntegerI64 relation (I64Table5.Table on_false on_true on_false on_true on_false))
-	(ReduceI64Table
+	(if-let reduction (SelectI64TableReduction on_false on_true))
+	(BuildI64TableReduction
 		(BuildIntegerPredicate relation (IntegerCompareOperator.LessThan true))
-		on_false on_true)
+		reduction)
 )
 
 (rule 80 (ProjectIntegerI64 relation (I64Table5.Table on_false on_true on_false on_false on_true))
-	(ReduceI64Table
+	(if-let reduction (SelectI64TableReduction on_false on_true))
+	(BuildI64TableReduction
 		(BuildIntegerPredicate relation (IntegerCompareOperator.LessThan false))
-		on_false on_true)
+		reduction)
 )
 
 (rule 70 (ProjectIntegerI64 relation (I64Table5.Table on_true on_true on_false on_true on_false))
-	(ReduceI64Table
+	(if-let reduction (SelectI64TableReduction on_false on_true))
+	(BuildI64TableReduction
 		(BuildIntegerPredicate relation
 			(IntegerCompareOperator.LessThanEqual true))
-		on_false on_true)
+		reduction)
 )
 
 (rule 60 (ProjectIntegerI64 relation (I64Table5.Table on_true on_true on_false on_false on_true))
-	(ReduceI64Table
+	(if-let reduction (SelectI64TableReduction on_false on_true))
+	(BuildI64TableReduction
 		(BuildIntegerPredicate relation
 			(IntegerCompareOperator.LessThanEqual false))
-		on_false on_true)
+		reduction)
 )
 
 (decl partial ProjectNumberI32 (NumberRelation I32Table4) Link)
 
 (rule 100 (ProjectNumberI32 relation (I32Table4.Table on_false on_true on_false on_false))
-	(ReduceI32Table
+	(if-let reduction (SelectI32TableReduction on_false on_true))
+	(BuildI32TableReduction
 		(BuildNumberPredicate relation (NumberPredicate.Direct (NumberCompareOperator.Equal)))
-		on_false on_true)
+		reduction)
 )
 
 (rule 90 (ProjectNumberI32 relation (I32Table4.Table on_true on_false on_false on_false))
-	(ReduceI32Table
+	(if-let reduction (SelectI32TableReduction on_false on_true))
+	(BuildI32TableReduction
 		(BuildNumberPredicate relation (NumberPredicate.Direct (NumberCompareOperator.LessThan)))
-		on_false on_true)
+		reduction)
 )
 
 (rule 80 (ProjectNumberI32 relation (I32Table4.Table on_true on_true on_false on_false))
-	(ReduceI32Table
+	(if-let reduction (SelectI32TableReduction on_false on_true))
+	(BuildI32TableReduction
 		(BuildNumberPredicate relation (NumberPredicate.Direct (NumberCompareOperator.LessThanEqual)))
-		on_false on_true)
+		reduction)
 )
 
 (rule 70 (ProjectNumberI32 relation (I32Table4.Table on_false on_false on_true on_false))
-	(ReduceI32Table
+	(if-let reduction (SelectI32TableReduction on_false on_true))
+	(BuildI32TableReduction
 		(BuildNumberPredicate relation (NumberPredicate.Reversed (NumberCompareOperator.LessThan)))
-		on_false on_true)
+		reduction)
 )
 
 (rule 60 (ProjectNumberI32 relation (I32Table4.Table on_false on_true on_true on_false))
-	(ReduceI32Table
+	(if-let reduction (SelectI32TableReduction on_false on_true))
+	(BuildI32TableReduction
 		(BuildNumberPredicate relation (NumberPredicate.Reversed (NumberCompareOperator.LessThanEqual)))
-		on_false on_true)
+		reduction)
 )
 
 (decl partial ProjectNumberI64 (NumberRelation I64Table4) Link)
 
 (rule 100 (ProjectNumberI64 relation (I64Table4.Table on_false on_true on_false on_false))
-	(ReduceI64Table
+	(if-let reduction (SelectI64TableReduction on_false on_true))
+	(BuildI64TableReduction
 		(BuildNumberPredicate relation (NumberPredicate.Direct (NumberCompareOperator.Equal)))
-		on_false on_true)
+		reduction)
 )
 
 (rule 90 (ProjectNumberI64 relation (I64Table4.Table on_true on_false on_false on_false))
-	(ReduceI64Table
+	(if-let reduction (SelectI64TableReduction on_false on_true))
+	(BuildI64TableReduction
 		(BuildNumberPredicate relation (NumberPredicate.Direct (NumberCompareOperator.LessThan)))
-		on_false on_true)
+		reduction)
 )
 
 (rule 80 (ProjectNumberI64 relation (I64Table4.Table on_true on_true on_false on_false))
-	(ReduceI64Table
+	(if-let reduction (SelectI64TableReduction on_false on_true))
+	(BuildI64TableReduction
 		(BuildNumberPredicate relation (NumberPredicate.Direct (NumberCompareOperator.LessThanEqual)))
-		on_false on_true)
+		reduction)
 )
 
 (rule 70 (ProjectNumberI64 relation (I64Table4.Table on_false on_false on_true on_false))
-	(ReduceI64Table
+	(if-let reduction (SelectI64TableReduction on_false on_true))
+	(BuildI64TableReduction
 		(BuildNumberPredicate relation (NumberPredicate.Reversed (NumberCompareOperator.LessThan)))
-		on_false on_true)
+		reduction)
 )
 
 (rule 60 (ProjectNumberI64 relation (I64Table4.Table on_false on_true on_true on_false))
-	(ReduceI64Table
+	(if-let reduction (SelectI64TableReduction on_false on_true))
+	(BuildI64TableReduction
 		(BuildNumberPredicate relation (NumberPredicate.Reversed (NumberCompareOperator.LessThanEqual)))
-		on_false on_true)
+		reduction)
 )
 
 (decl partial ReduceBooleanBinaryPair (Link Link IntegerBinaryOperator) Link)

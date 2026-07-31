@@ -25,6 +25,8 @@ use luau_foreign::{
 	Bit32Xor, FromBitsI64,
 };
 
+use crate::catalog::{Optimization, Optimizations};
+
 use super::{
 	internal::Context,
 	luau::{
@@ -34,15 +36,20 @@ use super::{
 };
 
 /// Supply a graph region to ISLE.
-pub struct RegionContext<'nodes>(pub &'nodes mut Vec<Node>);
+pub struct RegionContext<'context> {
+	/// Store the region nodes being rewritten.
+	pub nodes: &'context mut Vec<Node>,
+	/// Select the enabled rewrites.
+	pub optimizations: &'context Optimizations,
+}
 
 impl RegionContext<'_> {
 	fn at(&self, link: Link) -> &Node {
-		&self.0[usize::try_from(link.0).unwrap()]
+		&self.nodes[usize::try_from(link.0).unwrap()]
 	}
 
 	fn trace(&self, link: Link) -> Link {
-		identity_source(self.0, link)
+		identity_source(self.nodes, link)
 	}
 }
 
@@ -51,6 +58,58 @@ impl RegionContext<'_> {
 	reason = "semantic names replace generated positional Context parameter names"
 )]
 impl Context for RegionContext<'_> {
+	fn optimization_enabled(&mut self, optimization: &Optimization) -> bool {
+		self.optimizations.is_enabled(*optimization)
+	}
+
+	fn i32_unary_folding_enabled(&mut self, operator: &IntegerUnaryOperator) -> bool {
+		self.optimizations
+			.is_enabled(Optimization::for_integer_unary_folding(
+				IntegerType::I32,
+				*operator,
+			))
+	}
+
+	fn i64_unary_folding_enabled(&mut self, operator: &IntegerUnaryOperator) -> bool {
+		self.optimizations
+			.is_enabled(Optimization::for_integer_unary_folding(
+				IntegerType::I64,
+				*operator,
+			))
+	}
+
+	fn i32_binary_folding_enabled(&mut self, operator: &IntegerBinaryOperator) -> bool {
+		self.optimizations
+			.is_enabled(Optimization::for_integer_binary_folding(
+				IntegerType::I32,
+				*operator,
+			))
+	}
+
+	fn i64_binary_folding_enabled(&mut self, operator: &IntegerBinaryOperator) -> bool {
+		self.optimizations
+			.is_enabled(Optimization::for_integer_binary_folding(
+				IntegerType::I64,
+				*operator,
+			))
+	}
+
+	fn i32_comparison_folding_enabled(&mut self, operator: &IntegerCompareOperator) -> bool {
+		self.optimizations
+			.is_enabled(Optimization::for_integer_comparison_folding(
+				IntegerType::I32,
+				*operator,
+			))
+	}
+
+	fn i64_comparison_folding_enabled(&mut self, operator: &IntegerCompareOperator) -> bool {
+		self.optimizations
+			.is_enabled(Optimization::for_integer_comparison_folding(
+				IntegerType::I64,
+				*operator,
+			))
+	}
+
 	fn get_exact_boolean(&mut self, arg0: Link) -> Option<Link> {
 		let boolean = self.trace(arg0);
 
@@ -87,7 +146,7 @@ impl Context for RegionContext<'_> {
 	}
 
 	fn add_i32(&mut self, arg0: i32) -> Link {
-		Node::add_i32_into(self.0, arg0)
+		Node::add_i32_into(self.nodes, arg0)
 	}
 
 	fn get_i64(&mut self, arg0: Link) -> Option<i64> {
@@ -99,7 +158,7 @@ impl Context for RegionContext<'_> {
 	}
 
 	fn add_i64(&mut self, arg0: i64) -> Link {
-		Node::add_i64_into(self.0, arg0)
+		Node::add_i64_into(self.nodes, arg0)
 	}
 
 	fn widen_i32_value(&mut self, arg0: i32) -> i64 {
@@ -162,7 +221,7 @@ impl Context for RegionContext<'_> {
 		arg2: &IntegerType,
 		arg3: &IntegerBinaryOperator,
 	) -> Link {
-		IntegerBinaryOperation::add_into(self.0, arg0, arg1, *arg2, *arg3)
+		IntegerBinaryOperation::add_into(self.nodes, arg0, arg1, *arg2, *arg3)
 	}
 
 	fn get_integer_compare_operation(
@@ -189,7 +248,7 @@ impl Context for RegionContext<'_> {
 		arg2: &IntegerType,
 		arg3: &IntegerCompareOperator,
 	) -> Link {
-		IntegerCompareOperation::add_into(self.0, arg0, arg1, *arg2, *arg3)
+		IntegerCompareOperation::add_into(self.nodes, arg0, arg1, *arg2, *arg3)
 	}
 
 	fn evaluate_i32_binary(
@@ -408,7 +467,7 @@ impl Context for RegionContext<'_> {
 	}
 
 	fn add_integer_widen(&mut self, arg0: Link) -> Link {
-		IntegerWiden::add_into(self.0, arg0)
+		IntegerWiden::add_into(self.nodes, arg0)
 	}
 
 	fn get_integer_sign_extend(&mut self, arg0: Link) -> Option<(Link, ExtendType)> {
@@ -523,7 +582,7 @@ impl Context for RegionContext<'_> {
 		arg1: &NumberType,
 		arg2: &NumberUnaryOperator,
 	) -> Link {
-		NumberUnaryOperation::add_into(self.0, arg0, *arg1, *arg2)
+		NumberUnaryOperation::add_into(self.nodes, arg0, *arg1, *arg2)
 	}
 
 	fn get_number_compare_operation(
@@ -550,7 +609,7 @@ impl Context for RegionContext<'_> {
 		arg2: &NumberType,
 		arg3: &NumberCompareOperator,
 	) -> Link {
-		NumberCompareOperation::add_into(self.0, arg0, arg1, *arg2, *arg3)
+		NumberCompareOperation::add_into(self.nodes, arg0, arg1, *arg2, *arg3)
 	}
 
 	fn get_bit32_binary_operation(
@@ -572,14 +631,16 @@ impl Context for RegionContext<'_> {
 		arg2: &Bit32BinaryOperator,
 	) -> Link {
 		match *arg2 {
-			Bit32BinaryOperator::And => Bit32And::add_into(self.0, arg0, arg1),
-			Bit32BinaryOperator::Or => Bit32Or::add_into(self.0, arg0, arg1),
-			Bit32BinaryOperator::ExclusiveOr => Bit32Xor::add_into(self.0, arg0, arg1),
-			Bit32BinaryOperator::ShiftLeft => Bit32LShift::add_into(self.0, arg0, arg1),
-			Bit32BinaryOperator::ShiftRightUnsigned => Bit32RShift::add_into(self.0, arg0, arg1),
-			Bit32BinaryOperator::ShiftRightSigned => Bit32ArShift::add_into(self.0, arg0, arg1),
-			Bit32BinaryOperator::RotateLeft => Bit32LRotate::add_into(self.0, arg0, arg1),
-			Bit32BinaryOperator::RotateRight => Bit32RRotate::add_into(self.0, arg0, arg1),
+			Bit32BinaryOperator::And => Bit32And::add_into(self.nodes, arg0, arg1),
+			Bit32BinaryOperator::Or => Bit32Or::add_into(self.nodes, arg0, arg1),
+			Bit32BinaryOperator::ExclusiveOr => Bit32Xor::add_into(self.nodes, arg0, arg1),
+			Bit32BinaryOperator::ShiftLeft => Bit32LShift::add_into(self.nodes, arg0, arg1),
+			Bit32BinaryOperator::ShiftRightUnsigned => {
+				Bit32RShift::add_into(self.nodes, arg0, arg1)
+			}
+			Bit32BinaryOperator::ShiftRightSigned => Bit32ArShift::add_into(self.nodes, arg0, arg1),
+			Bit32BinaryOperator::RotateLeft => Bit32LRotate::add_into(self.nodes, arg0, arg1),
+			Bit32BinaryOperator::RotateRight => Bit32RRotate::add_into(self.nodes, arg0, arg1),
 		}
 	}
 
@@ -714,7 +775,7 @@ impl Context for RegionContext<'_> {
 		} else if is_exact_integer && is_in_word_range && !is_negative_zero {
 			Some(self.add_i32((arg0 as u32).cast_signed()))
 		} else {
-			Some(Node::add_f64_into(self.0, arg0))
+			Some(Node::add_f64_into(self.nodes, arg0))
 		}
 	}
 
@@ -915,13 +976,13 @@ impl Context for RegionContext<'_> {
 	}
 
 	fn split_low(&mut self, arg0: Link) -> Link {
-		FromBitsI64::add_into(self.0, arg0).0
+		FromBitsI64::add_into(self.nodes, arg0).0
 	}
 
 	fn flip_split_high(&mut self, arg0: Link) -> Link {
 		let high = Link(arg0.0, FromBitsI64::HIGH_PORT);
 
-		Bit32Xor::add_fast_into(self.0, high, 0x8000_0000)
+		Bit32Xor::add_fast_into(self.nodes, high, 0x8000_0000)
 	}
 }
 

@@ -7,7 +7,8 @@ use clap::Parser as _;
 use parking_lot::Mutex;
 
 use ir_graph::region::Function;
-use ir_pipeline::Optimizer;
+use ir_passes::catalog::Optimizations;
+use ir_pipeline::{OptimizationConfiguration, Optimizer};
 
 use self::arguments::{Arguments, Command, CompileArguments, RuntimeTarget, Source, Target};
 
@@ -23,7 +24,7 @@ fn lock_standard_output() -> BufWriter<StdoutLock<'static>> {
 
 fn build_root(
 	data: &[u8],
-	should_optimize: bool,
+	configuration: &OptimizationConfiguration,
 	source: Source,
 	target: Target,
 ) -> Arc<Mutex<Function>> {
@@ -35,9 +36,9 @@ fn build_root(
 	let mut optimizer = Optimizer::new();
 
 	match target {
-		Target::Luau => optimizer.run(&root, should_optimize, &mut luau_lower::apply),
-		Target::LuaJIT => optimizer.run(&root, should_optimize, &mut luajit_lower::apply),
-		Target::Json => optimizer.run(&root, should_optimize, &mut |_| false),
+		Target::Luau => optimizer.run(&root, configuration, &mut luau_lower::apply),
+		Target::LuaJIT => optimizer.run(&root, configuration, &mut luajit_lower::apply),
+		Target::Json => optimizer.run(&root, configuration, &mut |_, _| false),
 	}
 
 	root
@@ -64,7 +65,13 @@ fn compile(arguments: CompileArguments) {
 	} = arguments;
 
 	let data = std::fs::read(file).expect("failed to read the input file");
-	let root = build_root(&data, optimize, source, target);
+	let optimizations = if optimize {
+		Optimizations::all()
+	} else {
+		Optimizations::none()
+	};
+	let configuration = OptimizationConfiguration::with_maximum_rounds(optimizations);
+	let root = build_root(&data, &configuration, source, target);
 
 	print_root(&root, target);
 }

@@ -8,4 +8,5 @@ workspace = true
 
 [dependencies]
 ir-graph.workspace = true
+ir-passes.workspace = true
 luajit-foreign.workspace = true

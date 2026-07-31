@@ -13,6 +13,7 @@
 			(LuauUnaryOperator.Absolute)
 		)
 	)
+	(if-let true (OptimizationEnabled (Optimization.ReduceLuauAbsolute)))
 
 	inner
 )
@@ -21,6 +22,7 @@
 	(SimplifyLuauMath
 		(IntegralLuauUnary inner @ (IntegralLuauUnary _))
 	)
+	(if-let true (OptimizationEnabled (Optimization.ReduceLuauIntegralUnary)))
 
 	inner
 )
@@ -29,6 +31,7 @@
 	(SimplifyLuauMath
 		(LuauExtremum source source)
 	)
+	(if-let true (OptimizationEnabled (Optimization.ReduceLuauExtremum)))
 
 	source
 )
@@ -37,6 +40,7 @@
 	(SimplifyLuauMath
 		(LuauUnaryOperation (LuauNumber source) operator)
 	)
+	(if-let true (OptimizationEnabled (Optimization.FoldLuauUnaryConstants)))
 
 	(raw_luau_number_result (EvaluateLuauUnary operator source))
 )
@@ -45,6 +49,7 @@
 	(SimplifyLuauMath
 		(LuauBinaryOperation (LuauNumber left) (LuauNumber right) operator)
 	)
+	(if-let true (OptimizationEnabled (Optimization.FoldLuauBinaryConstants)))
 
 	(raw_luau_number_result (EvaluateLuauBinary operator left right))
 )

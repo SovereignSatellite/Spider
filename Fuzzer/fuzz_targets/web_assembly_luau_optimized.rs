@@ -17,11 +17,13 @@ mod luau;
 
 use libfuzzer_sys::fuzz_target;
 
+use ir_passes::catalog::Optimizations;
+
 use self::generation::SupportedModule;
 
 fuzz_target!(|module: SupportedModule| {
 	let bytes = module.into_bytes();
-	let root = lifting::lift(&bytes, true);
+	let root = lifting::lift(&bytes, Optimizations::all());
 
 	luau::compile(&root);
 });

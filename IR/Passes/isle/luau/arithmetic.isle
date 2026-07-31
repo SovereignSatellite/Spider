@@ -24,6 +24,7 @@
 			(LuauUnaryOperator.Negate)
 		)
 	)
+	(if-let true (OptimizationEnabled (Optimization.ReduceLuauDoubleNegation)))
 
 	source
 )
@@ -32,6 +33,7 @@
 	(SimplifyLuauArithmetic
 		(LuauArithmeticOperation (LuauNumber left) (LuauNumber right) operator)
 	)
+	(if-let true (OptimizationEnabled (Optimization.FoldLuauArithmeticConstants)))
 
 	(raw_luau_number_result (EvaluateLuauArithmetic operator left right))
 )

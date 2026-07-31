@@ -1,37 +1,68 @@
-(decl ReduceI32Table (Link i32 i32) Link)
+(type I32TableReduction
+	(enum
+		(ExclusiveOr (constant i32))
+		(Increment (constant i32))
+		(Decrement (constant i32))
+		(Mask (constant i32) (difference i32))
+	)
+)
 
-(rule 40 (ReduceI32Table predicate on_false on_true)
+(decl pure partial SelectI32TableReduction (i32 i32) I32TableReduction)
+
+(rule 40 (SelectI32TableReduction on_false on_true)
+	(if-let true (OptimizationEnabled (Optimization.ReduceI32TruthTableWithXor)))
 	(if-let 1 (EvaluateI32Binary (IntegerBinaryOperator.ExclusiveOr) on_false on_true))
+	(I32TableReduction.ExclusiveOr on_false)
+)
+
+(rule 30 (SelectI32TableReduction on_false on_true)
+	(if-let true (OptimizationEnabled (Optimization.ReduceI32TruthTableWithIncrement)))
+	(if-let 1 (EvaluateI32Binary (IntegerBinaryOperator.Subtract) on_true on_false))
+	(I32TableReduction.Increment on_false)
+)
+
+(rule 30 (SelectI32TableReduction on_false on_true)
+	(if-let true (OptimizationEnabled (Optimization.ReduceI32TruthTableWithDecrement)))
+	(if-let -1 (EvaluateI32Binary (IntegerBinaryOperator.Subtract) on_true on_false))
+	(I32TableReduction.Decrement on_false)
+)
+
+(rule 10 (SelectI32TableReduction on_false on_true)
+	(if-let true (OptimizationEnabled (Optimization.ReduceI32TruthTableWithMask)))
+	(if-let difference (EvaluateI32Binary (IntegerBinaryOperator.ExclusiveOr) on_false on_true))
+	(I32TableReduction.Mask on_false difference)
+)
+
+(decl BuildI32TableReduction (Link I32TableReduction) Link)
+
+(rule (BuildI32TableReduction predicate (I32TableReduction.ExclusiveOr constant))
 	(IntegerBinaryOperation
 		predicate
-		(I32 on_false)
+		(I32 constant)
 		(IntegerType.I32)
 		(IntegerBinaryOperator.ExclusiveOr)
 	)
 )
 
-(rule 30 (ReduceI32Table predicate on_false on_true)
-	(if-let 1 (EvaluateI32Binary (IntegerBinaryOperator.Subtract) on_true on_false))
+(rule (BuildI32TableReduction predicate (I32TableReduction.Increment constant))
 	(IntegerBinaryOperation
 		predicate
-		(I32 on_false)
+		(I32 constant)
 		(IntegerType.I32)
 		(IntegerBinaryOperator.Add)
 	)
 )
 
-(rule 30 (ReduceI32Table predicate on_false on_true)
-	(if-let -1 (EvaluateI32Binary (IntegerBinaryOperator.Subtract) on_true on_false))
+(rule (BuildI32TableReduction predicate (I32TableReduction.Decrement constant))
 	(IntegerBinaryOperation
-		(I32 on_false)
+		(I32 constant)
 		predicate
 		(IntegerType.I32)
 		(IntegerBinaryOperator.Subtract)
 	)
 )
 
-(rule 10 (ReduceI32Table predicate on_false on_true)
-	(if-let difference (EvaluateI32Binary (IntegerBinaryOperator.ExclusiveOr) on_false on_true))
+(rule (BuildI32TableReduction predicate (I32TableReduction.Mask constant difference))
 	(IntegerBinaryOperation
 		(IntegerBinaryOperation
 			(IntegerBinaryOperation
@@ -44,46 +75,84 @@
 			(IntegerType.I32)
 			(IntegerBinaryOperator.And)
 		)
-		(I32 on_false)
+		(I32 constant)
 		(IntegerType.I32)
 		(IntegerBinaryOperator.ExclusiveOr)
 	)
 )
 
-(decl ReduceI64Table (Link i64 i64) Link)
+(decl partial ReduceI32Table (Link i32 i32) Link)
 
-(rule 40 (ReduceI64Table predicate on_false on_true)
+(rule (ReduceI32Table predicate on_false on_true)
+	(if-let reduction (SelectI32TableReduction on_false on_true))
+	(BuildI32TableReduction predicate reduction)
+)
+
+(type I64TableReduction
+	(enum
+		(ExclusiveOr (constant i64))
+		(Increment (constant i64))
+		(Decrement (constant i64))
+		(Mask (constant i64) (difference i64))
+	)
+)
+
+(decl pure partial SelectI64TableReduction (i64 i64) I64TableReduction)
+
+(rule 40 (SelectI64TableReduction on_false on_true)
+	(if-let true (OptimizationEnabled (Optimization.ReduceI64TruthTableWithXor)))
 	(if-let 1 (EvaluateI64Binary (IntegerBinaryOperator.ExclusiveOr) on_false on_true))
+	(I64TableReduction.ExclusiveOr on_false)
+)
+
+(rule 30 (SelectI64TableReduction on_false on_true)
+	(if-let true (OptimizationEnabled (Optimization.ReduceI64TruthTableWithIncrement)))
+	(if-let 1 (EvaluateI64Binary (IntegerBinaryOperator.Subtract) on_true on_false))
+	(I64TableReduction.Increment on_false)
+)
+
+(rule 30 (SelectI64TableReduction on_false on_true)
+	(if-let true (OptimizationEnabled (Optimization.ReduceI64TruthTableWithDecrement)))
+	(if-let -1 (EvaluateI64Binary (IntegerBinaryOperator.Subtract) on_true on_false))
+	(I64TableReduction.Decrement on_false)
+)
+
+(rule 10 (SelectI64TableReduction on_false on_true)
+	(if-let true (OptimizationEnabled (Optimization.ReduceI64TruthTableWithMask)))
+	(if-let difference (EvaluateI64Binary (IntegerBinaryOperator.ExclusiveOr) on_false on_true))
+	(I64TableReduction.Mask on_false difference)
+)
+
+(decl BuildI64TableReduction (Link I64TableReduction) Link)
+
+(rule (BuildI64TableReduction predicate (I64TableReduction.ExclusiveOr constant))
 	(IntegerBinaryOperation
 		(IntegerWiden predicate)
-		(I64 on_false)
+		(I64 constant)
 		(IntegerType.I64)
 		(IntegerBinaryOperator.ExclusiveOr)
 	)
 )
 
-(rule 30 (ReduceI64Table predicate on_false on_true)
-	(if-let 1 (EvaluateI64Binary (IntegerBinaryOperator.Subtract) on_true on_false))
+(rule (BuildI64TableReduction predicate (I64TableReduction.Increment constant))
 	(IntegerBinaryOperation
 		(IntegerWiden predicate)
-		(I64 on_false)
+		(I64 constant)
 		(IntegerType.I64)
 		(IntegerBinaryOperator.Add)
 	)
 )
 
-(rule 30 (ReduceI64Table predicate on_false on_true)
-	(if-let -1 (EvaluateI64Binary (IntegerBinaryOperator.Subtract) on_true on_false))
+(rule (BuildI64TableReduction predicate (I64TableReduction.Decrement constant))
 	(IntegerBinaryOperation
-		(I64 on_false)
+		(I64 constant)
 		(IntegerWiden predicate)
 		(IntegerType.I64)
 		(IntegerBinaryOperator.Subtract)
 	)
 )
 
-(rule 10 (ReduceI64Table predicate on_false on_true)
-	(if-let difference (EvaluateI64Binary (IntegerBinaryOperator.ExclusiveOr) on_false on_true))
+(rule (BuildI64TableReduction predicate (I64TableReduction.Mask constant difference))
 	(IntegerBinaryOperation
 		(IntegerBinaryOperation
 			(IntegerBinaryOperation
@@ -96,8 +165,15 @@
 			(IntegerType.I64)
 			(IntegerBinaryOperator.And)
 		)
-		(I64 on_false)
+		(I64 constant)
 		(IntegerType.I64)
 		(IntegerBinaryOperator.ExclusiveOr)
 	)
+)
+
+(decl partial ReduceI64Table (Link i64 i64) Link)
+
+(rule (ReduceI64Table predicate on_false on_true)
+	(if-let reduction (SelectI64TableReduction on_false on_true))
+	(BuildI64TableReduction predicate reduction)
 )

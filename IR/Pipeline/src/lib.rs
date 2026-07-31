@@ -8,12 +8,33 @@ use parking_lot::Mutex;
 
 use ir_graph::{Region, Shape, region::Function, region_driver};
 use ir_passes::{
+	catalog::{OptimizationStages, Optimizations},
 	motion::InvariantPortMover,
 	normalize::{ConstantIsolator, DeadPortEliminator, TopologicalCompactor, identity},
 	simplify::{CommonNodeEliminator, control_folder, isle},
 };
 
-/// Composes the region-local passes into a fixpoint optimization loop.
+/// Provide the resolved policy consumed by one optimizer run.
+#[derive(Debug, PartialEq, Eq)]
+pub struct OptimizationConfiguration {
+	/// Select the enabled transformations.
+	pub optimizations: Optimizations,
+	/// Limit graph-changing fixpoint rounds per region.
+	pub round_limit: u32,
+}
+
+impl OptimizationConfiguration {
+	/// Create a configuration with the maximum rewrite-round limit.
+	#[must_use]
+	pub const fn with_maximum_rounds(optimizations: Optimizations) -> Self {
+		Self {
+			optimizations,
+			round_limit: u32::MAX,
+		}
+	}
+}
+
+/// Compose the region-local passes into a fixpoint optimization loop.
 pub struct Optimizer {
 	topological_compactor: TopologicalCompactor,
 	invariant_port_mover: InvariantPortMover,
@@ -23,7 +44,7 @@ pub struct Optimizer {
 }
 
 impl Optimizer {
-	/// Creates a new optimizer.
+	/// Create reusable optimizer scratch state.
 	#[must_use]
 	pub fn new() -> Self {
 		Self {
@@ -35,17 +56,27 @@ impl Optimizer {
 		}
 	}
 
-	fn run_generic_round(&mut self, region: &mut Region) -> bool {
+	fn run_generic_round(
+		&mut self,
+		region: &mut Region,
+		optimizations: &Optimizations,
+		optimization_stages: OptimizationStages,
+	) -> bool {
 		let mut changed = false;
 
-		changed |= control_folder::run(region.nodes_mut());
-		changed |= self.invariant_port_mover.run(region.nodes_mut());
+		changed |= optimization_stages.control_folder
+			&& control_folder::run(region.nodes_mut(), optimizations);
+		changed |=
+			optimizations.move_invariant_ports && self.invariant_port_mover.run(region.nodes_mut());
 
 		changed |= self.dead_port_eliminator.run(region.nodes_mut());
 
-		changed |= isle::reduce_match_outputs(region.nodes_mut());
-		changed |= self.common_node_eliminator.run(region.nodes_mut());
-		changed |= isle::run(region.nodes_mut());
+		changed |= optimization_stages.match_output_reductions
+			&& isle::reduce_match_outputs(region.nodes_mut(), optimizations);
+		changed |= optimizations.eliminate_common_nodes
+			&& self.common_node_eliminator.run(region.nodes_mut());
+		changed |=
+			optimization_stages.isle_rewrites && isle::run(region.nodes_mut(), optimizations);
 
 		changed
 	}
@@ -53,15 +84,19 @@ impl Optimizer {
 	fn optimize_region(
 		&mut self,
 		region: &mut Region,
-		lower_target_nodes: &mut dyn FnMut(&mut Region) -> bool,
+		configuration: &OptimizationConfiguration,
+		optimization_stages: OptimizationStages,
+		lower_target_nodes: &mut dyn FnMut(&mut Region, &Optimizations) -> bool,
 	) {
-		loop {
-			if self.run_generic_round(region) {
+		let optimizations = &configuration.optimizations;
+
+		for _ in 0..configuration.round_limit {
+			if self.run_generic_round(region, optimizations, optimization_stages) {
 				identity::remove(region.nodes_mut());
 				continue;
 			}
 
-			if lower_target_nodes(region) {
+			if optimization_stages.target_lowering && lower_target_nodes(region, optimizations) {
 				identity::remove(region.nodes_mut());
 				continue;
 			}
@@ -112,16 +147,25 @@ impl Optimizer {
 	}
 
 	/// Optimize every region in the complete function tree, deepest first.
-	/// Run target lowering only after generic rewrites settle.
+	/// Run target lowering only after selected generic rewrites settle.
 	pub fn run(
 		&mut self,
 		function: &Arc<Mutex<Function>>,
-		should_optimize: bool,
-		lower_target_nodes: &mut dyn FnMut(&mut Region) -> bool,
+		configuration: &OptimizationConfiguration,
+		lower_target_nodes: &mut dyn FnMut(&mut Region, &Optimizations) -> bool,
 	) {
+		let optimization_stages = configuration.optimizations.stages();
+		let has_optional_work =
+			optimization_stages.any_optimization && configuration.round_limit != 0;
+
 		region_driver::run_function(function, &mut |mut region| {
-			if should_optimize {
-				self.optimize_region(&mut region, lower_target_nodes);
+			if has_optional_work {
+				self.optimize_region(
+					&mut region,
+					configuration,
+					optimization_stages,
+					lower_target_nodes,
+				);
 			}
 
 			self.finalize(&mut region);
