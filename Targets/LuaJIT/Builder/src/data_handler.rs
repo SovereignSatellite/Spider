@@ -655,15 +655,7 @@ impl DataHandler {
 	}
 
 	pub fn build_table_length(&mut self, region: u32, source: Link) -> Expression {
-		let source = self.load(region, source);
-
-		Expression::Field(
-			Field {
-				source,
-				name: "minimum",
-			}
-			.into(),
-		)
+		self.build_field(region, source, "minimum")
 	}
 
 	pub fn build_index(&mut self, region: u32, source: Link, offset: Link) -> Expression {
