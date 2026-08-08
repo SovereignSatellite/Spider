@@ -443,17 +443,7 @@ impl DataHandler {
 		reference: Link,
 		node: BufferStore,
 	) -> Expression {
-		let arguments = [
-			self.load(region, reference),
-			self.load(region, node.offset),
-			self.load(region, node.value),
-		];
-		let expression = Apply {
-			name: node.name,
-			arguments,
-		};
-
-		Expression::Apply3Arguments(expression.into())
+		self.build_apply_3(region, node.name, [reference, node.offset, node.value])
 	}
 
 	pub fn build_vector_create(&mut self, region: u32, source: Link) -> Expression {
@@ -471,9 +461,13 @@ impl DataHandler {
 	}
 
 	pub fn build_vector_x(&mut self, region: u32, source: Link) -> Expression {
+		self.build_field(region, source, "x")
+	}
+
+	pub fn build_field(&mut self, region: u32, source: Link, name: &'static str) -> Expression {
 		let source = self.load(region, source);
 
-		Expression::Field(Field { source, name: "x" }.into())
+		Expression::Field(Field { source, name }.into())
 	}
 
 	pub fn build_infix(
@@ -703,19 +697,11 @@ impl DataHandler {
 	}
 
 	pub fn build_table_size(&mut self, region: u32, reference: Link) -> Expression {
-		self.build_table_length(region, reference)
+		self.build_apply_1(region, "rt_table_size", [reference])
 	}
 
 	pub fn build_table_length(&mut self, region: u32, source: Link) -> Expression {
-		let source = self.load(region, source);
-
-		Expression::Field(
-			Field {
-				source,
-				name: "minimum",
-			}
-			.into(),
-		)
+		self.build_field(region, source, "minimum")
 	}
 
 	pub fn build_index(&mut self, region: u32, source: Link, offset: Link) -> Expression {
