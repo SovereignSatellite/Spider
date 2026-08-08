@@ -9,7 +9,7 @@ use parking_lot::Mutex;
 use ir_graph::{Region, Shape, region::Function, region_driver};
 use ir_passes::{
 	catalog::{OptimizationStages, Optimizations},
-	motion::InvariantPortMover,
+	motion::{HeadControlledLoopInverter, InvariantPortMover, canonicalize_repeat_condition},
 	normalize::{ConstantIsolator, DeadPortEliminator, TopologicalCompactor, identity},
 	simplify::{CommonNodeEliminator, control_folder, isle},
 };
@@ -19,7 +19,7 @@ use ir_passes::{
 pub struct OptimizationConfiguration {
 	/// Select the enabled transformations.
 	pub optimizations: Optimizations,
-	/// Limit graph-changing fixpoint rounds per region.
+	/// Limit each graph-changing fixpoint phase to this many rounds.
 	pub round_limit: u32,
 }
 
@@ -37,6 +37,7 @@ impl OptimizationConfiguration {
 /// Compose the region-local passes into a fixpoint optimization loop.
 pub struct Optimizer {
 	topological_compactor: TopologicalCompactor,
+	head_controlled_loop_inverter: HeadControlledLoopInverter,
 	invariant_port_mover: InvariantPortMover,
 	common_node_eliminator: CommonNodeEliminator,
 	constant_isolator: ConstantIsolator,
@@ -49,6 +50,7 @@ impl Optimizer {
 	pub fn new() -> Self {
 		Self {
 			topological_compactor: TopologicalCompactor::new(),
+			head_controlled_loop_inverter: HeadControlledLoopInverter::new(),
 			invariant_port_mover: InvariantPortMover::new(),
 			common_node_eliminator: CommonNodeEliminator::new(),
 			constant_isolator: ConstantIsolator::new(),
@@ -146,6 +148,33 @@ impl Optimizer {
 		}
 	}
 
+	fn prepare_head_controlled_loop_inversion(&mut self, region: &mut Region) -> bool {
+		if let Region::Repeat(repeat) = region {
+			let _ = canonicalize_repeat_condition(repeat);
+		}
+
+		let inverted = self.head_controlled_loop_inverter.run(region.nodes_mut());
+		if inverted {
+			self.topological_compactor.run(region);
+		}
+
+		inverted
+	}
+
+	fn invert_head_controlled_loops(&mut self, function: &Arc<Mutex<Function>>, round_limit: u32) {
+		for _ in 0..round_limit {
+			let mut changed = false;
+
+			region_driver::run_function(function, &mut |mut region| {
+				changed |= self.prepare_head_controlled_loop_inversion(&mut region);
+			});
+
+			if !changed {
+				return;
+			}
+		}
+	}
+
 	/// Optimize every region in the complete function tree, deepest first.
 	/// Run target lowering only after selected generic rewrites settle.
 	pub fn run(
@@ -157,6 +186,9 @@ impl Optimizer {
 		let optimization_stages = configuration.optimizations.stages();
 		let has_optional_work =
 			optimization_stages.any_optimization && configuration.round_limit != 0;
+		if configuration.optimizations.invert_head_controlled_loops {
+			self.invert_head_controlled_loops(function, configuration.round_limit);
+		}
 
 		region_driver::run_function(function, &mut |mut region| {
 			if has_optional_work {

@@ -167,7 +167,7 @@ define_intents!(
 		ControlMotion,
 		ControlFlow,
 		"control-motion",
-		"Enable or disable motion of values unchanged within control regions."
+		"Enable or disable motion and restructuring across control regions."
 	),
 	(
 		FloatingPointConversions,
