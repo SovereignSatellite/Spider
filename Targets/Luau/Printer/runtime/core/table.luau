@@ -52,7 +52,7 @@ local function rt_table_grow<T>(destination: Table<T>, source: T, size: number):
 		return 0xFFFF_FFFF
 	end
 
-	for offset = old, new do
+	for offset = old, new - 1 do
 		destination[offset] = source
 	end
 
