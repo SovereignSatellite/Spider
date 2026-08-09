@@ -54,7 +54,7 @@ fn write_block(
 			source.push(operator);
 		} else {
 			source.push('[');
-			write_block(data, budget, source)?;
+			stacker::maybe_grow(0x1_0000, 0x10_0000, || write_block(data, budget, source))?;
 			source.push(']');
 		}
 
