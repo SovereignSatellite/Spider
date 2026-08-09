@@ -209,13 +209,7 @@ impl ExpressionBuilder {
 
 	fn handle_local_tee(&mut self, local: u32) {
 		let destination = LOCAL_BASE + u16::try_from(local).unwrap();
-		let source = self.stack_builder.pull_local();
-
-		assert_eq!(
-			self.stack_builder.push_local(),
-			source,
-			"local should remain the same"
-		);
+		let source = self.stack_builder.peek_local();
 
 		self.code_builder.add_local_set(destination, source);
 	}

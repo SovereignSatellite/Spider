@@ -118,6 +118,10 @@ impl StackBuilder {
 		self.top
 	}
 
+	pub const fn peek_local(&self) -> u16 {
+		self.top.wrapping_sub(1)
+	}
+
 	pub const fn set_top(&mut self, top: u16) {
 		self.top = top;
 	}
