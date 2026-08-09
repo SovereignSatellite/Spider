@@ -4,7 +4,7 @@ use arbitrary::{Arbitrary, Result, Unstructured};
 use wasm_smith::{Config, Module};
 
 pub struct SupportedModule {
-	module: Module,
+	bytes: Vec<u8>,
 }
 
 impl Debug for SupportedModule {
@@ -16,9 +16,9 @@ impl Debug for SupportedModule {
 impl<'data> Arbitrary<'data> for SupportedModule {
 	fn arbitrary(u: &mut Unstructured<'data>) -> Result<Self> {
 		let config = create_config(u)?;
-		let module = Module::new(config, u)?;
+		let bytes = Module::new(config, u)?.to_bytes();
 
-		Ok(Self { module })
+		Ok(Self { bytes })
 	}
 }
 
@@ -48,6 +48,6 @@ const fn disable_unsupported_proposals(config: &mut Config) {
 impl SupportedModule {
 	#[must_use]
 	pub fn into_bytes(self) -> Vec<u8> {
-		self.module.to_bytes()
+		self.bytes
 	}
 }
