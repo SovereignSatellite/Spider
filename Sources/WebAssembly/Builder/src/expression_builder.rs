@@ -1,5 +1,3 @@
-//! Expression builder that converts WebAssembly operators into IR instructions.
-
 use wasmparser::{BlockType, BrTable, FuncType, Ieee32, Ieee64, MemArg, Operator, OperatorsReader};
 
 use web_assembly_graph::{
@@ -111,13 +109,13 @@ impl ExpressionBuilder {
 		let top = *base + *parameters;
 
 		let Jump { source, branch, .. } = jumps.swap_remove(0);
-		let skip = self.code_builder.add_basic_block(1);
+		let then_exit = self.code_builder.add_basic_block(1);
 
-		self.stack_builder.jump_to_depth(skip, 0, 0);
+		self.stack_builder.jump_to_depth(then_exit, 0, 0);
 
-		// Patch the if statement to jump to the end of the else block
+		let else_entry = then_exit + 1;
 		self.code_builder
-			.set_jump_destination(source, branch, skip + 1);
+			.set_jump_destination(source, branch, else_entry);
 
 		self.stack_builder.set_top(top);
 	}
@@ -721,7 +719,7 @@ impl ExpressionBuilder {
 
 	#[expect(
 		clippy::too_many_lines,
-		reason = "large match needed for all WebAssembly operators"
+		reason = "large match handles every supported WebAssembly operator"
 	)]
 	#[expect(
 		clippy::wildcard_enum_match_arm,
@@ -1037,7 +1035,7 @@ impl ExpressionBuilder {
 
 	#[expect(
 		clippy::too_many_arguments,
-		reason = "entry point requires all builder state"
+		reason = "build requires graph output and complete function context"
 	)]
 	pub fn run(
 		&mut self,

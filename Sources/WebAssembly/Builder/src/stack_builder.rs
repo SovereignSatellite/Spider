@@ -1,5 +1,3 @@
-//! Stack-based builder for managing WebAssembly operand stack and control flow levels.
-
 use list::resizable::Resizable;
 use wasmparser::{BlockType, FuncType};
 
