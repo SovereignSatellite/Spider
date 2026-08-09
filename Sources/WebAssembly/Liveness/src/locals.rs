@@ -18,14 +18,14 @@ use web_assembly_graph::{
 	},
 };
 
-/// Live local variables per basic block.
+/// Store live local sets at region boundaries.
 pub struct Locals {
 	locals: Vec<u16>,
 	ranges: Vec<(u32, u32)>,
 }
 
 impl Locals {
-	/// Creates a new empty locals collection.
+	/// Create an empty locals collection.
 	#[must_use]
 	pub const fn new() -> Self {
 		Self {
@@ -34,7 +34,7 @@ impl Locals {
 		}
 	}
 
-	fn get_known(&self, id: u16) -> &[u16] {
+	fn get_or_empty(&self, id: u16) -> &[u16] {
 		let (start, end) = self.ranges[usize::from(id)];
 
 		if start == u32::MAX {
@@ -51,24 +51,21 @@ impl Locals {
 		&self.locals[start..end]
 	}
 
-	/// Returns the live locals for the given basic block.
-	///
-	/// Live sets exist only at region boundaries: the entry block, loop
-	/// headers, branch merges, and branch arm entries.
+	/// Return the live locals at a region boundary.
 	///
 	/// # Panics
 	///
-	/// Panics when queried at any other block.
+	/// Panics if `id` is not a region boundary.
 	#[must_use]
 	pub fn get(&self, id: u16) -> &[u16] {
 		let (start, _) = self.ranges[usize::from(id)];
 
 		assert!(start != u32::MAX, "block {id} is not a region boundary");
 
-		self.get_known(id)
+		self.get_or_empty(id)
 	}
 
-	/// Computes the union of live locals across multiple basic blocks.
+	/// Write the sorted union of multiple boundary sets into `union`.
 	pub fn get_union<I: IntoIterator<Item = u16>>(&self, ids: I, union: &mut Vec<u16>) {
 		union.clear();
 
@@ -102,50 +99,49 @@ impl Default for Locals {
 	}
 }
 
-/// Tracks live local variables across a control flow graph.
+/// Track live local variables across a control-flow graph.
 pub struct LocalTracker {
 	reads: Set,
-	count: u16,
+	stack_size: u16,
 }
 
 impl LocalTracker {
-	/// Creates a new local tracker.
+	/// Create a local tracker.
 	#[must_use]
 	pub const fn new() -> Self {
 		Self {
 			reads: Set::new(),
-			count: 0,
+			stack_size: 0,
 		}
 	}
 
 	fn read_local(&mut self, local: u16) {
-		self.count = self.count.max(local + 1);
+		self.stack_size = self.stack_size.max(local + 1);
 
 		self.reads.grow_insert(local.into());
 	}
 
 	fn write_local(&mut self, local: u16) {
-		self.count = self.count.max(local + 1);
+		self.stack_size = self.stack_size.max(local + 1);
 
 		self.reads.remove(local.into());
 	}
 
 	fn read_successors_in(&mut self, locals: &Locals, graph: &ControlFlowGraph, id: u16) {
 		for successor in graph.successors_acyclic(id) {
-			self.read_other_in(locals, successor);
+			self.read_boundary_or_empty(locals, successor);
 		}
 	}
 
-	fn read_other_in(&mut self, locals: &Locals, id: u16) {
-		// The first backward pass reads loop headers before storing them.
-		let live = locals.get_known(id).iter().copied().map(usize::from);
+	fn read_boundary_or_empty(&mut self, locals: &Locals, id: u16) {
+		let live = locals.get_or_empty(id).iter().copied().map(usize::from);
 
 		self.reads.extend(live);
 	}
 
 	fn handle_start(&mut self, locals: &mut Locals, graph: &ControlFlowGraph, id: u16) {
 		let should_store = if graph.find_repeat_end(id).is_some() {
-			self.read_other_in(locals, id);
+			self.read_boundary_or_empty(locals, id);
 
 			true
 		} else {
@@ -166,11 +162,11 @@ impl LocalTracker {
 
 		if let Some(end) = graph.find_branch_end(id) {
 			self.reads.clear();
-			self.read_other_in(locals, end);
+			self.read_boundary_or_empty(locals, end);
 		}
 
 		if let Some(start) = graph.find_repeat_start(id) {
-			self.read_other_in(locals, start);
+			self.read_boundary_or_empty(locals, start);
 
 			locals.insert(start, self.reads.as_slice());
 		}
@@ -676,12 +672,12 @@ impl LocalTracker {
 		}
 	}
 
-	/// Runs liveness analysis and returns the number of locals used.
-	#[must_use = "use the returned local count"]
+	/// Analyze the graph and return its required slot count.
+	#[must_use = "use the returned slot count"]
 	pub fn run(&mut self, locals: &mut Locals, graph: &ControlFlowGraph, result_count: u16) -> u16 {
 		locals.set_block_count(graph.basic_blocks.len());
 
-		self.count = 0;
+		self.stack_size = 0;
 
 		self.handle_all(locals, graph, result_count);
 
@@ -691,7 +687,7 @@ impl LocalTracker {
 
 		locals.insert(0, self.reads.as_slice());
 
-		self.count
+		self.stack_size
 	}
 }
 

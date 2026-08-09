@@ -4,7 +4,7 @@ use alloc::vec::Vec;
 
 use web_assembly_graph::instruction::{Instruction, Reference};
 
-/// Collects all external references used by the given instructions.
+/// Collect sorted unique external references from the instructions.
 pub fn track(references: &mut Vec<Reference>, instructions: &[Instruction]) {
 	references.clear();
 
