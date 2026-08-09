@@ -23,7 +23,7 @@ use self::generation::SupportedModule;
 
 fuzz_target!(|module: SupportedModule| {
 	let bytes = module.into_bytes();
-	let root = lifting::lift(&bytes, Optimizations::all());
+	let root = lifting::lift(bytes, Optimizations::all());
 
 	luajit::compile(&root);
 });

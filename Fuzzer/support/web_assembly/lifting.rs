@@ -7,12 +7,14 @@ use ir_passes::catalog::Optimizations;
 use ir_pipeline::{OptimizationConfiguration, Optimizer};
 use web_assembly_lifter::WebAssemblyLifter;
 
-pub fn lift(bytes: &[u8], optimizations: Optimizations) -> Arc<Mutex<Function>> {
+pub fn lift(bytes: Vec<u8>, optimizations: Optimizations) -> Arc<Mutex<Function>> {
 	let root = {
 		let mut lifter = WebAssemblyLifter::new();
 
-		lifter.run(bytes)
+		lifter.run(&bytes)
 	};
+
+	drop(bytes);
 
 	{
 		let mut optimizer = Optimizer::new();
