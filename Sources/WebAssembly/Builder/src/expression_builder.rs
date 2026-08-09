@@ -184,10 +184,8 @@ impl ExpressionBuilder {
 	}
 
 	fn handle_select(&mut self) {
-		let condition = self.stack_builder.pull_local();
-		let on_false = self.stack_builder.pull_local();
-		let on_true = self.stack_builder.pull_local();
-		let destination = self.stack_builder.push_local();
+		let (destination, on_true, on_false, condition) =
+			self.stack_builder.load_ternary_operation();
 
 		self.code_builder
 			.add_select(destination, condition, on_false, on_true);
@@ -229,15 +227,14 @@ impl ExpressionBuilder {
 	}
 
 	fn handle_load(&mut self, memory_argument: MemArg, kind: LoadType) {
+		let (destination, offset) = self.stack_builder.load_unary_operation();
 		let source = Location {
 			reference: memory_argument.memory.try_into().unwrap(),
-			offset: self.stack_builder.pull_local(),
+			offset,
 		};
 
 		self.code_builder
 			.apply_memory_offset(source.offset, memory_argument.offset);
-
-		let destination = self.stack_builder.push_local();
 
 		self.code_builder.add_memory_load(destination, source, kind);
 	}
@@ -265,8 +262,7 @@ impl ExpressionBuilder {
 
 	fn handle_memory_grow(&mut self, memory: u32) {
 		let memory = memory.try_into().unwrap();
-		let size = self.stack_builder.pull_local();
-		let destination = self.stack_builder.push_local();
+		let (destination, size) = self.stack_builder.load_unary_operation();
 
 		self.code_builder
 			.add_paged_memory_grow(destination, memory, size);
@@ -297,8 +293,7 @@ impl ExpressionBuilder {
 	}
 
 	fn handle_i32_equals_zero(&mut self) {
-		let lhs = self.stack_builder.pull_local();
-		let destination = self.stack_builder.push_local();
+		let (destination, lhs) = self.stack_builder.load_unary_operation();
 
 		self.code_builder.add_i32_compare_constant(
 			destination,
@@ -309,8 +304,7 @@ impl ExpressionBuilder {
 	}
 
 	fn handle_i64_equals_zero(&mut self) {
-		let lhs = self.stack_builder.pull_local();
-		let destination = self.stack_builder.push_local();
+		let (destination, lhs) = self.stack_builder.load_unary_operation();
 
 		self.code_builder.add_i64_constant(SHARED_LOCAL, 0);
 		self.code_builder.add_integer_compare_operation(
@@ -327,8 +321,7 @@ impl ExpressionBuilder {
 		kind: integer::Type,
 		operator: integer::UnaryOperator,
 	) {
-		let source = self.stack_builder.pull_local();
-		let destination = self.stack_builder.push_local();
+		let (destination, source) = self.stack_builder.load_unary_operation();
 
 		self.code_builder
 			.add_integer_unary_operation(destination, source, kind, operator);
@@ -347,9 +340,7 @@ impl ExpressionBuilder {
 		kind: integer::Type,
 		operator: integer::CompareOperator,
 	) {
-		let rhs = self.stack_builder.pull_local();
-		let lhs = self.stack_builder.pull_local();
-		let destination = self.stack_builder.push_local();
+		let (destination, lhs, rhs) = self.stack_builder.load_binary_operation();
 
 		self.code_builder
 			.add_integer_compare_operation(destination, lhs, rhs, kind, operator);
@@ -368,9 +359,7 @@ impl ExpressionBuilder {
 		kind: integer::Type,
 		operator: integer::CompareOperator,
 	) {
-		let lhs = self.stack_builder.pull_local();
-		let rhs = self.stack_builder.pull_local();
-		let destination = self.stack_builder.push_local();
+		let (destination, rhs, lhs) = self.stack_builder.load_binary_operation();
 
 		self.code_builder
 			.add_integer_compare_operation(destination, lhs, rhs, kind, operator);
@@ -389,9 +378,7 @@ impl ExpressionBuilder {
 		kind: number::Type,
 		operator: number::CompareOperator,
 	) {
-		let rhs = self.stack_builder.pull_local();
-		let lhs = self.stack_builder.pull_local();
-		let destination = self.stack_builder.push_local();
+		let (destination, lhs, rhs) = self.stack_builder.load_binary_operation();
 
 		self.code_builder
 			.add_number_compare_operation(destination, lhs, rhs, kind, operator);
@@ -410,9 +397,7 @@ impl ExpressionBuilder {
 		kind: number::Type,
 		operator: number::CompareOperator,
 	) {
-		let lhs = self.stack_builder.pull_local();
-		let rhs = self.stack_builder.pull_local();
-		let destination = self.stack_builder.push_local();
+		let (destination, rhs, lhs) = self.stack_builder.load_binary_operation();
 
 		self.code_builder
 			.add_number_compare_operation(destination, lhs, rhs, kind, operator);
@@ -431,9 +416,7 @@ impl ExpressionBuilder {
 		kind: integer::Type,
 		operator: integer::BinaryOperator,
 	) {
-		let rhs = self.stack_builder.pull_local();
-		let lhs = self.stack_builder.pull_local();
-		let destination = self.stack_builder.push_local();
+		let (destination, lhs, rhs) = self.stack_builder.load_binary_operation();
 
 		self.code_builder
 			.add_integer_binary_operation(destination, lhs, rhs, kind, operator);
@@ -452,8 +435,7 @@ impl ExpressionBuilder {
 		kind: number::Type,
 		operator: number::UnaryOperator,
 	) {
-		let source = self.stack_builder.pull_local();
-		let destination = self.stack_builder.push_local();
+		let (destination, source) = self.stack_builder.load_unary_operation();
 
 		self.code_builder
 			.add_number_unary_operation(destination, source, kind, operator);
@@ -472,9 +454,7 @@ impl ExpressionBuilder {
 		kind: number::Type,
 		operator: number::BinaryOperator,
 	) {
-		let rhs = self.stack_builder.pull_local();
-		let lhs = self.stack_builder.pull_local();
-		let destination = self.stack_builder.push_local();
+		let (destination, lhs, rhs) = self.stack_builder.load_binary_operation();
 
 		self.code_builder
 			.add_number_binary_operation(destination, lhs, rhs, kind, operator);
@@ -489,8 +469,7 @@ impl ExpressionBuilder {
 	}
 
 	fn handle_integer_narrow(&mut self) {
-		let source = self.stack_builder.pull_local();
-		let destination = self.stack_builder.push_local();
+		let (destination, source) = self.stack_builder.load_unary_operation();
 
 		self.code_builder.add_integer_narrow(destination, source);
 	}
@@ -502,8 +481,7 @@ impl ExpressionBuilder {
 		to: integer::Type,
 		from: number::Type,
 	) {
-		let source = self.stack_builder.pull_local();
-		let destination = self.stack_builder.push_local();
+		let (destination, source) = self.stack_builder.load_unary_operation();
 
 		self.code_builder.add_number_truncate_to_integer(
 			destination,
@@ -524,8 +502,7 @@ impl ExpressionBuilder {
 	}
 
 	fn handle_integer_widen(&mut self, is_signed: bool) {
-		let source = self.stack_builder.pull_local();
-		let destination = self.stack_builder.push_local();
+		let (destination, source) = self.stack_builder.load_unary_operation();
 
 		self.code_builder.add_integer_widen(destination, source);
 
@@ -541,8 +518,7 @@ impl ExpressionBuilder {
 		to: number::Type,
 		from: integer::Type,
 	) {
-		let source = self.stack_builder.pull_local();
-		let destination = self.stack_builder.push_local();
+		let (destination, source) = self.stack_builder.load_unary_operation();
 
 		self.code_builder
 			.add_integer_convert_to_number(destination, source, is_signed, to, from);
@@ -557,38 +533,33 @@ impl ExpressionBuilder {
 	}
 
 	fn handle_number_narrow(&mut self) {
-		let source = self.stack_builder.pull_local();
-		let destination = self.stack_builder.push_local();
+		let (destination, source) = self.stack_builder.load_unary_operation();
 
 		self.code_builder.add_number_narrow(destination, source);
 	}
 
 	fn handle_number_widen(&mut self) {
-		let source = self.stack_builder.pull_local();
-		let destination = self.stack_builder.push_local();
+		let (destination, source) = self.stack_builder.load_unary_operation();
 
 		self.code_builder.add_number_widen(destination, source);
 	}
 
 	fn handle_number_reinterpret(&mut self, from: number::Type) {
-		let source = self.stack_builder.pull_local();
-		let destination = self.stack_builder.push_local();
+		let (destination, source) = self.stack_builder.load_unary_operation();
 
 		self.code_builder
 			.add_number_transmute_to_integer(destination, source, from);
 	}
 
 	fn handle_integer_reinterpret(&mut self, from: integer::Type) {
-		let source = self.stack_builder.pull_local();
-		let destination = self.stack_builder.push_local();
+		let (destination, source) = self.stack_builder.load_unary_operation();
 
 		self.code_builder
 			.add_integer_transmute_to_number(destination, source, from);
 	}
 
 	fn handle_integer_extend(&mut self, kind: ExtendType) {
-		let source = self.stack_builder.pull_local();
-		let destination = self.stack_builder.push_local();
+		let (destination, source) = self.stack_builder.load_unary_operation();
 
 		self.code_builder
 			.add_integer_extend(destination, source, kind);
@@ -690,8 +661,7 @@ impl ExpressionBuilder {
 	}
 
 	fn handle_ref_is_null(&mut self) {
-		let source = self.stack_builder.pull_local();
-		let destination = self.stack_builder.push_local();
+		let (destination, source) = self.stack_builder.load_unary_operation();
 
 		self.code_builder.add_ref_is_null(destination, source);
 	}
@@ -715,11 +685,11 @@ impl ExpressionBuilder {
 	}
 
 	fn handle_table_get(&mut self, table: u32) {
+		let (destination, offset) = self.stack_builder.load_unary_operation();
 		let source = Location {
 			reference: table.try_into().unwrap(),
-			offset: self.stack_builder.pull_local(),
+			offset,
 		};
-		let destination = self.stack_builder.push_local();
 
 		self.code_builder.add_table_get(destination, source);
 	}
@@ -736,9 +706,7 @@ impl ExpressionBuilder {
 
 	fn handle_table_grow(&mut self, table: u32) {
 		let table = table.try_into().unwrap();
-		let size = self.stack_builder.pull_local();
-		let initializer = self.stack_builder.pull_local();
-		let destination = self.stack_builder.push_local();
+		let (destination, initializer, size) = self.stack_builder.load_binary_operation();
 
 		self.code_builder
 			.add_table_grow(destination, table, size, initializer);
