@@ -37,8 +37,6 @@ const HARNESS_START_SOURCE: &str = include_str!("harness/luajit.start.lua");
 const HARNESS_END_SOURCE: &str = include_str!("harness/luajit.end.lua");
 
 struct LuaJIT {
-	library_sections: LibrarySections,
-	library_printer: LibraryPrinter,
 	references: Vec<&'static str>,
 
 	compiler: Compiler,
@@ -51,14 +49,7 @@ struct LuaJIT {
 
 impl LuaJIT {
 	fn new(is_optimized: bool) -> Self {
-		let mut library_sections = LibrarySections::with_built_ins();
-
-		library_sections.parse_from(HARNESS_START_SOURCE);
-		library_sections.resolve();
-
 		Self {
-			library_sections,
-			library_printer: LibraryPrinter::new(),
 			references: Vec::new(),
 
 			compiler: Compiler::new(),
@@ -77,10 +68,16 @@ impl LuaJIT {
 		self.references.sort_unstable();
 		self.references.dedup();
 
-		self.library_printer
-			.resolve(&self.references, &self.library_sections);
+		let mut library_sections = LibrarySections::with_built_ins();
 
-		self.library_printer.print(&self.library_sections, out)?;
+		library_sections.parse_from(HARNESS_START_SOURCE);
+		library_sections.resolve();
+
+		let mut library_printer = LibraryPrinter::new();
+
+		library_printer.resolve(&self.references, &library_sections);
+
+		library_printer.print(&library_sections, out)?;
 
 		out.write_all(&self.file)?;
 		out.write_all(HARNESS_END_SOURCE.as_bytes())?;
