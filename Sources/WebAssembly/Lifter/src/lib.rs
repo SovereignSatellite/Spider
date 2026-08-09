@@ -103,31 +103,13 @@ impl WebAssemblyLifter {
 		}
 	}
 
-	fn load_types(&mut self, module: &Module<'_>) {
-		self.types.clear();
-
-		if let Some(types) = module.types.clone() {
-			self.types.add_sub_types(types);
-		}
-
-		for import in &module.environment.imports {
-			if let ImportKind::Function { type_index } = import.kind {
-				self.types.add_function(type_index);
-			}
-		}
-
-		if let Some(functions) = module.functions.clone() {
-			self.types.add_functions(functions);
-		}
-	}
-
 	fn create_import(&mut self, nodes: &mut Vec<Node>, import: &ImportPlan) {
 		let namespace = Arc::clone(&import.namespace);
 		let identifier = Arc::clone(&import.identifier);
 		let value = Import::add_into(nodes, namespace, identifier);
 
 		match import.kind {
-			ImportKind::Function { .. } => {
+			ImportKind::Function => {
 				let slot = MutableNew::add_into(nodes, value);
 
 				self.entities.functions.push(slot);
@@ -300,11 +282,10 @@ impl WebAssemblyLifter {
 	/// Lifts the given WebAssembly binary data into a root function.
 	#[must_use = "use the lifted root function"]
 	pub fn run(&mut self, data: &[u8]) -> Arc<Mutex<Function>> {
-		let module = Module::load(data);
+		let module = Module::load(data, &mut self.types);
 		let environment = &module.environment;
 
 		self.entities.clear();
-		self.load_types(&module);
 
 		Function::create(1, |nodes, arguments| {
 			self.create_entities(nodes, environment, module.code.len());

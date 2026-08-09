@@ -1,10 +1,11 @@
 use alloc::sync::Arc;
 
 use wasmparser::{
-	ElementItems, ExternalKind, FunctionBody, Imports, Parser, Payload, RecGroup, SectionLimited,
-	TableInit, TypeRef,
+	ElementItems, ExternalKind, FunctionBody, Imports, Parser, Payload, SectionLimited, TableInit,
+	TypeRef,
 };
 
+use web_assembly_builder::Types;
 use web_assembly_graph::instruction::MemorySize;
 
 use super::{
@@ -16,9 +17,13 @@ use super::{
 };
 
 impl ImportKind {
-	fn build(kind: TypeRef) -> Self {
+	fn build(kind: TypeRef, types: &mut Types) -> Self {
 		match kind {
-			TypeRef::Func(type_index) => Self::Function { type_index },
+			TypeRef::Func(type_index) => {
+				types.add_function(type_index);
+
+				Self::Function
+			}
 			TypeRef::Table(_) => Self::Table,
 			TypeRef::Memory(_) => Self::Memory,
 			TypeRef::Global(_) => Self::Global,
@@ -29,20 +34,20 @@ impl ImportKind {
 }
 
 impl ImportPlan {
-	fn build(import: wasmparser::Import<'_>) -> Self {
+	fn build(import: wasmparser::Import<'_>, types: &mut Types) -> Self {
 		Self {
 			namespace: Arc::<str>::from(import.module),
 			identifier: Arc::<str>::from(import.name),
-			kind: ImportKind::build(import.ty),
+			kind: ImportKind::build(import.ty, types),
 		}
 	}
 
-	fn build_all(section: SectionLimited<'_, Imports<'_>>) -> Vec<Self> {
+	fn build_all(section: SectionLimited<'_, Imports<'_>>, types: &mut Types) -> Vec<Self> {
 		section
 			.into_iter()
 			.map(Result::unwrap)
 			.map(|group| match group {
-				Imports::Single(_, import) => Self::build(import),
+				Imports::Single(_, import) => Self::build(import, types),
 				Imports::Compact1 { .. } => unimplemented!("`Compact1` imports"),
 				Imports::Compact2 { .. } => unimplemented!("`Compact2` imports"),
 			})
@@ -205,8 +210,6 @@ impl DataPlan {
 }
 
 pub struct Module<'data> {
-	pub types: Option<SectionLimited<'data, RecGroup>>,
-	pub functions: Option<SectionLimited<'data, u32>>,
 	pub code: Vec<FunctionBody<'data>>,
 	pub environment: EnvironmentPlan,
 }
@@ -214,8 +217,6 @@ pub struct Module<'data> {
 impl<'data> Module<'data> {
 	const fn new() -> Self {
 		Self {
-			types: None,
-			functions: None,
 			code: Vec::new(),
 			environment: EnvironmentPlan::new(),
 		}
@@ -225,18 +226,18 @@ impl<'data> Module<'data> {
 		clippy::wildcard_enum_match_arm,
 		reason = "catch-all for unsupported payloads"
 	)]
-	fn handle_payload(&mut self, payload: Payload<'data>) {
+	fn handle_payload(&mut self, payload: Payload<'data>, types: &mut Types) {
 		match payload {
 			Payload::Version { .. }
 			| Payload::DataCountSection { .. }
 			| Payload::CustomSection(_)
 			| Payload::End(_) => {}
 
-			Payload::TypeSection(section) => self.types = Some(section),
+			Payload::TypeSection(section) => types.add_sub_types(section),
 			Payload::ImportSection(section) => {
-				self.environment.imports = ImportPlan::build_all(section);
+				self.environment.imports = ImportPlan::build_all(section, types);
 			}
-			Payload::FunctionSection(section) => self.functions = Some(section),
+			Payload::FunctionSection(section) => types.add_functions(section),
 			Payload::TableSection(section) => {
 				self.environment.tables = TablePlan::build_all(section);
 			}
@@ -269,11 +270,12 @@ impl<'data> Module<'data> {
 		}
 	}
 
-	pub fn load(data: &'data [u8]) -> Self {
+	pub fn load(data: &'data [u8], types: &mut Types) -> Self {
 		let mut module = Self::new();
+		types.clear();
 
 		for payload in Parser::new(0).parse_all(data).map(Result::unwrap) {
-			module.handle_payload(payload);
+			module.handle_payload(payload, types);
 		}
 
 		module
