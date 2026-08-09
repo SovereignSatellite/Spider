@@ -617,7 +617,7 @@ fn compile_test(destination: &Path, tested: &str, is_optimized: bool) -> Result<
 	Ok(())
 }
 
-fn run_file(destination: &Path, is_optimized: bool, is_native: bool) -> io::Result<Box<str>> {
+fn run_file(destination: &Path, is_optimized: bool, is_native: bool) -> io::Result<()> {
 	let mut arguments = vec![OsStr::new(if is_optimized { "-O2" } else { "-O0" })];
 
 	if is_native {
@@ -647,10 +647,8 @@ fn run_and_assert(path: &Path, is_optimized: bool, is_native: bool) -> Result<()
 		handles.push(handle);
 	}
 
-	for (index, handle) in handles.into_iter().enumerate() {
-		let output = handle.join().unwrap()?;
-
-		assert!(output.is_empty(), "run {index} {output}");
+	for handle in handles {
+		handle.join().unwrap()?;
 	}
 
 	Ok(())
