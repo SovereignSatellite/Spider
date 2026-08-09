@@ -153,7 +153,7 @@ impl CodeBuilder {
 	pub fn try_add_stack_adjustment(&mut self, base: u16, top: u16, count: u16) -> bool {
 		let source = top.wrapping_sub(count);
 
-		if base == source || top == u16::MAX {
+		if count == 0 || base == source || top == u16::MAX {
 			return false;
 		}
 
