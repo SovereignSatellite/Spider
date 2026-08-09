@@ -25,5 +25,5 @@ fuzz_target!(|source: SupportedSource| {
 	let source = source.into_string();
 	let root = lifting::lift(source, Optimizations::none());
 
-	luau::compile(&root);
+	luau::compile(root);
 });

@@ -25,5 +25,5 @@ fuzz_target!(|module: SupportedModule| {
 	let bytes = module.into_bytes();
 	let root = lifting::lift(bytes, Optimizations::none());
 
-	luau::compile(&root);
+	luau::compile(root);
 });
