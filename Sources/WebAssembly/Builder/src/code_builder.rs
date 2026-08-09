@@ -44,8 +44,6 @@ fn fill_predecessors(basic_blocks: &mut [BasicBlock]) {
 pub struct CodeBuilder {
 	instructions: Vec<Instruction>,
 	basic_blocks: Vec<BasicBlock>,
-
-	position: u32,
 }
 
 impl CodeBuilder {
@@ -53,16 +51,12 @@ impl CodeBuilder {
 		Self {
 			instructions: Vec::new(),
 			basic_blocks: Vec::new(),
-
-			position: 0,
 		}
 	}
 
 	pub fn clear(&mut self) {
 		self.instructions.clear();
 		self.basic_blocks.clear();
-
-		self.position = 0;
 	}
 
 	pub fn swap_contents(&mut self, graph: &mut ControlFlowGraph) {
@@ -80,15 +74,14 @@ impl CodeBuilder {
 	pub fn add_basic_block(&mut self, successors: usize) -> u16 {
 		let basic_blocks = self.basic_blocks.len().try_into().unwrap();
 		let instructions = self.instructions.len().try_into().unwrap();
+		let start = self.basic_blocks.last().map_or(0, |block| block.end);
 
 		self.basic_blocks.push(BasicBlock {
 			predecessors: Resizable::new(),
 			successors: iter::repeat_n(basic_blocks + 1, successors).collect(),
-			start: self.position,
+			start,
 			end: instructions,
 		});
-
-		self.position = instructions;
 
 		basic_blocks
 	}
