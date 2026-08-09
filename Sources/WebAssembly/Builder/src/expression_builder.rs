@@ -723,6 +723,10 @@ impl ExpressionBuilder {
 		clippy::too_many_lines,
 		reason = "large match needed for all WebAssembly operators"
 	)]
+	#[expect(
+		clippy::wildcard_enum_match_arm,
+		reason = "all remaining WebAssembly operators share unsupported behavior"
+	)]
 	fn handle_operator(&mut self, types: &Types, operator: &Operator<'_>) {
 		match *operator {
 			Operator::Unreachable => self.handle_unreachable(),
@@ -1025,169 +1029,7 @@ impl ExpressionBuilder {
 			Operator::TableGrow { table } => self.handle_table_grow(table),
 			Operator::TableSize { table } => self.handle_table_size(table),
 
-			Operator::RefEq
-			| Operator::StructNew { .. }
-			| Operator::StructNewDefault { .. }
-			| Operator::StructGet { .. }
-			| Operator::StructGetS { .. }
-			| Operator::StructGetU { .. }
-			| Operator::StructSet { .. }
-			| Operator::ArrayNew { .. }
-			| Operator::ArrayNewDefault { .. }
-			| Operator::ArrayNewFixed { .. }
-			| Operator::ArrayNewData { .. }
-			| Operator::ArrayNewElem { .. }
-			| Operator::ArrayGet { .. }
-			| Operator::ArrayGetS { .. }
-			| Operator::ArrayGetU { .. }
-			| Operator::ArraySet { .. }
-			| Operator::ArrayLen
-			| Operator::ArrayFill { .. }
-			| Operator::ArrayCopy { .. }
-			| Operator::ArrayInitData { .. }
-			| Operator::ArrayInitElem { .. }
-			| Operator::RefTestNonNull { .. }
-			| Operator::RefTestNullable { .. }
-			| Operator::RefCastNonNull { .. }
-			| Operator::RefCastNullable { .. }
-			| Operator::BrOnCast { .. }
-			| Operator::BrOnCastFail { .. }
-			| Operator::AnyConvertExtern
-			| Operator::ExternConvertAny
-			| Operator::RefI31
-			| Operator::I31GetS
-			| Operator::I31GetU
-			| Operator::TypedSelectMulti { .. }
-			| Operator::ReturnCall { .. }
-			| Operator::ReturnCallIndirect { .. }
-			| Operator::MemoryDiscard { .. }
-			| Operator::MemoryAtomicNotify { .. }
-			| Operator::MemoryAtomicWait32 { .. }
-			| Operator::MemoryAtomicWait64 { .. }
-			| Operator::AtomicFence
-			| Operator::I32AtomicLoad { .. }
-			| Operator::I64AtomicLoad { .. }
-			| Operator::I32AtomicLoad8U { .. }
-			| Operator::I32AtomicLoad16U { .. }
-			| Operator::I64AtomicLoad8U { .. }
-			| Operator::I64AtomicLoad16U { .. }
-			| Operator::I64AtomicLoad32U { .. }
-			| Operator::I32AtomicStore { .. }
-			| Operator::I64AtomicStore { .. }
-			| Operator::I32AtomicStore8 { .. }
-			| Operator::I32AtomicStore16 { .. }
-			| Operator::I64AtomicStore8 { .. }
-			| Operator::I64AtomicStore16 { .. }
-			| Operator::I64AtomicStore32 { .. }
-			| Operator::I32AtomicRmwAdd { .. }
-			| Operator::I64AtomicRmwAdd { .. }
-			| Operator::I32AtomicRmw8AddU { .. }
-			| Operator::I32AtomicRmw16AddU { .. }
-			| Operator::I64AtomicRmw8AddU { .. }
-			| Operator::I64AtomicRmw16AddU { .. }
-			| Operator::I64AtomicRmw32AddU { .. }
-			| Operator::I32AtomicRmwSub { .. }
-			| Operator::I64AtomicRmwSub { .. }
-			| Operator::I32AtomicRmw8SubU { .. }
-			| Operator::I32AtomicRmw16SubU { .. }
-			| Operator::I64AtomicRmw8SubU { .. }
-			| Operator::I64AtomicRmw16SubU { .. }
-			| Operator::I64AtomicRmw32SubU { .. }
-			| Operator::I32AtomicRmwAnd { .. }
-			| Operator::I64AtomicRmwAnd { .. }
-			| Operator::I32AtomicRmw8AndU { .. }
-			| Operator::I32AtomicRmw16AndU { .. }
-			| Operator::I64AtomicRmw8AndU { .. }
-			| Operator::I64AtomicRmw16AndU { .. }
-			| Operator::I64AtomicRmw32AndU { .. }
-			| Operator::I32AtomicRmwOr { .. }
-			| Operator::I64AtomicRmwOr { .. }
-			| Operator::I32AtomicRmw8OrU { .. }
-			| Operator::I32AtomicRmw16OrU { .. }
-			| Operator::I64AtomicRmw8OrU { .. }
-			| Operator::I64AtomicRmw16OrU { .. }
-			| Operator::I64AtomicRmw32OrU { .. }
-			| Operator::I32AtomicRmwXor { .. }
-			| Operator::I64AtomicRmwXor { .. }
-			| Operator::I32AtomicRmw8XorU { .. }
-			| Operator::I32AtomicRmw16XorU { .. }
-			| Operator::I64AtomicRmw8XorU { .. }
-			| Operator::I64AtomicRmw16XorU { .. }
-			| Operator::I64AtomicRmw32XorU { .. }
-			| Operator::I32AtomicRmwXchg { .. }
-			| Operator::I64AtomicRmwXchg { .. }
-			| Operator::I32AtomicRmw8XchgU { .. }
-			| Operator::I32AtomicRmw16XchgU { .. }
-			| Operator::I64AtomicRmw8XchgU { .. }
-			| Operator::I64AtomicRmw16XchgU { .. }
-			| Operator::I64AtomicRmw32XchgU { .. }
-			| Operator::I32AtomicRmwCmpxchg { .. }
-			| Operator::I64AtomicRmwCmpxchg { .. }
-			| Operator::I32AtomicRmw8CmpxchgU { .. }
-			| Operator::I32AtomicRmw16CmpxchgU { .. }
-			| Operator::I64AtomicRmw8CmpxchgU { .. }
-			| Operator::I64AtomicRmw16CmpxchgU { .. }
-			| Operator::I64AtomicRmw32CmpxchgU { .. }
-			| Operator::TryTable { .. }
-			| Operator::Throw { .. }
-			| Operator::ThrowRef
-			| Operator::Try { .. }
-			| Operator::Catch { .. }
-			| Operator::Rethrow { .. }
-			| Operator::Delegate { .. }
-			| Operator::CatchAll
-			| Operator::GlobalAtomicGet { .. }
-			| Operator::GlobalAtomicSet { .. }
-			| Operator::GlobalAtomicRmwAdd { .. }
-			| Operator::GlobalAtomicRmwSub { .. }
-			| Operator::GlobalAtomicRmwAnd { .. }
-			| Operator::GlobalAtomicRmwOr { .. }
-			| Operator::GlobalAtomicRmwXor { .. }
-			| Operator::GlobalAtomicRmwXchg { .. }
-			| Operator::GlobalAtomicRmwCmpxchg { .. }
-			| Operator::TableAtomicGet { .. }
-			| Operator::TableAtomicSet { .. }
-			| Operator::TableAtomicRmwXchg { .. }
-			| Operator::TableAtomicRmwCmpxchg { .. }
-			| Operator::StructAtomicGet { .. }
-			| Operator::StructAtomicGetS { .. }
-			| Operator::StructAtomicGetU { .. }
-			| Operator::StructAtomicSet { .. }
-			| Operator::StructAtomicRmwAdd { .. }
-			| Operator::StructAtomicRmwSub { .. }
-			| Operator::StructAtomicRmwAnd { .. }
-			| Operator::StructAtomicRmwOr { .. }
-			| Operator::StructAtomicRmwXor { .. }
-			| Operator::StructAtomicRmwXchg { .. }
-			| Operator::StructAtomicRmwCmpxchg { .. }
-			| Operator::ArrayAtomicGet { .. }
-			| Operator::ArrayAtomicGetS { .. }
-			| Operator::ArrayAtomicGetU { .. }
-			| Operator::ArrayAtomicSet { .. }
-			| Operator::ArrayAtomicRmwAdd { .. }
-			| Operator::ArrayAtomicRmwSub { .. }
-			| Operator::ArrayAtomicRmwAnd { .. }
-			| Operator::ArrayAtomicRmwOr { .. }
-			| Operator::ArrayAtomicRmwXor { .. }
-			| Operator::ArrayAtomicRmwXchg { .. }
-			| Operator::ArrayAtomicRmwCmpxchg { .. }
-			| Operator::RefI31Shared
-			| Operator::CallRef { .. }
-			| Operator::ReturnCallRef { .. }
-			| Operator::RefAsNonNull
-			| Operator::BrOnNull { .. }
-			| Operator::BrOnNonNull { .. }
-			| Operator::ContNew { .. }
-			| Operator::ContBind { .. }
-			| Operator::Suspend { .. }
-			| Operator::Resume { .. }
-			| Operator::ResumeThrow { .. }
-			| Operator::Switch { .. }
-			| Operator::I64Add128
-			| Operator::I64Sub128
-			| Operator::I64MulWideS
-			| Operator::I64MulWideU
-			| _ => {
+			_ => {
 				unimplemented!("WebAssembly operator {operator:?} is not supported")
 			}
 		}
