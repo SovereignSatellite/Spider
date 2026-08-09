@@ -3,7 +3,7 @@
 extern crate alloc;
 
 use alloc::sync::{Arc, Weak};
-use core::str::Bytes;
+use core::{mem, str::Bytes};
 
 use parking_lot::Mutex;
 
@@ -22,7 +22,7 @@ const MEMORY_SIZE: u32 = 1_024 * 4 * CELL_SIZE;
 
 /// A lifter that compiles source code into a data flow graph.
 pub struct TuringMachineLifter {
-	loads: Vec<Link>,
+	loads: Resizable<Link, 4>,
 	store: Link,
 	offset: Link,
 
@@ -38,7 +38,7 @@ impl TuringMachineLifter {
 	#[must_use]
 	pub fn new() -> Self {
 		Self {
-			loads: Vec::new(),
+			loads: Resizable::new(),
 			store: Link::DANGLING,
 			offset: Link::DANGLING,
 
@@ -60,9 +60,7 @@ impl TuringMachineLifter {
 	}
 
 	fn reconcile_store(&mut self, nodes: &mut Vec<Node>) -> Link {
-		let sources: Resizable<_, _> = self.loads.iter().copied().collect();
-
-		self.loads.clear();
+		let sources = mem::take(&mut self.loads);
 
 		match *sources {
 			[state] => state,
