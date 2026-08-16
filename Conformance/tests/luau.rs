@@ -627,9 +627,8 @@ fn run_file(destination: &Path, is_optimized: bool, is_native: bool) -> io::Resu
 	arguments.push(destination.as_ref());
 
 	let program = env::var_os("LUAU_PATH").unwrap_or_else(|| "luau".into());
-	let output = process::run(&program, &arguments)?;
 
-	Ok(output)
+	process::run(&program, &arguments)
 }
 
 fn run_and_assert(path: &Path, is_optimized: bool, is_native: bool) -> Result<()> {

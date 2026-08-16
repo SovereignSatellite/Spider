@@ -592,9 +592,8 @@ fn run_file(destination: &Path, is_optimized: bool, is_native: bool) -> io::Resu
 	];
 
 	let program = env::var_os("LUAJIT_PATH").unwrap_or_else(|| "luajit".into());
-	let output = process::run(&program, &arguments)?;
 
-	Ok(output)
+	process::run(&program, &arguments)
 }
 
 fn run_and_assert(path: &Path, is_optimized: bool, is_native: bool) -> Result<()> {
