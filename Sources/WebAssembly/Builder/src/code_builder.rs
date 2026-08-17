@@ -1,5 +1,3 @@
-//! Low-level code builder for emitting WebAssembly IR instructions and basic blocks.
-
 #![expect(
 	clippy::too_many_arguments,
 	reason = "CFG instruction constructors mirror their struct fields"
@@ -44,8 +42,6 @@ fn fill_predecessors(basic_blocks: &mut [BasicBlock]) {
 pub struct CodeBuilder {
 	instructions: Vec<Instruction>,
 	basic_blocks: Vec<BasicBlock>,
-
-	position: u32,
 }
 
 impl CodeBuilder {
@@ -53,16 +49,12 @@ impl CodeBuilder {
 		Self {
 			instructions: Vec::new(),
 			basic_blocks: Vec::new(),
-
-			position: 0,
 		}
 	}
 
 	pub fn clear(&mut self) {
 		self.instructions.clear();
 		self.basic_blocks.clear();
-
-		self.position = 0;
 	}
 
 	pub fn swap_contents(&mut self, graph: &mut ControlFlowGraph) {
@@ -80,15 +72,14 @@ impl CodeBuilder {
 	pub fn add_basic_block(&mut self, successors: usize) -> u16 {
 		let basic_blocks = self.basic_blocks.len().try_into().unwrap();
 		let instructions = self.instructions.len().try_into().unwrap();
+		let start = self.basic_blocks.last().map_or(0, |block| block.end);
 
 		self.basic_blocks.push(BasicBlock {
 			predecessors: Resizable::new(),
 			successors: iter::repeat_n(basic_blocks + 1, successors).collect(),
-			start: self.position,
+			start,
 			end: instructions,
 		});
-
-		self.position = instructions;
 
 		basic_blocks
 	}
@@ -160,7 +151,7 @@ impl CodeBuilder {
 	pub fn try_add_stack_adjustment(&mut self, base: u16, top: u16, count: u16) -> bool {
 		let source = top.wrapping_sub(count);
 
-		if base == source || top == u16::MAX {
+		if count == 0 || base == source || top == u16::MAX {
 			return false;
 		}
 
@@ -603,17 +594,26 @@ impl CodeBuilder {
 		self.instructions.push(instruction);
 	}
 
-	// Our IR supports allocation to byte alignment, so we need
-	// to adjust this to work with WebAssembly pages.
-	fn apply_page_size(
-		&mut self,
-		destination: u16,
-		lhs: u16,
-		rhs: u16,
-		operator: integer::BinaryOperator,
-	) {
-		self.add_i32_constant(rhs, MemorySize::PAGE_SIZE.try_into().unwrap());
-		self.add_integer_binary_operation(destination, lhs, rhs, integer::Type::I32, operator);
+	fn convert_pages_to_bytes(&mut self, destination: u16, source: u16) {
+		self.add_i32_constant(SHARED_LOCAL, MemorySize::PAGE_SIZE.try_into().unwrap());
+		self.add_integer_binary_operation(
+			destination,
+			source,
+			SHARED_LOCAL,
+			integer::Type::I32,
+			integer::BinaryOperator::Multiply,
+		);
+	}
+
+	fn convert_bytes_to_pages(&mut self, destination: u16, source: u16) {
+		self.add_i32_constant(SHARED_LOCAL, MemorySize::PAGE_SIZE.try_into().unwrap());
+		self.add_integer_binary_operation(
+			destination,
+			source,
+			SHARED_LOCAL,
+			integer::Type::I32,
+			integer::BinaryOperator::Divide { is_signed: false },
+		);
 	}
 
 	fn add_memory_size(&mut self, destination: u16, memory: u16) {
@@ -627,12 +627,7 @@ impl CodeBuilder {
 
 	pub fn add_paged_memory_size(&mut self, destination: u16, memory: u16) {
 		self.add_memory_size(destination, memory);
-		self.apply_page_size(
-			destination,
-			destination,
-			SHARED_LOCAL,
-			integer::BinaryOperator::Divide { is_signed: false },
-		);
+		self.convert_bytes_to_pages(destination, destination);
 	}
 
 	fn add_memory_grow(&mut self, destination: u16, memory: u16, size: u16) {
@@ -646,12 +641,7 @@ impl CodeBuilder {
 	}
 
 	fn add_sized_memory_grow(&mut self, destination: u16, memory: u16, size: u16) {
-		self.apply_page_size(
-			SHARED_LOCAL,
-			size,
-			SHARED_LOCAL,
-			integer::BinaryOperator::Multiply,
-		);
+		self.convert_pages_to_bytes(SHARED_LOCAL, size);
 
 		self.add_memory_grow(destination, memory, SHARED_LOCAL);
 		self.add_i32_compare_constant(
@@ -664,12 +654,7 @@ impl CodeBuilder {
 		self.add_if(
 			SHARED_LOCAL,
 			|this| {
-				this.apply_page_size(
-					destination,
-					destination,
-					SHARED_LOCAL,
-					integer::BinaryOperator::Divide { is_signed: false },
-				);
+				this.convert_bytes_to_pages(destination, destination);
 			},
 			|_| {},
 		);
@@ -772,11 +757,8 @@ impl CodeBuilder {
 
 		self.try_add_stack_adjustment(base, top, results);
 
-		let exit = self.add_basic_block(1);
+		let fallthrough_exit = self.add_basic_block(1);
 
-		// Levels with destinations need to point to it, while levels
-		// without it simply defer to the next basic block after all
-		// adjustments have been completed.
 		if let Some(target) = destination {
 			self.add_jump_adjustments(base, parameters, &mut jumps);
 			self.set_jump_destinations(target, &jumps);
@@ -788,9 +770,8 @@ impl CodeBuilder {
 			self.set_jump_destinations(next_destination, &jumps);
 		}
 
-		// The base case always falls through to the next basic block.
-		let fall_through = self.basic_blocks.len().try_into().unwrap();
+		let next_block = self.basic_blocks.len().try_into().unwrap();
 
-		self.set_jump_destination(exit, 0, fall_through);
+		self.set_jump_destination(fallthrough_exit, 0, next_block);
 	}
 }

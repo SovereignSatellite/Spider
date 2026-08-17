@@ -1,18 +1,12 @@
-//! Eliminates unreachable blocks and sorts the survivors in reverse post-order.
-
 use core::mem;
-
 use web_assembly_graph::BasicBlock;
 
-/// Eliminate unreachable blocks and compact the remainder in reverse
-/// post-order.
 pub struct TopologicalCompactor {
 	blocks: Vec<BasicBlock>,
 	ids: Vec<u16>,
 }
 
 impl TopologicalCompactor {
-	/// Creates a new compactor.
 	#[must_use]
 	pub const fn new() -> Self {
 		Self {
@@ -70,7 +64,6 @@ impl TopologicalCompactor {
 		}
 	}
 
-	/// Compacts a set of basic blocks in place, starting from the given entry.
 	pub fn run(&mut self, blocks: &mut Vec<BasicBlock>, entry: u16) {
 		self.handle_blocks(blocks, entry);
 		self.handle_edges(blocks);

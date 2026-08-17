@@ -1,5 +1,3 @@
-//! Stack-based builder for managing WebAssembly operand stack and control flow levels.
-
 use list::resizable::Resizable;
 use wasmparser::{BlockType, FuncType};
 
@@ -116,6 +114,31 @@ impl StackBuilder {
 
 	pub const fn get_top(&self) -> u16 {
 		self.top
+	}
+
+	pub const fn peek_local(&self) -> u16 {
+		self.top.wrapping_sub(1)
+	}
+
+	pub const fn load_unary_operation(&self) -> (u16, u16) {
+		let source = self.peek_local();
+
+		(source, source)
+	}
+
+	pub const fn load_binary_operation(&mut self) -> (u16, u16, u16) {
+		let rhs = self.pull_local();
+		let lhs = self.peek_local();
+
+		(lhs, lhs, rhs)
+	}
+
+	pub const fn load_ternary_operation(&mut self) -> (u16, u16, u16, u16) {
+		let third = self.pull_local();
+		let second = self.pull_local();
+		let first = self.peek_local();
+
+		(first, first, second, third)
 	}
 
 	pub const fn set_top(&mut self, top: u16) {
