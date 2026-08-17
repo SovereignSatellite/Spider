@@ -10,7 +10,7 @@ pub struct ImportPlan {
 
 #[derive(Clone, Copy)]
 pub enum ImportKind {
-	Function { type_index: u32 },
+	Function,
 	Table,
 	Memory,
 	Global,
