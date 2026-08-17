@@ -9,7 +9,7 @@ const MAXIMUM_BLOCK_ITEMS: u32 = 256;
 const MAXIMUM_SOURCE_ITEMS: u32 = 4096;
 
 pub struct SupportedSource {
-	block: Block,
+	source: String,
 }
 
 impl Debug for SupportedSource {
@@ -21,76 +21,43 @@ impl Debug for SupportedSource {
 impl<'data> Arbitrary<'data> for SupportedSource {
 	fn arbitrary(u: &mut Unstructured<'data>) -> Result<Self> {
 		let mut budget = MAXIMUM_SOURCE_ITEMS;
-		let block = Block::arbitrary(u, &mut budget)?;
+		let mut source = String::new();
 
-		Ok(Self { block })
+		write_block(u, &mut budget, &mut source)?;
+
+		Ok(Self { source })
 	}
 }
 
 impl SupportedSource {
 	#[must_use]
 	pub fn into_string(self) -> String {
-		let mut source = String::new();
-
-		self.block.write(&mut source);
-
-		source
+		self.source
 	}
 }
 
-struct Block {
-	items: Vec<Item>,
-}
-
-impl Block {
-	fn arbitrary(unstructured: &mut Unstructured<'_>, budget: &mut u32) -> Result<Self> {
-		let mut items = Vec::new();
-
-		unstructured.arbitrary_loop(None, Some(MAXIMUM_BLOCK_ITEMS), |data| {
-			if *budget == 0 {
-				return Ok(ControlFlow::Break(()));
-			}
-
-			*budget -= 1;
-
-			items.push(Item::arbitrary(data, budget)?);
-
-			Ok(ControlFlow::Continue(()))
-		})?;
-
-		Ok(Self { items })
-	}
-
-	fn write(&self, source: &mut String) {
-		for item in &self.items {
-			item.write(source);
+fn write_block(
+	unstructured: &mut Unstructured<'_>,
+	budget: &mut u32,
+	source: &mut String,
+) -> Result<()> {
+	unstructured.arbitrary_loop(None, Some(MAXIMUM_BLOCK_ITEMS), |data| {
+		if *budget == 0 {
+			return Ok(ControlFlow::Break(()));
 		}
-	}
-}
 
-enum Item {
-	Operator(char),
-	Loop(Block),
-}
+		*budget -= 1;
 
-impl Item {
-	fn arbitrary(unstructured: &mut Unstructured<'_>, budget: &mut u32) -> Result<Self> {
-		let variant = unstructured.int_in_range(0..=OPERATORS.len())?;
+		let variant = data.int_in_range(0..=OPERATORS.len())?;
 
-		match OPERATORS.get(variant) {
-			Some(&operator) => Ok(Self::Operator(operator)),
-			None => Block::arbitrary(unstructured, budget).map(Self::Loop),
+		if let Some(&operator) = OPERATORS.get(variant) {
+			source.push(operator);
+		} else {
+			source.push('[');
+			stacker::maybe_grow(0x1_0000, 0x10_0000, || write_block(data, budget, source))?;
+			source.push(']');
 		}
-	}
 
-	fn write(&self, source: &mut String) {
-		match self {
-			Self::Operator(operator) => source.push(*operator),
-			Self::Loop(block) => {
-				source.push('[');
-				block.write(source);
-				source.push(']');
-			}
-		}
-	}
+		Ok(ControlFlow::Continue(()))
+	})
 }

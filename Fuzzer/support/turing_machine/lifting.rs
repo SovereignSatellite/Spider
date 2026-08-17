@@ -7,12 +7,14 @@ use ir_passes::catalog::Optimizations;
 use ir_pipeline::{OptimizationConfiguration, Optimizer};
 use turing_machine_lifter::TuringMachineLifter;
 
-pub fn lift(source: &str, optimizations: Optimizations) -> Arc<Mutex<Function>> {
+pub fn lift(source: String, optimizations: Optimizations) -> Arc<Mutex<Function>> {
 	let root = {
 		let mut lifter = TuringMachineLifter::new();
 
-		lifter.run(source)
+		lifter.run(&source)
 	};
+
+	drop(source);
 
 	{
 		let mut optimizer = Optimizer::new();

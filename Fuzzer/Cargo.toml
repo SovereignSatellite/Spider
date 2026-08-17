@@ -19,6 +19,7 @@ luajit-printer.workspace = true
 luau-builder.workspace = true
 luau-printer.workspace = true
 parking_lot.workspace = true
+stacker.workspace = true
 web-assembly-lifter.workspace = true
 
 libfuzzer-sys = "=0.4.10"
