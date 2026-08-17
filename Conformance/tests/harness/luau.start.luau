@@ -94,14 +94,6 @@ function hn_report_failure(content, level, ...)
 	hn_failed_test_count = hn_failed_test_count + 1
 end
 
--- SECTION assert_ok
--- NEEDS report_failure
-function hn_assert_ok(callback)
-	xpcall(callback, function(reason)
-		hn_report_failure("%*", 2, reason)
-	end)
-end
-
 -- SECTION assert_trap
 -- NEEDS report_failure
 function hn_assert_trap(reason, callback)

@@ -37,8 +37,6 @@ const HARNESS_START_SOURCE: &str = include_str!("harness/luau.start.luau");
 const HARNESS_END_SOURCE: &str = include_str!("harness/luau.end.luau");
 
 struct Luau {
-	library_sections: LibrarySections,
-	library_printer: LibraryPrinter,
 	references: Vec<&'static str>,
 
 	compiler: Compiler,
@@ -51,14 +49,7 @@ struct Luau {
 
 impl Luau {
 	fn new(is_optimized: bool) -> Self {
-		let mut library_sections = LibrarySections::with_built_ins();
-
-		library_sections.parse_from(HARNESS_START_SOURCE);
-		library_sections.resolve();
-
 		Self {
-			library_sections,
-			library_printer: LibraryPrinter::new(),
 			references: Vec::new(),
 
 			compiler: Compiler::new(),
@@ -77,10 +68,16 @@ impl Luau {
 		self.references.sort_unstable();
 		self.references.dedup();
 
-		self.library_printer
-			.resolve(&self.references, &self.library_sections);
+		let mut library_sections = LibrarySections::with_built_ins();
 
-		self.library_printer.print(&self.library_sections, out)?;
+		library_sections.parse_from(HARNESS_START_SOURCE);
+		library_sections.resolve();
+
+		let mut library_printer = LibraryPrinter::new();
+
+		library_printer.resolve(&self.references, &library_sections);
+
+		library_printer.print(&library_sections, out)?;
 
 		out.write_all(&self.file)?;
 		out.write_all(HARNESS_END_SOURCE.as_bytes())?;
@@ -620,7 +617,7 @@ fn compile_test(destination: &Path, tested: &str, is_optimized: bool) -> Result<
 	Ok(())
 }
 
-fn run_file(destination: &Path, is_optimized: bool, is_native: bool) -> io::Result<Box<str>> {
+fn run_file(destination: &Path, is_optimized: bool, is_native: bool) -> io::Result<()> {
 	let mut arguments = vec![OsStr::new(if is_optimized { "-O2" } else { "-O0" })];
 
 	if is_native {
@@ -630,9 +627,8 @@ fn run_file(destination: &Path, is_optimized: bool, is_native: bool) -> io::Resu
 	arguments.push(destination.as_ref());
 
 	let program = env::var_os("LUAU_PATH").unwrap_or_else(|| "luau".into());
-	let output = process::run(&program, &arguments)?;
 
-	Ok(output)
+	process::run(&program, &arguments)
 }
 
 fn run_and_assert(path: &Path, is_optimized: bool, is_native: bool) -> Result<()> {
@@ -650,10 +646,8 @@ fn run_and_assert(path: &Path, is_optimized: bool, is_native: bool) -> Result<()
 		handles.push(handle);
 	}
 
-	for (index, handle) in handles.into_iter().enumerate() {
-		let output = handle.join().unwrap()?;
-
-		assert!(output.is_empty(), "run {index} {output}");
+	for handle in handles {
+		handle.join().unwrap()?;
 	}
 
 	Ok(())

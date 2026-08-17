@@ -38,7 +38,7 @@ fn push_all_output(child: Child, out: &mut String) -> Result<()> {
 	Ok(())
 }
 
-pub fn run(path: &OsStr, arguments: &[&OsStr]) -> Result<Box<str>> {
+pub fn run(path: &OsStr, arguments: &[&OsStr]) -> Result<()> {
 	const TEST_TIMEOUT: Duration = Duration::from_secs(4);
 
 	let mut child = Command::new(path)
@@ -47,14 +47,14 @@ pub fn run(path: &OsStr, arguments: &[&OsStr]) -> Result<Box<str>> {
 		.stderr(Stdio::piped())
 		.spawn()?;
 
-	let mut output = match poll_until_timeout(&mut child, TEST_TIMEOUT) {
-		Ok(status) if status.success() => return Ok(Box::default()),
+	let (error_kind, mut output) = match poll_until_timeout(&mut child, TEST_TIMEOUT) {
+		Ok(status) if status.success() => return Ok(()),
 
-		Ok(status) => status.to_string(),
-		Err(error) => error.to_string(),
+		Ok(status) => (io::ErrorKind::Other, status.to_string()),
+		Err(error) => (error.kind(), error.to_string()),
 	};
 
 	push_all_output(child, &mut output)?;
 
-	Ok(output.into_boxed_str())
+	Err(io::Error::new(error_kind, output))
 }
