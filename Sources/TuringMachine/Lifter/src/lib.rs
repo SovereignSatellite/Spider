@@ -3,6 +3,7 @@
 extern crate alloc;
 
 use alloc::sync::{Arc, Weak};
+use core::{mem, str::Bytes};
 
 use parking_lot::Mutex;
 
@@ -19,47 +20,13 @@ use ir_graph::{
 const CELL_SIZE: u32 = 4;
 const MEMORY_SIZE: u32 = 1_024 * 4 * CELL_SIZE;
 
-enum Operator {
-	OffsetAdd,
-	OffsetSubtract,
-	MemoryAdd,
-	MemorySubtract,
-	Input,
-	Output,
-	Start,
-	End,
-}
-
-impl TryFrom<char> for Operator {
-	type Error = ();
-
-	fn try_from(character: char) -> Result<Self, Self::Error> {
-		let operator = match character {
-			'>' => Self::OffsetAdd,
-			'<' => Self::OffsetSubtract,
-			'+' => Self::MemoryAdd,
-			'-' => Self::MemorySubtract,
-			',' => Self::Input,
-			'.' => Self::Output,
-			'[' => Self::Start,
-			']' => Self::End,
-
-			_ => return Err(()),
-		};
-
-		Ok(operator)
-	}
-}
-
 /// A lifter that compiles source code into a data flow graph.
 pub struct TuringMachineLifter {
-	loads: Vec<Link>,
+	loads: Resizable<Link, 4>,
 	store: Link,
 	offset: Link,
 
 	io_state: Link,
-
-	operators: Vec<Operator>,
 
 	namespace: Arc<str>,
 	input_identifier: Arc<str>,
@@ -71,13 +38,11 @@ impl TuringMachineLifter {
 	#[must_use]
 	pub fn new() -> Self {
 		Self {
-			loads: Vec::new(),
+			loads: Resizable::new(),
 			store: Link::DANGLING,
 			offset: Link::DANGLING,
 
 			io_state: Link::DANGLING,
-
-			operators: Vec::new(),
 
 			namespace: Arc::from("turing"),
 			input_identifier: Arc::from("ask"),
@@ -95,9 +60,7 @@ impl TuringMachineLifter {
 	}
 
 	fn reconcile_store(&mut self, nodes: &mut Vec<Node>) -> Link {
-		let sources: Resizable<_, _> = self.loads.iter().copied().collect();
-
-		self.loads.clear();
+		let sources = mem::take(&mut self.loads);
 
 		match *sources {
 			[state] => state,
@@ -218,12 +181,12 @@ impl TuringMachineLifter {
 		})
 	}
 
-	fn create_repeat(&mut self, nodes: &mut Vec<Node>) {
+	fn create_repeat(&mut self, nodes: &mut Vec<Node>, source: &mut Bytes<'_>) {
 		let arguments = self.capture_state(nodes);
 
 		let repeat = Repeat::add_into(nodes, arguments, |nodes, repeat_arguments| {
 			self.rebind_state(repeat_arguments);
-			self.handle_code(nodes);
+			self.handle_code(nodes, source);
 
 			let condition = self.emit_condition(nodes);
 			let results = self.capture_state(nodes);
@@ -238,26 +201,27 @@ impl TuringMachineLifter {
 		&mut self,
 		parent: &Weak<Mutex<Match>>,
 		argument_count: u16,
+		source: &mut Bytes<'_>,
 	) -> Arc<Mutex<Branch>> {
 		Branch::create(Weak::clone(parent), argument_count, |nodes, arguments| {
 			self.rebind_state(arguments);
-			self.create_repeat(nodes);
+			self.create_repeat(nodes, source);
 
 			self.capture_state(nodes)
 		})
 	}
 
-	fn handle_block_unbounded(&mut self, nodes: &mut Vec<Node>) {
-		stacker::maybe_grow(0x1_0000, 0x10_0000, || self.handle_block(nodes));
+	fn handle_block_unbounded(&mut self, nodes: &mut Vec<Node>, source: &mut Bytes<'_>) {
+		stacker::maybe_grow(0x1_0000, 0x10_0000, || self.handle_block(nodes, source));
 	}
 
-	fn handle_block(&mut self, nodes: &mut Vec<Node>) {
+	fn handle_block(&mut self, nodes: &mut Vec<Node>, source: &mut Bytes<'_>) {
 		let condition = self.emit_condition(nodes);
 		let arguments = self.capture_state(nodes);
 
 		let match_id = Match::add_into(nodes, arguments, condition, |parent, argument_count| {
 			let false_branch = self.create_false_branch(parent, argument_count);
-			let true_branch = self.create_true_branch(parent, argument_count);
+			let true_branch = self.create_true_branch(parent, argument_count, source);
 
 			vec![false_branch, true_branch]
 		});
@@ -265,28 +229,30 @@ impl TuringMachineLifter {
 		self.rebind_state(match_id);
 	}
 
-	fn handle_code(&mut self, nodes: &mut Vec<Node>) {
-		while let Some(operator) = self.operators.pop() {
+	fn handle_code(&mut self, nodes: &mut Vec<Node>, source: &mut Bytes<'_>) {
+		while let Some(operator) = source.next() {
 			match operator {
-				Operator::OffsetAdd => {
+				b'>' => {
 					self.handle_offset_operation(nodes, integer::BinaryOperator::Add);
 				}
-				Operator::OffsetSubtract => {
+				b'<' => {
 					self.handle_offset_operation(nodes, integer::BinaryOperator::Subtract);
 				}
 
-				Operator::MemoryAdd => {
+				b'+' => {
 					self.handle_memory_operation(nodes, integer::BinaryOperator::Add);
 				}
-				Operator::MemorySubtract => {
+				b'-' => {
 					self.handle_memory_operation(nodes, integer::BinaryOperator::Subtract);
 				}
 
-				Operator::Input => self.handle_input(nodes),
-				Operator::Output => self.handle_output(nodes),
+				b',' => self.handle_input(nodes),
+				b'.' => self.handle_output(nodes),
 
-				Operator::Start => self.handle_block_unbounded(nodes),
-				Operator::End => return,
+				b'[' => self.handle_block_unbounded(nodes, source),
+				b']' => return,
+
+				_ => {}
 			}
 		}
 	}
@@ -294,19 +260,13 @@ impl TuringMachineLifter {
 	/// Compiles the given source code into a root function.
 	#[must_use = "use the lifted root function"]
 	pub fn run(&mut self, source: &str) -> Arc<Mutex<Function>> {
-		self.operators.clear();
-		self.operators.extend(
-			source
-				.chars()
-				.rev()
-				.filter_map(|character| Operator::try_from(character).ok()),
-		);
+		let mut source = source.bytes();
 
 		Function::create(1, |nodes, arguments| {
 			self.io_state = Link(arguments, 0);
 
 			self.create_memory(nodes);
-			self.handle_code(nodes);
+			self.handle_code(nodes, &mut source);
 
 			vec![self.io_state]
 		})
