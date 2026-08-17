@@ -83,7 +83,9 @@ impl SlotFile {
 	}
 
 	pub fn capture_outputs(&mut self, nodes: &mut Vec<Node>, result_count: usize) -> Vec<Link> {
-		let mut results = self.locals[LOCAL_BASE..LOCAL_BASE + result_count].to_vec();
+		let mut results = Vec::with_capacity(result_count + 1);
+
+		results.extend_from_slice(&self.locals[LOCAL_BASE..LOCAL_BASE + result_count]);
 
 		self.create_fence(nodes);
 
@@ -143,7 +145,7 @@ impl SlotFile {
 	}
 
 	pub fn capture_bindings(&self, live: &[u16]) -> Vec<Link> {
-		let mut links = Vec::new();
+		let mut links = Vec::with_capacity(self.dependencies.count() + live.len() + 1);
 
 		self.dependencies.get_all_into(&mut links);
 
