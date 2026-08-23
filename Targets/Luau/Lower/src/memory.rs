@@ -2,6 +2,7 @@
 
 use ir_graph::{
 	Link, Node,
+	list::fixed::Fixed,
 	operation::{LoadType, Location, StoreType},
 };
 use luau_foreign::{
@@ -27,10 +28,10 @@ const WRITE_U32: &str = "buffer_write_u32";
 const WRITE_F64: &str = "buffer_write_f64";
 
 pub fn lower_load(nodes: &mut Vec<Node>, identifier: u32, source: Location, kind: LoadType) {
-	let mut reads = Vec::new();
+	let mut reads = Fixed::new();
 	let value = load_value(nodes, source.reference, source.offset, kind, &mut reads);
 
-	replace::replace_read(nodes, identifier, value, source.reference, &reads);
+	replace::replace_read(nodes, identifier, value, source.reference, reads.as_slice());
 }
 
 fn load_value(
@@ -38,7 +39,7 @@ fn load_value(
 	buffer: Link,
 	offset: Link,
 	kind: LoadType,
-	reads: &mut Vec<Link>,
+	reads: &mut Fixed<Link, 2>,
 ) -> Link {
 	match kind {
 		LoadType::I32_S8 => read_signed(nodes, buffer, offset, READ_I8, reads),
@@ -62,11 +63,13 @@ fn read(
 	buffer: Link,
 	offset: Link,
 	name: &'static str,
-	reads: &mut Vec<Link>,
+	reads: &mut Fixed<Link, 2>,
 ) -> Link {
 	let value = BufferLoad::add_into(nodes, name, buffer, offset);
 
-	reads.push(value);
+	reads
+		.try_push(value)
+		.unwrap_or_else(|_| unreachable!("Luau memory loads have at most two reads"));
 
 	value
 }
@@ -78,7 +81,7 @@ fn read_signed(
 	buffer: Link,
 	offset: Link,
 	name: &'static str,
-	reads: &mut Vec<Link>,
+	reads: &mut Fixed<Link, 2>,
 ) -> Link {
 	let value = read(nodes, buffer, offset, name, reads);
 
@@ -90,7 +93,7 @@ fn widen_read_signed(
 	buffer: Link,
 	offset: Link,
 	name: &'static str,
-	reads: &mut Vec<Link>,
+	reads: &mut Fixed<Link, 2>,
 ) -> Link {
 	let low = read_signed(nodes, buffer, offset, name, reads);
 
@@ -102,7 +105,7 @@ fn widen_read_unsigned(
 	buffer: Link,
 	offset: Link,
 	name: &'static str,
-	reads: &mut Vec<Link>,
+	reads: &mut Fixed<Link, 2>,
 ) -> Link {
 	let low = read(nodes, buffer, offset, name, reads);
 
@@ -121,7 +124,12 @@ fn widen_signed(nodes: &mut Vec<Node>, low: Link) -> Link {
 	IntoBitsI64::add_into(nodes, low, high)
 }
 
-fn load_long(nodes: &mut Vec<Node>, buffer: Link, offset: Link, reads: &mut Vec<Link>) -> Link {
+fn load_long(
+	nodes: &mut Vec<Node>,
+	buffer: Link,
+	offset: Link,
+	reads: &mut Fixed<Link, 2>,
+) -> Link {
 	let low = read(nodes, buffer, offset, READ_U32, reads);
 	let high_offset = LuauAdd::add_fast_into(nodes, offset, WORD_BYTES);
 	let high = read(nodes, buffer, high_offset, READ_U32, reads);
