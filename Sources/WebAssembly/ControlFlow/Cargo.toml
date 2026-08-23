@@ -1,5 +1,5 @@
 [package]
-name = "web-assembly-lifter"
+name = "web-assembly-control-flow"
 version = "1.0.0"
 edition = "2024"
 
@@ -9,8 +9,5 @@ workspace = true
 [dependencies]
 ir-graph.workspace = true
 list.workspace = true
-parking_lot.workspace = true
+set.workspace = true
 stacker.workspace = true
-wasmparser.workspace = true
-
-web-assembly-control-flow = { path = "../ControlFlow" }

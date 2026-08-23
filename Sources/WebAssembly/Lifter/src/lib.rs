@@ -12,38 +12,24 @@ use wasmparser::FunctionBody;
 use ir_graph::{
 	Link, Node,
 	operation::{
-		Aggregate, Apply, Export, Extract, Fence, Import, Location, MemoryNew, MutableNew,
+		Apply, Export, Extract, Fence, Import, Location, MemoryNew, MutableGet, MutableNew,
 		MutableSet, TableNew, TableSet,
 	},
 	region::Function,
 };
-use web_assembly_builder::Types;
 
 use self::{
-	entities::Entities,
-	environment::{
-		ElementItemPlan, ElementKindPlan, ElementPlan, EnvironmentPlan, ExportKind, ExportPlan,
-		ImportKind, ImportPlan,
-	},
 	function::FunctionLifter,
-	graph_builder::GraphBuilder,
-	module::Module,
+	module::{
+		ConstantExpression, ElementItemPlan, ElementKindPlan, ElementPlan, ExportKind, ExportPlan,
+		ImportKind, ImportPlan, ModuleBindings, ModuleDefinition, ModulePlan, TypeRegistry,
+		build_initialization,
+	},
 };
 
-mod constant_expression;
-mod dependencies;
-mod entities;
-mod environment;
 mod function;
-mod graph_builder;
-mod interval;
+mod memory;
 mod module;
-mod slots;
-mod synthesis;
-
-const MEMORY_CONTENT_FIELD: u32 = 0;
-const MEMORY_SIZE_FIELD: u32 = 1;
-const MEMORY_MAXIMUM_FIELD: u32 = 2;
 
 fn add_mutable_from_null(nodes: &mut Vec<Node>) -> Link {
 	let null = Node::add_null_into(nodes);
@@ -51,34 +37,44 @@ fn add_mutable_from_null(nodes: &mut Vec<Node>) -> Link {
 	MutableNew::add_into(nodes, null)
 }
 
-fn create_memory(
-	nodes: &mut Vec<Node>,
-	initializer: Vec<(Arc<[u8]>, u32)>,
-	size: u32,
-	maximum: u32,
-) -> Link {
-	let size = Node::add_i32_into(nodes, size.cast_signed());
-	let maximum = Node::add_i32_into(nodes, maximum.cast_signed());
-
-	let content = MemoryNew::add_into(nodes, initializer, size);
-	let content = MutableNew::add_into(nodes, content);
-	let size = MutableNew::add_into(nodes, size);
-
-	Aggregate::add_into(nodes, vec![content, size, maximum])
-}
-
-fn create_data(nodes: &mut Vec<Node>, initializer: Arc<[u8]>) -> Link {
+fn create_data_segment(nodes: &mut Vec<Node>, initializer: Arc<[u8]>) -> Link {
 	let size = Node::add_i32_into(nodes, initializer.len().try_into().unwrap());
 	let content = MemoryNew::add_into(nodes, vec![(initializer, 0)], size);
 
 	MutableNew::add_into(nodes, content)
 }
 
+fn emit_constant_expression_to_root(
+	nodes: &mut Vec<Node>,
+	bindings: &ModuleBindings,
+	expression: ConstantExpression,
+) -> Link {
+	match expression {
+		ConstantExpression::I32(value) => Node::add_i32_into(nodes, value),
+		ConstantExpression::I64(value) => Node::add_i64_into(nodes, value),
+		ConstantExpression::F32(value) => Node::add_f32_into(nodes, value),
+		ConstantExpression::F64(value) => Node::add_f64_into(nodes, value),
+		ConstantExpression::RefNull => Node::add_null_into(nodes),
+		ConstantExpression::RefFunction(function) => {
+			bindings.emit_function_reference(nodes, function)
+		}
+		ConstantExpression::GlobalGet(global) => {
+			let Ok(index) = usize::try_from(global) else {
+				unreachable!()
+			};
+
+			MutableGet::add_into(nodes, bindings.globals[index]).0
+		}
+	}
+}
+
 impl ElementItemPlan {
-	fn emit_into(self, nodes: &mut Vec<Node>, entities: &Entities) -> Link {
+	fn emit_to_root(self, nodes: &mut Vec<Node>, bindings: &ModuleBindings) -> Link {
 		match self {
-			Self::Function(function) => entities.emit_function_reference(nodes, function),
-			Self::Expression(expression) => expression.emit_into(nodes, entities),
+			Self::Function(function) => bindings.emit_function_reference(nodes, function),
+			Self::Expression(expression) => {
+				emit_constant_expression_to_root(nodes, bindings, expression)
+			}
 		}
 	}
 }
@@ -86,9 +82,8 @@ impl ElementItemPlan {
 /// Lifts WebAssembly binary data into an IR data flow graph.
 pub struct WebAssemblyLifter {
 	function_lifter: FunctionLifter,
-	entities: Entities,
-	graph_builder: GraphBuilder,
-	types: Types,
+	bindings: ModuleBindings,
+	types: TypeRegistry,
 }
 
 impl WebAssemblyLifter {
@@ -97,9 +92,8 @@ impl WebAssemblyLifter {
 	pub const fn new() -> Self {
 		Self {
 			function_lifter: FunctionLifter::new(),
-			entities: Entities::new(),
-			graph_builder: GraphBuilder::new(),
-			types: Types::new(),
+			bindings: ModuleBindings::new(),
+			types: TypeRegistry::new(),
 		}
 	}
 
@@ -112,19 +106,24 @@ impl WebAssemblyLifter {
 			ImportKind::Function => {
 				let slot = MutableNew::add_into(nodes, value);
 
-				self.entities.functions.push(slot);
+				self.bindings.functions.push(slot);
 			}
-			ImportKind::Table => self.entities.tables.push(value),
-			ImportKind::Memory => self.entities.memories.push(value),
-			ImportKind::Global => self.entities.globals.push(value),
+			ImportKind::Table => self.bindings.tables.push(value),
+			ImportKind::Memory => self.bindings.memories.push(value),
+			ImportKind::Global => self.bindings.globals.push(value),
 		}
 	}
 
-	fn populate_element(&self, nodes: &mut Vec<Node>, element: &ElementPlan, table: Link) -> Link {
+	fn populate_element_segment(
+		&self,
+		nodes: &mut Vec<Node>,
+		element: &ElementPlan,
+		table: Link,
+	) -> Link {
 		let mut link = table;
 
 		for (&item, offset) in element.items.iter().zip(0_i32..) {
-			let source = item.emit_into(nodes, &self.entities);
+			let source = item.emit_to_root(nodes, &self.bindings);
 			let destination = Location {
 				reference: link,
 				offset: Node::add_i32_into(nodes, offset),
@@ -136,7 +135,7 @@ impl WebAssemblyLifter {
 		link
 	}
 
-	fn create_element(nodes: &mut Vec<Node>, element: &ElementPlan) -> Link {
+	fn create_element_segment(nodes: &mut Vec<Node>, element: &ElementPlan) -> Link {
 		let Ok(count) = u32::try_from(element.items.len()) else {
 			unreachable!()
 		};
@@ -148,68 +147,68 @@ impl WebAssemblyLifter {
 	// reference items read the slots through their post-installation states.
 	// Declared segments are dropped without ever being readable, so only
 	// active and passive segments receive their items.
-	fn populate_elements(&mut self, nodes: &mut Vec<Node>, environment: &EnvironmentPlan) {
-		for (index, element) in environment.elements.iter().enumerate() {
+	fn populate_element_segments(&mut self, nodes: &mut Vec<Node>, module: &ModulePlan) {
+		for (index, element) in module.elements.iter().enumerate() {
 			if matches!(element.kind, ElementKindPlan::Declared) {
 				continue;
 			}
 
-			let table = self.entities.elements[index];
-			let link = self.populate_element(nodes, element, table);
+			let table = self.bindings.elements[index];
+			let link = self.populate_element_segment(nodes, element, table);
 
-			self.entities.elements[index] = link;
+			self.bindings.elements[index] = link;
 		}
 	}
 
-	fn create_entities(
+	fn create_bindings(
 		&mut self,
 		nodes: &mut Vec<Node>,
-		environment: &EnvironmentPlan,
+		module: &ModulePlan,
 		declared_function_count: usize,
 	) {
-		for import in &environment.imports {
+		for import in &module.imports {
 			self.create_import(nodes, import);
 		}
 
-		self.entities.functions.extend(
+		self.bindings.functions.extend(
 			iter::repeat_with(|| add_mutable_from_null(nodes)).take(declared_function_count),
 		);
 
-		self.entities.globals.extend(
-			iter::repeat_with(|| add_mutable_from_null(nodes)).take(environment.globals.len()),
-		);
+		self.bindings
+			.globals
+			.extend(iter::repeat_with(|| add_mutable_from_null(nodes)).take(module.globals.len()));
 
-		self.entities.tables.extend(
-			environment
+		self.bindings.tables.extend(
+			module
 				.tables
 				.iter()
 				.map(|table| TableNew::add_into(nodes, Vec::new(), table.minimum, table.maximum)),
 		);
 
-		self.entities.memories.extend(
-			environment
+		self.bindings.memories.extend(
+			module
 				.memories
 				.iter()
-				.map(|memory| create_memory(nodes, Vec::new(), memory.minimum, memory.maximum)),
+				.map(|plan| memory::create(nodes, Vec::new(), plan.minimum, plan.maximum)),
 		);
 
-		self.entities.datas.extend(
-			environment
+		self.bindings.datas.extend(
+			module
 				.datas
 				.iter()
-				.map(|data| create_data(nodes, Arc::clone(&data.bytes))),
+				.map(|data| create_data_segment(nodes, Arc::clone(&data.bytes))),
 		);
 
-		self.entities.elements.extend(
-			environment
+		self.bindings.elements.extend(
+			module
 				.elements
 				.iter()
-				.map(|element| Self::create_element(nodes, element)),
+				.map(|element| Self::create_element_segment(nodes, element)),
 		);
 	}
 
 	fn install_functions(&mut self, nodes: &mut Vec<Node>, code: &[FunctionBody<'_>]) {
-		let import_count = self.entities.functions.len() - code.len();
+		let import_count = self.bindings.functions.len() - code.len();
 
 		for (offset, body) in code.iter().enumerate() {
 			let overall_index = import_count + offset;
@@ -221,33 +220,28 @@ impl WebAssemblyLifter {
 				body,
 				function_index,
 				&self.types,
-				&self.entities,
+				&self.bindings,
 			);
-			let slot = self.entities.functions[overall_index];
+			let slot = self.bindings.functions[overall_index];
 
-			self.entities.functions[overall_index] = MutableSet::add_into(nodes, slot, function);
+			self.bindings.functions[overall_index] = MutableSet::add_into(nodes, slot, function);
 		}
 	}
 
-	fn lower_initialization(
-		&mut self,
-		nodes: &mut Vec<Node>,
-		environment: &EnvironmentPlan,
-	) -> Link {
-		self.graph_builder.clear();
-
-		synthesis::synthesize_initialization(&mut self.graph_builder, environment);
+	fn lower_initialization(&mut self, nodes: &mut Vec<Node>, plan: &ModulePlan) -> Link {
+		let graph = self.function_lifter.take_graph();
+		let graph = build_initialization(graph, plan);
 
 		self.function_lifter
-			.build_synthesized(nodes, self.graph_builder.finish(), &self.entities)
+			.build_synthesized(nodes, graph, &self.bindings)
 	}
 
-	// Every entity state feeds the fence so the compactor keeps root-level
-	// writes whose only readers run later, inside called function bodies.
-	fn create_fence(&self, nodes: &mut Vec<Node>, state: Link) -> Link {
+	fn fence_root_states(&self, nodes: &mut Vec<Node>, state: Link) -> Link {
+		// Every entity state feeds the fence so the compactor keeps root-level
+		// writes whose only readers run later, inside called function bodies.
 		let mut states = vec![state];
 
-		self.entities.collect_states_into(&mut states);
+		self.bindings.collect_states_into(&mut states);
 
 		let fence = Fence::add_into(nodes, Resizable::Heap(states));
 
@@ -260,16 +254,15 @@ impl WebAssemblyLifter {
 		};
 
 		match export.kind {
-			ExportKind::Function => self.entities.emit_function_reference(nodes, export.index),
-			ExportKind::Table => self.entities.tables[index],
-			ExportKind::Memory => self.entities.memories[index],
-			ExportKind::Global => self.entities.globals[index],
+			ExportKind::Function => self.bindings.emit_function_reference(nodes, export.index),
+			ExportKind::Table => self.bindings.tables[index],
+			ExportKind::Memory => self.bindings.memories[index],
+			ExportKind::Global => self.bindings.globals[index],
 		}
 	}
 
-	fn emit_exports(&self, nodes: &mut Vec<Node>, environment: &EnvironmentPlan) -> Vec<Link> {
-		environment
-			.exports
+	fn emit_exports(&self, nodes: &mut Vec<Node>, plan: &ModulePlan) -> Vec<Link> {
+		plan.exports
 			.iter()
 			.map(|export| {
 				let value = self.resolve_export(nodes, export);
@@ -281,23 +274,23 @@ impl WebAssemblyLifter {
 
 	/// Lifts the given WebAssembly binary data into a root function.
 	#[must_use = "use the lifted root function"]
-	pub fn run(&mut self, data: &[u8]) -> Arc<Mutex<Function>> {
-		let module = Module::load(data, &mut self.types);
-		let environment = &module.environment;
+	pub fn run(&mut self, binary: &[u8]) -> Arc<Mutex<Function>> {
+		let module = ModuleDefinition::parse(binary, &mut self.types);
+		let plan = &module.plan;
 
-		self.entities.clear();
+		self.bindings.clear();
 
 		Function::create(1, |nodes, arguments| {
-			self.create_entities(nodes, environment, module.code.len());
+			self.create_bindings(nodes, plan, module.code.len());
 			self.install_functions(nodes, &module.code);
-			self.populate_elements(nodes, environment);
+			self.populate_element_segments(nodes, plan);
 
-			let initialization = self.lower_initialization(nodes, environment);
-			let trap = self.create_fence(nodes, Link(arguments, 0));
+			let initialization = self.lower_initialization(nodes, plan);
+			let trap = self.fence_root_states(nodes, Link(arguments, 0));
 			let function = Extract::add_into(nodes, initialization, 0);
 			let apply = Apply::add_into(nodes, function, vec![initialization, trap], 1);
 
-			let mut states = self.emit_exports(nodes, environment);
+			let mut states = self.emit_exports(nodes, plan);
 
 			states.push(Link(apply, 0));
 

@@ -24,7 +24,6 @@ luau-builder = { path = "Targets/Luau/Builder" }
 luau-foreign = { path = "Targets/Luau/Foreign" }
 luau-lower = { path = "Targets/Luau/Lower" }
 luau-printer = { path = "Targets/Luau/Printer" }
-web-assembly-graph = { path = "Sources/WebAssembly/Graph" }
 web-assembly-lifter = { path = "Sources/WebAssembly/Lifter" }
 
 list = { git = "https://github.com/SovereignSatellite/RustListDataStructure.git", rev = "a236bf9" }
