@@ -1,0 +1,9 @@
+(include_subdirs unqualified)
+
+(library
+ (name IR)
+ (modules_without_implementation
+  CompilationUnit
+  Definitions
+  Path
+  TypeDefinition))

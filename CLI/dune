@@ -1,0 +1,13 @@
+(executable
+ (name spider)
+ (libraries
+  IR
+  IR_Memory
+  Passes
+  TuringMachine
+  WebAssembly
+  Luau
+  LuaJIT
+  Rust
+  Json
+  cmdliner))

@@ -1,0 +1,14 @@
+(include_subdirs unqualified)
+
+(library
+ (name Luau)
+ (libraries IR IR_Memory IR_Luau Passes Allocator Emission))
+
+(rule
+ (target Resources.ml)
+ (deps
+  (glob_files_rec Runtime/**.luau))
+ (action
+  (with-stdout-to
+   %{target}
+   (run %{exe:../../Emission/Embed/Embed.exe} %{deps}))))

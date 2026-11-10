@@ -1,0 +1,14 @@
+(include_subdirs unqualified)
+
+(library
+ (name LuaJIT)
+ (libraries IR IR_Memory IR_LuaJIT Passes Allocator Emission))
+
+(rule
+ (target Resources.ml)
+ (deps
+  (glob_files_rec Runtime/**.lua))
+ (action
+  (with-stdout-to
+   %{target}
+   (run %{exe:../../Emission/Embed/Embed.exe} %{deps}))))

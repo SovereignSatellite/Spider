@@ -1,0 +1,14 @@
+(include_subdirs unqualified)
+
+(library
+ (name Rust)
+ (libraries IR IR_Memory IR_Rust Passes Allocator Emission))
+
+(rule
+ (target Resources.ml)
+ (deps
+  (glob_files_rec Runtime/**.rs))
+ (action
+  (with-stdout-to
+   %{target}
+   (run %{exe:../../Emission/Embed/Embed.exe} %{deps}))))

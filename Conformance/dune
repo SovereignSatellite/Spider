@@ -1,0 +1,13 @@
+(executable
+ (name conformance)
+ (libraries
+  IR
+  IR_Memory
+  Passes
+  WebAssembly
+  Emission
+  Luau
+  LuaJIT
+  Rust
+  wasm
+  unix))

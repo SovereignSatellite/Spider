@@ -1,0 +1,6 @@
+(include_subdirs unqualified)
+
+(library
+ (name Allocator)
+ (modules_without_implementation Move)
+ (libraries IR))

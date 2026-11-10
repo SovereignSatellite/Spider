@@ -1,0 +1,3 @@
+(library
+ (name IR_LuaJIT)
+ (libraries IR))
