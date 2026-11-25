@@ -266,7 +266,7 @@ impl<'data> Module<'data> {
 			}
 			Payload::CodeSectionEntry(body) => self.code.push(body),
 
-			payload => unimplemented!("{payload:?}"),
+			_ => unimplemented!("{payload:?}"),
 		}
 	}
 

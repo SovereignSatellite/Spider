@@ -321,7 +321,6 @@ impl Node {
 
 	/// Returns the number of output ports for this node.
 	#[must_use]
-	#[expect(clippy::too_many_lines, reason = "exhaustive match over node variants")]
 	pub fn result_count(&self) -> u16 {
 		match self {
 			Self::Function(_)
@@ -398,7 +397,6 @@ impl Node {
 	///
 	/// Panics if this is a boundary node or contains a non-finalized region.
 	#[must_use]
-	#[expect(clippy::too_many_lines, reason = "exhaustive match over node variants")]
 	pub fn duplicate_operation(&self) -> Self {
 		match self {
 			Self::Function(node) => Self::Function(node.lock().duplicate()),
@@ -474,7 +472,6 @@ impl Node {
 
 	/// Returns the structural role this node plays during a region walk.
 	#[must_use]
-	#[expect(clippy::too_many_lines, reason = "exhaustive match over node variants")]
 	pub const fn shape(&self) -> Shape<'_> {
 		match self {
 			Self::Function(arc) => Shape::Function(arc),
@@ -541,12 +538,18 @@ impl Node {
 	}
 
 	/// Visits each outer link (arguments from the parent region's perspective).
-	pub fn for_each_outer<H: FnMut(Link)>(&self, mut handler: H) {
+	pub fn for_each_outer<H>(&self, mut handler: H)
+	where
+		H: FnMut(Link),
+	{
 		for_each_visit!(self, for_each_outer, handler);
 	}
 
 	/// Mutably visits each outer link (arguments from the parent region's perspective).
-	pub fn for_each_mut_outer<H: FnMut(&mut Link)>(&mut self, mut handler: H) {
+	pub fn for_each_mut_outer<H>(&mut self, mut handler: H)
+	where
+		H: FnMut(&mut Link),
+	{
 		for_each_visit!(self, for_each_mut_outer, handler);
 	}
 }

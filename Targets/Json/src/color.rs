@@ -10,7 +10,6 @@ pub enum Color {
 }
 
 impl Color {
-	#[expect(clippy::too_many_lines, reason = "exhaustive match over node variants")]
 	pub const fn from_node(node: &Node) -> Self {
 		match node {
 			Node::Function(_) | Node::FunctionArguments(_) | Node::FunctionResults(_) => Self::Blue,

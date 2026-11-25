@@ -1,10 +1,5 @@
 //! Memory access and management operations.
 
-#![expect(
-	unused_variables,
-	reason = "macro-generated visitors may not consume every field"
-)]
-
 use alloc::sync::Arc;
 
 use crate::{Link, Node};

@@ -6,7 +6,6 @@ use ir_graph::{
 };
 
 #[must_use]
-#[expect(clippy::too_many_lines, reason = "exhaustive match over node variants")]
 pub fn get_static(node: &Node) -> Option<&'static str> {
 	let name = match node {
 		Node::Function(_) => "Function",
@@ -236,7 +235,6 @@ fn write_number_compare_operation(
 	)
 }
 
-#[expect(clippy::too_many_lines, reason = "exhaustive match over node variants")]
 pub fn write(node: &Node, out: &mut dyn Write) -> Result<()> {
 	match *node {
 		Node::Function(_)

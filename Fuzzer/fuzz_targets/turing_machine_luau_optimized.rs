@@ -1,9 +1,5 @@
 //! Generates valid Turing Machine sources and compiles them to optimized Luau.
 
-#![expect(
-	unused_crate_dependencies,
-	reason = "this target only exercises Luau output"
-)]
 #![no_main]
 
 extern crate alloc;

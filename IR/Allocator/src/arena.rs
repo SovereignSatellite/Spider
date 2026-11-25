@@ -89,10 +89,10 @@ impl Arena {
 		self.entries[self.offset(self.nodes_start(region), link)]
 	}
 
-	pub(crate) fn resolve_entries<Resolver: FnMut(u32) -> u32>(
-		&mut self,
-		mut resolver: Resolver,
-	) -> u32 {
+	pub(crate) fn resolve_entries<Resolver>(&mut self, mut resolver: Resolver) -> u32
+	where
+		Resolver: FnMut(u32) -> u32,
+	{
 		let mut peak = 0;
 
 		for entry in &mut self.entries {

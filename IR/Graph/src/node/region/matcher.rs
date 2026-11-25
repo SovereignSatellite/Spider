@@ -144,7 +144,10 @@ impl Match {
 	}
 
 	/// Visits each outer link (arguments, condition).
-	pub fn for_each_outer<H: FnMut(Link)>(&self, mut handler: H) {
+	pub fn for_each_outer<H>(&self, mut handler: H)
+	where
+		H: FnMut(Link),
+	{
 		for &link in &self.arguments {
 			handler(link);
 		}
@@ -153,7 +156,10 @@ impl Match {
 	}
 
 	/// Mutably visits each outer link (arguments, condition).
-	pub fn for_each_mut_outer<H: FnMut(&mut Link)>(&mut self, mut handler: H) {
+	pub fn for_each_mut_outer<H>(&mut self, mut handler: H)
+	where
+		H: FnMut(&mut Link),
+	{
 		for link in &mut self.arguments {
 			handler(link);
 		}

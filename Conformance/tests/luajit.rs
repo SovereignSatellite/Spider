@@ -153,7 +153,7 @@ impl LuaJIT {
 	fn format_argument_f32(&mut self, value: F32) -> Result<()> {
 		let F32 { bits } = value;
 		let float = f32::from_bits(bits);
-		let bits = i32::from_ne_bytes(bits.to_ne_bytes());
+		let bits = bits.cast_signed();
 
 		write!(self.file, "{bits} --[[ {float}_f32 ]]")?;
 
@@ -163,7 +163,7 @@ impl LuaJIT {
 	fn format_argument_f64(&mut self, value: F64) -> Result<()> {
 		let F64 { bits } = value;
 		let float = f64::from_bits(bits);
-		let bits = i64::from_ne_bytes(bits.to_ne_bytes());
+		let bits = bits.cast_signed();
 
 		write!(self.file, "{bits}LL --[[ {float}_f64 ]]")?;
 
@@ -296,7 +296,7 @@ impl LuaJIT {
 	fn format_assert_equal_f32(&mut self, value: F32) -> Result<()> {
 		let F32 { bits } = value;
 		let float = f32::from_bits(bits);
-		let bits = i32::from_ne_bytes(bits.to_ne_bytes());
+		let bits = bits.cast_signed();
 
 		self.references.push("assert_equal_f32");
 
@@ -308,7 +308,7 @@ impl LuaJIT {
 	fn format_assert_equal_f64(&mut self, value: F64) -> Result<()> {
 		let F64 { bits } = value;
 		let float = f64::from_bits(bits);
-		let bits = i64::from_ne_bytes(bits.to_ne_bytes());
+		let bits = bits.cast_signed();
 
 		self.references.push("assert_equal_f64");
 
@@ -320,10 +320,6 @@ impl LuaJIT {
 		Ok(())
 	}
 
-	#[expect(
-		clippy::too_many_lines,
-		reason = "exhaustive match over wast result pattern variants"
-	)]
 	fn format_assert_pattern(&mut self, result: WastRet<'_>) -> Result<()> {
 		let WastRet::Core(result) = result else {
 			unimplemented!()

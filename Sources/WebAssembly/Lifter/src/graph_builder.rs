@@ -77,7 +77,7 @@ impl GraphBuilder {
 	}
 
 	pub fn emit_size(&mut self, size: u32) -> u16 {
-		let data = i32::from_ne_bytes(size.to_ne_bytes());
+		let data = size.cast_signed();
 
 		self.emit_i32_constant(data)
 	}

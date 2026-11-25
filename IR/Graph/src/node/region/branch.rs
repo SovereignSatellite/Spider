@@ -1,10 +1,5 @@
 //! A branch region, one arm of a match dispatch.
 
-#![expect(
-	unused_variables,
-	reason = "macro-generated visitors may not consume every field"
-)]
-
 use alloc::sync::{Arc, Weak};
 
 use parking_lot::Mutex;

@@ -47,10 +47,22 @@ macro_rules! handle_mut_argument_source {
 	};
 }
 
+macro_rules! handle_binding {
+	($name:ident, ignore) => {
+		_
+	};
+	($name:ident, $variant:ident) => {
+		$name
+	};
+}
+
 macro_rules! handle_visitor {
 	($name:ident, $type:ty, $visitor:ident, ( $( ($field:ident, $variant:ident) ),* )) => {
-		pub(crate) fn $name<H: FnMut($type)>(&self, mut handler: H) {
-			let Self { $($field),* } = self;
+		pub(crate) fn $name<H>(&self, mut handler: H)
+		where
+			H: FnMut($type),
+		{
+			let Self { $($field: handle_binding!($field, $variant)),* } = self;
 
 			$(
 				$visitor!(handler, $field, $variant)
@@ -61,8 +73,11 @@ macro_rules! handle_visitor {
 
 macro_rules! handle_mut_visitor {
 	($name:ident, $type:ty, $visitor:ident, ( $( ($field:ident, $variant:ident) ),* )) => {
-		pub(crate) fn $name<H: FnMut(&mut $type)>(&mut self, mut handler: H) {
-			let Self { $($field),* } = self;
+		pub(crate) fn $name<H>(&mut self, mut handler: H)
+		where
+			H: FnMut(&mut $type),
+		{
+			let Self { $($field: handle_binding!($field, $variant)),* } = self;
 
 			$(
 				$visitor!(handler, $field, $variant)

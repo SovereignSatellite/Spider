@@ -83,7 +83,10 @@ impl StronglyConnectedFinder {
 		}
 	}
 
-	pub fn for_each<H: FnMut(&[u16])>(&self, mut handler: H) {
+	pub fn for_each<H>(&self, mut handler: H)
+	where
+		H: FnMut(&[u16]),
+	{
 		let mut start = 0;
 
 		for &end in &self.separators {

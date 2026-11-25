@@ -27,7 +27,10 @@ pub trait Visitor {
 
 impl Function {
 	/// Accepts a visitor and traverses the function.
-	pub fn accept<T: Visitor>(&self, visitor: &mut T) -> ControlFlow<T::Output> {
+	pub fn accept<T>(&self, visitor: &mut T) -> ControlFlow<T::Output>
+	where
+		T: Visitor,
+	{
 		let Self { code, returns, .. } = self;
 
 		code.accept_unbounded(visitor)?;
@@ -39,7 +42,10 @@ impl Function {
 }
 
 impl ExpressionMatch {
-	fn accept<T: Visitor>(&self, visitor: &mut T) -> ControlFlow<T::Output> {
+	fn accept<T>(&self, visitor: &mut T) -> ControlFlow<T::Output>
+	where
+		T: Visitor,
+	{
 		let Self {
 			branches,
 			condition,
@@ -53,7 +59,10 @@ impl ExpressionMatch {
 }
 
 impl ExpressionCall {
-	fn accept<T: Visitor>(&self, visitor: &mut T) -> ControlFlow<T::Output> {
+	fn accept<T>(&self, visitor: &mut T) -> ControlFlow<T::Output>
+	where
+		T: Visitor,
+	{
 		let Self {
 			function,
 			arguments,
@@ -67,7 +76,10 @@ impl ExpressionCall {
 }
 
 impl<const N: usize> Apply<N> {
-	fn accept<T: Visitor>(&self, visitor: &mut T) -> ControlFlow<T::Output> {
+	fn accept<T>(&self, visitor: &mut T) -> ControlFlow<T::Output>
+	where
+		T: Visitor,
+	{
 		self.arguments
 			.iter()
 			.try_for_each(|argument| argument.accept_unbounded(visitor))
@@ -75,7 +87,10 @@ impl<const N: usize> Apply<N> {
 }
 
 impl Infix {
-	fn accept<T: Visitor>(&self, visitor: &mut T) -> ControlFlow<T::Output> {
+	fn accept<T>(&self, visitor: &mut T) -> ControlFlow<T::Output>
+	where
+		T: Visitor,
+	{
 		let Self { lhs, rhs, .. } = self;
 
 		lhs.accept_unbounded(visitor)?;
@@ -84,7 +99,10 @@ impl Infix {
 }
 
 impl Prefix {
-	fn accept<T: Visitor>(&self, visitor: &mut T) -> ControlFlow<T::Output> {
+	fn accept<T>(&self, visitor: &mut T) -> ControlFlow<T::Output>
+	where
+		T: Visitor,
+	{
 		let Self { source, .. } = self;
 
 		source.accept_unbounded(visitor)
@@ -92,7 +110,10 @@ impl Prefix {
 }
 
 impl BooleanToInteger {
-	fn accept<T: Visitor>(&self, visitor: &mut T) -> ControlFlow<T::Output> {
+	fn accept<T>(&self, visitor: &mut T) -> ControlFlow<T::Output>
+	where
+		T: Visitor,
+	{
 		let Self { source } = self;
 
 		source.accept_unbounded(visitor)
@@ -100,7 +121,10 @@ impl BooleanToInteger {
 }
 
 impl RefIsNull {
-	fn accept<T: Visitor>(&self, visitor: &mut T) -> ControlFlow<T::Output> {
+	fn accept<T>(&self, visitor: &mut T) -> ControlFlow<T::Output>
+	where
+		T: Visitor,
+	{
 		let Self { source } = self;
 
 		source.accept_unbounded(visitor)
@@ -108,7 +132,10 @@ impl RefIsNull {
 }
 
 impl Aggregate {
-	fn accept<T: Visitor>(&self, visitor: &mut T) -> ControlFlow<T::Output> {
+	fn accept<T>(&self, visitor: &mut T) -> ControlFlow<T::Output>
+	where
+		T: Visitor,
+	{
 		let Self { fields } = self;
 
 		fields
@@ -118,7 +145,10 @@ impl Aggregate {
 }
 
 impl Extract {
-	fn accept<T: Visitor>(&self, visitor: &mut T) -> ControlFlow<T::Output> {
+	fn accept<T>(&self, visitor: &mut T) -> ControlFlow<T::Output>
+	where
+		T: Visitor,
+	{
 		let Self { source, .. } = self;
 
 		source.accept_unbounded(visitor)
@@ -126,7 +156,10 @@ impl Extract {
 }
 
 impl Field {
-	fn accept<T: Visitor>(&self, visitor: &mut T) -> ControlFlow<T::Output> {
+	fn accept<T>(&self, visitor: &mut T) -> ControlFlow<T::Output>
+	where
+		T: Visitor,
+	{
 		let Self { source, .. } = self;
 
 		source.accept_unbounded(visitor)
@@ -134,7 +167,10 @@ impl Field {
 }
 
 impl TableNew {
-	fn accept<T: Visitor>(&self, visitor: &mut T) -> ControlFlow<T::Output> {
+	fn accept<T>(&self, visitor: &mut T) -> ControlFlow<T::Output>
+	where
+		T: Visitor,
+	{
 		let Self { initializer, .. } = self;
 
 		initializer
@@ -144,7 +180,10 @@ impl TableNew {
 }
 
 impl Index {
-	fn accept<T: Visitor>(&self, visitor: &mut T) -> ControlFlow<T::Output> {
+	fn accept<T>(&self, visitor: &mut T) -> ControlFlow<T::Output>
+	where
+		T: Visitor,
+	{
 		let Self { source, offset } = self;
 
 		source.accept_unbounded(visitor)?;
@@ -153,7 +192,10 @@ impl Index {
 }
 
 impl MemoryNew {
-	fn accept<T: Visitor>(&self, visitor: &mut T) -> ControlFlow<T::Output> {
+	fn accept<T>(&self, visitor: &mut T) -> ControlFlow<T::Output>
+	where
+		T: Visitor,
+	{
 		let Self { size, .. } = self;
 
 		size.accept_unbounded(visitor)
@@ -161,11 +203,17 @@ impl MemoryNew {
 }
 
 impl Expression {
-	fn accept_unbounded<T: Visitor>(&self, visitor: &mut T) -> ControlFlow<T::Output> {
+	fn accept_unbounded<T>(&self, visitor: &mut T) -> ControlFlow<T::Output>
+	where
+		T: Visitor,
+	{
 		stacker::maybe_grow(0x1_0000, 0x10_0000, || self.accept(visitor))
 	}
 
-	fn accept<T: Visitor>(&self, visitor: &mut T) -> ControlFlow<T::Output> {
+	fn accept<T>(&self, visitor: &mut T) -> ControlFlow<T::Output>
+	where
+		T: Visitor,
+	{
 		visitor.visit_expression(self)?;
 
 		match self {
@@ -203,11 +251,17 @@ impl Expression {
 }
 
 impl Sequence {
-	fn accept_unbounded<T: Visitor>(&self, visitor: &mut T) -> ControlFlow<T::Output> {
+	fn accept_unbounded<T>(&self, visitor: &mut T) -> ControlFlow<T::Output>
+	where
+		T: Visitor,
+	{
 		stacker::maybe_grow(0x1_0000, 0x10_0000, || self.accept(visitor))
 	}
 
-	fn accept<T: Visitor>(&self, visitor: &mut T) -> ControlFlow<T::Output> {
+	fn accept<T>(&self, visitor: &mut T) -> ControlFlow<T::Output>
+	where
+		T: Visitor,
+	{
 		let Self { statements } = self;
 
 		statements
@@ -217,7 +271,10 @@ impl Sequence {
 }
 
 impl StatementMatch {
-	fn accept<T: Visitor>(&self, visitor: &mut T) -> ControlFlow<T::Output> {
+	fn accept<T>(&self, visitor: &mut T) -> ControlFlow<T::Output>
+	where
+		T: Visitor,
+	{
 		let Self {
 			branches,
 			condition,
@@ -232,7 +289,10 @@ impl StatementMatch {
 }
 
 impl Repeat {
-	fn accept<T: Visitor>(&self, visitor: &mut T) -> ControlFlow<T::Output> {
+	fn accept<T>(&self, visitor: &mut T) -> ControlFlow<T::Output>
+	where
+		T: Visitor,
+	{
 		let Self {
 			code,
 			condition,
@@ -246,7 +306,10 @@ impl Repeat {
 }
 
 impl Assign {
-	fn accept<T: Visitor>(&self, visitor: &mut T) -> ControlFlow<T::Output> {
+	fn accept<T>(&self, visitor: &mut T) -> ControlFlow<T::Output>
+	where
+		T: Visitor,
+	{
 		let Self { source, .. } = self;
 
 		source.accept_unbounded(visitor)
@@ -254,7 +317,10 @@ impl Assign {
 }
 
 impl StatementCall {
-	fn accept<T: Visitor>(&self, visitor: &mut T) -> ControlFlow<T::Output> {
+	fn accept<T>(&self, visitor: &mut T) -> ControlFlow<T::Output>
+	where
+		T: Visitor,
+	{
 		let Self { call, .. } = self;
 
 		call.accept_unbounded(visitor)
@@ -262,7 +328,10 @@ impl StatementCall {
 }
 
 impl SetIndex {
-	fn accept<T: Visitor>(&self, visitor: &mut T) -> ControlFlow<T::Output> {
+	fn accept<T>(&self, visitor: &mut T) -> ControlFlow<T::Output>
+	where
+		T: Visitor,
+	{
 		let Self {
 			table,
 			offset,
@@ -276,7 +345,10 @@ impl SetIndex {
 }
 
 impl Statement {
-	fn accept<T: Visitor>(&self, visitor: &mut T) -> ControlFlow<T::Output> {
+	fn accept<T>(&self, visitor: &mut T) -> ControlFlow<T::Output>
+	where
+		T: Visitor,
+	{
 		visitor.visit_statement(self)?;
 
 		match self {

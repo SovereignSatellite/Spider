@@ -86,7 +86,7 @@ macro_rules! define_binary_operation {
 			/// Adds the operation with a constant right-hand operand.
 			#[must_use = "inserted nodes without live consumers are dead"]
 			pub fn add_fast_into(nodes: &mut Vec<Node>, lhs: Link, rhs: u32) -> Link {
-				let rhs = i32::from_ne_bytes(rhs.to_ne_bytes());
+				let rhs = rhs.cast_signed();
 				let rhs = Node::add_i32_into(nodes, rhs);
 
 				Self::add_into(nodes, lhs, rhs)

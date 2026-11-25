@@ -140,7 +140,7 @@ impl Luau {
 	}
 
 	fn format_argument_i32(&mut self, value: i32) -> Result<()> {
-		let value = u32::from_ne_bytes(value.to_ne_bytes());
+		let value = value.cast_unsigned();
 
 		write!(self.file, "{value} --[[ 0x{value:08X} ]]")?;
 
@@ -293,7 +293,7 @@ impl Luau {
 	}
 
 	fn format_assert_equal_i32(&mut self, value: i32) -> Result<()> {
-		let value = u32::from_ne_bytes(value.to_ne_bytes());
+		let value = value.cast_unsigned();
 
 		self.references.push("assert_equal_i32");
 
@@ -353,10 +353,6 @@ impl Luau {
 		Ok(())
 	}
 
-	#[expect(
-		clippy::too_many_lines,
-		reason = "exhaustive match over wast result pattern variants"
-	)]
 	fn format_assert_pattern(&mut self, result: WastRet<'_>) -> Result<()> {
 		let WastRet::Core(result) = result else {
 			unimplemented!()

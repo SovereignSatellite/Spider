@@ -736,6 +736,10 @@ impl ExpressionBuilder {
 			Operator::End => self.handle_end(),
 			Operator::Br { relative_depth } => self.handle_br(relative_depth),
 			Operator::BrIf { relative_depth } => self.handle_br_if(relative_depth),
+			#[expect(
+				clippy::ref_patterns,
+				reason = "the other arms copy their fields out of the borrowed operator"
+			)]
 			Operator::BrTable { ref targets } => self.handle_br_table(targets),
 			Operator::Return => self.handle_return(),
 			Operator::Call { function_index } => {

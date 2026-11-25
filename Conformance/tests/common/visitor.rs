@@ -73,10 +73,6 @@ pub trait Visitor {
 
 	fn visit_wait(&mut self, span: Span, thread: Id<'_>) -> Result<()>;
 
-	#[expect(
-		clippy::too_many_lines,
-		reason = "exhaustive match over wast directive variants"
-	)]
 	fn visit_directive(&mut self, directive: WastDirective<'_>) -> Result<()> {
 		match directive {
 			WastDirective::Module(quote_wat) => self.visit_module(quote_wat),

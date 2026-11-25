@@ -4,7 +4,6 @@ use core::mem;
 
 use ir_graph::{Link, Node};
 
-#[expect(clippy::too_many_lines, reason = "exhaustive match over node variants")]
 const fn clone_constant(node: &Node) -> Option<Node> {
 	match node {
 		Node::Function(_)
