@@ -150,7 +150,7 @@ impl Optimizer {
 
 	fn prepare_head_controlled_loop_inversion(&mut self, region: &mut Region) -> bool {
 		if let Region::Repeat(repeat) = region {
-			let _ = canonicalize_repeat_condition(repeat);
+			_ = canonicalize_repeat_condition(repeat);
 		}
 
 		let inverted = self.head_controlled_loop_inverter.run(region.nodes_mut());

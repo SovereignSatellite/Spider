@@ -20,12 +20,8 @@ pub trait Foreign: Any {
 	fn duplicate(&self) -> Box<dyn Foreign>;
 
 	/// Calls `handler` for each outer link.
-	fn for_each_outer(&self, handler: &mut dyn FnMut(Link)) {
-		let _ = handler;
-	}
+	fn for_each_outer(&self, _handler: &mut dyn FnMut(Link)) {}
 
 	/// Calls `handler` for each mutable outer link.
-	fn for_each_mut_outer(&mut self, handler: &mut dyn FnMut(&mut Link)) {
-		let _ = handler;
-	}
+	fn for_each_mut_outer(&mut self, _handler: &mut dyn FnMut(&mut Link)) {}
 }

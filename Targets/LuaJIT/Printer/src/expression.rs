@@ -176,7 +176,7 @@ impl Print for i64 {
 
 impl Print for f32 {
 	fn print(&self, _printer: &mut LuaJITPrinter, out: &mut dyn Write) -> Result<()> {
-		let bits = i32::from_ne_bytes(self.to_ne_bytes());
+		let bits = self.to_bits().cast_signed();
 
 		write!(out, "{bits}")
 	}
@@ -184,7 +184,7 @@ impl Print for f32 {
 
 impl Print for f64 {
 	fn print(&self, _printer: &mut LuaJITPrinter, out: &mut dyn Write) -> Result<()> {
-		let bits = i64::from_ne_bytes(self.to_ne_bytes());
+		let bits = self.to_bits().cast_signed();
 
 		write!(out, "{bits}LL")
 	}

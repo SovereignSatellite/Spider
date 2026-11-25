@@ -1,10 +1,5 @@
 //! The lambda-like function region and its boundary nodes.
 
-#![expect(
-	unused_variables,
-	reason = "macro-generated visitors may not consume every field"
-)]
-
 use alloc::sync::{Arc, Weak};
 
 use parking_lot::Mutex;

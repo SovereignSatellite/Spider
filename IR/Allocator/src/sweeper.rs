@@ -170,7 +170,6 @@ impl Sweeper {
 	// Interfering values may share a register only within one class, where they
 	// hold the same value; a coalescing bug that broke this would surface only
 	// as a distant miscompile, so it is checked here.
-	#[cfg(debug_assertions)]
 	fn is_valid(&self, values: &[Value], classes: &Classes) -> bool {
 		values.iter().enumerate().all(|(left, interval)| {
 			values.iter().enumerate().take(left).all(|(right, other)| {
@@ -182,15 +181,6 @@ impl Sweeper {
 					|| !interferes
 			})
 		})
-	}
-
-	#[cfg(not(debug_assertions))]
-	#[expect(
-		clippy::unused_self,
-		reason = "the debug validator reads the assignments through self"
-	)]
-	const fn is_valid(&self, _values: &[Value], _classes: &Classes) -> bool {
-		true
 	}
 
 	/// Assigns registers to every class by the forward scan and returns the

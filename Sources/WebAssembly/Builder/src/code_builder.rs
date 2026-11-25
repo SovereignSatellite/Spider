@@ -562,7 +562,7 @@ impl CodeBuilder {
 		}
 
 		let raw_offset = u32::try_from(offset).unwrap();
-		let signed_offset = i32::from_ne_bytes(raw_offset.to_ne_bytes());
+		let signed_offset = raw_offset.cast_signed();
 
 		self.add_i32_constant(SHARED_LOCAL, signed_offset);
 		self.add_integer_binary_operation(

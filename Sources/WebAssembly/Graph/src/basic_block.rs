@@ -40,7 +40,10 @@ impl BasicBlock {
 	}
 
 	/// Remaps both neighbour lists via the mapping function and drops predecessors whose remapped id is `u16::MAX`.
-	pub fn replace_ids<M: Fn(u16) -> u16>(&mut self, map: M) {
+	pub fn replace_ids<M>(&mut self, map: M)
+	where
+		M: Fn(u16) -> u16,
+	{
 		for id in &mut self.predecessors {
 			*id = map(*id);
 		}

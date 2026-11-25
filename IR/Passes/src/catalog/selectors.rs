@@ -24,10 +24,6 @@ impl Optimization {
 	}
 
 	/// Return the exact folding leaf for an integer binary operation.
-	#[expect(
-		clippy::too_many_lines,
-		reason = "the exhaustive operation mapping stays local and follows declaration order"
-	)]
 	#[must_use]
 	pub const fn for_integer_binary_folding(
 		kind: integer::Type,
@@ -154,10 +150,6 @@ impl Optimization {
 	}
 
 	/// Return the exact target-lowering leaf for an integer binary operation.
-	#[expect(
-		clippy::too_many_lines,
-		reason = "the exhaustive operation mapping stays local and follows declaration order"
-	)]
 	#[must_use]
 	pub const fn for_integer_binary_lowering(
 		kind: integer::Type,

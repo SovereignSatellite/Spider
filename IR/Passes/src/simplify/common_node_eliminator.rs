@@ -169,10 +169,6 @@ impl Signature {
 	// value the operands can carry: `Luau.Add` and `Luau.Multiply` see floats
 	// whose NaN-payload asymmetry the bit transmutes observe, and `Math.Min`
 	// and `Math.Max` propagate whichever NaN arrives first.
-	#[expect(
-		clippy::cognitive_complexity,
-		reason = "a flat downcast chain over every pure binary foreign"
-	)]
 	fn foreign_binary(any: &dyn Any) -> Option<Self> {
 		foreign_binary_signatures!(
 			any,

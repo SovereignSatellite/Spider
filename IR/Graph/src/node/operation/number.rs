@@ -1,10 +1,5 @@
 //! Floating-point arithmetic and comparison operations.
 
-#![expect(
-	unused_variables,
-	reason = "macro-generated visitors may not consume every field"
-)]
-
 use crate::{Link, Node};
 
 /// Floating-point types.

@@ -38,7 +38,10 @@ impl TableNew {
 		Link(id, 0)
 	}
 
-	pub(crate) fn for_each_outer<H: FnMut(Link)>(&self, mut handler: H) {
+	pub(crate) fn for_each_outer<H>(&self, mut handler: H)
+	where
+		H: FnMut(Link),
+	{
 		let Self { initializer, .. } = self;
 
 		for item in initializer {
@@ -46,7 +49,10 @@ impl TableNew {
 		}
 	}
 
-	pub(crate) fn for_each_mut_outer<H: FnMut(&mut Link)>(&mut self, mut handler: H) {
+	pub(crate) fn for_each_mut_outer<H>(&mut self, mut handler: H)
+	where
+		H: FnMut(&mut Link),
+	{
 		let Self { initializer, .. } = self;
 
 		for item in initializer {

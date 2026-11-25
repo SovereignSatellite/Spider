@@ -696,7 +696,10 @@ impl Instruction {
 		clippy::too_many_lines,
 		reason = "exhaustive match over instruction variants"
 	)]
-	pub fn for_each_reference<H: FnMut(Reference)>(self, mut handler: H) {
+	pub fn for_each_reference<H>(self, mut handler: H)
+	where
+		H: FnMut(Reference),
+	{
 		match self {
 			Self::LocalSet(_)
 			| Self::LocalBranch(_)

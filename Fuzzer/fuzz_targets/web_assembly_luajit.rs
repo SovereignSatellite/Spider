@@ -1,9 +1,5 @@
 //! Generates valid WebAssembly modules and compiles them to unoptimized `LuaJIT`.
 
-#![expect(
-	unused_crate_dependencies,
-	reason = "this target only exercises LuaJIT output"
-)]
 #![no_main]
 
 extern crate alloc;

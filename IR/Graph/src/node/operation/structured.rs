@@ -1,10 +1,5 @@
 //! Native structured data, aggregates and field extraction.
 
-#![expect(
-	unused_variables,
-	reason = "macro-generated visitors may not consume every field"
-)]
-
 use crate::{Link, Node};
 
 /// An aggregate value composed from a list of field links.

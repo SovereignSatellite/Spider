@@ -66,7 +66,10 @@ impl Locals {
 	}
 
 	/// Write the sorted union of multiple boundary sets into `union`.
-	pub fn get_union<I: IntoIterator<Item = u16>>(&self, ids: I, union: &mut Vec<u16>) {
+	pub fn get_union<I>(&self, ids: I, union: &mut Vec<u16>)
+	where
+		I: IntoIterator<Item = u16>,
+	{
 		union.clear();
 
 		for id in ids {
@@ -581,10 +584,6 @@ impl LocalTracker {
 		self.read_local(size);
 	}
 
-	#[expect(
-		clippy::too_many_lines,
-		reason = "exhaustive match over instruction variants"
-	)]
 	fn handle_instruction(&mut self, instruction: Instruction) {
 		match instruction {
 			Instruction::LocalSet(instruction) => self.handle_local_set(instruction),

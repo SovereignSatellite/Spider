@@ -4,11 +4,6 @@
 //! replicate sign bit, convert between integer/float, bit-reinterpret).
 //! WebAssembly's fused extension opcodes compose these primitives.
 
-#![expect(
-	unused_variables,
-	reason = "macro-generated visitors may not consume every field"
-)]
-
 use crate::{Link, Node};
 
 use super::{integer, number};

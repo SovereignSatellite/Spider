@@ -41,10 +41,6 @@ const fn integer_unary_name(node: &integer::UnaryOperation) -> &'static str {
 	}
 }
 
-#[expect(
-	clippy::too_many_lines,
-	reason = "exhaustive match over integer binary operators"
-)]
 const fn integer_binary_name(node: &integer::BinaryOperation) -> &'static str {
 	match (node.kind, node.operator) {
 		(integer::Type::I32, integer::BinaryOperator::Add) => "rt_add_i32",

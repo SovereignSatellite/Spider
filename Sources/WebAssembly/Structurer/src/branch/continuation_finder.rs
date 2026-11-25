@@ -26,7 +26,10 @@ impl ContinuationFinder {
 		}
 	}
 
-	pub fn set_excluded<I: IntoIterator<Item = u16>>(&mut self, iter: I) {
+	pub fn set_excluded<I>(&mut self, iter: I)
+	where
+		I: IntoIterator<Item = u16>,
+	{
 		self.excluded.clear();
 		self.excluded.extend(iter);
 		self.excluded.sort_unstable();

@@ -370,7 +370,6 @@ impl<'allocator, 'policy> Emitter<'allocator, 'policy> {
 		unimplemented!("`{}` has no expression form", foreign.identifier())
 	}
 
-	#[expect(clippy::question_mark, reason = "keep foreign dispatch shape uniform")]
 	fn value_native_f32(&mut self, any: &dyn Any) -> Option<Expression> {
 		let region = self.region;
 
@@ -386,11 +385,11 @@ impl<'allocator, 'policy> Emitter<'allocator, 'policy> {
 		} else if let Some(node) = any.downcast_ref::<NativeMultiplyF32>() {
 			self.data_handler
 				.build_apply_2(region, "native_multiply_f32", [node.lhs, node.rhs])
-		} else if let Some(node) = any.downcast_ref::<NativeDivideF32>() {
+		} else {
+			let node = any.downcast_ref::<NativeDivideF32>()?;
+
 			self.data_handler
 				.build_apply_2(region, "native_divide_f32", [node.lhs, node.rhs])
-		} else {
-			return None;
 		};
 
 		Some(expression)
@@ -875,16 +874,15 @@ impl<'allocator, 'policy> Emitter<'allocator, 'policy> {
 		self.bridge(id, operation::MemoryDrop::STATE_PORT, node.source);
 	}
 
-	#[expect(clippy::too_many_lines, reason = "exhaustive match over node variants")]
 	fn handle_node(&mut self, nodes: &[Node], id: u32, node: &Node) {
-		match *node {
-			Node::Function(ref arc) => {
+		match node {
+			Node::Function(arc) => {
 				let expression = self.build_function(arc);
 
 				self.emit_or_defer(id, expression);
 			}
-			Node::Match(ref arc) => self.handle_match(id, arc),
-			Node::Repeat(ref arc) => self.handle_repeat(arc),
+			Node::Match(arc) => self.handle_match(id, arc),
+			Node::Repeat(arc) => self.handle_repeat(arc),
 
 			Node::FunctionArguments(_)
 			| Node::FunctionResults(_)
@@ -892,12 +890,12 @@ impl<'allocator, 'policy> Emitter<'allocator, 'policy> {
 			| Node::BranchResults(_)
 			| Node::RepeatArguments(_) => {}
 
-			Node::RepeatResults(ref node) => self.handle_repeat_results(node),
+			Node::RepeatResults(node) => self.handle_repeat_results(node),
 
-			Node::Identity(ref node) => self.handle_identity(id, node),
-			Node::Fence(ref node) => self.handle_fence(id, node),
+			Node::Identity(node) => self.handle_identity(id, node),
+			Node::Fence(node) => self.handle_fence(id, node),
 
-			Node::Foreign(ref node) => self.handle_foreign(nodes, id, node.as_ref()),
+			Node::Foreign(node) => self.handle_foreign(nodes, id, node.as_ref()),
 
 			Node::Import(_)
 			| Node::Trap
@@ -928,22 +926,22 @@ impl<'allocator, 'policy> Emitter<'allocator, 'policy> {
 			| Node::TableNew(_)
 			| Node::MemoryNew(_) => self.emit_expression(nodes, id),
 
-			Node::Export(ref node) => self.handle_export(id, node),
-			Node::Apply(ref node) => self.handle_call(id, node),
-			Node::MutableGet(node) => self.handle_mutable_get(id, node),
-			Node::MutableSet(node) => self.handle_mutable_set(id, node),
-			Node::TableGet(node) => self.handle_table_get(id, node),
-			Node::TableSet(node) => self.handle_table_set(id, node),
-			Node::TableSize(node) => self.handle_table_size(id, node),
-			Node::TableGrow(node) => self.handle_table_grow(id, node),
-			Node::TableFill(node) => self.handle_table_fill(id, node),
-			Node::TableCopy(node) => self.handle_table_copy(id, node),
-			Node::TableDrop(node) => self.handle_table_drop(id, node),
-			Node::MemoryLoad(node) => self.handle_memory_load(id, node),
-			Node::MemoryStore(node) => self.handle_memory_store(id, node),
-			Node::MemoryFill(node) => self.handle_memory_fill(id, node),
-			Node::MemoryCopy(node) => self.handle_memory_copy(id, node),
-			Node::MemoryDrop(node) => self.handle_memory_drop(id, node),
+			Node::Export(node) => self.handle_export(id, node),
+			Node::Apply(node) => self.handle_call(id, node),
+			Node::MutableGet(node) => self.handle_mutable_get(id, *node),
+			Node::MutableSet(node) => self.handle_mutable_set(id, *node),
+			Node::TableGet(node) => self.handle_table_get(id, *node),
+			Node::TableSet(node) => self.handle_table_set(id, *node),
+			Node::TableSize(node) => self.handle_table_size(id, *node),
+			Node::TableGrow(node) => self.handle_table_grow(id, *node),
+			Node::TableFill(node) => self.handle_table_fill(id, *node),
+			Node::TableCopy(node) => self.handle_table_copy(id, *node),
+			Node::TableDrop(node) => self.handle_table_drop(id, *node),
+			Node::MemoryLoad(node) => self.handle_memory_load(id, *node),
+			Node::MemoryStore(node) => self.handle_memory_store(id, *node),
+			Node::MemoryFill(node) => self.handle_memory_fill(id, *node),
+			Node::MemoryCopy(node) => self.handle_memory_copy(id, *node),
+			Node::MemoryDrop(node) => self.handle_memory_drop(id, *node),
 		}
 	}
 

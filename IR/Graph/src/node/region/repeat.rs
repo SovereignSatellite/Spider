@@ -1,10 +1,5 @@
 //! The theta-like repeat region and its boundary nodes.
 
-#![expect(
-	unused_variables,
-	reason = "macro-generated visitors may not consume every field"
-)]
-
 use alloc::sync::{Arc, Weak};
 
 use parking_lot::Mutex;
@@ -101,14 +96,20 @@ impl Repeat {
 	}
 
 	/// Visits each outer link (arguments).
-	pub fn for_each_outer<H: FnMut(Link)>(&self, mut handler: H) {
+	pub fn for_each_outer<H>(&self, mut handler: H)
+	where
+		H: FnMut(Link),
+	{
 		for &link in &self.arguments {
 			handler(link);
 		}
 	}
 
 	/// Mutably visits each outer link (arguments).
-	pub fn for_each_mut_outer<H: FnMut(&mut Link)>(&mut self, mut handler: H) {
+	pub fn for_each_mut_outer<H>(&mut self, mut handler: H)
+	where
+		H: FnMut(&mut Link),
+	{
 		for link in &mut self.arguments {
 			handler(link);
 		}

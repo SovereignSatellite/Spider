@@ -1,11 +1,6 @@
 //! Small cross-cutting node types: function application, pass-through,
 //! ordering fence, and reference-null check.
 
-#![expect(
-	unused_variables,
-	reason = "macro-generated visitors may not consume every field"
-)]
-
 use list::resizable::Resizable;
 
 use crate::{Link, Node};

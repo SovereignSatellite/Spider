@@ -53,10 +53,6 @@ impl RegionContext<'_> {
 	}
 }
 
-#[expect(
-	clippy::renamed_function_params,
-	reason = "semantic names replace generated positional Context parameter names"
-)]
 impl Context for RegionContext<'_> {
 	fn optimization_enabled(&mut self, optimization: &Optimization) -> bool {
 		self.optimizations.is_enabled(*optimization)
@@ -760,11 +756,6 @@ impl Context for RegionContext<'_> {
 		}
 	}
 
-	#[expect(
-		clippy::cast_possible_truncation,
-		clippy::cast_sign_loss,
-		reason = "the guard restricts the value to the exact, lossless u32 range"
-	)]
 	fn raw_luau_number_result(&mut self, arg0: f64) -> Option<Link> {
 		let is_exact_integer = arg0.fract() == 0.0_f64;
 		let is_in_word_range = (0.0_f64..=4_294_967_295.0_f64).contains(&arg0);

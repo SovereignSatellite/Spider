@@ -1,9 +1,5 @@
 //! Generates valid WebAssembly modules and compiles them to unoptimized Luau.
 
-#![expect(
-	unused_crate_dependencies,
-	reason = "this target only exercises Luau output"
-)]
 #![no_main]
 
 extern crate alloc;

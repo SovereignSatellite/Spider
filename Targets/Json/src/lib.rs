@@ -152,7 +152,6 @@ impl JsonPrinter {
 		self.record_subgraph(parent, entry, exit);
 	}
 
-	#[expect(clippy::too_many_lines, reason = "exhaustive match over node variants")]
 	fn assign_ids(&mut self, nodes: &[Node]) {
 		for node in nodes {
 			let global = self.names.assign();
